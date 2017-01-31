@@ -109,7 +109,7 @@ public class GreenLightning {
 		    final PipeConfig<ServerResponseSchema> fileServerOutgoingDataConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, fileOutgoing, fileChunkSize);//from modules  to  supervisor
 		
 		    //must create here to ensure we have the same instance for both the module and outgoing pipes
-		    Pipe<ServerResponseSchema>[] staticFileOutputs;
+		    Pipe<ServerResponseSchema>[][] staticFileOutputs;
 		    
 			@Override
 			public long addModule(int a, 
@@ -122,12 +122,12 @@ public class GreenLightning {
 					//the file server is stateless therefore we can build 1 instance for every input pipe
 					int instances = inputs.length;
 					
-					staticFileOutputs = new Pipe[instances];
+					staticFileOutputs = new Pipe[instances][1];
 					
 					int i = instances;
 					while (--i>=0) {
-						staticFileOutputs[i] = new Pipe<ServerResponseSchema>(fileServerOutgoingDataConfig);
-						FileReadModuleStage.newInstance(graphManager, inputs[i], staticFileOutputs[i], spec, pathRoot);					
+						staticFileOutputs[i][0] = new Pipe<ServerResponseSchema>(fileServerOutgoingDataConfig);
+						FileReadModuleStage.newInstance(graphManager, inputs[i], staticFileOutputs[i][0], spec, pathRoot);					
 					}
 					
 				}
@@ -150,10 +150,9 @@ public class GreenLightning {
 				
 			}
 			
-		//TODO: add input pipes to be defined here as well??
 			
 			@Override
-			public Pipe<ServerResponseSchema>[] outputPipes(int a) {
+			public Pipe<ServerResponseSchema>[][] outputPipes(int a) {
 				if (fileServerIndex == a) {
 					if (null==staticFileOutputs) {
 						throw new UnsupportedOperationException("the addModule method must be called first");
