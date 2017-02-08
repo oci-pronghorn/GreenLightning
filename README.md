@@ -13,9 +13,13 @@ for unencrypted http calls on a 4 core box.
 The test makes 16K simultaneous (in flight) requests of 32 connections. Many more permutations are left to still be tested.
 
 Green Lightning:   1,000K RPS (saturated 1Gb connection)  (in large mode)
+
 Green Lightning:   500K RPS (in small mode mode between 60-160MB of memory)
+
 NGINX:             260K RPS
+
 Netty:             100K RPS
+
 
 The build server:
 https://pronghorn.ci.cloudbees.com/job/GreenLightning/
