@@ -2,9 +2,11 @@
 Fast small footprint HTTP server in Java
 
 
-This is early days for the project but we have enough here to proove out the core design. 
-Please consider sponsoring continued work on this project.
+This is early days for the project but we have enough here to prove out the core design. 
+Please consider sponsoring continued work on this BSD open source project. 
 
+Drop a note to info@ociweb.com if you would like to set up a meeting to talk about Green Lightning.  
+What featrues are most important to you?
 
 
 When running tests with a small 30 byte file I was able to to hit the following numbers
