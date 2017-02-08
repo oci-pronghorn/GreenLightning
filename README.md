@@ -33,12 +33,16 @@ then run the go.sh shell file to start up the demo web page
 review the go.sh to see how its called.
 
 --t is for turning on or off TLS (https) support, keys are built in cant change yet
+
 --s is the folder holding the static site pages,  these can not be changed while its running
      note if this points to the index.html file it will be used as the default for the domain. 
+     
 --l is for running in large mode where it allocates many GB for performance
     with -l False  (the small mode) it is still much more performant than any other 
     server I could find.
+    
 --h what host to run this on (eg ip) if not provided it will guess from network settings.
+
 --p what port to run on the default is 8080 even when TLS is turned on.
 
 
