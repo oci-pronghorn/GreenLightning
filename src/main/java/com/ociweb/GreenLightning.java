@@ -32,10 +32,33 @@ public class GreenLightning {
 	public static void main(String[] args) {
 						
 		String path = HTTPServer.getOptArg("-site", "--s", args, null);	
+		String resourceRoot = HTTPServer.getOptArg("-resourcesRoot", "--rr", args, null==path?"/site/index.html":null);
+		String rootFolder = null;
 		
 		if (null==path) {
-			System.out.println("Path to site must be defined with -site or --s");
-			return;			
+		   if (null==resourceRoot) {
+			   System.out.println("Path to site must be defined with -site or --s");			   
+			   return;			
+		   } else {
+			   //use internal resources	
+			   
+			   int endOfRoot = resourceRoot.lastIndexOf('/');
+			   if (-1==endOfRoot) {
+				   System.out.println("resourceRoot must contain at least one / to define the subfolder inside the resources folder");
+				   return;
+			   }
+			   rootFolder = resourceRoot.substring(0, endOfRoot);
+			   			   
+			   System.out.println("reading site data from internal resources: "+rootFolder);  
+		   }			
+		} else {
+			   if (null==resourceRoot) {
+				   //normal file path site
+				   System.out.println("reading site data from: "+path);
+			   } else {
+				   System.out.println("use -size for file paths or -resourcesRoot for packaged resources. Only one can be used at a time.");
+				   return;
+			   }
 		}
 		
 		
@@ -62,7 +85,7 @@ public class GreenLightning {
 	    final int fileOutgoing = large? 2048 : 1024;//makes big performance difference.  TODO: why does making this large make a difference?
 	    final int fileChunkSize = large? 1<<14 : 1<<10;
 	    
-		HTTPServer.startupHTTPServer(large, GreenLightning.moduleConfig(path, fileOutgoing, fileChunkSize), bindHost, port, Boolean.parseBoolean(isTLS) );
+		HTTPServer.startupHTTPServer(large, GreenLightning.moduleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, Boolean.parseBoolean(isTLS) );
         		
 		System.out.println("Press \"ENTER\" to exit...");
 		int value = -1;
@@ -84,22 +107,37 @@ public class GreenLightning {
 	///TODO: shutdown not happening as desired.
     ///TOOD: need the memory consumed added on to to the graph.
 	
-    static ModuleConfig moduleConfig(String path, final int fileOutgoing, final int fileChunkSize) {
-
+    static ModuleConfig moduleConfig(String path, String resourceRoot, String rootFolder,
+    		                         final int fileOutgoing, final int fileChunkSize) {
     	
-		final File pathRoot = new File(path.replace("target/phogLite.jar!",""));
-		
-		int moduleCount=0;
-		
-		int fileServerIdx = -1;
-		
-		if (pathRoot.exists()) {
-			logger.info("reading files from folder {}",pathRoot);
-			fileServerIdx = moduleCount;
-			moduleCount++;
+    	
+    	//GreenLightning.class.getClassLoader().getResourceAsStream(name)
+    	
+    	
+    	
+    	final int moduleCount = 1;		
+    	final int fileServerIdx = 0;
+    	
+    	
+    	File tempPathRoot = null;
+		if (null!=path) {
+			tempPathRoot = new File(path.replace("target/phogLite.jar!",""));
+			if (tempPathRoot.exists()) {
+				logger.info("reading files from folder {}",tempPathRoot);
+			} else {
+				logger.info("EXITING: unable to find {}",tempPathRoot);
+				System.exit(-1);				
+			}
+		} else {
+			
+			
+			
 		}
+
 		
-		final int finalModuleCount = moduleCount;
+		
+		final File pathRoot = tempPathRoot;
+		final int finalModuleCount = 1;
 		final int fileServerIndex = fileServerIdx;
 		
 		//using the basic no-fills API
