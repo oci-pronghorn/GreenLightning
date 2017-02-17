@@ -20,7 +20,7 @@ Green Lightning:   500K RPS (in small mode mode between 60-160MB of memory)
 
 NGINX:             260K RPS
 
-Netty:             100K RPS
+Netty:             160K RPS
 
 
 The build server:
