@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+  
+  <template name="Release" id="20">
+     <uInt32 name="Count" id="22"/>
+  </template>  
+
+  
+</templates>

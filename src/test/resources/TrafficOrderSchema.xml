@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+
+  <template name="Go" id="10">
+     <uInt32 name="PipeIdx" id="11"/>
+     <uInt32 name="Count" id="12"/>
+  </template>
+    
+</templates>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+
+
+   <template name="HTTPGet" id="100">   
+     <uInt32 name="Port" id="1"/>
+     <string name="Host" id="2" charset="unicode"/>
+     <string name="Path" id="3" charset="unicode"/>
+     <uInt32 name="Listener" id="10"/>
+   </template>
+   
+   <template name="HTTPPost" id="101">
+     <uInt32 name="Port" id="1"/>
+     <string name="Host" id="2" charset="unicode"/>
+     <string name="Path" id="3" charset="unicode"/>
+     <byteVector name="Payload" id="5"/>
+     <uInt32 name="Listener" id="10"/>
+   </template>   
+  
+      
+</templates>

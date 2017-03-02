@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+
+
+   <template name="Subscribe" id="100">
+     <string name="Topic" id="1" charset="unicode"/>
+     <uInt32 name="SubscriberIdentityHash"   id="4"/>
+   </template>
+   
+   <template name="Unsubscribe" id="101">
+     <string name="Topic" id="1" charset="unicode"/>
+     <uInt32 name="SubscriberIdentityHash"   id="4"/>
+   </template>   
+
+   <template name="Publish" id="103">
+     <string name="Topic" id="1" charset="unicode"/>
+     <byteVector name="Payload" id="3"/>
+   </template>   
+   
+   <template name="ChangeState" id="70">
+     <uInt32 name="Ordinal" id="7"/>
+   </template>    
+      
+</templates>
