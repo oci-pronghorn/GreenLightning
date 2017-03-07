@@ -1,0 +1,13 @@
+[Unit]
+Description=oci-demo
+Requires=network.target
+After=network.target
+AllowIsolate=yes
+
+[Service]
+ExecStart=/etc/greenlightning/launch-green-lightning.sh
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

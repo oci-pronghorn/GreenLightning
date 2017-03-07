@@ -82,7 +82,7 @@ public class GreenLightning {
 			}		
 	    }
 	   	
-	    final int fileOutgoing = large? 2048 : 1024;//makes big performance difference.  TODO: why does making this large make a difference?
+	    final int fileOutgoing = large ? 2048 : 1024;//makes big performance difference.
 	    final int fileChunkSize = large? 1<<14 : 1<<10;
 	    
 		HTTPServer.startupHTTPServer(large, GreenLightning.moduleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, Boolean.parseBoolean(isTLS) );
@@ -100,12 +100,6 @@ public class GreenLightning {
 		
 	}
 
-	
-	
-	///TODO: minimize memory for small
-	///TODO: fix trieParser insert of substring starting.
-	///TODO: shutdown not happening as desired.
-    ///TOOD: need the memory consumed added on to to the graph.
 	
     static ModuleConfig moduleConfig(String path, String resourceRoot, String rootFolder,
     		                         final int fileOutgoing, final int fileChunkSize) {
@@ -128,13 +122,10 @@ public class GreenLightning {
 				logger.info("EXITING: unable to find {}",tempPathRoot);
 				System.exit(-1);				
 			}
-		} else {
-			
-			
-			
 		}
-
 		
+		final String resourcesRoot = resourceRoot;
+		final String resourcesDefault = rootFolder;
 		
 		final File pathRoot = tempPathRoot;
 		final int finalModuleCount = 1;
@@ -164,15 +155,18 @@ public class GreenLightning {
 					
 					int i = instances;
 					while (--i>=0) {
-						staticFileOutputs[i][0] = new Pipe<ServerResponseSchema>(fileServerOutgoingDataConfig);
-						FileReadModuleStage.newInstance(graphManager, inputs[i], staticFileOutputs[i][0], spec, pathRoot);					
+						staticFileOutputs[i][0] = new Pipe<ServerResponseSchema>(fileServerOutgoingDataConfig); //TODO: old code which will be removed.
+						if (null != pathRoot) {
+							//file based site
+							FileReadModuleStage.newInstance(graphManager, inputs[i], staticFileOutputs[i][0], spec, pathRoot);	
+						} else {
+							//jar resources based site
+							FileReadModuleStage.newInstance(graphManager, inputs[i], staticFileOutputs[i][0], spec, resourcesRoot, resourcesDefault);	
+						}
 					}
 					
 				}
-				
-				//add simple lambda based rest/post handler
-				//TODO: just enough to avoid stage work.
-				
+
 				//return needed headers
 				return 0;
 			}
