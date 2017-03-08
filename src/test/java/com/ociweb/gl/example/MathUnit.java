@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.CommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.ListenerConfig;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PayloadReader;
 import com.ociweb.gl.api.PayloadWriter;
@@ -27,6 +28,7 @@ public class MathUnit implements RestListener {
 	private final Logger logger = LoggerFactory.getLogger(MathUnit.class);
 	
 	private final CommandChannel cc; 
+	private final ListenerConfig lc;
 	
 	//example response UTF-8 encoded
 	//{"x":9,"y":17,"groovySum":26}
@@ -48,10 +50,7 @@ public class MathUnit implements RestListener {
 		//TODO: by adding exclusive topics we can communnicated pont to point 
 		//runtime.setExclusiveTopics(cc,"myTopic","myOtherTopic");
 		
-		//TODO: something like this will make more since going forward.
-		//this.lc = runtime.newRestListenerConfig(routes);
-		runtime.setRoutes(cc, routes);
-		
+		this.lc = runtime.newRestListenerConfig(routes);
 		
 		
 				

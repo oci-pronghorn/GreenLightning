@@ -112,19 +112,22 @@ public class GreenRuntime {
 	
 
 
-
-    CommandChannelVisitor gatherPipesVisitor = new CommandChannelVisitor() {    	
+    CommandChannelVisitor gatherPipesVisitor = new CommandChannelVisitor() {
+    	
 		@Override
 		public void visit(CommandChannel cmdChnl) {			
 			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());
-			Pipe<HTTPRequestSchema>[] httpRequestPipesInCC = cmdChnl.getHTTPRequestPipes();
-			httpRequestPipes = PronghornStage.join(httpRequestPipes, httpRequestPipesInCC);	
-		  
-		}    	
+			
+		}
+
+		@Override
+		public void visit(ListenerConfig cnfg) {
+			Pipe<HTTPRequestSchema>[] httpRequestPipesInCC = cnfg.getHTTPRequestPipes();
+			httpRequestPipes = PronghornStage.join(httpRequestPipes, httpRequestPipesInCC);
+		}
+		
     };
    
-    
-
     
     
     private void resetGatherPipesVisitor() {
@@ -153,7 +156,7 @@ public class GreenRuntime {
         return reportChoice(longName, shortName, defaultValue);
     }
     
-    public static String reportChoice(final String longName, final String shortName, final String value) {
+    static String reportChoice(final String longName, final String shortName, final String value) {
         System.out.print(longName);
         System.out.print(" ");
         System.out.print(shortName);
@@ -405,6 +408,14 @@ public class GreenRuntime {
                     visitor.visit(cmdChnl);
                                         
                 }
+                
+                if (ListenerConfig.class == fields[f].getType()) {
+                	ListenerConfig cnfg = (ListenerConfig)fields[f].get(listener);                 
+                    
+                    visitor.visit(cnfg);
+                                        
+                }
+                
             } catch (Throwable e) {
                 logger.debug("unable to find CommandChannel",e);
             }
@@ -491,7 +502,7 @@ public class GreenRuntime {
 
     
 	public static GreenRuntime run(GreenApp app) {
-	    GreenRuntime runtime = new GreenRuntime();
+	    GreenRuntime runtime = new GreenRuntime(); 
         return run(app, runtime);
     }
 
@@ -621,7 +632,7 @@ public class GreenRuntime {
 			PipeCleanerStage.newInstance(runtime.gm, forPipeCleaner.toArray(new Pipe[forPipeCleaner.size()]));
 		}
 		
-		NetGraphBuilder.buildRouters(runtime.gm, routerCount, planIncomingGroup, acks, fromRouterToModules, routerConfig); 
+		NetGraphBuilder.buildRouters(runtime.gm, routerCount, planIncomingGroup, acks, fromRouterToModules, routerConfig, serverCoord); 
 		
 		
 		
@@ -661,10 +672,11 @@ public class GreenRuntime {
 		
 	}
 
-	public void setRoutes(CommandChannel cc, int ... routes) {
-		CommandChannel.setRestRoutes(cc, routes, parallelInstanceUnderActiveConstruction);
-	}
 
+	public ListenerConfig newRestListenerConfig(int[] routes) {
+		return new ListenerConfig(builder, routes, parallelInstanceUnderActiveConstruction);
+	}
+    
 
 	public void addFileServer(String path, int ... routes) {
 				
@@ -682,6 +694,21 @@ public class GreenRuntime {
 				
 	}
 
+	public void addFileServer(String resourceRoot, String resourceDefault, int ... routes) {
+		
+		//due to internal implementation we must keep the same number of outputs as inputs.
+		int r = routes.length;
+		int p = computeParaMulti();
+		
+		int count = r*p;
+		
+		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
+		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
+		populatePipeArrays(r, p, inputs, outputs, routes);		
+		
+		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
+				
+	}
 
 	private int computeParaMulti() {
 		int p;
@@ -707,6 +734,6 @@ public class GreenRuntime {
 			}
 		}
 	}
-    
+
     
 }

@@ -69,10 +69,7 @@ public class CommandChannel {
 
     private final static int[] EMPTY = new int[0];
     private final static Pipe[] EMPTY_PIPES = new Pipe[0];
-    
-    private Pipe<HTTPRequestSchema>[] restRequests = EMPTY_PIPES;
-	
-    
+
     private final int MAX_TEXT_LENGTH = 64;
     private final Pipe<RawDataSchema> digitBuffer = new Pipe<RawDataSchema>(new PipeConfig<RawDataSchema>(RawDataSchema.instance,3,MAX_TEXT_LENGTH));
     
@@ -609,45 +606,7 @@ public class CommandChannel {
 							    false, null, 0,0,0, outputStream, conStateIdx);
 	}
 
-	
-	//package protected
-	static void setRestRoutes(CommandChannel cc, int[] routes, final int parallelInstance) {
-		assert(routes.length>0) : "API requires 1 or more routes";
-		
-		int r = routes.length;
-				
-		int p;
-		if (-1 == parallelInstance) {
-			p = cc.builder.parallelism();
-		} else {
-			p = 1;
-		}
-		int count = r*p;
-		
-		cc.restRequests = new Pipe[count];
-		int idx = count;
-		
-		while (--r >= 0) {	
-			int routeIndex = routes[r];
-			//if parallel is -1 we need to do one for each
-						
-			int x = p;
-			while (--x>=0) {
-							
-				Pipe<HTTPRequestSchema> pipe = cc.builder.createHTTPRequestPipe(cc.builder.restPipeConfig.grow2x(), routeIndex, -1 == parallelInstance ? x : parallelInstance);				
-				
-				cc.restRequests[--idx] = pipe;
-	            
-			}            
-		}
-		
-		
-	}
 
-
-    Pipe<HTTPRequestSchema>[] getHTTPRequestPipes() {
-    	return restRequests;
-    }
 
 
 }
