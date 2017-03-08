@@ -455,8 +455,10 @@ public class GreenRuntime {
                    
        logStageScheduleRates();
           
-       MonitorConsoleStage.attach(gm);//documents what was buit.
-       
+       boolean debug = false;
+       if (debug) {	   
+    	   MonitorConsoleStage.attach(gm);//documents what was buit.
+       }
        
        scheduler = builder.createScheduler(this);       
 
