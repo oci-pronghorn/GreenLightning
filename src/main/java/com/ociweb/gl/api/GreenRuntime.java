@@ -681,6 +681,11 @@ public class GreenRuntime {
     
 
 	public void addFileServer(String path, int ... routes) {
+
+        // Strip URL space tokens from incoming path strings to avoid issues.
+        // TODO: This should be made garbage free.
+        // TODO: Is this expected behavior?
+        path = path.replaceAll("\\Q%20\\E", " ");
 				
 		//due to internal implementation we must keep the same number of outputs as inputs.
 		int r = routes.length;
