@@ -10,6 +10,7 @@ import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
 import com.ociweb.pronghorn.network.ClientConnection;
 import com.ociweb.pronghorn.network.ClientCoordinator;
+import com.ociweb.pronghorn.network.HeaderUtil;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -118,7 +119,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 											
 						                	DataOutputBlobWriter.encodeAsUTF8(activeWriter,"GET");
 						                	
-						                	int len = PipeReader.readDataLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3);					                	
+						                	int len = PipeReader.readBytesLength(requestPipe,ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3);					                	
 						                	int  first = PipeReader.readBytesPosition(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3);					                	
 						                	boolean prePendSlash = (0==len) || ('/' != PipeReader.readBytesBackingArray(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3)[first&Pipe.blobMask(requestPipe)]);  
 						                	
@@ -131,7 +132,12 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 											//Reading from UTF8 field and writing to UTF8 encoded field so we are doing a direct copy here.
 											PipeReader.readBytes(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, activeWriter);
 											
-											finishWritingHeader(hostBack, hostPos, hostLen, hostMask, activeWriter, implementationVersion, 0);
+											HeaderUtil.writeHeaderBeginning(hostBack, hostPos, hostLen, Pipe.blobMask(requestPipe), activeWriter);
+											
+											HeaderUtil.writeHeaderMiddle(activeWriter, implementationVersion);
+											PipeReader.readBytes(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, activeWriter);
+											HeaderUtil.writeHeaderEnding(activeWriter, true, (long) 0);
+											
 						                	DataOutputBlobWriter.closeHighLevelField(activeWriter, NetPayloadSchema.MSG_PLAIN_210_FIELD_PAYLOAD_204);
 						                					                	
 						                	PipeWriter.publishWrites(outputPipe);
@@ -188,12 +194,11 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 											//Reading from UTF8 field and writing to UTF8 encoded field so we are doing a direct copy here.
 											PipeReader.readBytes(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, activeWriter);
 											
-											//TODO: what is the lenght?
-											finishWritingHeader(hostBack, hostPos, hostLen, hostMask, activeWriter, implementationVersion, 0);
+											HeaderUtil.writeHeaderBeginning(hostBack, hostPos, hostLen, Pipe.blobMask(requestPipe), activeWriter);
 											
-											//TODO: write the payload.
-											
-											
+											HeaderUtil.writeHeaderMiddle(activeWriter, implementationVersion);
+											PipeReader.readBytes(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7, activeWriter);
+											HeaderUtil.writeHeaderEnding(activeWriter, true, (long) 0);  
 											
 											
 											
@@ -293,20 +298,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 		return true;
 	}
 
-	public static void finishWritingHeader(byte[] hostBack, int hostPos, int hostLen, int hostMask,
-			                              DataOutputBlobWriter<NetPayloadSchema> writer, CharSequence implementationVersion, long length) {
-		DataOutputBlobWriter.encodeAsUTF8(writer," HTTP/1.1\r\nHost: ");
-		DataOutputBlobWriter.write(writer,hostBack,hostPos,hostLen,hostMask);
-		DataOutputBlobWriter.encodeAsUTF8(writer,"\r\nUser-Agent: Pronghorn/");
-		DataOutputBlobWriter.encodeAsUTF8(writer,implementationVersion);
-		if (length>0) {
-			DataOutputBlobWriter.encodeAsUTF8(writer,"\r\nContent-Length: "+Long.toString(length)); //TODO: rewrite as garbage free.
-		} else if (length<0) {
-			DataOutputBlobWriter.encodeAsUTF8(writer,"\r\nTransfer-Encoding: chunked");//TODO: write the payload must be chunked.
-		}
-		DataOutputBlobWriter.encodeAsUTF8(writer,"\r\nConnection: keep-alive\r\n\r\n"); //double \r\b marks the end of the header
-	}
-	
+
 	
 	
 
