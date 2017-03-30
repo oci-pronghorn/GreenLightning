@@ -245,7 +245,25 @@
 	          </dependency>
 	        </dependencies>
         </plugin>
-
+	<plugin>
+	    <groupId>com.excelsiorjet</groupId>
+	    <artifactId>excelsior-jet-maven-plugin</artifactId>
+	    <version>0.9.5</version>
+	    <configuration>
+	        <mainClass>com.ociweb.GreenLightning</mainClass>
+		<profileStartup>false</profileStartup>
+		<runtime>
+		    <flavor>server</flavor>
+		</runtime>
+		<packageFiles>
+		    <packageFile>
+			<path>LICENSE</path>
+			<type>file</type>
+			<packagePath>/</packagePath>
+		    </packageFile>
+		</packageFiles>
+	    </configuration>
+	</plugin>
         </plugins>
     </build>
 
