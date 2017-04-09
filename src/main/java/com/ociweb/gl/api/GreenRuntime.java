@@ -120,12 +120,6 @@ public class GreenRuntime {
 			
 		}
 
-		@Override
-		public void visit(ListenerConfig cnfg) {
-			Pipe<HTTPRequestSchema>[] httpRequestPipesInCC = cnfg.getHTTPRequestPipes();
-			httpRequestPipes = PronghornStage.join(httpRequestPipes, httpRequestPipesInCC);
-		}
-		
     };
    
     
@@ -219,34 +213,45 @@ public class GreenRuntime {
     }
     
 
-    public ListenerFilter addRestListener(RestListener listener) {
-    	return registerListener(listener);
+    public ListenerFilter addRestListener(RestListener listener, int ... routes) {
+    	return registerListenerImpl(listener, routes);
     }
     
     public ListenerFilter addStartupListener(StartupListener listener) {
-        return registerListener(listener);
+        return registerListenerImpl(listener);
     }
     
     public ListenerFilter addTimeListener(TimeListener listener) {
-        return registerListener(listener);
+        return registerListenerImpl(listener);
     }
     
     public ListenerFilter addPubSubListener(PubSubListener listener) {
-        return registerListener(listener);
+        return registerListenerImpl(listener);
     }
 
     public <E extends Enum<E>> ListenerFilter addStateChangeListener(StateChangeListener<E> listener) {
-        return registerListener(listener);
+        return registerListenerImpl(listener);
     }
     
     public ListenerFilter addListener(Object listener) {
-        return registerListener(listener);
+        return registerListenerImpl(listener);
     }
     
     public ListenerFilter registerListener(Object listener) {
+    	return registerListenerImpl(listener);
+    }
+    
+    private ListenerFilter registerListenerImpl(Object listener, int ... optionalInts) {
                 
-    	resetGatherPipesVisitor();        
-		visitCommandChannelsUsedByListener(listener, gatherPipesVisitor);//populates  httpRequestPipes and outputPipes
+    	resetGatherPipesVisitor();     	
+    	
+    	//bind pair object of RestListener and routes in one object? 
+    	
+		if (optionalInts.length>0 && listener instanceof RestListener) {
+			httpRequestPipes = PronghornStage.join(httpRequestPipes, new ListenerConfig(builder, optionalInts, parallelInstanceUnderActiveConstruction).getHTTPRequestPipes());
+		}
+    	
+    	visitCommandChannelsUsedByListener(listener, gatherPipesVisitor);//populates  httpRequestPipes and outputPipes
 
 		
 		
@@ -406,13 +411,6 @@ public class GreenRuntime {
                     assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
                     cmdChnl.setListener(listener);
                     visitor.visit(cmdChnl);
-                                        
-                }
-                
-                if (ListenerConfig.class == fields[f].getType()) {
-                	ListenerConfig cnfg = (ListenerConfig)fields[f].get(listener);                 
-                    
-                    visitor.visit(cnfg);
                                         
                 }
                 
@@ -674,7 +672,7 @@ public class GreenRuntime {
 		
 	}
 
-
+    @Deprecated
 	public ListenerConfig newRestListenerConfig(int[] routes) {
 		return new ListenerConfig(builder, routes, parallelInstanceUnderActiveConstruction);
 	}

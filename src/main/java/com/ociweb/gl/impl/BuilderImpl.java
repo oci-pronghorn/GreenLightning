@@ -407,7 +407,7 @@ public class BuilderImpl implements Builder {
 			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[TYPE_NET], masterAckIn[TYPE_NET], clientRequests);
 			
 			
-			NetGraphBuilder.buildHTTPClientGraph(true, gm, maxPartialResponses, ccm, netPipeLookup, 10, 1<<15, clientRequests, netResponsePipes, 2, 2, 2); 
+			NetGraphBuilder.buildHTTPClientGraph(true, gm, maxPartialResponses, ccm, netPipeLookup, 10, 1<<15, clientRequests, netResponsePipes, 2, 2, 2, 2048, 64, 1<<19); 
 						
 		}// else {
 			//System.err.println("skipped  "+IntHashTable.isEmpty(netPipeLookup)+"  "+netResponsePipes.length+"   "+netRequestPipes.length  );

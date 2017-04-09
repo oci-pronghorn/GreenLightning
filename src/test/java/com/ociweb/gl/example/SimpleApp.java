@@ -82,7 +82,8 @@ public class SimpleApp implements GreenApp {
 		
 		//TODO wrong matching IDS plus no server startup??
 		
-		runtime.addRestListener(new MathUnit(runtime, ADD_ID1, ADD_ID2)); //accept all registered routes
+		runtime.addRestListener(new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
+		
 		
 		
 		

@@ -27,8 +27,7 @@ public class MathUnit implements RestListener {
 
 	private final Logger logger = LoggerFactory.getLogger(MathUnit.class);
 	
-	private final CommandChannel cc; 
-	private final ListenerConfig lc;
+	private final CommandChannel cc;
 	
 	//example response UTF-8 encoded
 	//{"x":9,"y":17,"groovySum":26}
@@ -42,18 +41,13 @@ public class MathUnit implements RestListener {
 	private final StringBuilder b = new StringBuilder();
 	private final StringBuilder c = new StringBuilder();
 	
-	public MathUnit(final GreenRuntime runtime, int ... routes) {
-		assert(routes.length>0) : "This rest module must be associated with at least 1 route";
-		
+	public MathUnit(final GreenRuntime runtime) {
+
 		this.cc = runtime.newCommandChannel(/*CommandChannel.DYNAMIC_MESSAGING |*/ CommandChannel.NET_RESPONDER);
        
 		//TODO: by adding exclusive topics we can communnicated pont to point 
 		//runtime.setExclusiveTopics(cc,"myTopic","myOtherTopic");
 		
-		this.lc = runtime.newRestListenerConfig(routes);
-		
-		
-				
 	}
 	
 	

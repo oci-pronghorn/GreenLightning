@@ -152,7 +152,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 	            			case ClientHTTPRequestSchema.MSG_HTTPPOST_101:
 	            				
 				                {
-				                	
+				                					                	
 				            		final byte[] hostBack = Pipe.blob(requestPipe);
 				            		final int hostPos = PipeReader.readBytesPosition(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2);
 				            		final int hostLen = PipeReader.readBytesLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2);
