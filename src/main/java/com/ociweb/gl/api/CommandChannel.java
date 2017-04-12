@@ -3,6 +3,9 @@ package com.ociweb.gl.api;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -29,6 +32,8 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
  */
 public class CommandChannel {
 
+	private final Logger logger = LoggerFactory.getLogger(CommandChannel.class);
+	
     private final Pipe<TrafficOrderSchema> goPipe;
     private final Pipe<MessagePubSub> messagePubSub;
     private final Pipe<ClientHTTPRequestSchema> httpRequest;
@@ -182,49 +187,49 @@ public class CommandChannel {
 
 	
     
-    Pipe<?>[] getOutputPipes() {
+    public static Pipe<?>[] getOutputPipes(CommandChannel that) {
     	
     	int length = 0;
     	
-    	if (null != messagePubSub) {
+    	if (null != that.messagePubSub) {
     		length++;
     	}
     	
-    	if (null != httpRequest) {
+    	if (null != that.httpRequest) {
     		length++;
     	}
     	
-    	if (null != netResponse) {
-    		length+=netResponse.length;
+    	if (null != that.netResponse) {
+    		length+=that.netResponse.length;
     	}
     	
-    	if (null != goPipe) {//last
+    	if (null != that.goPipe) {//last
     		length++;
     	}
     	
-    	length += exclusivePubSub.length;
+    	length += that.exclusivePubSub.length;
     	
     	int idx = 0;
     	Pipe[] results = new Pipe[length];
     	
-    	System.arraycopy(exclusivePubSub, 0, results, 0, exclusivePubSub.length);
-    	idx+=exclusivePubSub.length;
+    	System.arraycopy(that.exclusivePubSub, 0, results, 0, that.exclusivePubSub.length);
+    	idx+=that.exclusivePubSub.length;
     	
-    	if (null != messagePubSub) {
-    		results[idx++] = messagePubSub;
+    	if (null != that.messagePubSub) {
+    		results[idx++] = that.messagePubSub;
     	}
     	
-    	if (null != httpRequest) {
-    		results[idx++] = httpRequest;
+    	if (null != that.httpRequest) {
+    		results[idx++] = that.httpRequest;
     	}
     	
-    	if (null != netResponse) {    		
-    		System.arraycopy(netResponse, 0, results, idx, netResponse.length);
-    		idx+=netResponse.length;
+    	if (null != that.netResponse) {    		
+    		System.arraycopy(that.netResponse, 0, results, idx, that.netResponse.length);
+    		idx+=that.netResponse.length;
     	}
     	
-    	if (null != goPipe) {//last
-    		results[idx++] = goPipe;
+    	if (null != that.goPipe) {//last
+    		results[idx++] = that.goPipe;
     	}
     	
     	return results;
@@ -512,6 +517,10 @@ public class CommandChannel {
 
 	public Optional<NetResponseWriter> openHTTPResponse(long connectionId, long sequenceCode, int statusCode, int context, HTTPContentTypeDefaults contentType, int length) {
 
+		if (length<0) {
+			logger.warn("TODO: Chunked posting is not yet supported, it works but will not close the stream when finished. ");
+		}
+		
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
 		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
 	

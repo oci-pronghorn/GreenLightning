@@ -2,9 +2,12 @@ package com.ociweb.gl.api;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.Field;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -98,8 +101,6 @@ public class GreenRuntime {
     private int netResponsePipeIdx = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
     private int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
     
-    
-    private int defaultSleepRateNS = 1_200;//10_000;   //we will only check for new work 100 times per second to keep CPU usage low.
 
     
     private final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
@@ -116,8 +117,7 @@ public class GreenRuntime {
     	
 		@Override
 		public void visit(CommandChannel cmdChnl) {			
-			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());
-			
+			outputPipes = PronghornStage.join(outputPipes, CommandChannel.getOutputPipes(cmdChnl));			
 		}
 
     };
@@ -132,7 +132,6 @@ public class GreenRuntime {
 	
     public GreenRuntime() {
         gm = new GraphManager();
-     
     }
 
     public static String getOptArg(String longName, String shortName, String[] args, String defaultValue) {
@@ -165,6 +164,7 @@ public class GreenRuntime {
     	}
     	return this.builder;
     }
+    
     
     
     
@@ -324,7 +324,13 @@ public class GreenRuntime {
         }                
 
 		
-        ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, inputPipes, outputPipes);
+        return reactiveListener(listener, inputPipes, subPipeIdx, testId);
+        
+    }
+
+
+	private ListenerFilter reactiveListener(Object listener, Pipe<?>[] inputPipes, int subPipeIdx, int testId) {
+		ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, inputPipes, outputPipes);
         if (listener instanceof RestListener) {
         	GraphManager.addNota(gm, GraphManager.DOT_RANK_NAME, "ModuleStage", reactiveListener);
         }
@@ -340,8 +346,7 @@ public class GreenRuntime {
         assert(-1==testId || GraphManager.allPipesOfType(gm, MessageSubscription.instance)[subPipeIdx].id==testId) : "GraphManager has returned the pipes out of the expected order";
         
         return reactiveListener;
-        
-    }
+	}
 
 
 	private Pipe<MessageSubscription> createSubscriptionPipe() {
@@ -429,7 +434,7 @@ public class GreenRuntime {
             stage.setTimeEventSchedule(rate, builder.getTriggerStart());
             //Since we are using the time schedule we must set the stage to be faster
             long customRate =   (rate*nsPerMS)/NonThreadScheduler.granularityMultiplier;// in ns and guanularityXfaster than clock trigger
-            long appliedRate = Math.min(customRate,defaultSleepRateNS);
+            long appliedRate = Math.min(customRate,builder.getDefaultSleepRateNS());
             GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, appliedRate, stage);
         }
     }
@@ -453,8 +458,7 @@ public class GreenRuntime {
                    
        logStageScheduleRates();
           
-       boolean debug = false;
-       if (debug) {	   
+       if ( this.getHardware().isTelemetryEnabled()) {	   
     	   MonitorConsoleStage.attach(gm);//documents what was buit.
        }
        
@@ -485,9 +489,13 @@ public class GreenRuntime {
     }    
 
     public void shutdownRuntime() {
+    	if (null == scheduler || null == builder) {
+    		System.exit(0);
+    		return;
+    	}
         //clean shutdown providing time for the pipe to empty
         scheduler.shutdown();
-        scheduler.awaitTermination(10, TimeUnit.SECONDS); //timeout error if this does not exit cleanly withing this time.
+        scheduler.awaitTermination(3, TimeUnit.SECONDS); //timeout error if this does not exit cleanly withing this time.
         //all the software has now stopped so now shutdown the hardware.
         builder.shutdown();
     }
@@ -531,13 +539,9 @@ public class GreenRuntime {
                 	app.declareParallelBehavior(runtime);                
                 }
             }
-            runtime.constructingParallelInstancesEnding();                    
-
-            
-            
+            runtime.constructingParallelInstancesEnding();
+                        
             runtime.finalGraphBuild();
-            
-           
             
             runtime.scheduler.startup();
         } catch (Throwable t) {
@@ -656,10 +660,8 @@ public class GreenRuntime {
 
 	private static void establishDefaultRate(GreenRuntime runtime) {
 		
-		System.err.println("default rate "+runtime.defaultSleepRateNS);
-		
 		//by default, unless explicitly set the stages will use this sleep rate
-		GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.defaultSleepRateNS);
+		GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.getHardware().getDefaultSleepRateNS());
 	
 	}
 
@@ -680,11 +682,9 @@ public class GreenRuntime {
 
 	public void addFileServer(String path, int ... routes) {
 
-        // Strip URL space tokens from incoming path strings to avoid issues.
-        // TODO: This should be made garbage free.
-        // TODO: Is this expected behavior?
-        path = path.replaceAll("\\Q%20\\E", " ");
-				
+        File rootPath = buildFilePath(path);
+        
+        
 		//due to internal implementation we must keep the same number of outputs as inputs.
 		int r = routes.length;
 		int p = computeParaMulti();
@@ -695,8 +695,49 @@ public class GreenRuntime {
 		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
 		populatePipeArrays(r, p, inputs, outputs, routes);		
 		
-		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, new File(path));
+		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
 				
+	}
+
+    //TODO: needs a lot of re-work.
+	private File buildFilePath(String path) {
+		// Strip URL space tokens from incoming path strings to avoid issues.
+        // TODO: This should be made garbage free.
+        // TODO: Is this expected behavior?
+        path = path.replaceAll("\\Q%20\\E", " ");
+
+        //TODO: MUST FIND PATH...
+        Enumeration<URL> resource;
+		try {
+			resource = ClassLoader.getSystemResources(path);
+		
+			while (resource.hasMoreElements()) {
+				System.err.println("looking for resoruce: "+path+" and found "+String.valueOf(resource.nextElement()));
+			}
+		
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+        		
+        	//	ClassLoader.getSystemResource(path);
+        
+        
+        File rootPath = new File(path);
+        
+        if (!rootPath.exists()) {
+        	//test if this is under development
+        	File devPath = new File("./src/main/resources/"+path);
+        	if (devPath.exists()) {
+        		rootPath = devPath;
+        	}
+        }
+       
+        
+        if (!rootPath.exists()) {
+        	throw new UnsupportedOperationException("Path not found: "+rootPath);
+        }
+		return rootPath;
 	}
 
 	public void addFileServer(String resourceRoot, String resourceDefault, int ... routes) {
@@ -738,6 +779,12 @@ public class GreenRuntime {
 				outputs[idx] = builder.newNetResposnePipe(fileResponseConfig, parallelIndex);
 			}
 		}
+	}
+
+
+	//Not for general consumption, only used when we need the low level Pipes to connect directly to the pub/sub or other dynamic subsystem.
+	public static GraphManager getGraphManager(GreenRuntime runtime) {
+		return runtime.gm;
 	}
 
     

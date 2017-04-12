@@ -90,6 +90,11 @@ public class BuilderImpl implements Builder {
 	private Pipe<MessagePubSub> tempPipeOfStartupSubscriptions;
 	/////////////////
 	/////////////////
+    
+    private long defaultSleepRateNS = 1_200;//10_000;   //we will only check for new work 100 times per second to keep CPU usage low.
+
+	private final int shutdownTimeoutInSeconds = 1;
+
 
 	protected ReentrantLock devicePinConfigurationLock = new ReentrantLock();
 
@@ -98,7 +103,7 @@ public class BuilderImpl implements Builder {
 	private int bindPort = -1;
 	private boolean isLarge = false;
 	private boolean isTLS = true; 
-		
+	private boolean isTelemetryEnabled = false;
 	
 	//TODO: set these vales when we turn on the client usage??
 	private int connectionsInBit = 3; 
@@ -453,16 +458,19 @@ public class BuilderImpl implements Builder {
 		
 		final StageScheduler scheduler =  threadLimit <= 0 ? new ThreadPerStageScheduler(gm): 
 			                                                 new FixedThreadsScheduler(gm, threadLimit, threadLimitHard);
-
+		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				scheduler.shutdown();
-				scheduler.awaitTermination(30, TimeUnit.MINUTES);
+				scheduler.awaitTermination(iotDeviceRuntime.getHardware().getShutdownSeconds(), TimeUnit.SECONDS);
 			}
 		});
 		return scheduler;
 	}
 
+	private int getShutdownSeconds() {
+		return shutdownTimeoutInSeconds;
+	}
 
 	public boolean isListeningToSubscription(Object listener) {
 		return listener instanceof PubSubListener || listener instanceof StateChangeListener<?>;
@@ -610,7 +618,24 @@ public class BuilderImpl implements Builder {
 		return pipe;
 	}
 
+	public boolean isTelemetryEnabled() {
+		return isTelemetryEnabled;
+	}
 
+	@Override
+	public void enableTelemetry(boolean enable) {
+		isTelemetryEnabled = enable;
+	}
+
+
+	public long getDefaultSleepRateNS() {
+		return defaultSleepRateNS;
+	}
+
+	@Override
+	public void setDefaultRate(long ns) {
+		defaultSleepRateNS = ns;
+	}
 	
 
 

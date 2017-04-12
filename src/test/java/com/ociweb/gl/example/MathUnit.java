@@ -43,6 +43,7 @@ public class MathUnit implements RestListener {
 	
 	public MathUnit(final GreenRuntime runtime) {
 
+		
 		this.cc = runtime.newCommandChannel(/*CommandChannel.DYNAMIC_MESSAGING |*/ CommandChannel.NET_RESPONDER);
        
 		//TODO: by adding exclusive topics we can communnicated pont to point 

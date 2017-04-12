@@ -36,7 +36,7 @@ public class SimpleApp implements GreenApp {
 		
 		ADD_ID1 = builder.registerRoute("/groovyadd/%i%./%i%.");
 		ADD_ID2 = builder.registerRoute("/add/%i%./%i%.");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
-		FILE_ID1 = builder.registerRoute("/%b");//TODO: if this is first it ignores the rest of the paths, shoud fix bug
+		FILE_ID1 = builder.registerRoute("/%b");//TODO: if this is first it ignores the rest of the paths, TODO: should fix bug
 		
 		
 		//ADD_ID1 = builder.registerRoute("/groovyadd/%i/%i");
