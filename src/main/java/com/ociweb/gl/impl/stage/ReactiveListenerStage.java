@@ -65,7 +65,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     /////////////////////
     private Number stageRate;
     protected final GraphManager graphManager;
-    private int timeProcessWindow;
+    protected int timeProcessWindow;
 
     private PipeUTF8MutableCharSquence workspace = new PipeUTF8MutableCharSquence();
     private PayloadReader payloadReader;
