@@ -119,23 +119,23 @@ public class BuilderImpl implements Builder {
 	//////////////////////////////
 
 	
-	public boolean isLarge() {
+	public final boolean isLarge() {
 		return isLarge;
 	}
 	
-	public boolean isTLS() {
+	public final boolean isTLS() {
 		return isTLS;
 	}
 	
-	public String bindHost() {
+	public final String bindHost() {
 		return bindHost;
 	}
 	
-	public int bindPort() {
+	public final int bindPort() {
 		return bindPort;
 	}
 	
-    public void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
+    public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
     	
     	this.useNetServer();
     	this.isTLS = isTLS;
@@ -146,7 +146,7 @@ public class BuilderImpl implements Builder {
     }
 
     
-    public HTTP1xRouterStageConfig routerConfig() {
+    public final HTTP1xRouterStageConfig routerConfig() {
     	return routerConfig;
     }
     
@@ -156,7 +156,7 @@ public class BuilderImpl implements Builder {
     private ArrayList<Pipe<HTTPRequestSchema>>[][] collectedHTTPRequstPipes;
 	private ArrayList<Pipe<ServerResponseSchema>>[] collectedServerResponsePipes;
     
-	public void recordPipeMapping(Pipe<HTTPRequestSchema> httpRequestPipe, int routeIdx, int parallelId) {
+	public final void recordPipeMapping(Pipe<HTTPRequestSchema> httpRequestPipe, int routeIdx, int parallelId) {
 		
 		if (null==collectedHTTPRequstPipes) {
 			
@@ -186,14 +186,14 @@ public class BuilderImpl implements Builder {
 	}
 	
 	
-	public Pipe<HTTPRequestSchema>[] buildFromRequestArray(int r, int p) {
+	public final Pipe<HTTPRequestSchema>[] buildFromRequestArray(int r, int p) {
 		ArrayList<Pipe<HTTPRequestSchema>> list = collectedHTTPRequstPipes[r][p];
 		return (Pipe<HTTPRequestSchema>[]) list.toArray(new Pipe[list.size()]);
 	}
 	
 	
 	
-	public void recordPipeMapping(Pipe<ServerResponseSchema> netResponse, int parallelInstanceId) {
+	public final void recordPipeMapping(Pipe<ServerResponseSchema> netResponse, int parallelInstanceId) {
 		
 		if (null == collectedServerResponsePipes) {
 			int parallelism = parallelism();
@@ -211,13 +211,13 @@ public class BuilderImpl implements Builder {
 	}
 	
 
-	public Pipe<ServerResponseSchema>[] buildToOrderArray(int r) {
+	public final Pipe<ServerResponseSchema>[] buildToOrderArray(int r) {
 		ArrayList<Pipe<ServerResponseSchema>> list = collectedServerResponsePipes[r];
 		return (Pipe<ServerResponseSchema>[]) list.toArray(new Pipe[list.size()]);
 	}
 	
 	
-    public Pipe<ServerResponseSchema> newNetResposnePipe(PipeConfig<ServerResponseSchema> config, int parallelInstanceId) {
+    public final Pipe<ServerResponseSchema> newNetResposnePipe(PipeConfig<ServerResponseSchema> config, int parallelInstanceId) {
     	Pipe<ServerResponseSchema> pipe = new Pipe<ServerResponseSchema>(config) {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -230,7 +230,7 @@ public class BuilderImpl implements Builder {
     }
 	
     //liniear search only used once in startup method for the stage.
-	public void lookupRouteAndPara(Pipe<?> localPipe, int idx, int[] routes, int[] para) {
+	public final void lookupRouteAndPara(Pipe<?> localPipe, int idx, int[] routes, int[] para) {
 		int p = parallelism();
 
 		while (--p >= 0) {
@@ -257,7 +257,7 @@ public class BuilderImpl implements Builder {
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
 	}
 
-	public <E extends Enum<E>> boolean isValidState(E state) {
+	public final <E extends Enum<E>> boolean isValidState(E state) {
 
 		if (null!=beginningState) {
 			return beginningState.getClass()==state.getClass();    		
@@ -265,18 +265,18 @@ public class BuilderImpl implements Builder {
 		return false;
 	}
 
-	public <E extends Enum<E>> Builder startStateMachineWith(E state) {   	
+	public final <E extends Enum<E>> Builder startStateMachineWith(E state) {   	
 		beginningState = state;	
 		return this;
 	}
 
-	public Builder setTriggerRate(long rateInMS) {
+	public final Builder setTriggerRate(long rateInMS) {
 		timeTriggerRate = rateInMS;
 		timeTriggerStart = System.currentTimeMillis()+rateInMS;
 		return this;
 	}
 	
-	public Builder setTriggerRate(TimeTrigger trigger) {	
+	public final Builder setTriggerRate(TimeTrigger trigger) {	
 		long period = trigger.getRate();
 		timeTriggerRate = period;
 		long now = System.currentTimeMillis();		
@@ -285,33 +285,33 @@ public class BuilderImpl implements Builder {
 		return this;
 	}
 
-	public Builder useNetClient() {
+	public final Builder useNetClient() {
 		this.useNetClient = true;
 		return this;
 	}
 
-	public Builder useNetServer() {
+	public final Builder useNetServer() {
 		this.useNetServer = true;
 		return this;
 	}
 
-	public boolean isUseNetServer() {
+	public final boolean isUseNetServer() {
 		return this.useNetServer;
 	}
 
 	
-	public long getTriggerRate() {
+	public final long getTriggerRate() {
 		return timeTriggerRate;
 	}
-	public long getTriggerStart() {
+	public final long getTriggerStart() {
 		return timeTriggerStart;
 	}
 
-    public ReactiveListenerStage createReactiveListener(GraphManager gm,  Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes) {
-        return new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this);
+    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes) {
+        return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this);
     }
 
-	public CommandChannel newCommandChannel(
+	public final CommandChannel newCommandChannel(
 												int features,
 			                                    int parallelInstanceId,
 											    PipeConfig<MessagePubSub> pubSubConfig,
@@ -437,12 +437,12 @@ public class BuilderImpl implements Builder {
 	       
 	}
 
-	private boolean useNetClient(IntHashTable netPipeLookup, Pipe<NetResponseSchema>[] netResponsePipes, Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
+	private final boolean useNetClient(IntHashTable netPipeLookup, Pipe<NetResponseSchema>[] netResponsePipes, Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
 
 		return !IntHashTable.isEmpty(netPipeLookup) && (netResponsePipes.length!=0) && (netRequestPipes.length!=0);
 	}
 
-	private void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
+	private final void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
 			Pipe<MessagePubSub>[] messagePubSub,
 			Pipe<TrafficReleaseSchema>[] masterMsggoOut, 
 			Pipe<TrafficAckSchema>[] masterMsgackIn, 
@@ -454,7 +454,7 @@ public class BuilderImpl implements Builder {
 
 	}
 
-	public StageScheduler createScheduler(GreenRuntime iotDeviceRuntime) {
+	public final StageScheduler createScheduler(GreenRuntime iotDeviceRuntime) {
 		
 		final StageScheduler scheduler =  threadLimit <= 0 ? new ThreadPerStageScheduler(gm): 
 			                                                 new FixedThreadsScheduler(gm, threadLimit, threadLimitHard);
@@ -468,19 +468,19 @@ public class BuilderImpl implements Builder {
 		return scheduler;
 	}
 
-	private int getShutdownSeconds() {
+	private final int getShutdownSeconds() {
 		return shutdownTimeoutInSeconds;
 	}
 
-	public boolean isListeningToSubscription(Object listener) {
+	public final boolean isListeningToSubscription(Object listener) {
 		return listener instanceof PubSubListener || listener instanceof StateChangeListener<?>;
 	}
 
-	public boolean isListeningToHTTPResponse(Object listener) {
+	public final boolean isListeningToHTTPResponse(Object listener) {
 		return listener instanceof HTTPResponseListener;
 	}
 
-	public boolean isListeningHTTPRequest(Object listener) {
+	public final boolean isListeningHTTPRequest(Object listener) {
 		return listener instanceof RestListener;
 	}
 	
@@ -491,11 +491,11 @@ public class BuilderImpl implements Builder {
 		return System.currentTimeMillis();
 	}
 
-	public void blockChannelUntil(int channelId, long timeInMillis) {        
+	public final void blockChannelUntil(int channelId, long timeInMillis) {        
 		channelBlocker.until(channelId, timeInMillis);
 	}
 
-	public boolean isChannelBlocked(int channelId) {
+	public final boolean isChannelBlocked(int channelId) {
 		if (null != channelBlocker)  {
 			return channelBlocker.isBlocked(channelId);
 		} else {
@@ -503,7 +503,7 @@ public class BuilderImpl implements Builder {
 		}
 	}
 
-	public long releaseChannelBlocks(long now) {
+	public final long releaseChannelBlocks(long now) {
 		if (null != channelBlocker) {
 			channelBlocker.releaseBlocks(now);
 			return channelBlocker.durationToNextRelease(now, -1);
@@ -512,15 +512,15 @@ public class BuilderImpl implements Builder {
 		}
 	}
 
-	public long nanoTime() {
+	public final long nanoTime() {
 		return System.nanoTime();
 	}
 
-	public Enum[] getStates() {
+	public final Enum[] getStates() {
 		return null==beginningState? new Enum[0] : beginningState.getClass().getEnumConstants();
 	}
 
-	public void addStartupSubscription(CharSequence topic, int systemHash) {
+	public final void addStartupSubscription(CharSequence topic, int systemHash) {
 
 		Pipe<MessagePubSub> pipe = getTempPipeOfStartupSubscriptions();
 
@@ -533,7 +533,7 @@ public class BuilderImpl implements Builder {
 		}
 	}
 
-	private Pipe<MessagePubSub> getTempPipeOfStartupSubscriptions() {
+	private final Pipe<MessagePubSub> getTempPipeOfStartupSubscriptions() {
 		if (null==tempPipeOfStartupSubscriptions) {
 
 			final PipeConfig<MessagePubSub> messagePubSubConfig = new PipeConfig<MessagePubSub>(MessagePubSub.instance, maxStartupSubs,maxTopicLengh);   
@@ -544,14 +544,14 @@ public class BuilderImpl implements Builder {
 		return tempPipeOfStartupSubscriptions;
 	}
 
-	public Pipe<MessagePubSub> consumeStartupSubscriptions() {
+	public final Pipe<MessagePubSub> consumeStartupSubscriptions() {
 		Pipe<MessagePubSub> result = tempPipeOfStartupSubscriptions;
 		tempPipeOfStartupSubscriptions = null;//no longer needed
 		return result;
 	}
 
 	@Override
-	public void limitThreads(int threadLimit) {
+	public final void limitThreads(int threadLimit) {
 		this.threadLimit = threadLimit;
 		this.threadLimitHard = true;
 	}
@@ -562,24 +562,24 @@ public class BuilderImpl implements Builder {
 		this.threadLimitHard = false;
 	}
 
-	public int parallelism() {
+	public final int parallelism() {
 		return parallelism;
 	}
 
 	@Override
-	public void parallelism(int parallel) {
+	public final void parallelism(int parallel) {
 		parallelism = parallel;
 	}
 
 	
 	@Override
-	public int registerRoute(CharSequence route, HTTPHeaderKey ... headers) {
+	public final int registerRoute(CharSequence route, HTTPHeaderKey ... headers) {
 		
 		return routerConfig.registerRoute(route, headerMask(headers));
 
 	}
 
-	private long headerMask(HTTPHeaderKey... headers) {
+	private final long headerMask(HTTPHeaderKey... headers) {
 		long headerLong = 0;
 		int i = headers.length;
 		while (--i>=0) {
@@ -595,19 +595,19 @@ public class BuilderImpl implements Builder {
 	}
 
 
-	public ClientCoordinator getClientCoordinator() {
+	public final ClientCoordinator getClientCoordinator() {
 
 		return useNetClient ? new ClientCoordinator(connectionsInBit, maxPartialResponse) : null;
 		
 	}
 
-	public Pipe<HTTPRequestSchema> createHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig, int routeIndex, int parallelInstance) {
+	public final Pipe<HTTPRequestSchema> createHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig, int routeIndex, int parallelInstance) {
 		Pipe<HTTPRequestSchema> pipe = newHTTPRequestPipe(restPipeConfig);		
 		recordPipeMapping(pipe, routeIndex, parallelInstance);		
 		return pipe;
 	}
 
-	public Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {
+	public final Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {
 		Pipe<HTTPRequestSchema> pipe = new Pipe<HTTPRequestSchema>(restPipeConfig) {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -618,22 +618,22 @@ public class BuilderImpl implements Builder {
 		return pipe;
 	}
 
-	public boolean isTelemetryEnabled() {
+	public final boolean isTelemetryEnabled() {
 		return isTelemetryEnabled;
 	}
 
 	@Override
-	public void enableTelemetry(boolean enable) {
+	public final void enableTelemetry(boolean enable) {
 		isTelemetryEnabled = enable;
 	}
 
 
-	public long getDefaultSleepRateNS() {
+	public final long getDefaultSleepRateNS() {
 		return defaultSleepRateNS;
 	}
 
 	@Override
-	public void setDefaultRate(long ns) {
+	public final void setDefaultRate(long ns) {
 		defaultSleepRateNS = ns;
 	}
 	

@@ -17,14 +17,14 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Blocker;
 
-public abstract class AbstractTrafficOrderedStage extends PronghornStage {
+public abstract class AbstractTrafficOrderedStage<H extends BuilderImpl> extends PronghornStage {
 
 	private final int MAX_DEVICES = 127; //do not know of any hardware yet with more connections than this.
 
 	private final Pipe<TrafficReleaseSchema>[] goPipe;
 	private final Pipe<TrafficAckSchema>[] ackPipe;
 
-	protected final BuilderImpl hardware;
+	protected final H hardware;
 	private Blocker connectionBlocker;
 		
 	protected int[] activeCounts;	
@@ -63,7 +63,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	 * @param ackPipe
 	 */
 	public AbstractTrafficOrderedStage(GraphManager graphManager, 
-			BuilderImpl hardware,
+			H hardware,
 			Pipe<?>[] output,
 			Pipe<TrafficReleaseSchema>[] goPipe, Pipe<TrafficAckSchema>[] ackPipe, Pipe<?> ... otherResponse ) {
 

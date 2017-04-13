@@ -1,7 +1,5 @@
 package com.ociweb.gl.impl.stage;
 
-import java.util.Arrays;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,17 +18,15 @@ import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
-import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
-import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
-public class ReactiveListenerStage extends PronghornStage implements ListenerFilter {
+public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage implements ListenerFilter {
 
     protected final Object              listener;
     
@@ -42,7 +38,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
     protected long                      timeTrigger;
     protected long                      timeRate;   
     
-    protected BuilderImpl					hardware;
+    protected H			        		hardware;
   
     private static final Logger logger = LoggerFactory.getLogger(ReactiveListenerStage.class); 
      
@@ -53,9 +49,9 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
     private static final int MAX_PORTS = 10;
  
     
-    private final Enum[] states;
+    protected final Enum[] states;
     
-    private boolean timeEvents = false;
+    protected boolean timeEvents = false;
     
     /////////////////////
     //Listener Filters
@@ -68,7 +64,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 		
     /////////////////////
     private Number stageRate;
-    private final GraphManager graphManager;
+    protected final GraphManager graphManager;
     private int timeProcessWindow;
 
     private PipeUTF8MutableCharSquence workspace = new PipeUTF8MutableCharSquence();
@@ -83,7 +79,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
     
     
     
-    public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, BuilderImpl hardware) {
+    public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H hardware) {
 
         
         super(graphManager, inputPipes, outputPipes);
@@ -104,7 +100,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
     }
 
     
-    public void setTimeEventSchedule(long rate, long start) {
+    public final void setTimeEventSchedule(long rate, long start) {
         
         timeRate = rate;
         timeTrigger = start;
@@ -186,7 +182,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
     }
 
     
-    private void consumeRestRequest(RestListener listener, Pipe<HTTPRequestSchema> p, final int routeId, final int parallelIdx) {
+    protected final void consumeRestRequest(RestListener listener, Pipe<HTTPRequestSchema> p, final int routeId, final int parallelIdx) {
 		
     	  while (Pipe.hasContentToRead(p)) {                
               
@@ -243,7 +239,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 	}
 
 
-	private void consumeNetResponse(HTTPResponseListener listener, Pipe<NetResponseSchema> p) {
+	protected final void consumeNetResponse(HTTPResponseListener listener, Pipe<NetResponseSchema> p) {
 				
     	 while (Pipe.hasContentToRead(p)) {                
              
@@ -329,7 +325,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 //	public static final int MSG_STATECHANGED_71_FIELD_OLDORDINAL_8 = 0x00000001;
 //	public static final int MSG_STATECHANGED_71_FIELD_NEWORDINAL_9 = 0x00000002;
 	
-	private void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {
+	protected final void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {
 				
 		//TODO: Pipe.markHead(p); change all calls to low level API then add support for mark.		
 		
@@ -409,7 +405,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 
 	private static final long MS_to_NS = 1_000_000;
 
-	private void processTimeEvents(TimeListener listener, long trigger) {
+	private final void processTimeEvents(TimeListener listener, long trigger) {
 		
 		long msRemaining = (trigger-hardware.currentTimeMillis()); 
 		if (msRemaining > timeProcessWindow) {
@@ -434,21 +430,21 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 
             
     
-    private boolean isNotExcluded(int newOrdinal, long[] excluded) {
+    private final boolean isNotExcluded(int newOrdinal, long[] excluded) {
     	if (null!=excluded) {
     		return 0 == (excluded[newOrdinal>>6] & (1L<<(newOrdinal & 0x3F)));			
 		}
 		return true;
 	}
 
-	private boolean isIncluded(int newOrdinal, long[] included) {
+	private final boolean isIncluded(int newOrdinal, long[] included) {
 		if (null!=included) {			
 			return 0 != (included[newOrdinal>>6] & (1L<<(newOrdinal & 0x3F)));
 		}
 		return true;
 	}
 	
-	private <T> boolean isNotExcluded(T port, T[] excluded) {
+	private final <T> boolean isNotExcluded(T port, T[] excluded) {
 		if (null!=excluded) {
 			int e = excluded.length;
 			while (--e>=0) {
@@ -460,7 +456,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 		return true;
 	}
 
-	private boolean isNotExcluded(int a, int[] excluded) {
+	private final boolean isNotExcluded(int a, int[] excluded) {
 		if (null!=excluded) {
 			int e = excluded.length;
 			while (--e>=0) {
@@ -472,7 +468,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 		return true;
 	}
 	
-	private <T> boolean isIncluded(T port, T[] included) {
+	private final <T> boolean isIncluded(T port, T[] included) {
 		if (null!=included) {
 			int i = included.length;
 			while (--i>=0) {
@@ -485,7 +481,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 		return true;
 	}
 	
-	private boolean isIncluded(int a, int[] included) {
+	private final boolean isIncluded(int a, int[] included) {
 		if (null!=included) {
 			int i = included.length;
 			while (--i>=0) {
@@ -500,7 +496,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 	
 
 	@Override
-	public ListenerFilter includeRoutes(int... routeIds) {
+	public final ListenerFilter includeRoutes(int... routeIds) {
 		if (listener instanceof RestListener) {
 			
 			throw new UnsupportedOperationException("Not yet implemented");
@@ -515,7 +511,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 
 
 	@Override
-	public ListenerFilter excludeRoutes(int... routeIds) {
+	public final ListenerFilter excludeRoutes(int... routeIds) {
 		if (listener instanceof RestListener) {
 			
 			throw new UnsupportedOperationException("Not yet implemented");
@@ -530,7 +526,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 	
 	
 	@Override
-	public ListenerFilter addSubscription(CharSequence topic) {		
+	public final ListenerFilter addSubscription(CharSequence topic) {		
 		if (!startupCompleted && listener instanceof PubSubListener) {
 			hardware.addStartupSubscription(topic, System.identityHashCode(listener));		
 			return this;
@@ -544,7 +540,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 	}
 
 	@Override
-	public <E extends Enum<E>> ListenerFilter includeStateChangeTo(E ... state) {	
+	public final <E extends Enum<E>> ListenerFilter includeStateChangeTo(E ... state) {	
 		if (!startupCompleted && listener instanceof StateChangeListener) {
 			includedToStates = buildMaskArray(state);
 			return this;
@@ -558,7 +554,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 	}
 
 	@Override
-	public <E extends Enum<E>> ListenerFilter excludeStateChangeTo(E ... state) {
+	public final <E extends Enum<E>> ListenerFilter excludeStateChangeTo(E ... state) {
 		if (!startupCompleted && listener instanceof StateChangeListener) {
 			excludedToStates = buildMaskArray(state);
 			return this;
@@ -573,12 +569,12 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 
 	
 	@Override
-	public <E extends Enum<E>> ListenerFilter includeStateChangeToAndFrom(E ... state) {
+	public final <E extends Enum<E>> ListenerFilter includeStateChangeToAndFrom(E ... state) {
 		return includeStateChangeTo(state).includeStateChangeFrom(state);
 	}
 	
 	@Override
-	public <E extends Enum<E>> ListenerFilter includeStateChangeFrom(E ... state) {
+	public final <E extends Enum<E>> ListenerFilter includeStateChangeFrom(E ... state) {
 		if (!startupCompleted && listener instanceof StateChangeListener) {
 			includedFromStates = buildMaskArray(state);
 			return this;
@@ -592,7 +588,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 	}
 
 	@Override
-	public <E extends Enum<E>> ListenerFilter excludeStateChangeFrom(E ... state) {
+	public final <E extends Enum<E>> ListenerFilter excludeStateChangeFrom(E ... state) {
 		if (!startupCompleted && listener instanceof StateChangeListener) {
 			excludedFromStates = buildMaskArray(state);
 			return this;
@@ -605,7 +601,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 		}
 	} 
 	
-	private <E extends Enum<E>> long[] buildMaskArray(E[] state) {
+	private final <E extends Enum<E>> long[] buildMaskArray(E[] state) {
 		int maxOrdinal = findMaxOrdinal(state);
 		int a = maxOrdinal >> 6;
 		int b = maxOrdinal & 0x3F;		
@@ -621,7 +617,7 @@ public class ReactiveListenerStage extends PronghornStage implements ListenerFil
 		return array;
 	}
 
-	private <E extends Enum<E>> int findMaxOrdinal(E[] state) {
+	private final <E extends Enum<E>> int findMaxOrdinal(E[] state) {
 		int maxOrdinal = -1;
 		int i = state.length;
 		while (--i>=0) {
