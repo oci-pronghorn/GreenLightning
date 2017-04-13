@@ -79,11 +79,10 @@ public class MathUnit implements RestListener {
 //      writer.close();
 ///////		
 		
-		//TODO: all reactiveListeners must accept the header block, then params, then post. we can skip over the headers if extras are provided.
-		//      each listener must be able to request headers if needed.
-		
+
 		
 		populateResponseStringBuilders(request);
+	
 		
 		//optional but without it we must chunk, if it does not match lengh we will throw..
 		int length = part1.length+a.length()+
@@ -127,66 +126,37 @@ public class MathUnit implements RestListener {
 //example code for sending response with follow on parts
 //output = cc.openHTTPResponseContinuation(connectionId, sequenceNo, context);
 //////////////////////
-	//	System.err.println("XXXXXXXXXXXXX CALLED RESULTS "+a+"  "+b+"  "+c);
-		
-		return writer.isPresent(); //if false is returned then this method will be called again later with the same inputs.
-		
-		
-		
-		
-		
-		//return true that we consumed the request and false if we need it to come back later?
-		
-		//URGENT -- enough to test 1 listener with immediate response
-		
-		// runtime parallel init with router and order on each end (plus web server integration)
 
-		//IMPORTANT -- enough to relay to 1 extra listenr and respond
-		
-		// command channel startup support for exclusive topics (point to point)
-		// add exclusive direct connectoin support for messages
-		
-		//GOOOD - enough to have easier readability and debugging.
-		
-		// add %d  into the trie parser for readability ...
-		// add full dot support for graph inspection
-		
-		
-		
+		return writer.isPresent(); //if false is returned then this method will be called again later with the same inputs.
+
 	}
 	
 
 	
 	private void populateResponseStringBuilders(DataInputBlobReader<HTTPRequestSchema> inputStream) {
 		
-		//inputStream.readDecimalAsDouble();// TODO:   these are %i%. values perhapse they need a better name %d ?
-		
-		long m1 = inputStream.readPackedLong(); //TODO: confirm that the capture logic returns the values in this format.
-		byte e1 = inputStream.readByte();
-				
-		
-		//logger.info("Value a {} {}",m1,e1);		
-		
-		
-		long m2 = inputStream.readPackedLong();
-		byte e2 = inputStream.readByte();
-		
-				
-		//logger.info("Value b {} {}",m2,e2);
-		
-		
-		//NOTE: if headers are requested they will appear after the arguments.
-		
-		a.setLength(0);
-		Appendables.appendDecimalValue(a, m1, e1);
-		
-		b.setLength(0);
-		Appendables.appendDecimalValue(b, m2, e2);
+		double a = inputStream.readDecimalAsDouble();
+		double b = inputStream.readDecimalAsDouble();
 		
 		c.setLength(0);
-		Decimal.sum(m1, e1, m2, e2, (m,e)->{
-			Appendables.appendDecimalValue(c, m, e);			
-		});
+		c.append(a+b);
+
+//Here is the lower level, fixed position implementation		
+//		long m1 = inputStream.readPackedLong(); 
+//		byte e1 = inputStream.readByte();
+//		
+//		long m2 = inputStream.readPackedLong();
+//		byte e2 = inputStream.readByte();
+//		a.setLength(0);
+//		Appendables.appendDecimalValue(a, m1, e1);
+//		
+//		b.setLength(0);
+//		Appendables.appendDecimalValue(b, m2, e2);
+//		
+//		c.setLength(0);
+//		Decimal.sum(m1, e1, m2, e2, (m,e)->{
+//			Appendables.appendDecimalValue(c, m, e);			
+//		});
 	
 		
 	}	

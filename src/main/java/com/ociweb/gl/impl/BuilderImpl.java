@@ -57,8 +57,8 @@ public class BuilderImpl implements Builder {
 	protected boolean useNetClient;
 	protected boolean useNetServer;
 
-	private long timeTriggerRate;
-	private long timeTriggerStart;
+	protected long timeTriggerRate;
+	protected long timeTriggerStart;
 		
 	private Blocker channelBlocker;
 
