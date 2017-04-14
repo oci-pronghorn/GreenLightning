@@ -32,11 +32,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private short[] subscriberLists;
     private int totalSubscriberLists;
     
-    private TrieParser localSubscriptionTrie;    
- 
-    private TrieParserReader trieReader;
-    
-    
+    private TrieParser localSubscriptionTrie;
+    private TrieParserReader localSubscriptionTrieReader;
+        
     private IntHashTable subscriptionPipeLookup;
     
     private int[] pendingPublish; //remaining pipes that this pending message must be published to
@@ -156,9 +154,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         
         this.subscriberLists = new short[maxLists*subscriberListSize];       
         Arrays.fill(this.subscriberLists, (short)-1);
-        this.localSubscriptionTrie = new TrieParser(maxLists * estimatedTopicLength,1,false,false);
+        this.localSubscriptionTrie = new TrieParser(maxLists * estimatedTopicLength,1,false,true);//must support extraction for wild cards.
 
-        this.trieReader = new TrieParserReader();
+        //this reader is set up for complete text only, all topics are sent in complete.
+        this.localSubscriptionTrieReader = new TrieParserReader(2,true);
 
         this.pendingPublish = new int[subscriberListSize];
         
@@ -338,7 +337,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         
                         //selects the topics pipe
                       
-                        int listIdx = (int) TrieParserReader.query(trieReader, localSubscriptionTrie, backing, pos, len, mask);
+                        int listIdx = (int) TrieParserReader.query(localSubscriptionTrieReader, localSubscriptionTrie, backing, pos, len, mask);
+                        
+                        //logger.info("trie lookup got value {}  for text {} ",listIdx, Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask));
+                        
                         if (listIdx>=0) {
                         	
                         	if (hasNextSubscriber(listIdx)) {
@@ -402,13 +404,17 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	private void addSubscription(final short pipeIdx, final byte[] backing, final int pos, final int len, final int mask) {
 
 		
-		int listIdx = (int) TrieParserReader.query(trieReader, localSubscriptionTrie, backing, pos, len, mask);
+		int listIdx = (int) TrieParserReader.query(localSubscriptionTrieReader, localSubscriptionTrie, backing, pos, len, mask);
+		//logger.info("adding new subscription {} found it {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
 		
 		if (listIdx<0) {
 		    //create new subscription
 		    listIdx = subscriberListSize*totalSubscriberLists++;
-		    //System.err.println("Adding new subcription with value "+listIdx);
+		    //System.err.println("Adding new subscription with value "+listIdx);
 		    localSubscriptionTrie.setValue(backing, pos, len, mask, listIdx);
+			
+		    //logger.info("set new subscription {} found it {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
+
 		}
 		
 		//add index on first -1 or stop if value already found                    

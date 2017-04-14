@@ -573,12 +573,14 @@ public class BuilderImpl implements Builder {
 
 	
 	@Override
-	public final int registerRoute(CharSequence route, HTTPHeaderKey ... headers) {
-		
+	public final int registerRoute(CharSequence route, HTTPHeaderKey ... headers) {		
 		return routerConfig.registerRoute(route, headerMask(headers));
-
 	}
 
+	public final byte[] extractionPattern(int route) {
+		return routerConfig.extractionPattern(route);
+	}
+	
 	private final long headerMask(HTTPHeaderKey... headers) {
 		long headerLong = 0;
 		int i = headers.length;

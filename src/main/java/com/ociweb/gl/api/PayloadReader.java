@@ -11,6 +11,13 @@ public class PayloadReader extends DataInputBlobReader{
     }
     
     
+    void setPattern(byte[] dataPattern) {
+    	
+    	//TODO: keeping this data pattern will alow for methods like    pr.readAsDouble(ordinalPos)
+    	//TODO: cache indexes as we go...
+    	
+    }
+    
     //TODO: requires support for mark
     //TODO: as with PayloadWriter needs a bounds check for the makers
     
