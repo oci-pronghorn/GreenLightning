@@ -180,6 +180,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         
         
     }
+    
+    @Override    
+    public void shutdown() {
+    }
 
     
     protected final void consumeRestRequest(RestListener listener, Pipe<HTTPRequestSchema> p, final int routeId, final int parallelIdx) {
