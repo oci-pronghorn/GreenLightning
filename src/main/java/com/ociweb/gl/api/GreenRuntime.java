@@ -1,9 +1,7 @@
 package com.ociweb.gl.api;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.ArrayList;
@@ -18,22 +16,13 @@ import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
-import com.ociweb.pronghorn.network.HTTP1xRouterStage;
-import com.ociweb.pronghorn.network.HTTP1xRouterStageConfig;
-import com.ociweb.pronghorn.network.HTTPServerConfig;
-import com.ociweb.pronghorn.network.ModuleConfig;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
-import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPHeaderKeyDefaults;
-import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
-import com.ociweb.pronghorn.network.config.HTTPSpecification;
-import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
+import com.ociweb.pronghorn.network.http.HTTPServerConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
@@ -641,16 +630,21 @@ public class GreenRuntime {
 			PipeCleanerStage.newInstance(runtime.gm, forPipeCleaner.toArray(new Pipe[forPipeCleaner.size()]));
 		}
 		
-		NetGraphBuilder.buildRouters(runtime.gm, routerCount, planIncomingGroup, acks, fromRouterToModules, routerConfig, serverCoord); 
-		
-		
-		
 		//NOTE: building arrays of pipes grouped by parallel/routers heading out to order supervisor		
 		Pipe<ServerResponseSchema>[][] fromModulesToOrderSuper = new Pipe[routerCount][];
+		Pipe<ServerResponseSchema>[] errorResponsePipes = new Pipe[routerCount];
+		PipeConfig<ServerResponseSchema> errConfig = ServerResponseSchema.instance.newPipeConfig(4, 512);
 		int r = routerCount;
 		while (--r>=0) {
-			fromModulesToOrderSuper[r] = runtime.builder.buildToOrderArray(r);			
+			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
+			fromModulesToOrderSuper[r] = PronghornStage.join(runtime.builder.buildToOrderArray(r),errorResponsePipes[r]);			
 		}
+		
+		NetGraphBuilder.buildRouters(runtime.gm, routerCount, planIncomingGroup, acks, fromRouterToModules, errorResponsePipes, routerConfig, serverCoord); 
+		
+		
+		
+		
 		NetGraphBuilder.buildRemainderOfServerStages(runtime.builder.isTLS(), runtime.gm, serverCoord, routerCount, serverConfig, handshakeIncomingGroup, fromModulesToOrderSuper);
 	}
 
