@@ -2,7 +2,7 @@ package com.ociweb.gl.impl.schema;
 
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.MessageSchema;
-public class TrafficReleaseSchema extends MessageSchema {
+public class TrafficReleaseSchema extends MessageSchema<TrafficReleaseSchema> {
 
     public final static FieldReferenceOffsetManager FROM = new FieldReferenceOffsetManager(
             new int[]{0xc0400002,0x80000000,0xc0200002},

@@ -18,12 +18,14 @@ import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
+import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
-import com.ociweb.pronghorn.network.http.HTTPServerConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
+import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
+import com.ociweb.pronghorn.network.schema.ReleaseSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -549,18 +551,19 @@ public class GreenRuntime {
 	private static void buildGraphForServer(GreenApp app, GreenRuntime runtime) {
 		
 		
-		HTTPServerConfig serverConfig = new HTTPServerConfig(runtime.builder.isLarge(), runtime.builder.isTLS());
+		ServerPipesConfig serverConfig = new ServerPipesConfig(runtime.builder.isLarge(), runtime.builder.isTLS());
 
-		ServerCoordinator serverCoord = new ServerCoordinator((String) runtime.builder.bindHost(), runtime.builder.bindPort(), 
+		ServerCoordinator serverCoord = new ServerCoordinator( runtime.builder.isTLS(),
+															   (String) runtime.builder.bindHost(), runtime.builder.bindPort(), 
 				                                               serverConfig.maxConnectionBitsOnServer, 
 				                                               serverConfig.maxPartialResponsesServer, 
 				                                               runtime.getHardware().parallelism());
 		
 		final int routerCount = runtime.getHardware().parallelism();
 		
-		final Pipe[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);           
+		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);           
 		
-		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(runtime.builder.isTLS(), runtime.gm, serverCoord, routerCount, serverConfig, encryptedIncomingGroup);
+		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(runtime.gm, serverCoord, routerCount, serverConfig, encryptedIncomingGroup);
 		               
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
@@ -580,7 +583,7 @@ public class GreenRuntime {
 	}
 
 
-	private static void buildLastHalfOfGraphForServer(GreenApp app, GreenRuntime runtime, HTTPServerConfig serverConfig,
+	private static void buildLastHalfOfGraphForServer(GreenApp app, GreenRuntime runtime, ServerPipesConfig serverConfig,
 			ServerCoordinator serverCoord, final int routerCount, Pipe[] acks, Pipe[] handshakeIncomingGroup,
 			Pipe[] planIncomingGroup) {
 		////////////////////////
@@ -640,12 +643,15 @@ public class GreenRuntime {
 			fromModulesToOrderSuper[r] = PronghornStage.join(runtime.builder.buildToOrderArray(r),errorResponsePipes[r]);			
 		}
 		
-		NetGraphBuilder.buildRouters(runtime.gm, routerCount, planIncomingGroup, acks, fromRouterToModules, errorResponsePipes, routerConfig, serverCoord); 
+		NetGraphBuilder.buildRouters(runtime.gm, routerCount, planIncomingGroup, acks, fromRouterToModules, errorResponsePipes, routerConfig, serverCoord);
+		boolean isTLS = runtime.builder.isTLS();
+		final GraphManager graphManager = runtime.gm; 
 		
+				
+		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOfServerStages(graphManager, serverCoord,
+				                                            serverConfig, handshakeIncomingGroup);
 		
-		
-		
-		NetGraphBuilder.buildRemainderOfServerStages(runtime.builder.isTLS(), runtime.gm, serverCoord, routerCount, serverConfig, handshakeIncomingGroup, fromModulesToOrderSuper);
+		NetGraphBuilder.buildOrderingSupers(graphManager, serverCoord, routerCount, fromModulesToOrderSuper, fromOrderedContent);
 	}
 
 

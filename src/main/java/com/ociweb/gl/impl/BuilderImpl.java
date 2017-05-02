@@ -399,7 +399,8 @@ public class BuilderImpl implements Builder {
 			
 			int connectionsInBits=10;			
 			int maxPartialResponses=4;
-			ClientCoordinator ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses);
+			boolean isTLS = true;
+			ClientCoordinator ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
 
 			//TODO: tie this in tonight.
 			int inputsCount = 1;
@@ -412,8 +413,8 @@ public class BuilderImpl implements Builder {
 			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[TYPE_NET], masterAckIn[TYPE_NET], clientRequests);
 			
 			
-			NetGraphBuilder.buildHTTPClientGraph(true, gm, maxPartialResponses, ccm, netPipeLookup, 10, 1<<15, 
-					                             clientRequests, netResponsePipes);
+			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, netPipeLookup, 10, 1<<15, clientRequests, 
+					                             netResponsePipes);
 						
 		}// else {
 			//System.err.println("skipped  "+IntHashTable.isEmpty(netPipeLookup)+"  "+netResponsePipes.length+"   "+netRequestPipes.length  );
@@ -599,8 +600,8 @@ public class BuilderImpl implements Builder {
 
 
 	public final ClientCoordinator getClientCoordinator() {
-
-		return useNetClient ? new ClientCoordinator(connectionsInBit, maxPartialResponse) : null;
+		boolean isTLS = true;
+		return useNetClient ? new ClientCoordinator(connectionsInBit, maxPartialResponse, isTLS) : null;
 		
 	}
 

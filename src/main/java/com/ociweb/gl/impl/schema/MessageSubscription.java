@@ -2,7 +2,7 @@ package com.ociweb.gl.impl.schema;
 
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.MessageSchema;
-public class MessageSubscription extends MessageSchema {
+public class MessageSubscription extends MessageSchema<MessageSubscription> {
 
 
 	public final static FieldReferenceOffsetManager FROM = new FieldReferenceOffsetManager(
