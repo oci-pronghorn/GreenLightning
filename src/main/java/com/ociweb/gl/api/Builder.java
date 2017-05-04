@@ -49,6 +49,8 @@ public interface Builder {
 
 	void parallelism(int parallel);
 
+	long fieldId(int routeId, byte[] fieldName);
+	
 	int registerRoute(CharSequence route, HTTPHeaderKey ... headers);
       
 	public void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);

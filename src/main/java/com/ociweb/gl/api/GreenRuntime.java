@@ -111,14 +111,7 @@ public class GreenRuntime {
 		}
 
     };
-   
-    public byte[] getExtractionPattern(int route) {
-    	
-    	//TODO: this can be used to build a method like    readAsDouble(pattern, stream, idx) or value could be in reader??
-    	
-    	return builder.extractionPattern(route);
-    }
-    
+
     private void resetGatherPipesVisitor() {
     	outputPipes = new Pipe<?>[0];
     	httpRequestPipes = (Pipe<HTTPRequestSchema>[]) new Pipe<?>[0];

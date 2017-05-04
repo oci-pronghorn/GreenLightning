@@ -38,7 +38,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     protected long                      timeTrigger;
     protected long                      timeRate;   
     
-    protected H			        		hardware;
+    protected H			        		builder;
   
     private static final Logger logger = LoggerFactory.getLogger(ReactiveListenerStage.class); 
      
@@ -79,7 +79,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     
     
-    public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H hardware) {
+    public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H builder) {
 
         
         super(graphManager, inputPipes, outputPipes);
@@ -87,12 +87,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
         this.inputPipes = inputPipes;
         this.outputPipes = outputPipes;       
-        this.hardware = hardware;
+        this.builder = builder;
         
-        this.states = hardware.getStates();
+        this.states = builder.getStates();
         this.graphManager = graphManager;
              
-        this.ccm = hardware.getClientCoordinator();
+        this.ccm = builder.getClientCoordinator();
         
         //allow for shutdown upon shutdownRequest we have new content
         GraphManager.addNota(graphManager, GraphManager.PRODUCER, GraphManager.PRODUCER, this);
@@ -135,7 +135,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         while (--p >= 0) {
         	 Pipe<?> localPipe = inputPipes[p];
         	 if (Pipe.isForSchema(localPipe, HTTPRequestSchema.instance)) {
-        		 hardware.lookupRouteAndPara(localPipe, p, routeIds, parallelIds);
+        		 builder.lookupRouteAndPara(localPipe, p, routeIds, parallelIds);
         	 } else {
         		 routeIds[p]=Integer.MIN_VALUE;
         		 parallelIds[p]=Integer.MIN_VALUE;
@@ -217,6 +217,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  PayloadReader request = (PayloadReader)Pipe.inputStream(p);
     	    	  DataInputBlobReader.openLowLevelAPIField(request); //NOTE: this will take meta then take len
     	    	  
+    	    	  //TODO: must pre index the location of the headers??
+    	    	  
+    	    	  request.setFieldNameParser(builder.extractionParser(routeId));
+    	    	  
+    	    	  //add these to the HTTPPayloadReader which will extend PaylaodReader...
     	    	  int revisionId = Pipe.takeInt(p);
     	    	  int requestContext = Pipe.takeInt(p);
 
@@ -225,7 +230,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	              }
-    	    	  
+             	 request.setFieldNameParser(null);//just for safety
+             	 
     	      } else  if (HTTPRequestSchema.MSG_RESTREQUEST_300==msgIdx) {
     	    	  throw new UnsupportedOperationException("File requests are not supported at this level.");
     	      } else {
@@ -411,7 +417,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	private final void processTimeEvents(TimeListener listener, long trigger) {
 		
-		long msRemaining = (trigger-hardware.currentTimeMillis()); 
+		long msRemaining = (trigger-builder.currentTimeMillis()); 
 		if (msRemaining > timeProcessWindow) {
 			//if its not near, leave
 			return;
@@ -422,7 +428,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			} catch (InterruptedException e) {
 			}
 		}		
-		while (hardware.currentTimeMillis() < trigger) {
+		while (builder.currentTimeMillis() < trigger) {
 			Thread.yield();                	
 		}
 		
@@ -532,7 +538,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	@Override
 	public final ListenerFilter addSubscription(CharSequence topic) {		
 		if (!startupCompleted && listener instanceof PubSubListener) {
-			hardware.addStartupSubscription(topic, System.identityHashCode(listener));		
+			builder.addStartupSubscription(topic, System.identityHashCode(listener));		
 			return this;
 		} else {
 			if (startupCompleted) {

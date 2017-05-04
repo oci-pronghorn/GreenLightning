@@ -51,6 +51,7 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.scheduling.ThreadPerStageScheduler;
 import com.ociweb.pronghorn.util.Blocker;
+import com.ociweb.pronghorn.util.TrieParser;
 
 public class BuilderImpl implements Builder {
 
@@ -573,14 +574,21 @@ public class BuilderImpl implements Builder {
 		parallelism = parallel;
 	}
 
+	@Override
+	public long fieldId(int routeId, byte[] fieldName) {
 	
+		// TODO Auto-generated method stub
+		
+		return 0;
+	}
+		
 	@Override
 	public final int registerRoute(CharSequence route, HTTPHeaderKey ... headers) {		
 		return routerConfig.registerRoute(route, headerMask(headers));
 	}
 
-	public final byte[] extractionPattern(int route) {
-		return routerConfig.extractionPattern(route);
+	public final TrieParser extractionParser(int route) {
+		return routerConfig.extractionParser(route);
 	}
 	
 	private final long headerMask(HTTPHeaderKey... headers) {
@@ -640,7 +648,8 @@ public class BuilderImpl implements Builder {
 	public final void setDefaultRate(long ns) {
 		defaultSleepRateNS = ns;
 	}
-	
+
+
 
 
 

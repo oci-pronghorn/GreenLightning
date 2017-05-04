@@ -34,9 +34,12 @@ public class SimpleApp implements GreenApp {
 		int bindPort = 8081;
 		builder.enableServer(isTLS, isLarge, bindHost, bindPort);
 		
-		ADD_ID1 = builder.registerRoute("/groovyadd/%i%./%i%.");
-		ADD_ID2 = builder.registerRoute("/add/%i%./%i%.");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
-		FILE_ID1 = builder.registerRoute("/%b");//TODO: if this is first it ignores the rest of the paths, TODO: should fix bug
+		ADD_ID1 = builder.registerRoute("/groovyadd/^{a}/^{b}");
+		ADD_ID2 = builder.registerRoute("/add/^a/^b");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
+		
+		FILE_ID1 = builder.registerRoute("/${unknown}");//TODO: if this is first it ignores the rest of the paths, TODO: should fix bug
+		
+		//int fieldId = builder.fieldId(ADD_ID2, "name".getBytes());
 		
 		
 		//ADD_ID1 = builder.registerRoute("/groovyadd/%i/%i");
