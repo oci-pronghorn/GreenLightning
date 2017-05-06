@@ -4,19 +4,20 @@ import java.io.IOException;
 
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 
-public class PayloadWriter extends DataOutputBlobWriter {
+public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWriter<T> {
 
-    private final Pipe p;
+    private final Pipe<T> p;
     private final int maxLength;
     private int length;
-    private CommandChannel commandChannel;
+    private Commandable commandChannel;
     private long key;
     private int loc=-1;
     
-    public PayloadWriter(Pipe p) {
+    public PayloadWriter(Pipe<T> p) {
     	
     	super(p);
     	this.p = p;    
@@ -59,11 +60,11 @@ public class PayloadWriter extends DataOutputBlobWriter {
 	        closeHighLevelField(loc);
 	        loc = -1;//clear field
 	        PipeWriter.publishWrites(p);        
-	        commandChannel.publishGo(1,commandChannel.subPipeIdx);
+	        commandChannel.publishGo(1,commandChannel.subPipeIdx());
         }
     }
 
-    void openField(int loc, CommandChannel commandChannel) {
+    public void openField(int loc, Commandable commandChannel) {
     	//assert(this.loc == -1) : "Already open for writing, can not open again.";
     	this.commandChannel = commandChannel;
         this.loc = loc;

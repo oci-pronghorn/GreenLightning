@@ -30,7 +30,7 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
  * Represents a dedicated channel for communicating with a single device
  * or resource on an IoT system.
  */
-public class CommandChannel {
+public class CommandChannel implements Commandable {
 
 	private final Logger logger = LoggerFactory.getLogger(CommandChannel.class);
 	
@@ -279,7 +279,7 @@ public class CommandChannel {
     }
 
     
-    protected void publishGo(int count, int pipeIdx) {
+    public void publishGo(int count, int pipeIdx) {
         if(PipeWriter.tryWriteFragment(goPipe, TrafficOrderSchema.MSG_GO_10)) {                 
             PipeWriter.writeInt(goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11, pipeIdx);
             PipeWriter.writeInt(goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12, count);
@@ -615,6 +615,11 @@ public class CommandChannel {
 				AbstractRestStage.writeHeader(revisionBytes, status, 0, etagBytes, contentType.getBytes(), 
 							    lenAsBytes, lenAsBytesPos, lenAsBytesLen, lenAsBytesMask, 
 							    false, null, 0,0,0, outputStream, conStateIdx);
+	}
+
+	@Override
+	public int subPipeIdx() {
+		return subPipeIdx;
 	}
 
 

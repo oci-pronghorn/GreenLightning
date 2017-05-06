@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.CommandChannel;
+import com.ociweb.gl.api.FieldReader;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.ListenerConfig;
 import com.ociweb.gl.api.NetResponseWriter;
@@ -54,7 +55,7 @@ public class MathUnit implements RestListener {
 	
 	
 	@Override
-	public boolean restRequest(int routeId, long connectionId, long sequenceCode, HTTPVerb verb,  PayloadReader request) {//use special HTTP request object with channelID and Sequence plus stream...
+	public boolean restRequest(int routeId, long connectionId, long sequenceCode, HTTPVerb verb,  FieldReader request) {//use special HTTP request object with channelID and Sequence plus stream...
 
 		//while has headers, visit header, p
 		//read header id
@@ -133,14 +134,17 @@ public class MathUnit implements RestListener {
 	
 
 	
-	private void populateResponseStringBuilders(DataInputBlobReader<HTTPRequestSchema> inputStream) {
+	private void populateResponseStringBuilders(FieldReader reader) {
 		
-		double a = inputStream.readDecimalAsDouble();
-		double b = inputStream.readDecimalAsDouble();
+		
+		double a = reader.getDouble("a".getBytes());
+		double b = reader.getDouble("b".getBytes());
 		
 		c.setLength(0);
 		c.append(a+b);
 
+		
+		
 //Here is the lower level, fixed position implementation		
 //		long m1 = inputStream.readPackedLong(); 
 //		byte e1 = inputStream.readByte();

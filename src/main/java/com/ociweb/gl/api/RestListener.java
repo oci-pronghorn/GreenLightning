@@ -20,6 +20,6 @@ public interface RestListener {
      * @param route
      * @param fieldsInPipe
      */
-    boolean restRequest(int routeId, long connectionId, long sequenceCode, HTTPVerb verb, PayloadReader request);
+    boolean restRequest(int routeId, long connectionId, long sequenceCode, HTTPVerb verb, FieldReader request);
     
 }

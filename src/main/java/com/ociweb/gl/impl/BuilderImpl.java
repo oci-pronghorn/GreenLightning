@@ -577,7 +577,13 @@ public class BuilderImpl implements Builder {
 	@Override
 	public long fieldId(int routeId, byte[] fieldName) {
 	
+		TrieParser parser = this.extractionParser(routeId);
+		
+		//use reader to lookup field name...
+		
 		// TODO Auto-generated method stub
+		
+		
 		
 		return 0;
 	}

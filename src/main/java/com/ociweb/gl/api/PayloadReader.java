@@ -11,16 +11,7 @@ import com.ociweb.pronghorn.util.math.Decimal;
 public class PayloadReader extends DataInputBlobReader implements FieldReader{
 	//TODO: Extend class as HTTPPayload reader to hold other fields
 	//      extended class provides a header visitor of some kind.
-	
-	//TODO: as with PayloadWriter needs a bounds check for the makers
-    //TODO: add new interface to hide the reader methods...
-	
-	//TODO: all stream publish methods must track positons backwards on end.
-	//      do for all publishers and for http to avoid headers.
-	
-	//TODO: this class is awkward in that it will bring in un-used methods
-	//TODO: need to track memory usage.
-	
+
 	private TrieParser extractionParser;
 	private TrieParserReader reader = new TrieParserReader(true);
 	
@@ -29,13 +20,8 @@ public class PayloadReader extends DataInputBlobReader implements FieldReader{
     }
 
 	public void setFieldNameParser(TrieParser extractionParser) {
-		extractionParser = extractionParser;
+		this.extractionParser = extractionParser;
 	}
-    	
-	public long getFieldId(byte[] fieldName) {
-		return reader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
-	}
-
 
 	private int fieldIdx(long fieldId) {
 		return (int)fieldId & 0xFFFF;
@@ -46,10 +32,21 @@ public class PayloadReader extends DataInputBlobReader implements FieldReader{
 	}
 
 	private int computePosition(long fieldId) {
+		assert(fieldId>=0) : "check field name, it does not match any found field";
 		//jump to end and index backwards to find data position
 		return readFromEndLastInt(fieldIdx(fieldId));		
 	}
+	
+	private int computePositionSecond(long fieldId) {
+		assert(fieldId>=0) : "check field name, it does not match any found field";
+		//jump to end and index backwards to find data position
+		return readFromEndLastInt(1+fieldIdx(fieldId));		
+	}
 
+	public long getFieldId(byte[] fieldName) {
+		return reader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
+	}
+	
 	public long getLong(byte[] fieldName) {
 		return getLong(getFieldId(fieldName));		
 	}
@@ -98,6 +95,49 @@ public class PayloadReader extends DataInputBlobReader implements FieldReader{
 		throw new UnsupportedOperationException("unknown type "+type);
 	}
 	
+	public long getLongDirect(long fieldId) {
+		assert(TrieParser.ESCAPE_CMD_SIGNED_INT == fieldType(fieldId));
+		position(computePosition(fieldId));
+		return DataInputBlobReader.readPackedLong(this);
+	}
+	
+	public double getDoubleDirect(long fieldId) {
+		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
+		position(computePosition(fieldId));
+		return Decimal.asDouble(readPackedLong(this), readByte());
+	}
+	
+	public <A extends Appendable> A getTextDirect(long fieldId, A appendable) {
+		assert(TrieParser.ESCAPE_CMD_BYTES == fieldType(fieldId));
+		position(computePosition(fieldId));		
+		readUTF(appendable);
+		return appendable;
+	}
+		
+	public long getRationalNumeratorDirect(long fieldId) {
+		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
+		position(computePosition(fieldId));
+		return DataInputBlobReader.readPackedLong(this);
+	}
+	
+	public long getRationalDenominatorDirect(long fieldId) {		
+		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
+		position(computePositionSecond(fieldId));
+		return DataInputBlobReader.readPackedLong(this);
+	}
+	
+	public long getDecimalMantissaDirect(long fieldId) {
+		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
+		position(computePosition(fieldId));
+		return DataInputBlobReader.readPackedLong(this);
+	}
+	
+	public byte getDecimalExponentDirect(long fieldId) {
+		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
+		position(computePositionSecond(fieldId));
+		return readByte();
+	}
+	
 	public double getDouble(byte[] fieldName) {
 		return getDouble(getFieldId(fieldName));		
 	}
@@ -119,13 +159,13 @@ public class PayloadReader extends DataInputBlobReader implements FieldReader{
 			double denominator = DataInputBlobReader.readPackedLong(this);
 			return numerator/denominator;
 		} 
-		throw new UnsupportedOperationException("unknown type "+type);
+		throw new UnsupportedOperationException("unknown type "+type+" field "+Long.toHexString(fieldId));
 	}
 	
 	public long getRationalNumerator(byte[] fieldName) {
 		return getRationalNumerator(getFieldId(fieldName));		
 	}
-	
+		
 	@SuppressWarnings("unchecked")
 	public long getRationalNumerator(long fieldId) {
 		
@@ -133,9 +173,7 @@ public class PayloadReader extends DataInputBlobReader implements FieldReader{
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			long numerator = DataInputBlobReader.readPackedLong(this);
-			DataInputBlobReader.readPackedLong(this);
-			return numerator;
+			return DataInputBlobReader.readPackedLong(this);
 		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
 			long m = readPackedLong(); 
 			byte e = readByte();
@@ -151,18 +189,16 @@ public class PayloadReader extends DataInputBlobReader implements FieldReader{
 	public long getRationalDenominator(byte[] fieldName) {
 		return getRationalDenominator(getFieldId(fieldName));		
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	public long getRationalDenominator(long fieldId) {
-		
-		position(computePosition(fieldId));
-		
+				
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			DataInputBlobReader.readPackedLong(this);
-			long denominator = DataInputBlobReader.readPackedLong(this);
-			return denominator;
+			position(computePositionSecond(fieldId));
+			return DataInputBlobReader.readPackedLong(this);
 		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
+			position(computePosition(fieldId));
 			DataInputBlobReader.readPackedLong(this); 
 			byte e = readByte();
 			return e<0 ? (long)(1d/Decimal.powdi[64 - e]) : 1;
