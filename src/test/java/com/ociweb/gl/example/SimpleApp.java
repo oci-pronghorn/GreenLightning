@@ -1,15 +1,10 @@
 package com.ociweb.gl.example;
 
 import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.TimeTrigger;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPHeaderKey;
-import com.ociweb.pronghorn.network.config.HTTPHeaderKeyDefaults;
-import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
-import com.ociweb.pronghorn.util.Appendables;
-import com.ociweb.gl.api.GreenApp;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
 public class SimpleApp implements GreenApp {
 
@@ -17,10 +12,22 @@ public class SimpleApp implements GreenApp {
 	public int ADD_ID2;
 	public int FILE_ID1;
 	
+	private final int port;
+	private final boolean isLarge;
+	private final boolean isTLS;
+	private MathUnit singleInstance;	
+	
+	public SimpleApp(int port, boolean isLarge, boolean isTLS) {
+		this.port = port;
+		this.isLarge = isLarge;
+		this.isTLS = isTLS;
+	}
+	
     public static void main( String[] args ) {
-        GreenRuntime.run(new SimpleApp());
+        GreenRuntime.run(new SimpleApp(8081,true,false));
     }
 	
+    
 	@Override
 	public void declareConfiguration(Builder builder) {
 		
@@ -28,13 +35,10 @@ public class SimpleApp implements GreenApp {
 	//	builder.limitThreads(8); TODO: this works however its spending too much time spinning on the threads.
 		builder.parallelism(8);
 				
-		boolean isTLS = false;
-		boolean isLarge = true;
 		String bindHost = "127.0.0.1";
-		int bindPort = 8081;
-		builder.enableServer(isTLS, isLarge, bindHost, bindPort);
+		builder.enableServer(isTLS, isLarge, bindHost, port);
 		
-		ADD_ID1 = builder.registerRoute("/groovyadd/^{a}/^{b}");
+		ADD_ID1 = builder.registerRoute("/groovyadd/^{a}/^{b}",HTTPHeaderDefaults.COOKIE.rootBytes());
 		ADD_ID2 = builder.registerRoute("/add/^a/^b");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
 		
 		FILE_ID1 = builder.registerRoute("/${unknown}");//TODO: if this is first it ignores the rest of the paths, TODO: should fix bug
@@ -51,8 +55,13 @@ public class SimpleApp implements GreenApp {
        //TODO: this breaks when we add headers....
 	}
 
+	
+	
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {		
+		
+		
+		runtime.addRestListener(singleInstance = new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
 		
 		
 //		runtime.addTimeListener((now)->{Appendables.appendValue(System.out, "This is run every second on the second: ",now,"ms\n");
@@ -85,11 +94,12 @@ public class SimpleApp implements GreenApp {
 		
 		//TODO wrong matching IDS plus no server startup??
 		
-		runtime.addRestListener(new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
+		//runtime.addRestListener(new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
 		
-		
-		
-		
+	}
+	
+	public String getLastCookie() {
+		return singleInstance.getLastCookie();
 	}
 	
 }

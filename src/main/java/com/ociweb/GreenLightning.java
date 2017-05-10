@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.pronghorn.HTTPServer;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPHeaderKeyDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
@@ -144,7 +144,7 @@ public class GreenLightning {
 			@Override
 			public IntHashTable addModule(int a, 
 					GraphManager graphManager, Pipe<HTTPRequestSchema>[] inputs,
-					HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults> spec) {
+					HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> spec) {
 				
 				//
 				if (fileServerIndex == a) {

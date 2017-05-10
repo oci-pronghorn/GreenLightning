@@ -1,7 +1,7 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.pronghorn.network.ServerCoordinator;
-import com.ociweb.pronghorn.network.config.HTTPHeaderKey;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
 
 /**
  * Functional interface for a handler of REST service events.

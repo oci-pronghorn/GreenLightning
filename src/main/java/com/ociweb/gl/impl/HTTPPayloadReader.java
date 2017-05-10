@@ -4,12 +4,13 @@ import java.util.Optional;
 
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HeaderReader;
-import com.ociweb.pronghorn.network.config.HTTPHeaderKey;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
+import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
@@ -30,9 +31,10 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	
 	
 	
-	
 	public int headerId(byte[] header) {		
-		return (int)TrieParserReader.query(reader, headerTrieParser, header, 0, header.length, Integer.MAX_VALUE);
+		int result = (int)TrieParserReader.query(reader, headerTrieParser, header, 0, header.length, Integer.MAX_VALUE);
+		//System.out.println(result+"  "+new String(header));
+		return result;
 	}
 
 	public HTTPPayloadReader(Pipe<S> pipe) {
@@ -54,9 +56,10 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	public Optional<HeaderReader> openHeaderData(int headerId) {
 	
 		if (headerId>=0) {
-			int item = IntHashTable.getItem(headerHash, HTTPHeaderKey.HEADER_BIT | headerId);
+			int item = IntHashTable.getItem(headerHash, HTTPHeader.HEADER_BIT | headerId);
+			
 			if (item!=0) {				
-				position(readFromEndLastInt(paraIndexCount + (0xFFFF & item)));	//TODO: base must be just count!!
+				position(readFromEndLastInt(paraIndexCount + 1+ (0xFFFF & item)));
 				return optionalHeaderReader;
 			}
 		}
@@ -145,5 +148,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	public boolean isVerbTrace() {
 		return HTTPVerbDefaults.TRACE == verb;
 	}
+
+
 	
 }

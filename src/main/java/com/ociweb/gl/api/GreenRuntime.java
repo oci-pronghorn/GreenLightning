@@ -38,6 +38,7 @@ import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
+import com.ociweb.pronghorn.stage.scheduling.ThreadPerStageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 
 public class GreenRuntime {
@@ -430,31 +431,27 @@ public class GreenRuntime {
     }
 
         
-    private void finalGraphBuild() {
+    private void finishGraphBuild() {
+		builder.buildStages(subscriptionPipeLookup,
+				   				netPipeLookup,
+		                        GraphManager.allPipesOfType(gm, MessageSubscription.instance),
+		                        GraphManager.allPipesOfType(gm, NetResponseSchema.instance),
+		                        
+		                        GraphManager.allPipesOfType(gm, TrafficOrderSchema.instance),                            
 
-       builder.buildStages(subscriptionPipeLookup,
-    		   				netPipeLookup,
-                            GraphManager.allPipesOfType(gm, MessageSubscription.instance),
-                            GraphManager.allPipesOfType(gm, NetResponseSchema.instance),
-                            
-                            GraphManager.allPipesOfType(gm, TrafficOrderSchema.instance),                            
-
-                            GraphManager.allPipesOfType(gm, MessagePubSub.instance),
-                            GraphManager.allPipesOfType(gm, ClientHTTPRequestSchema.instance)
-               );
-    
-       
-       //find all the instances of CommandChannel stage to startup first, note they are also unscheduled.
-                   
-       logStageScheduleRates();
-          
-       if ( this.getHardware().isTelemetryEnabled()) {	   
-    	   MonitorConsoleStage.attach(gm);//documents what was buit.
-       }
-       
-       scheduler = builder.createScheduler(this);       
-
-    }
+		                        GraphManager.allPipesOfType(gm, MessagePubSub.instance),
+		                        GraphManager.allPipesOfType(gm, ClientHTTPRequestSchema.instance)
+		           );
+		
+		   
+		   //find all the instances of CommandChannel stage to startup first, note they are also unscheduled.
+		               
+		   logStageScheduleRates();
+		      
+		   if ( this.getHardware().isTelemetryEnabled()) {	   
+			   MonitorConsoleStage.attach(gm);//documents what was buit.
+		   }
+	}
 
 
     private void logStageScheduleRates() {
@@ -501,11 +498,26 @@ public class GreenRuntime {
     
 	public static GreenRuntime run(GreenApp app) {
 	    GreenRuntime runtime = new GreenRuntime(); 
-        return run(app, runtime);
+        buildGraph(app, runtime);
+		
+		runtime.scheduler = runtime.builder.createScheduler(runtime);            
+		runtime.scheduler.startup();
+		
+		return runtime;
+    }
+	
+	public static GreenRuntime test(GreenApp app) {
+	    GreenRuntime runtime = new GreenRuntime(); 
+        buildGraph(app, runtime);
+		
+		runtime.scheduler = new NonThreadScheduler(runtime.getHardware().gm);            
+		runtime.scheduler.startup();
+		
+		return runtime;
     }
 
-    private static GreenRuntime run(GreenApp app, GreenRuntime runtime) {
-        try {
+    private static void buildGraph(GreenApp app, GreenRuntime runtime) {
+		try {
             app.declareConfiguration(runtime.getHardware());
             
             //debug the URL trie
@@ -514,11 +526,8 @@ public class GreenRuntime {
             establishDefaultRate(runtime);
             
             if (runtime.builder.isUseNetServer()) {
-
 	            buildGraphForServer(app, runtime);
-
-            } else {
-            	
+            } else {            	
             	app.declareBehavior(runtime);
             	
             	int parallelism = runtime.getHardware().parallelism();
@@ -531,15 +540,14 @@ public class GreenRuntime {
             }
             runtime.constructingParallelInstancesEnding();
                         
-            runtime.finalGraphBuild();
+            runtime.finishGraphBuild();
+			
             
-            runtime.scheduler.startup();
         } catch (Throwable t) {
             t.printStackTrace();
             System.exit(-1);
         }
-        return runtime;
-    }
+	}
 
 
 	private static void buildGraphForServer(GreenApp app, GreenRuntime runtime) {

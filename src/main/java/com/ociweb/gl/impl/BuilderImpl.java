@@ -28,8 +28,8 @@ import com.ociweb.gl.impl.stage.TrafficCopStage;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPHeaderKey;
-import com.ociweb.pronghorn.network.config.HTTPHeaderKeyDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
@@ -51,6 +51,7 @@ import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.scheduling.ThreadPerStageScheduler;
 import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
+import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class BuilderImpl implements Builder {
 
@@ -113,9 +114,9 @@ public class BuilderImpl implements Builder {
 	//////////////////////////////
 	//support for REST modules and routing
 	//////////////////////////////
-	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults> httpSpec = HTTPSpecification.defaultSpec();
-	private final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults> routerConfig
-	                               = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults>(httpSpec); 
+	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> httpSpec = HTTPSpecification.defaultSpec();
+	private final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig
+	                               = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(httpSpec); 
 	//////////////////////////////
 	//////////////////////////////
 
@@ -147,7 +148,7 @@ public class BuilderImpl implements Builder {
     }
 
     
-    public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults> routerConfig() {
+    public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {
     	return routerConfig;
     }
     
@@ -457,17 +458,19 @@ public class BuilderImpl implements Builder {
 
 	}
 
-	public final StageScheduler createScheduler(GreenRuntime iotDeviceRuntime) {
-		
-		final StageScheduler scheduler =  threadLimit <= 0 ? new ThreadPerStageScheduler(gm): 
-			                                                 new FixedThreadsScheduler(gm, threadLimit, threadLimitHard);
+	public static final StageScheduler createScheduler(GreenRuntime runtime) {
+				
+		final StageScheduler scheduler =  runtime.getHardware().threadLimit <= 0 ? new ThreadPerStageScheduler(runtime.getHardware().gm): 
+			                                                 new FixedThreadsScheduler(runtime.getHardware().gm, runtime.getHardware().threadLimit, runtime.getHardware().threadLimitHard);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				scheduler.shutdown();
-				scheduler.awaitTermination(iotDeviceRuntime.getHardware().getShutdownSeconds(), TimeUnit.SECONDS);
+				scheduler.awaitTermination(runtime.getHardware().getShutdownSeconds(), TimeUnit.SECONDS);
 			}
 		});
+		
+		
 		return scheduler;
 	}
 
@@ -591,7 +594,7 @@ public class BuilderImpl implements Builder {
 	}
 		
 	@Override
-	public final int registerRoute(CharSequence route, HTTPHeaderKey ... headers) {		
+	public final int registerRoute(CharSequence route, byte[] ... headers) {		
 		return routerConfig.registerRoute(route, headerTable(headers), httpSpec.headerParser());
 	}
 
@@ -611,15 +614,24 @@ public class BuilderImpl implements Builder {
 		return routerConfig.headerTrieParser(routeId);
 	}
 	
-	private final IntHashTable headerTable(HTTPHeaderKey... headers) {
+	private final TrieParserReader localReader = new TrieParserReader(0, true);
+	
+	private final IntHashTable headerTable(byte[] ... headers) {
 		
 		IntHashTable headerToPosTable = IntHashTable.newTableExpectingCount(headers.length);		
 		int count = 0;
 		int i = headers.length;
 		
-		while (--i>=0) {			
-			int ord = headers[i].ordinal();
-			boolean ok = IntHashTable.setItem(headerToPosTable, HTTPHeaderKey.HEADER_BIT | ord, HTTPHeaderKey.HEADER_BIT | (count++));
+		while (--i>=0) {	
+			
+			byte[] h = headers[i];
+			int ord = (int)localReader.query(localReader, httpSpec.headerParser(), h, 0, h.length, Integer.MAX_VALUE);
+			
+			if (ord<0) {
+				throw new UnsupportedOperationException("unsupported header "+new String(h));
+			}
+			
+			boolean ok = IntHashTable.setItem(headerToPosTable, HTTPHeader.HEADER_BIT | ord, HTTPHeader.HEADER_BIT | (count++));
 			assert(ok);
 		}
 		

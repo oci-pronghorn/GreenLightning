@@ -9,6 +9,7 @@ import com.ociweb.gl.api.CommandChannel;
 import com.ociweb.gl.api.FieldReader;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
+import com.ociweb.gl.api.HeaderReader;
 import com.ociweb.gl.api.ListenerConfig;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PayloadWriter;
@@ -16,6 +17,7 @@ import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
@@ -30,6 +32,7 @@ public class MathUnit implements RestListener {
 	private final Logger logger = LoggerFactory.getLogger(MathUnit.class);
 	
 	private final CommandChannel cc;
+	private String lastCookie;
 	
 	//example response UTF-8 encoded
 	//{"x":9,"y":17,"groovySum":26}
@@ -58,11 +61,20 @@ public class MathUnit implements RestListener {
 	@Override
 	public boolean restRequest(HTTPFieldReader request) {
 		
+		final StringBuilder cookieValue = new StringBuilder();
+		Optional<HeaderReader> cookieReader = request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes());
+		cookieReader.ifPresent((c)->{
+			
+			c.readUTF(cookieValue);
+			lastCookie = cookieValue.toString();
+			//System.out.println("cookie from browser: "+cookieValue);
+		});
+
+		
+		
 				
 		double a1 = request.getDouble("a".getBytes());
 		double b1 = request.getDouble("b".getBytes());
-		
-		
 		
 		c.setLength(0);
 		c.append(a1+b1);
@@ -113,6 +125,12 @@ public class MathUnit implements RestListener {
 
 		return writer.isPresent(); //if false is returned then this method will be called again later with the same inputs.
 
+	}
+
+
+
+	public String getLastCookie() {
+		return lastCookie;
 	}	
 
 }

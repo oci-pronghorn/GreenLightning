@@ -1,7 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.network.config.HTTPHeaderKey;
-
 /**
  * Base interface for an IoT device's hardware.
  * <p>
@@ -51,7 +49,7 @@ public interface Builder {
 
 	long fieldId(int routeId, byte[] fieldName);
 	
-	int registerRoute(CharSequence route, HTTPHeaderKey ... headers);
+	int registerRoute(CharSequence route, byte[] ... headers);
       
 	public void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
     

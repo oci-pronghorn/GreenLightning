@@ -194,7 +194,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	  while (Pipe.hasContentToRead(p)) {                
               
     		  Pipe.markTail(p);
-              
+             
               int msgIdx = Pipe.takeMsgIdx(p);
     	  
     	      if (HTTPRequestSchema.MSG_RESTREQUEST_300==msgIdx) {
@@ -218,6 +218,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	      	    	  
     	    	  HTTPPayloadReader<HTTPRequestSchema> request = (HTTPPayloadReader<HTTPRequestSchema>)Pipe.inputStream(p);
     	    	  DataInputBlobReader.openLowLevelAPIField(request); //NOTE: this will take meta then take len
+    	        	
+    	    	  
+    	    	  
     	    	  
     	    	  request.setFieldNameParser(builder.extractionParser(routeId));
     	    	  
