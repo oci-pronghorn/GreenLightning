@@ -32,7 +32,6 @@ public class SimpleApp implements GreenApp {
 	public void declareConfiguration(Builder builder) {
 		
 		builder.setTriggerRate(TimeTrigger.OnTheSecond);
-	//	builder.limitThreads(8); TODO: this works however its spending too much time spinning on the threads.
 		builder.parallelism(8);
 				
 		String bindHost = "127.0.0.1";
@@ -42,60 +41,21 @@ public class SimpleApp implements GreenApp {
 		ADD_ID2 = builder.registerRoute("/add/^a/^b");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
 		
 		FILE_ID1 = builder.registerRoute("/${unknown}");//TODO: if this is first it ignores the rest of the paths, TODO: should fix bug
-		
-		//int fieldId = builder.fieldId(ADD_ID2, "name".getBytes());
-		
-		
-		//ADD_ID1 = builder.registerRoute("/groovyadd/%i/%i");
-		//ADD_ID2 = builder.registerRoute("/add/%i/%i");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
-		
-		//TODO: must add support for Unroutable choices
-//		FILE_ID1 = builder.registerRoute("/favicon.ico"); //Just eat the reequest??
-		
-       //TODO: this breaks when we add headers....
+
 	}
 
 	
 	
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {		
-		
-		
+				
 		runtime.addRestListener(singleInstance = new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
-		
-		
-//		runtime.addTimeListener((now)->{Appendables.appendValue(System.out, "This is run every second on the second: ",now,"ms\n");
-//		                               });
-//		
-//		runtime.addStartupListener(()->{System.out.println("this is run first");  });
-	
-		///TODO: this gets skipped as an older response?
-		
-//		runtime.addFileServer("/home/nate/git/GreenLightning/src/main/resources/site/index.html", FILE_ID1); 
-
-		//runtime.addFileServer("/home/nate/git/GreenLightning/src/main/resources/site/index.html", FILE_ID1);    
-  
-		
-		
-		//runtime.addRestListener(new MathUnit(runtime, ADD_ID1, ADD_ID2)); //accept all registered routes
-		//runtime.addRestListener(new MathUnit(runtime, ADD_ID2));//, ADD_ID2)); //accept all registered routes
-		
-		
 		
 	}
 
 	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {	
-		
-	//	runtime.addRestListener(new MathUnit(runtime, ADD_ID1));//, ADD_ID2)); //accept all registered routes
 
-		runtime.addFileServer("/home/nate/git/GreenLightning/src/main/resources/site/index.html", FILE_ID1); 
-//		runtime.addFileServer("/home/nate/git/GreenLightning/src/main/resources/site/index.html", FILE_ID1);  
-		
-		//TODO wrong matching IDS plus no server startup??
-		
-		//runtime.addRestListener(new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
-		
 	}
 	
 	public String getLastCookie() {
