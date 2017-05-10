@@ -1,5 +1,7 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.gl.impl.PayloadReader;
+
 /**
  * Functional interface for a publish-subscribe subscriber registered
  * with the {@link GreenRuntime}.

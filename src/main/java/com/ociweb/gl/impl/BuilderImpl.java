@@ -12,7 +12,6 @@ import com.ociweb.gl.api.CommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.PayloadReader;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.StateChangeListener;
@@ -115,7 +114,8 @@ public class BuilderImpl implements Builder {
 	//support for REST modules and routing
 	//////////////////////////////
 	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults> httpSpec = HTTPSpecification.defaultSpec();
-	private final HTTP1xRouterStageConfig routerConfig = new HTTP1xRouterStageConfig(httpSpec); 
+	private final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults> routerConfig
+	                               = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults>(httpSpec); 
 	//////////////////////////////
 	//////////////////////////////
 
@@ -147,7 +147,7 @@ public class BuilderImpl implements Builder {
     }
 
     
-    public final HTTP1xRouterStageConfig routerConfig() {
+    public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults> routerConfig() {
     	return routerConfig;
     }
     
@@ -579,6 +579,8 @@ public class BuilderImpl implements Builder {
 	
 		TrieParser parser = this.extractionParser(routeId);
 		
+		//extractionParserBase
+		
 		//use reader to lookup field name...
 		
 		// TODO Auto-generated method stub
@@ -590,26 +592,38 @@ public class BuilderImpl implements Builder {
 		
 	@Override
 	public final int registerRoute(CharSequence route, HTTPHeaderKey ... headers) {		
-		return routerConfig.registerRoute(route, headerMask(headers));
+		return routerConfig.registerRoute(route, headerTable(headers), httpSpec.headerParser());
 	}
 
 	public final TrieParser extractionParser(int route) {
-		return routerConfig.extractionParser(route);
+		return routerConfig.extractionParser(route).getRuntimeParser();
 	}
 	
-	private final long headerMask(HTTPHeaderKey... headers) {
-		long headerLong = 0;
+	public final int extractionParserIndexCount(int route) {
+		return routerConfig.extractionParser(route).getIndexCount();
+	}
+	
+	public IntHashTable headerToPositionTable(int routeId) {
+		return routerConfig.headerToPositionTable(routeId);
+	}
+	
+	public TrieParser headerTrieParser(int routeId) {
+		return routerConfig.headerTrieParser(routeId);
+	}
+	
+	private final IntHashTable headerTable(HTTPHeaderKey... headers) {
+		
+		IntHashTable headerToPosTable = IntHashTable.newTableExpectingCount(headers.length);		
+		int count = 0;
 		int i = headers.length;
-		while (--i>=0) {
-			
-			int ord = headers[i].ordinal();			
-			if (ord >= 63) {
-				throw new UnsupportedOperationException("Used headers must have idx values < 63. Please ask to have this limit raised.");
-			}			
-			headerLong |= (1L << ord);
-			
+		
+		while (--i>=0) {			
+			int ord = headers[i].ordinal();
+			boolean ok = IntHashTable.setItem(headerToPosTable, HTTPHeaderKey.HEADER_BIT | ord, HTTPHeaderKey.HEADER_BIT | (count++));
+			assert(ok);
 		}
-		return headerLong;
+		
+		return headerToPosTable;
 	}
 
 
@@ -630,7 +644,7 @@ public class BuilderImpl implements Builder {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<HTTPRequestSchema> createNewBlobReader() {
-				return new PayloadReader(this);
+				return new HTTPPayloadReader<HTTPRequestSchema>(this);
 			}
 		};
 		return pipe;

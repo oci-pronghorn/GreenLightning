@@ -21,6 +21,7 @@ import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class GreenLightning {
@@ -141,7 +142,7 @@ public class GreenLightning {
 		    Pipe<ServerResponseSchema>[][] staticFileOutputs;
 		    
 			@Override
-			public long addModule(int a, 
+			public IntHashTable addModule(int a, 
 					GraphManager graphManager, Pipe<HTTPRequestSchema>[] inputs,
 					HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderKeyDefaults> spec) {
 				
@@ -168,7 +169,7 @@ public class GreenLightning {
 				}
 
 				//return needed headers
-				return 0;
+				return IntHashTable.EMPTY;
 			}
 		
 			@Override

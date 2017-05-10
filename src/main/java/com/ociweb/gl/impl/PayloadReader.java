@@ -1,21 +1,22 @@
-package com.ociweb.gl.api;
+package com.ociweb.gl.impl;
 
+import com.ociweb.gl.api.FieldReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
+import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.math.Decimal;
 
-@SuppressWarnings("rawtypes")
-public class PayloadReader extends DataInputBlobReader implements FieldReader{
+public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobReader<S> implements FieldReader{
 	//TODO: Extend class as HTTPPayload reader to hold other fields
 	//      extended class provides a header visitor of some kind.
 
 	private TrieParser extractionParser;
 	private TrieParserReader reader = new TrieParserReader(true);
 	
-	public PayloadReader(Pipe pipe) {
+	public PayloadReader(Pipe<S> pipe) {
         super(pipe);
     }
 

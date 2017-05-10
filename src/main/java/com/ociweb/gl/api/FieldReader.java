@@ -1,8 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
-import com.ociweb.pronghorn.util.TrieParser;
-
 public interface FieldReader {
 
 	public long getFieldId(byte[] fieldName);

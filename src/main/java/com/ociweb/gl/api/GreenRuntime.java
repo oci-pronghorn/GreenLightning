@@ -12,6 +12,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -354,7 +356,7 @@ public class GreenRuntime {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
-				return new PayloadReader(this);
+				return new HTTPPayloadReader<NetResponseSchema>(this);
 			}
 		};
 		return netResponsePipe;

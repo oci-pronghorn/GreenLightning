@@ -10,13 +10,13 @@ import com.ociweb.pronghorn.pipe.Pipe;
 
 public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema> {
 
-    private final Pipe p;
+    private final Pipe<ServerResponseSchema> p;
     private final int maxLength;
     private int length;
     private long key;
     private int context;
     
-    public NetResponseWriter(Pipe p) {
+    public NetResponseWriter(Pipe<ServerResponseSchema> p) {
     	
     	super(p);
     	this.p = p;    

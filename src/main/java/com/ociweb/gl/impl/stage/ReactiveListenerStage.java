@@ -5,24 +5,27 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.ListenerFilter;
-import com.ociweb.gl.api.PayloadReader;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.network.ClientConnection;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
+import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
+import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
@@ -212,24 +215,31 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  long sequenceCode = (((long)parallelIdx)<<32) | ((long)sequenceNo);
     	    	  
     	    	  int verbId = Pipe.takeInt(p);
-    	    	  
-    	    	  
-    	    	  PayloadReader request = (PayloadReader)Pipe.inputStream(p);
+    	    	      	    	  
+    	    	  HTTPPayloadReader<HTTPRequestSchema> request = (HTTPPayloadReader<HTTPRequestSchema>)Pipe.inputStream(p);
     	    	  DataInputBlobReader.openLowLevelAPIField(request); //NOTE: this will take meta then take len
-    	    	  
-    	    	  //TODO: must pre index the location of the headers??
     	    	  
     	    	  request.setFieldNameParser(builder.extractionParser(routeId));
     	    	  
-    	    	  //add these to the HTTPPayloadReader which will extend PaylaodReader...
-    	    	  int revisionId = Pipe.takeInt(p);
-    	    	  int requestContext = Pipe.takeInt(p);
-
-    	    	  boolean isDone = listener.restRequest(routeId, connectionId, sequenceCode, (HTTPVerb)httpSpec.verbs[verbId], request);
-             	  if (!isDone) {
+ 				  request.setHeaderTable(builder.headerToPositionTable(routeId), 
+ 						                 builder.extractionParserIndexCount(routeId),
+ 						                 builder.headerTrieParser(routeId)
+ 						                 );
+ 				  
+    	    	  request.setRevisionId(Pipe.takeInt(p));
+    	    	  request.setRequestContext(Pipe.takeInt(p));
+    	    	  
+    	    	  request.setRouteId(routeId);
+    	    	  request.setConnectionId(connectionId, sequenceCode);
+    	    	  
+    	    	  //assign verbs as strings...
+    	    	  request.setVerb((HTTPVerbDefaults)httpSpec.verbs[verbId]);
+ 			
+    	    	  if (!listener.restRequest(request)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	              }
+             	  
              	 request.setFieldNameParser(null);//just for safety
              	 
     	      } else  if (HTTPRequestSchema.MSG_RESTREQUEST_300==msgIdx) {
