@@ -3,18 +3,25 @@ package com.ociweb.gl.api;
 import java.io.IOException;
 
 import com.ociweb.pronghorn.network.ServerCoordinator;
+import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
+import com.ociweb.pronghorn.network.http.AbstractRestStage;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 
-public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema> {
+public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema> implements Appendable {
 
     private final Pipe<ServerResponseSchema> p;
     private final int maxLength;
     private int length;
     private long key;
     private int context;
+    private int headerBlobPosition;
+    private long positionOfLen;
+    private int statusCode;
+    private HTTPContentTypeDefaults contentType;
     
     public NetResponseWriter(Pipe<ServerResponseSchema> p) {
     	
@@ -48,24 +55,65 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     	
     }
 
+	private static void writeHeader(NetResponseWriter outputStream, final int headerBlobPosition, 
+			                        final long positionOfLen,
+									int statusCode, final int context, 
+									HTTPContentTypeDefaults contentType, int length) {
+		
+		DataOutputBlobWriter.openFieldAtPosition(outputStream, headerBlobPosition);
+
+		byte[] revisionBytes = HTTPRevisionDefaults.HTTP_1_1.getBytes();		
+		byte[] etagBytes = null;//TODO: nice feature to add later		
+		int connectionIsClosed = 1&(context>>ServerCoordinator.CLOSE_CONNECTION_SHIFT);
+		
+		AbstractRestStage.writeHeader(revisionBytes, statusCode, 0, etagBytes, contentType.getBytes(), 
+					                  length, false, null, 0,0,0, outputStream, connectionIsClosed);
+
+		int propperLength = DataOutputBlobWriter.length(outputStream);
+		Pipe.validateVarLength(outputStream.getPipe(), propperLength);
+		Pipe.setIntValue(propperLength, outputStream.getPipe(), positionOfLen); //go back and set the right length.
+		outputStream.getPipe().closeBlobFieldWrite();
+	}
     
     public void publish() {
     	
-    	closeLowLevelField();
+    	int len = closeLowLevelField(this); //end of writing the payload    	
+    	Pipe.addIntValue(context, p);  //real context    	
+    	Pipe.confirmLowLevelWrite(p);
     	
-    	Pipe.addIntValue(context, p); 
+    	//update the header to match length
+    	if (0 == (ServerCoordinator.END_RESPONSE_MASK&context) ) {
+    		//this is not the end so it will be chunked
+    		len = -1;
+    	}
     	
-    	Pipe.confirmLowLevelWrite(p, Pipe.sizeOf(p, ServerResponseSchema.MSG_TOCHANNEL_100)); ///NOTE: modify later wehn we add subscription publish feature
-    	Pipe.publishWrites(p);    	
+    	writeHeader(this, headerBlobPosition, positionOfLen, statusCode, context, contentType, len);
+    	
+    	//now publish both header and payload
+    	Pipe.publishWrites(p);
  
     }
 
-    void openField(int context) {
+    void openField(final int context) {
+		this.context = context;
+		this.length = 0;
+		DataOutputBlobWriter.openField(this);
+	}
+    
+	   
+    void openField(final int headerBlobPosition, final long positionOfLen,
+				   int statusCode, final int context, HTTPContentTypeDefaults contentType) {
+    	this.headerBlobPosition = headerBlobPosition;
+    	this.positionOfLen = positionOfLen;
+    	this.statusCode = statusCode;
+    	this.contentType = contentType;
     	this.context = context;
         this.length = 0;
         DataOutputBlobWriter.openField(this);
     }
 
+    
+    
     private static void checkLimit(NetResponseWriter that, int x) {
     	//TODO: the math on this bounds check is wrong and must be fixed.. It is accumulaing all byte written not just the open ones now.
     //	if ( (that.length+=x) > that.maxLength ) {
@@ -171,6 +219,12 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 		super.writeUTF(s);
 	}
 
+	@Override
+    public void writeUTF8Text(CharSequence s) {
+		checkLimit(this,s.length()*6);//Estimated (maximum length)
+    	super.writeUTF8Text(s);
+    }
+    
 	@Override
 	public void writeASCII(CharSequence s) {
 		checkLimit(this,s.length());

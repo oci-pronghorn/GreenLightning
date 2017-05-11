@@ -8,17 +8,11 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.MessagePubSub;
-import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ServerCoordinator;
-import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
-import com.ociweb.pronghorn.network.http.AbstractRestStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
@@ -515,12 +509,11 @@ public class CommandChannel implements Commandable {
         }
     }
 
-	public Optional<NetResponseWriter> openHTTPResponse(long connectionId, long sequenceCode, int statusCode, int context, HTTPContentTypeDefaults contentType, int length) {
+    //TODO: remove length, we can compute this so the user need not provide it !!
+	public Optional<NetResponseWriter> openHTTPResponse(long connectionId, long sequenceCode, 
+			                                            int statusCode, final int context, 
+			                                            HTTPContentTypeDefaults contentType) {
 
-		if (length<0) {
-			logger.warn("TODO: Chunked posting is not yet supported, it works but will not close the stream when finished. ");
-		}
-		
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
 		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
 	
@@ -530,28 +523,52 @@ public class CommandChannel implements Commandable {
 		
 		if (!Pipe.hasRoomForWrite(pipe)) {
 			return Optional.empty();
-		}
-		
-		
+		}		
+
+		///////////////////////////////////////
+		//message 1 which contains the headers
+		//////////////////////////////////////
+				
 		Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
 		Pipe.addLongValue(connectionId, pipe);
 		Pipe.addIntValue(sequenceNo, pipe);	
-		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
-
-		outputStream.openField(context);
+		
+		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);	
+		final int headerBlobPosition = Pipe.getWorkingBlobHeadPosition(pipe);
+		//outputStream.length = 0; //TODO: for lenghth check...
+		DataOutputBlobWriter.openFieldAtPosition(outputStream, headerBlobPosition); 	//no context, that will come in the second message 
+        
+		//for the var field we store this as meta then length
+		final long positionOfLen = 1+Pipe.workingHeadPosition(pipe);	
+		DataOutputBlobWriter.closeLowLevelMaxVarLenField(outputStream);
+		assert(pipe.maxVarLen == Pipe.slab(pipe)[((int)positionOfLen) & Pipe.slabMask(pipe)]) : "expected max var field length";
+		
+		Pipe.addIntValue(0, pipe); 	//no context, that will come in the second message		
+		//the full blob size of this message is very large to ensure we have room later...
+		//this call allows for the following message to be written after this messages blob data
+		int consumed = Pipe.writeTrailingCountOfBytesConsumed(outputStream.getPipe()); 
+		assert(pipe.maxVarLen == consumed);
+		Pipe.confirmLowLevelWrite(pipe); 
+		//Stores this publish until the next message is complete and published
+		Pipe.storeUnpublishedWrites(outputStream.getPipe());
+	
+		
+		//////////////////////////////////////////
+		//begin message 2 which contains the body
+		//////////////////////////////////////////
+		Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
+		Pipe.addLongValue(connectionId, pipe);
+		Pipe.addIntValue(sequenceNo, pipe);	
+		
+		outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
+		outputStream.openField(headerBlobPosition, positionOfLen, statusCode, context, contentType);
 				
-		int connectionIsClosed = 1&(context>>ServerCoordinator.CLOSE_CONNECTION_SHIFT);
-		byte[] revisionBytes = HTTPRevisionDefaults.HTTP_1_1.getBytes();
-		
-		byte[] etagBytes = null;//TODO: nice feature to add later
-		
-		writeHeaderImpl(outputStream, statusCode, contentType, length, connectionIsClosed, revisionBytes, etagBytes);
-
 		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
 		//TODO: keep track of was this the end and flag error??
-		
-		return optionalResponseWriter.length>1 ? optionalResponseWriter[parallelIndex] : optionalResponseWriter[0]; 
+
+		return optionalResponseWriter.length > 1 ? optionalResponseWriter[parallelIndex] : optionalResponseWriter[0]; 
 	}
+
 
 	public Optional<NetResponseWriter> openHTTPResponseContinuation(long connectionId, long sequenceCode, int context) {
 		
@@ -579,43 +596,6 @@ public class CommandChannel implements Commandable {
 		return optionalResponseWriter[parallelIndex];
 	}
 
-
-	private <T extends HTTPContentType>void writeHeaderImpl(final DataOutputBlobWriter<ServerResponseSchema> outputStream,	int status, T contentType, int length, final int conStateIdx, byte[] revisionBytes,
-			byte[] etagBytes) {
-		
-				byte[] lenAsBytes = null;//TODO: nice feature to add of knowing length up front.
-				int lenAsBytesPos = 0;
-			    int lenAsBytesLen = 0;
-			    int lenAsBytesMask = 0;
-			
-				if (length>=0) {
-									
-					  int addSize = Pipe.addMsgIdx(digitBuffer, RawDataSchema.MSG_CHUNKEDSTREAM_1);
-					  int digitsLen = Pipe.addLongAsUTF8(digitBuffer, length);
-				      Pipe.publishWrites(digitBuffer);
-				      Pipe.confirmLowLevelWrite(digitBuffer, addSize);
-				      
-				      ////////////
-										          
-			          int msgIdx = Pipe.takeMsgIdx(digitBuffer); 
-			          int meta = Pipe.takeRingByteMetaData(digitBuffer);
-			          lenAsBytesLen = Pipe.takeRingByteLen(digitBuffer);
-			          lenAsBytesPos = Pipe.bytePosition(meta, digitBuffer, lenAsBytesLen);
-			          lenAsBytes = Pipe.byteBackingArray(meta, digitBuffer);
-			          lenAsBytesMask = Pipe.blobMask(digitBuffer);
-			          
-			          assert(digitsLen == lenAsBytesLen) : "byte written should be the same as bytes consumed";
-			          
-			          Pipe.confirmLowLevelRead(digitBuffer, Pipe.sizeOf(RawDataSchema.instance,RawDataSchema.MSG_CHUNKEDSTREAM_1));
-			          Pipe.releaseReadLock(digitBuffer);
-												
-				}				
-
-				
-				AbstractRestStage.writeHeader(revisionBytes, status, 0, etagBytes, contentType.getBytes(), 
-							    lenAsBytes, lenAsBytesPos, lenAsBytesLen, lenAsBytesMask, 
-							    false, null, 0,0,0, outputStream, conStateIdx);
-	}
 
 	@Override
 	public int subPipeIdx() {

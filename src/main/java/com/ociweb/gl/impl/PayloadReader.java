@@ -211,6 +211,10 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		throw new UnsupportedOperationException("unknown type "+type);
 	}
 	
+	public <A extends Appendable> A getText(byte[] fieldName, A appendable) {
+		return getText(getFieldId(fieldName),appendable);		
+	}
+	
 	@SuppressWarnings("unchecked")
 	public <A extends Appendable> A getText(long fieldId, A appendable) {
 		

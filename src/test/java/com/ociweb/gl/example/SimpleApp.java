@@ -30,7 +30,7 @@ public class SimpleApp implements GreenApp {
     
 	@Override
 	public void declareConfiguration(Builder builder) {
-		
+
 		builder.setTriggerRate(TimeTrigger.OnTheSecond);
 		builder.parallelism(8);
 				

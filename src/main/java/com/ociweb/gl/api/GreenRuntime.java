@@ -156,8 +156,9 @@ public class GreenRuntime {
     	return this.builder;
     }
     
-    
-    
+    public long fieldId(int routeId, byte[] fieldName) {
+    	return getHardware().fieldId(routeId, fieldName);
+    }    
     
     public CommandChannel newCommandChannel(int features) { 
       

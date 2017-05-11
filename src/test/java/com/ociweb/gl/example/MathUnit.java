@@ -69,9 +69,7 @@ public class MathUnit implements RestListener {
 			lastCookie = cookieValue.toString();
 			//System.out.println("cookie from browser: "+cookieValue);
 		});
-
-		
-		
+				
 				
 		double a1 = request.getDouble("a".getBytes());
 		double b1 = request.getDouble("b".getBytes());
@@ -79,24 +77,13 @@ public class MathUnit implements RestListener {
 		c.setLength(0);
 		c.append(a1+b1);
 	
-		
-		//optional but without it we must chunk, if it does not match lengh we will throw..
-		int length = part1.length+a.length()+
-				 	 part2.length+b.length()+
-					 part3.length+c.length()+
-					 part4.length;
-	
-		//3 masks,  end data,  close connection, upgrade
 
-		int maxContentLength = cc.maxHTTPContentLength; //biggest block we can publish at a time.
-		assert(length<maxContentLength); //if we needed to send more data we would not set the end data flag
-		
 		//| ServerCoordinator.END_RESPONSE_MASK;
 		int context = END_OF_RESPONSE; //if we choose we can or this with CLOSE_CONNECTION or not and leave the connection open for more calls.
 				
 		int statusCode = 200;
         
-		Optional<NetResponseWriter> writer = cc.openHTTPResponse(request.getConnectionId(), request.getSequenceCode(), statusCode, context, HTTPContentTypeDefaults.JSON, length); 
+		Optional<NetResponseWriter> writer = cc.openHTTPResponse(request.getConnectionId(), request.getSequenceCode(), statusCode, context, HTTPContentTypeDefaults.JSON); 
 				
 		writer.ifPresent( (outputStream) -> {
 			

@@ -25,6 +25,7 @@ public interface FieldReader {
 	public long getRationalDenominator(byte[] fieldName);
 	public long getRationalDenominator(long fieldId);
 	
+	public <A extends Appendable> A getText(byte[] fieldName, A appendable);
 	public <A extends Appendable> A getText(long fieldId, A appendable);
 		
 	public long getLongDirect(long fieldId);	

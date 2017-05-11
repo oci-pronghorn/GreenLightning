@@ -580,17 +580,8 @@ public class BuilderImpl implements Builder {
 	@Override
 	public long fieldId(int routeId, byte[] fieldName) {
 	
-		TrieParser parser = this.extractionParser(routeId);
-		
-		//extractionParserBase
-		
-		//use reader to lookup field name...
-		
-		// TODO Auto-generated method stub
-		
-		
-		
-		return 0;
+		return TrieParserReader.query(localReader, this.extractionParser(routeId), fieldName, 0, fieldName.length, Integer.MAX_VALUE);
+
 	}
 		
 	@Override
