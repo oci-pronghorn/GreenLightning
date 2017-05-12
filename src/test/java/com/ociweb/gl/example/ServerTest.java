@@ -63,7 +63,8 @@ public class ServerTest {
 				builder.append((char)value);
 			}
 			
-			assertTrue(builder.toString().startsWith("{\"x\":,\"y\":,\"groovySum\":5.1"));
+			String response = builder.toString();
+			assertTrue(response, response.startsWith("{\"x\":2.3,\"y\":2.8,\"groovySum\":5.1"));
 			//System.out.println(builder);
 			
     	} catch (Exception e) {

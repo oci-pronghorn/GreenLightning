@@ -115,10 +115,18 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		return appendable;
 	}
 		
+	public long getRationalNumeratorDirect(byte[] fieldName) {
+		return getRationalNumeratorDirect(getFieldId(fieldName));		
+	}
+	
 	public long getRationalNumeratorDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
 		position(computePosition(fieldId));
 		return DataInputBlobReader.readPackedLong(this);
+	}
+	
+	public long getRationalDenominatorDirect(byte[] fieldName) {
+		return getRationalDenominatorDirect(getFieldId(fieldName));		
 	}
 	
 	public long getRationalDenominatorDirect(long fieldId) {		
@@ -127,10 +135,18 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
+	public long getDecimalMantissaDirect(byte[] fieldName) {
+		return getDecimalMantissaDirect(getFieldId(fieldName));		
+	}
+	
 	public long getDecimalMantissaDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
 		position(computePosition(fieldId));
 		return DataInputBlobReader.readPackedLong(this);
+	}
+	
+	public byte getDecimalExponentDirect(byte[] fieldName) {
+		return (byte)getDecimalExponentDirect(getFieldId(fieldName));		
 	}
 	
 	public byte getDecimalExponentDirect(long fieldId) {

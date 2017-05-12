@@ -31,8 +31,16 @@ public interface FieldReader {
 	public long getLongDirect(long fieldId);	
 	public double getDoubleDirect(long fieldId);	
 	public <A extends Appendable> A getTextDirect(long fieldId, A appendable);	
+	
+	public long getRationalDenominatorDirect(byte[] fieldName);
+	public long getRationalNumeratorDirect(byte[] fieldName);
+	
 	public long getRationalDenominatorDirect(long fieldId);
 	public long getRationalNumeratorDirect(long fieldId);
+	
+	public long getDecimalMantissaDirect(byte[] fieldName);	
+	public byte getDecimalExponentDirect(byte[] fieldName);
+	
 	public long getDecimalMantissaDirect(long fieldId);	
 	public byte getDecimalExponentDirect(long fieldId);
 	

@@ -46,15 +46,15 @@ public interface Builder {
     void limitThreads();
 
 	void parallelism(int parallel);
-
-	long fieldId(int routeId, byte[] fieldName);
 	
 	int registerRoute(CharSequence route, byte[] ... headers);
       
-	public void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
+	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
     
-	public void enableTelemetry(boolean enable);
+	void enableTelemetry(boolean enable);
 	
-	public void setDefaultRate(long ns);
+	void setDefaultRate(long ns);
+	
+	long fieldId(int routeId, byte[] fieldName);
 	
 }
