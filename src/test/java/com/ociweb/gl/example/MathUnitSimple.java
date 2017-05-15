@@ -17,9 +17,9 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.math.Decimal;
 
-public class MathUnit implements RestListener {
+public class MathUnitSimple implements RestListener {
 
-	private final Logger logger = LoggerFactory.getLogger(MathUnit.class);
+	private final Logger logger = LoggerFactory.getLogger(MathUnitSimple.class);
 	
 	private final GreenCommandChannel cc;
 	private String lastCookie;
@@ -28,25 +28,18 @@ public class MathUnit implements RestListener {
 	
 	private final NetResponseTemplate<HTTPFieldReader> template;
 
-	public MathUnit(final GreenRuntime runtime) {
+	public MathUnitSimple(final GreenRuntime runtime) {
 
 		this.cc = runtime.newCommandChannel(GreenCommandChannel.NET_RESPONDER);
-		
+       
 		template = new NetResponseTemplate<HTTPFieldReader>()
 				     .add("{\"x\":").add((w,s)->{s.getText(fieldA, w);})
 				     .add(",\"y\":").add((w,s)->{s.getText(fieldB, w);})
-				     .add(",\"groovySum\":").add((w,s)->{				    	 
-				    	 Decimal.sum(
-				    			 s.getDecimalMantissaDirect(fieldA),
-				    			 s.getDecimalExponentDirect(fieldA), 
-				    			 s.getDecimalMantissaDirect(fieldB),
-				    			 s.getDecimalExponentDirect(fieldB),
-				    			 (m,e)->{Appendables.appendDecimalValue(w, m, e);});				    	
+				     .add(",\"groovySum\":").add((w,s)->{
+				    	 Appendables.appendValue(w, s.getInt(fieldA) +s.getInt(fieldB));				    	
 				     })
 				     .add("}");		
 	}
-	
-	
 	
 	@Override
 	public boolean restRequest(HTTPFieldReader request) {

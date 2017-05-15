@@ -11,6 +11,7 @@ public class SimpleApp implements GreenApp {
 	public int ADD_ID1;
 	public int ADD_ID2;
 	public int FILE_ID1;
+	public int SIMPLE_ADD_ID1;
 	
 	private final int port;
 	private final boolean isLarge;
@@ -37,11 +38,17 @@ public class SimpleApp implements GreenApp {
 		String bindHost = "127.0.0.1";
 		builder.enableServer(isTLS, isLarge, bindHost, port);
 		
+		ADD_ID2 = builder.registerRoute("/add/$a/$b");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
 		ADD_ID1 = builder.registerRoute("/groovyadd/^{a}/^{b}",HTTPHeaderDefaults.COOKIE.rootBytes());
-		ADD_ID2 = builder.registerRoute("/add/^a/^b");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
 		
 		FILE_ID1 = builder.registerRoute("/${unknown}");//TODO: if this is first it ignores the rest of the paths, TODO: should fix bug
-
+		
+		//$a no work,  #a no work. ^a no work %%a converts 1 but not second
+		
+		
+		//TODO: to use % requires %% instead of just 1...
+		//TODO: test when the value is not found why does it hang?
+		SIMPLE_ADD_ID1 = builder.registerRoute("/simpleadd/#{a}/#{b}",HTTPHeaderDefaults.COOKIE.rootBytes());
 	}
 
 	
@@ -49,8 +56,8 @@ public class SimpleApp implements GreenApp {
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {		
 				
+		runtime.addRestListener(new MathUnitSimple(runtime), SIMPLE_ADD_ID1);
 		runtime.addRestListener(singleInstance = new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
-		
 	}
 
 	@Override

@@ -2,6 +2,7 @@ package com.ociweb.gl.api;
 
 import java.io.IOException;
 
+import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.MessageSchema;
@@ -13,7 +14,8 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     private final Pipe<T> p;
     private final int maxLength;
     private int length;
-    private Commandable commandChannel;
+    private GreenCommandChannel commandChannel;
+    private BuilderImpl builder;
     private long key;
     private int loc=-1;
     
@@ -59,20 +61,23 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
         if (loc!=-1) {
 	        closeHighLevelField(loc);
 	        loc = -1;//clear field
-	        PipeWriter.publishWrites(p);        
-	        commandChannel.publishGo(1,commandChannel.subPipeIdx());
+	        PipeWriter.publishWrites(p);     
+	        
+	        builder.releasePubSubTraffic(1, (GreenCommandChannel)commandChannel);
+	        
         }
     }
 
-    public void openField(int loc, Commandable commandChannel) {
+    public void openField(int loc, GreenCommandChannel commandChannel, BuilderImpl builder) {
     	//assert(this.loc == -1) : "Already open for writing, can not open again.";
     	this.commandChannel = commandChannel;
+    	this.builder = builder;
         this.loc = loc;
         this.length = 0;
         DataOutputBlobWriter.openField(this);
     }
 
-    private static void checkLimit(PayloadWriter that, int x) {
+    private void checkLimit(PayloadWriter<T> that, int x) {
     	
     	if ( (that.length+=x) > that.maxLength ) {
     		throw new RuntimeException("This field is limited to a maximum length of "+that.maxLength+". Write less data or declare a larger max payload size.");

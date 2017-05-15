@@ -16,6 +16,7 @@ import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -24,9 +25,9 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
  * Represents a dedicated channel for communicating with a single device
  * or resource on an IoT system.
  */
-public class CommandChannel implements Commandable {
+public class GreenCommandChannel<B extends BuilderImpl> {
 
-	private final Logger logger = LoggerFactory.getLogger(CommandChannel.class);
+	private final Logger logger = LoggerFactory.getLogger(GreenCommandChannel.class);
 	
     private final Pipe<TrafficOrderSchema> goPipe;
     private final Pipe<MessagePubSub> messagePubSub;
@@ -36,25 +37,19 @@ public class CommandChannel implements Commandable {
     private Optional<NetResponseWriter>[] optionalResponseWriter;
     
     
-    private Optional<PayloadWriter> optionalPipSubWriter;
+    private Optional<PayloadWriter<MessagePubSub>> optionalPipSubWriter;
     
     private int lastResponseWriterFinished = 1;//starting in the "end" state
     
     private final Pipe<MessagePubSub>[] exclusivePubSub;
     private String[] exclusiveTopics =  new String[0];//TODO: make empty
-        
+
     
     protected AtomicBoolean aBool = new AtomicBoolean(false);   
 
     protected static final long MS_TO_NS = 1_000_000;
          
     private Object listener;
-
-    protected final int subPipeIdx         = 0;
-    protected final int netPipeIdx         = 1;
-    protected final int netResponsePipeIdx = 2;
-    protected final int goPipeIdx          = 3;
-    
     
     public static final int DYNAMIC_MESSAGING = 1<<0;
     public static final int STATE_MACHINE = DYNAMIC_MESSAGING;//state machine is based on DYNAMIC_MESSAGING;    
@@ -62,9 +57,8 @@ public class CommandChannel implements Commandable {
     public static final int NET_REQUESTER     = 1<<1;
     public static final int NET_RESPONDER     = 1<<2;
     public static final int ALL = DYNAMIC_MESSAGING | NET_REQUESTER | NET_RESPONDER;
-    
-    private final int parallelInstanceId;    
-    private BuilderImpl builder;
+      
+    protected B builder;
 
     private final static int[] EMPTY = new int[0];
     private final static Pipe[] EMPTY_PIPES = new Pipe[0];
@@ -74,30 +68,25 @@ public class CommandChannel implements Commandable {
     
 	public final int maxHTTPContentLength;
 	
+	protected Pipe<?>[] optionalOutputPipes;
+	
     
-    public CommandChannel(GraphManager gm, BuilderImpl hardware,
+    public GreenCommandChannel(GraphManager gm, B hardware,
 			      		    int parallelInstanceId,
-				            PipeConfig<MessagePubSub> pubSubConfig,
-				            PipeConfig<ClientHTTPRequestSchema> netRequestConfig,
-				            PipeConfig<TrafficOrderSchema> goPipeConfig,
-				            PipeConfig<ServerResponseSchema> netResponseconfig
+			      		    PipeConfigManager pcm
 				           ) {
-    	this(gm,hardware,ALL, parallelInstanceId, pubSubConfig, netRequestConfig, goPipeConfig, netResponseconfig);
+    	this(gm,hardware,ALL, parallelInstanceId, pcm);
     }
     
-    public CommandChannel(GraphManager gm, BuilderImpl hardware,
+    public GreenCommandChannel(GraphManager gm, B builder,
     					  int features,
     					  int parallelInstanceId,
-                          PipeConfig<MessagePubSub> pubSubConfig,
-                          PipeConfig<ClientHTTPRequestSchema> netRequestConfig,
-                          PipeConfig<TrafficOrderSchema> goPipeConfig,
-                          PipeConfig<ServerResponseSchema> netResponseconfig
+    					  PipeConfigManager pcm
     		             ) {
     	
-       this.parallelInstanceId = parallelInstanceId;
                              
-       this.messagePubSub = ((features & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pubSubConfig);
-       this.httpRequest   = ((features & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(netRequestConfig);
+       this.messagePubSub = ((features & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class));
+       this.httpRequest   = ((features & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class));
 
        this.digitBuffer.initBuffers();
        
@@ -106,18 +95,18 @@ public class CommandChannel implements Commandable {
        ////////////////////////       
        Pipe<ServerResponseSchema>[] netResponse = null;
        if ((features & NET_RESPONDER) != 0) {
-    	   
+    	   //int parallelInstanceId = hardware.ac
     	   if (-1 == parallelInstanceId) {
     		   //we have only a single instance of this object so we must have 1 pipe for each parallel track
-    		   int p = hardware.parallelism();
+    		   int p = builder.parallelism();
     		   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[p];
     		   while (--p>=0) {
-    			   netResponse[p] = hardware.newNetResposnePipe(netResponseconfig, p);
+    			   netResponse[p] = builder.newNetResposnePipe(pcm.getConfig(ServerResponseSchema.class), p);
     		   }
     	   } else {
     		   //we have multiple instances of this object so each only has 1 pipe
     		   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[1];
-    		   netResponse[0] = hardware.newNetResposnePipe(netResponseconfig, parallelInstanceId);
+    		   netResponse[0] = builder.newNetResposnePipe(pcm.getConfig(ServerResponseSchema.class), parallelInstanceId);
     	   }
        }
        this.netResponse = netResponse;
@@ -151,14 +140,14 @@ public class CommandChannel implements Commandable {
        
        
        //we only need go pipe for some features and when they are used we create the go pipe
-       this.goPipe        = (this.messagePubSub == null)          ? null : newGoPipe(goPipeConfig);
+       this.goPipe        = (this.messagePubSub == null)          ? null : newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
 
        ///////////////////
 
        int e = this.exclusiveTopics.length;
        this.exclusivePubSub = (Pipe<MessagePubSub>[])new Pipe[e];
        while (--e>=0) {
-    	   exclusivePubSub[e] = newPubSubPipe(pubSubConfig);
+    	   exclusivePubSub[e] = newPubSubPipe(pcm.getConfig(MessagePubSub.class));
        }
        ///////////////////       
 
@@ -175,55 +164,68 @@ public class CommandChannel implements Commandable {
 	   this.maxHTTPContentLength = temp;		
 	   ///////////////////////////////////////
 	   
-       this.builder = hardware;
+       this.builder = builder;
        
     }
 
-	
     
-    public static Pipe<?>[] getOutputPipes(CommandChannel that) {
+	protected boolean goHasRoom() {
+		return PipeWriter.hasRoomForWrite(goPipe);
+	}
+
+    
+    public Pipe<?>[] getOutputPipes() {
     	
     	int length = 0;
     	
-    	if (null != that.messagePubSub) {
+    	if (null != messagePubSub) { //Index needed plust i2c index needed.
     		length++;
     	}
     	
-    	if (null != that.httpRequest) {
+    	if (null != httpRequest) {
     		length++;
     	}
     	
-    	if (null != that.netResponse) {
-    		length+=that.netResponse.length;
+    	if (null != netResponse) {
+    		length+=netResponse.length;
     	}
     	
-    	if (null != that.goPipe) {//last
+    	if (null != goPipe) {//last
     		length++;
     	}
     	
-    	length += that.exclusivePubSub.length;
+    	length += exclusivePubSub.length;
     	
+    	if (null!=optionalOutputPipes) {
+    		length+=optionalOutputPipes.length;
+    	}
+  
     	int idx = 0;
     	Pipe[] results = new Pipe[length];
     	
-    	System.arraycopy(that.exclusivePubSub, 0, results, 0, that.exclusivePubSub.length);
-    	idx+=that.exclusivePubSub.length;
+    	System.arraycopy(exclusivePubSub, 0, results, 0, exclusivePubSub.length);
+    	idx+=exclusivePubSub.length;
     	
-    	if (null != that.messagePubSub) {
-    		results[idx++] = that.messagePubSub;
+    	if (null != messagePubSub) {
+    		results[idx++] = messagePubSub;
     	}
     	
-    	if (null != that.httpRequest) {
-    		results[idx++] = that.httpRequest;
+    	if (null != httpRequest) {
+    		results[idx++] = httpRequest;
     	}
     	
-    	if (null != that.netResponse) {    		
-    		System.arraycopy(that.netResponse, 0, results, idx, that.netResponse.length);
-    		idx+=that.netResponse.length;
+    	if (null != netResponse) {    		
+    		System.arraycopy(netResponse, 0, results, idx, netResponse.length);
+    		idx+=netResponse.length;
     	}
     	
-    	if (null != that.goPipe) {//last
-    		results[idx++] = that.goPipe;
+    	if (null!=optionalOutputPipes) {
+    		System.arraycopy(optionalOutputPipes, 0, results, idx, optionalOutputPipes.length);
+    		idx+=optionalOutputPipes.length;
+    	}
+    	
+    	if (null != goPipe) {//last
+    		results[idx++] = goPipe;
     	}
     	
     	return results;
@@ -235,20 +237,18 @@ public class CommandChannel implements Commandable {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataOutputBlobWriter<MessagePubSub> createNewBlobWriter() {
-				return new PayloadWriter(this);
+				return new PayloadWriter<MessagePubSub>(this);
 			}    		
     	};
     }
     
     private static Pipe<ClientHTTPRequestSchema> newNetRequestPipe(PipeConfig<ClientHTTPRequestSchema> config) {
-    	
-    	new Exception("created client pipe ").printStackTrace();
-    	
+
     	return new Pipe<ClientHTTPRequestSchema>(config) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataOutputBlobWriter<ClientHTTPRequestSchema> createNewBlobWriter() {
-				return new PayloadWriter(this);
+				return new PayloadWriter<ClientHTTPRequestSchema>(this);
 			}    		
     	};
     }
@@ -260,28 +260,14 @@ public class CommandChannel implements Commandable {
         
     
     
-    void setListener(Object listener) {
-        if (null != this.listener) {
+    public static void setListener(GreenCommandChannel c, Object listener) {
+        if (null != c.listener) {
             throw new UnsupportedOperationException("Bad Configuration, A CommandChannel can only be held and used by a single listener lambda/class");
         }
-        this.listener = listener;
-        
-        
-        
-        
+        c.listener = listener;
         
     }
 
-    
-    public void publishGo(int count, int pipeIdx) {
-        if(PipeWriter.tryWriteFragment(goPipe, TrafficOrderSchema.MSG_GO_10)) {                 
-            PipeWriter.writeInt(goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11, pipeIdx);
-            PipeWriter.writeInt(goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12, count);
-            PipeWriter.publishWrites(goPipe);
-        } else {
-            throw new UnsupportedOperationException("Was already check and should not have run out of space.");
-        }
-    }
 
     protected boolean enterBlockOk() {
         return aBool.compareAndSet(false, true);
@@ -330,8 +316,8 @@ public class CommandChannel implements Commandable {
     		    		
     		PipeWriter.publishWrites(httpRequest);
             
-    		publishGo(1,subPipeIdx);
-            
+    		builder.releasePubSubTraffic(1, this);
+    	            
             return true;
         }        
         return false;
@@ -364,7 +350,7 @@ public class CommandChannel implements Commandable {
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    public PayloadWriter httpPost(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
+    public PayloadWriter<ClientHTTPRequestSchema> httpPost(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
     	if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
                 	    
     		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, port);
@@ -372,10 +358,11 @@ public class CommandChannel implements Commandable {
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
     		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_LISTENER_10, System.identityHashCode(listener));
 
-            publishGo(1,subPipeIdx);
+    		builder.releasePubSubTraffic(1, this);
             
-            PayloadWriter pw = (PayloadWriter) Pipe.outputStream(messagePubSub);    
-            pw.openField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5,this);  
+            PayloadWriter<ClientHTTPRequestSchema> pw = (PayloadWriter<ClientHTTPRequestSchema>) Pipe.outputStream(httpRequest);
+           
+            pw.openField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5, this, builder);  
             return pw;
         } else {
         	return null;
@@ -417,7 +404,7 @@ public class CommandChannel implements Commandable {
             
             PipeWriter.publishWrites(messagePubSub);
             
-            publishGo(1,subPipeIdx);
+            builder.releasePubSubTraffic(1, this);
             
             return true;
         }        
@@ -452,7 +439,7 @@ public class CommandChannel implements Commandable {
             
             PipeWriter.publishWrites(messagePubSub);
             
-            publishGo(1,subPipeIdx);
+            builder.releasePubSubTraffic(1, this);
             
             return true;
         }        
@@ -477,7 +464,7 @@ public class CommandChannel implements Commandable {
     		 PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_CHANGESTATE_70_FIELD_ORDINAL_7,  state.ordinal());
              PipeWriter.publishWrites(messagePubSub);
              
-             publishGo(1,subPipeIdx);
+             builder.releasePubSubTraffic(1, this);
     		 return true;
     	 }
 
@@ -492,13 +479,13 @@ public class CommandChannel implements Commandable {
      *
      * @return {@link PayloadWriter} attached to the given topic.
      */
-    public  Optional<PayloadWriter> openTopic(CharSequence topic) { //TODO: urgent, must add support for MQTT style routing and wild cards.
+    public Optional<PayloadWriter<MessagePubSub>> openTopic(CharSequence topic) { //TODO: urgent, must add support for MQTT style routing and wild cards.
         
         if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
             
             PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
-            PayloadWriter pw = (PayloadWriter) Pipe.outputStream(messagePubSub);
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);            
+            PayloadWriter<MessagePubSub> pw = (PayloadWriter<MessagePubSub>) Pipe.outputStream(messagePubSub);
+            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);            
                         
             return optionalPipSubWriter;
             
@@ -596,13 +583,16 @@ public class CommandChannel implements Commandable {
 		return optionalResponseWriter[parallelIndex];
 	}
 
-
-	@Override
-	public int subPipeIdx() {
-		return subPipeIdx;
+	public void publishGo(int count, int pipeIdx) {
+		
+		if(PipeWriter.tryWriteFragment(goPipe, TrafficOrderSchema.MSG_GO_10)) {                 
+            PipeWriter.writeInt(goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11, pipeIdx);
+            PipeWriter.writeInt(goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12, count);
+            PipeWriter.publishWrites(goPipe);
+        } else {
+            throw new UnsupportedOperationException("Was already check and should not have run out of space.");
+        }
+		
 	}
-
-
-
-
+	
 }

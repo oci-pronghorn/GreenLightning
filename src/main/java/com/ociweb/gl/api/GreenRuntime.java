@@ -31,6 +31,7 @@ import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.monitor.MonitorConsoleStage;
@@ -105,12 +106,11 @@ public class GreenRuntime {
 	private Pipe<HTTPRequestSchema>[] httpRequestPipes = null;
 	
 
-
     CommandChannelVisitor gatherPipesVisitor = new CommandChannelVisitor() {
     	
 		@Override
-		public void visit(CommandChannel cmdChnl) {			
-			outputPipes = PronghornStage.join(outputPipes, CommandChannel.getOutputPipes(cmdChnl));			
+		public void visit(GreenCommandChannel cmdChnl) {			
+			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());			
 		}
 
     };
@@ -160,45 +160,43 @@ public class GreenRuntime {
     	return getHardware().fieldId(routeId, fieldName);
     }    
     
-    public CommandChannel newCommandChannel(int features) { 
+    public GreenCommandChannel newCommandChannel(int features) { 
       
-    	return buildCommandChannel(
-									 features,
-                                       messagePubSubConfig,
-                                       requestNetConfig,
-                                       (goPipeConfig),
-                                       serverResponseNetConfig
-		                             );    	
+    	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+    	
+    	pcm.addConfig(messagePubSubConfig);
+    	pcm.addConfig(requestNetConfig);
+    	pcm.addConfig(goPipeConfig);
+    	pcm.addConfig(serverResponseNetConfig);
+    	
+    	
+    	return buildCommandChannel( features, parallelInstanceUnderActiveConstruction, pcm  );    	
     }
 
-    public CommandChannel newCommandChannel(int features, int customChannelLength) { 
+    public GreenCommandChannel newCommandChannel(int features, int customChannelLength) { 
        
-        return buildCommandChannel(
-										features,
-                                       (new PipeConfig<MessagePubSub>(MessagePubSub.instance, customChannelLength,defaultCommandChannelMaxPayload)),
-                                       requestNetConfig,
-                                       (new PipeConfig<TrafficOrderSchema>(TrafficOrderSchema.instance, customChannelLength)),
-                                       new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, customChannelLength, defaultCommandChannelHTTPResponseMaxPayload)
-        		                	);        
+    	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+    	
+    	pcm.addConfig(customChannelLength,defaultCommandChannelMaxPayload,MessagePubSub.class);
+    	pcm.addConfig(requestNetConfig);
+    	pcm.addConfig(customChannelLength,0,TrafficOrderSchema.class);
+    	pcm.addConfig(customChannelLength,defaultCommandChannelHTTPResponseMaxPayload,ServerResponseSchema.class);
+    	   	
+        return buildCommandChannel(	features, parallelInstanceUnderActiveConstruction, pcm);        
     }
     
     
-    private CommandChannel buildCommandChannel(
+    private GreenCommandChannel buildCommandChannel(
     		 										int features,
-										    		PipeConfig<MessagePubSub> pubSubConfig,
-										            PipeConfig<ClientHTTPRequestSchema> netRequestConfig,
-										            PipeConfig<TrafficOrderSchema> orderPipe,
-										            PipeConfig<ServerResponseSchema> netResponseconfig
+    		 										int paraInst,
+										    		PipeConfigManager pcm
 										    	) {
     	
     	
     	return this.builder.newCommandChannel(
     			features,
-    			parallelInstanceUnderActiveConstruction,
-                messagePubSubConfig,
-                requestNetConfig,
-                (goPipeConfig),
-                serverResponseNetConfig
+    			paraInst,
+    			pcm
               ); 
     	
     	
@@ -376,7 +374,7 @@ public class GreenRuntime {
         cmdChannelUsageChecker = new IntHashTable(9);
         return true;
     }
-    private boolean channelNotPreviouslyUsed(CommandChannel cmdChnl) {
+    private boolean channelNotPreviouslyUsed(GreenCommandChannel cmdChnl) {
         int hash = cmdChnl.hashCode();
         
         if (IntHashTable.hasItem(cmdChannelUsageChecker, hash)) {
@@ -402,11 +400,11 @@ public class GreenRuntime {
         while (--f >= 0) {
             try {
                 fields[f].setAccessible(true);                
-                if (CommandChannel.class == fields[f].getType()) {
-                    CommandChannel cmdChnl = (CommandChannel)fields[f].get(listener);                 
+                if (GreenCommandChannel.class == fields[f].getType()) {
+                    GreenCommandChannel cmdChnl = (GreenCommandChannel)fields[f].get(listener);                 
                     
                     assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
-                    cmdChnl.setListener(listener);
+                    GreenCommandChannel.setListener(cmdChnl, listener);
                     visitor.visit(cmdChnl);
                                         
                 }
@@ -675,7 +673,7 @@ public class GreenRuntime {
 
 
 
-	public void setExclusiveTopics(CommandChannel cc, String ... exlusiveTopics) {
+	public void setExclusiveTopics(GreenCommandChannel cc, String ... exlusiveTopics) {
 		// TODO Auto-generated method stub
 		
 		throw new UnsupportedOperationException("Not yet implemented");

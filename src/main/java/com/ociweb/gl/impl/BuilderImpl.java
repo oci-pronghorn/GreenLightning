@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.CommandChannel;
+import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.NetResponseWriter;
@@ -43,6 +43,7 @@ import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.scheduling.FixedThreadsScheduler;
@@ -110,6 +111,8 @@ public class BuilderImpl implements Builder {
 	private int connectionsInBit = 3; 
 	private int maxPartialResponse = 10;
 	
+	private int IDX_MSG = -1;
+	private int IDX_NET = -1;
 
 	//////////////////////////////
 	//support for REST modules and routing
@@ -255,7 +258,6 @@ public class BuilderImpl implements Builder {
 	public BuilderImpl(GraphManager gm) {	
 
 		this.gm = gm;
-
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
 	}
 
@@ -313,15 +315,12 @@ public class BuilderImpl implements Builder {
         return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this);
     }
 
-	public final CommandChannel newCommandChannel(
+	public <G extends GreenCommandChannel> G newCommandChannel(
 												int features,
 			                                    int parallelInstanceId,
-											    PipeConfig<MessagePubSub> pubSubConfig,
-									            PipeConfig<ClientHTTPRequestSchema> netRequestConfig,
-									            PipeConfig<TrafficOrderSchema> orderPipe,
-									            PipeConfig<ServerResponseSchema> netResponseconfig
+			                                    PipeConfigManager pcm
 			                                ) {
-		return new CommandChannel(gm, this, features, parallelInstanceId, pubSubConfig, netRequestConfig, orderPipe, netResponseconfig);
+		return (G) new GreenCommandChannel(gm, this, features, parallelInstanceId, pcm);
 	}
 
 	static final boolean debug = false;
@@ -329,8 +328,6 @@ public class BuilderImpl implements Builder {
 	public void shutdown() {
 		//can be overridden by specific hardware impl if shutdown is supported.
 	}
-
-
 
 	public final void buildStages(
 			IntHashTable subscriptionPipeLookup,
@@ -345,15 +342,11 @@ public class BuilderImpl implements Builder {
 			) {
 
 		int commandChannelCount = orderPipes.length;
-		
-		
 		int eventSchemas = 0;
 		
-
-		int TYPE_MSG = eventSchemas++;
-		int TYPE_NET = useNetClient(netPipeLookup, netResponsePipes, netRequestPipes) ? eventSchemas++ : -1;
+		IDX_MSG = eventSchemas++;
+		IDX_NET = useNetClient(netPipeLookup, netResponsePipes, netRequestPipes) ? eventSchemas++ : -1;
 						
-
 		Pipe<TrafficReleaseSchema>[][] masterGoOut = new Pipe[eventSchemas][commandChannelCount];
 		Pipe<TrafficAckSchema>[][]     masterAckIn = new Pipe[eventSchemas][commandChannelCount];
 
@@ -384,15 +377,15 @@ public class BuilderImpl implements Builder {
 		////////
 		if (useNetClient(netPipeLookup, netResponsePipes, netRequestPipes)) {
 			
-			if (masterGoOut[TYPE_NET].length != masterAckIn[TYPE_NET].length) {
-				throw new UnsupportedOperationException(masterGoOut[TYPE_NET].length+"!="+masterAckIn[TYPE_NET].length);
+			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
+				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+masterAckIn[IDX_NET].length);
 			}
-			if (masterGoOut[TYPE_NET].length != netRequestPipes.length) {
-				throw new UnsupportedOperationException(masterGoOut[TYPE_NET].length+"!="+netRequestPipes.length);
+			if (masterGoOut[IDX_NET].length != netRequestPipes.length) {
+				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+netRequestPipes.length);
 			}
 			
-			assert(masterGoOut[TYPE_NET].length == masterAckIn[TYPE_NET].length);
-			assert(masterGoOut[TYPE_NET].length == netRequestPipes.length);
+			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
+			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
 			
 				
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,4,16000); 		
@@ -412,7 +405,7 @@ public class BuilderImpl implements Builder {
 			while (--r>=0) {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}
-			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[TYPE_NET], masterAckIn[TYPE_NET], clientRequests);
+			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
 			
 			
 			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, netPipeLookup, 10, 1<<15, clientRequests, 
@@ -429,11 +422,11 @@ public class BuilderImpl implements Builder {
 		if (IntHashTable.isEmpty(subscriptionPipeLookup) 
 			&& subscriptionPipes.length==0
 			&& messagePubSub.length==0
-			&& masterGoOut[TYPE_MSG].length==0
-			&& masterAckIn[TYPE_MSG].length==0) {
+			&& masterGoOut[IDX_MSG].length==0
+			&& masterAckIn[IDX_MSG].length==0) {
 			logger.trace("saved some resources by not starting up the unused pub sub service.");
 		} else {
-		 	createMessagePubSubStage(subscriptionPipeLookup, messagePubSub, masterGoOut[TYPE_MSG], masterAckIn[TYPE_MSG], subscriptionPipes);
+		 	createMessagePubSubStage(subscriptionPipeLookup, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
 		}
 
 		channelBlocker = new Blocker(maxGoPipeId+1);
@@ -662,7 +655,6 @@ public class BuilderImpl implements Builder {
 		isTelemetryEnabled = enable;
 	}
 
-
 	public final long getDefaultSleepRateNS() {
 		return defaultSleepRateNS;
 	}
@@ -672,8 +664,9 @@ public class BuilderImpl implements Builder {
 		defaultSleepRateNS = ns;
 	}
 
-
-
+	public void releasePubSubTraffic(int count, GreenCommandChannel<?> gcc) {
+		gcc.publishGo(count, IDX_MSG);
+	}
 
 
 

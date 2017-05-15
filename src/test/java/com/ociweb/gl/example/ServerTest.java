@@ -29,6 +29,7 @@ public class ServerTest {
     }
     
 	private void testSimpleCallAndCookie(boolean isTLS, int port) {
+		
 		SSLUtilities.trustAllHostnames();
     	SSLUtilities.trustAllHttpsCertificates();
     	
@@ -50,7 +51,7 @@ public class ServerTest {
     	try {
 
     		URL testCall = new URL("http"+(isTLS?"s":"")+"://127.0.0.1:"+port+"/groovyadd/2.3/2.8");
-		
+	
 			URLConnection connection = testCall.openConnection();
 			connection.setRequestProperty("Cookie", "Oreo");
 			
@@ -62,6 +63,7 @@ public class ServerTest {
 			while ((value = stream.read()) != -1) {
 				builder.append((char)value);
 			}
+			stream.close();
 			
 			String response = builder.toString();
 			assertTrue(response, response.startsWith("{\"x\":2.3,\"y\":2.8,\"groovySum\":5.1"));
@@ -72,9 +74,36 @@ public class ServerTest {
 			fail();
 		}
     	
-    	isLive.set(false);
     	
+    	
+//    	try {
+//
+//    		URL testCall = new URL("http"+(isTLS?"s":"")+"://127.0.0.1:"+port+"/simpleadd/2/8");
+//		
+//			URLConnection connection = testCall.openConnection();
+//			
+//			connection.connect();
+//			InputStream stream = connection.getInputStream();
+//			StringBuilder builder = new StringBuilder();
+//			int value;
+//			while ((value = stream.read()) != -1) {
+//				builder.append((char)value);
+//			}
+//			stream.close();
+//			
+//			String response = builder.toString();
+//			assertTrue(response, response.startsWith("{\"x\":2,\"y\":8,\"groovySum\":10"));
+//			//System.out.println(builder);
+//			
+//    	} catch (Exception e) {
+//    		e.printStackTrace();
+//			fail();
+//		}
+    	
+    	isLive.set(false);
     	assertEquals("Oreo", app.getLastCookie());
+
+    	
 	}
     
 }
