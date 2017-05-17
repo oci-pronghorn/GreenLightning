@@ -121,13 +121,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         timeProcessWindow = (null==stageRate? 0 : (int)(stageRate.longValue()/MS_to_NS));
         
         
-        //Do last so we complete all the initializations first
-        if (listener instanceof StartupListener) {
-        	((StartupListener)listener).startup();
-        }        
-        startupCompleted=true;
-                
-        
         ///////////////////////
         //build local lookup for the routeIds based on which pipe the data was read from.
         ///////////////////////
@@ -145,7 +138,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         	 }
         }     
         
-        
+        //Do last so we complete all the initializations first
+        if (listener instanceof StartupListener) {
+        	((StartupListener)listener).startup();
+        }        
+        startupCompleted=true;
         
     }
 

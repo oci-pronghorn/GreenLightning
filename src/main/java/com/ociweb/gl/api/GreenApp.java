@@ -9,9 +9,9 @@ package com.ociweb.gl.api;
  *
  * @author Nathan Tippy
  */
-public interface GreenApp {
-
-    /**
+public interface GreenApp<B extends Builder, G extends GreenRuntime> {
+	
+	 /**
      * Invoked when this GreenApp is asked to declare any configuration it needs.
      *
      * This method should perform all of its config declarations directly on the
@@ -21,8 +21,8 @@ public interface GreenApp {
      * @param builder {@link Builder} instance to declare connections on.
      *
      * @see Builder
-     */
-    void declareConfiguration(Builder builder);
+     */ 
+    void declareConfiguration(B builder);
 
     /**
      * Invoked when this GreenApp is asked to declare any behavior that it has.
@@ -35,9 +35,8 @@ public interface GreenApp {
      *
      * @see GreenRuntime
      */
-    void declareBehavior(GreenRuntime runtime);
+    void declareBehavior(G runtime);
     
-    
-    void declareParallelBehavior(GreenRuntime runtime);
-    
+	default void declareParallelBehavior(G runtime) {		
+	}
 }

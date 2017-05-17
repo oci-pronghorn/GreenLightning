@@ -329,109 +329,8 @@ public class BuilderImpl implements Builder {
 		//can be overridden by specific hardware impl if shutdown is supported.
 	}
 
-	public final void buildStages(
-			IntHashTable subscriptionPipeLookup,
-			IntHashTable netPipeLookup,			
-			Pipe<MessageSubscription>[] subscriptionPipes, //one for each listener of this type (subscription per pipe)
-			Pipe<NetResponseSchema>[] netResponsePipes,
-
-			Pipe<TrafficOrderSchema>[] orderPipes,    //one for each command channel 
-
-			Pipe<MessagePubSub>[] messagePubSub,      //one for each command channel 
-			Pipe<ClientHTTPRequestSchema>[] netRequestPipes  //one for each command channel
-			) {
-
-		int commandChannelCount = orderPipes.length;
-		int eventSchemas = 0;
-		
-		IDX_MSG = eventSchemas++;
-		IDX_NET = useNetClient(netPipeLookup, netResponsePipes, netRequestPipes) ? eventSchemas++ : -1;
-						
-		Pipe<TrafficReleaseSchema>[][] masterGoOut = new Pipe[eventSchemas][commandChannelCount];
-		Pipe<TrafficAckSchema>[][]     masterAckIn = new Pipe[eventSchemas][commandChannelCount];
-
-		long timeout = 20_000; //20 seconds
-
-		int maxGoPipeId = 0;
-		int t = commandChannelCount;
-		while (--t>=0) {
-
-			int p = eventSchemas;//major command requests that can come from commandChannels
-			Pipe<TrafficReleaseSchema>[] goOut = new Pipe[p];
-			Pipe<TrafficAckSchema>[] ackIn = new Pipe[p];
-			while (--p>=0) {
-				masterGoOut[p][t] = goOut[p] = new Pipe<TrafficReleaseSchema>(releasePipesConfig);
-				maxGoPipeId = Math.max(maxGoPipeId, goOut[p].id);
-				
-				masterAckIn[p][t] = ackIn[p]=new Pipe<TrafficAckSchema>(ackPipesConfig);								
-			}
-			
-			TrafficCopStage trafficCopStage = new TrafficCopStage(gm, timeout, orderPipes[t], ackIn, goOut);
-
-		}
-		
-		
-		
-		////////
-		//create the network client stages
-		////////
-		if (useNetClient(netPipeLookup, netResponsePipes, netRequestPipes)) {
-			
-			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
-				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+masterAckIn[IDX_NET].length);
-			}
-			if (masterGoOut[IDX_NET].length != netRequestPipes.length) {
-				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+netRequestPipes.length);
-			}
-			
-			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
-			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
-			
-				
-			PipeConfig<NetPayloadSchema> clientNetRequestConfig = new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,4,16000); 		
-
-			//BUILD GRAPH
-			
-			int connectionsInBits=10;			
-			int maxPartialResponses=4;
-			boolean isTLS = true;
-			ClientCoordinator ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
-
-			//TODO: tie this in tonight.
-			int inputsCount = 1;
-			int outputsCount = 1;
-			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
-			int r = outputsCount;
-			while (--r>=0) {
-				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
-			}
-			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
-			
-			
-			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, netPipeLookup, 10, 1<<15, clientRequests, 
-					                             netResponsePipes);
-						
-		}// else {
-			//System.err.println("skipped  "+IntHashTable.isEmpty(netPipeLookup)+"  "+netResponsePipes.length+"   "+netRequestPipes.length  );
-		//}
-		
-		/////////
-		//always create the pub sub and state management stage?
-		/////////
-		//TODO: only create when subscriptionPipeLookup is not empty and subscriptionPipes has zero length.
-		if (IntHashTable.isEmpty(subscriptionPipeLookup) 
-			&& subscriptionPipes.length==0
-			&& messagePubSub.length==0
-			&& masterGoOut[IDX_MSG].length==0
-			&& masterAckIn[IDX_MSG].length==0) {
-			logger.trace("saved some resources by not starting up the unused pub sub service.");
-		} else {
-		 	createMessagePubSubStage(subscriptionPipeLookup, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
-		}
-
+	protected void initChannelBlocker(int maxGoPipeId) {
 		channelBlocker = new Blocker(maxGoPipeId+1);
-		   
-	       
 	}
 
 	private final boolean useNetClient(IntHashTable netPipeLookup, Pipe<NetResponseSchema>[] netResponsePipes, Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
@@ -453,13 +352,13 @@ public class BuilderImpl implements Builder {
 
 	public static final StageScheduler createScheduler(GreenRuntime runtime) {
 				
-		final StageScheduler scheduler =  runtime.getHardware().threadLimit <= 0 ? new ThreadPerStageScheduler(runtime.getHardware().gm): 
-			                                                 new FixedThreadsScheduler(runtime.getHardware().gm, runtime.getHardware().threadLimit, runtime.getHardware().threadLimitHard);
+		final StageScheduler scheduler =  runtime.builder.threadLimit <= 0 ? new ThreadPerStageScheduler(runtime.builder.gm): 
+			                                                 new FixedThreadsScheduler(runtime.builder.gm, runtime.builder.threadLimit, runtime.builder.threadLimitHard);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				scheduler.shutdown();
-				scheduler.awaitTermination(runtime.getHardware().getShutdownSeconds(), TimeUnit.SECONDS);
+				scheduler.awaitTermination(runtime.builder.getShutdownSeconds(), TimeUnit.SECONDS);
 			}
 		});
 		
@@ -666,6 +565,100 @@ public class BuilderImpl implements Builder {
 
 	public void releasePubSubTraffic(int count, GreenCommandChannel<?> gcc) {
 		gcc.publishGo(count, IDX_MSG);
+	}
+
+	public void buildStages(IntHashTable subscriptionPipeLookup2, IntHashTable netPipeLookup2, GraphManager gm2) {
+		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfType(gm2, MessageSubscription.instance);
+		Pipe<NetResponseSchema>[] netResponsePipes = GraphManager.allPipesOfType(gm2, NetResponseSchema.instance);
+		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfType(gm2, TrafficOrderSchema.instance);
+		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfType(gm2, MessagePubSub.instance);
+		Pipe<ClientHTTPRequestSchema>[] netRequestPipes = GraphManager.allPipesOfType(gm2, ClientHTTPRequestSchema.instance);
+		int commandChannelCount = orderPipes.length;
+		int eventSchemas = 0;
+		
+		IDX_MSG = eventSchemas++;
+		IDX_NET = useNetClient(netPipeLookup2, netResponsePipes, netRequestPipes) ? eventSchemas++ : -1;
+						
+		Pipe<TrafficReleaseSchema>[][] masterGoOut = new Pipe[eventSchemas][commandChannelCount];
+		Pipe<TrafficAckSchema>[][]     masterAckIn = new Pipe[eventSchemas][commandChannelCount];
+		
+		long timeout = 20_000; //20 seconds
+		
+		int maxGoPipeId = 0;
+		int t = commandChannelCount;
+		while (--t>=0) {
+		
+			int p = eventSchemas;//major command requests that can come from commandChannels
+			Pipe<TrafficReleaseSchema>[] goOut = new Pipe[p];
+			Pipe<TrafficAckSchema>[] ackIn = new Pipe[p];
+			while (--p>=0) {
+				masterGoOut[p][t] = goOut[p] = new Pipe<TrafficReleaseSchema>(releasePipesConfig);
+				maxGoPipeId = Math.max(maxGoPipeId, goOut[p].id);
+				
+				masterAckIn[p][t] = ackIn[p]=new Pipe<TrafficAckSchema>(ackPipesConfig);								
+			}
+			
+			TrafficCopStage trafficCopStage = new TrafficCopStage(gm, timeout, orderPipes[t], ackIn, goOut);
+		}
+		initChannelBlocker(maxGoPipeId);
+		
+		
+		////////
+		//create the network client stages
+		////////
+		if (useNetClient(netPipeLookup2, netResponsePipes, netRequestPipes)) {
+			
+			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
+				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+masterAckIn[IDX_NET].length);
+			}
+			if (masterGoOut[IDX_NET].length != netRequestPipes.length) {
+				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+netRequestPipes.length);
+			}
+			
+			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
+			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
+			
+				
+			PipeConfig<NetPayloadSchema> clientNetRequestConfig = new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,4,16000); 		
+		
+			//BUILD GRAPH
+			
+			int connectionsInBits=10;			
+			int maxPartialResponses=4;
+			boolean isTLS = true;
+			ClientCoordinator ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
+		
+			//TODO: tie this in tonight.
+			int inputsCount = 1;
+			int outputsCount = 1;
+			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
+			int r = outputsCount;
+			while (--r>=0) {
+				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
+			}
+			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
+			
+			
+			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, netPipeLookup2, 10, 1<<15, clientRequests, 
+					                             netResponsePipes);
+						
+		}// else {
+			//System.err.println("skipped  "+IntHashTable.isEmpty(netPipeLookup)+"  "+netResponsePipes.length+"   "+netRequestPipes.length  );
+		//}
+		
+		/////////
+		//always create the pub sub and state management stage?
+		/////////
+		//TODO: only create when subscriptionPipeLookup is not empty and subscriptionPipes has zero length.
+		if (IntHashTable.isEmpty(subscriptionPipeLookup2) 
+			&& subscriptionPipes.length==0
+			&& messagePubSub.length==0
+			&& masterGoOut[IDX_MSG].length==0
+			&& masterAckIn[IDX_MSG].length==0) {
+			logger.trace("saved some resources by not starting up the unused pub sub service.");
+		} else {
+		 	createMessagePubSubStage(subscriptionPipeLookup2, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
+		}
 	}
 
 
