@@ -101,12 +101,12 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     		   int p = builder.parallelism();
     		   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[p];
     		   while (--p>=0) {
-    			   netResponse[p] = builder.newNetResposnePipe(pcm.getConfig(ServerResponseSchema.class), p);
+    			   netResponse[p] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), p);
     		   }
     	   } else {
     		   //we have multiple instances of this object so each only has 1 pipe
     		   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[1];
-    		   netResponse[0] = builder.newNetResposnePipe(pcm.getConfig(ServerResponseSchema.class), parallelInstanceId);
+    		   netResponse[0] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), parallelInstanceId);
     	   }
        }
        this.netResponse = netResponse;
@@ -496,7 +496,26 @@ public class GreenCommandChannel<B extends BuilderImpl> {
         }
     }
 
-    //TODO: remove length, we can compute this so the user need not provide it !!
+
+	public boolean publishHTTPResponse(HTTPFieldReader w, int statusCode) {
+		
+		//logger.info("Building response for connection {} sequence {} ",w.getConnectionId(),w.getSequenceCode());
+		
+		Optional<NetResponseWriter> opt = openHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
+				statusCode,
+				HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION,
+				null); //no type and no body so use null
+		opt.ifPresent(NetResponseWriter::close); //zero length just send back the status code.
+		return opt.isPresent();
+	}
+
+	public Optional<NetResponseWriter> openHTTPResponse(HTTPFieldReader w, 
+										            int statusCode, final int context, 
+										            HTTPContentTypeDefaults contentType) {
+		return openHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
+				                statusCode, context, contentType);
+	}	
+
 	public Optional<NetResponseWriter> openHTTPResponse(long connectionId, long sequenceCode, 
 			                                            int statusCode, final int context, 
 			                                            HTTPContentTypeDefaults contentType) {

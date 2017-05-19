@@ -2,8 +2,13 @@ package com.ociweb.gl.api;
 
 import java.util.Optional;
 
+import com.ociweb.pronghorn.network.ServerCoordinator;
+
 public interface HTTPFieldReader extends FieldReader {
 
+	public static final int END_OF_RESPONSE = ServerCoordinator.END_RESPONSE_MASK;
+	public static final int CLOSE_CONNECTION = ServerCoordinator.CLOSE_CONNECTION_MASK;
+	
 	public Optional<HeaderReader> openHeaderData(byte[] header);
 	public Optional<HeaderReader> openHeaderData(int headerId);
 	public int headerId(byte[] header);

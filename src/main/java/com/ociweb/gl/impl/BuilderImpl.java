@@ -222,7 +222,7 @@ public class BuilderImpl implements Builder {
 	}
 	
 	
-    public final Pipe<ServerResponseSchema> newNetResposnePipe(PipeConfig<ServerResponseSchema> config, int parallelInstanceId) {
+    public final Pipe<ServerResponseSchema> newNetResponsePipe(PipeConfig<ServerResponseSchema> config, int parallelInstanceId) {
     	Pipe<ServerResponseSchema> pipe = new Pipe<ServerResponseSchema>(config) {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -350,7 +350,7 @@ public class BuilderImpl implements Builder {
 
 	}
 
-	public static final StageScheduler createScheduler(GreenRuntime runtime) {
+	public StageScheduler createScheduler(GreenRuntime runtime) {
 				
 		final StageScheduler scheduler =  runtime.builder.threadLimit <= 0 ? new ThreadPerStageScheduler(runtime.builder.gm): 
 			                                                 new FixedThreadsScheduler(runtime.builder.gm, runtime.builder.threadLimit, runtime.builder.threadLimitHard);

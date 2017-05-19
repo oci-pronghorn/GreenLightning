@@ -66,7 +66,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 		byte[] etagBytes = null;//TODO: nice feature to add later		
 		int connectionIsClosed = 1&(context>>ServerCoordinator.CLOSE_CONNECTION_SHIFT);
 		
-		AbstractRestStage.writeHeader(revisionBytes, statusCode, 0, etagBytes, contentType.getBytes(), 
+		AbstractRestStage.writeHeader(revisionBytes, statusCode, 0, etagBytes, null!=contentType?contentType.getBytes():null, 
 					                  length, false, null, 0,0,0, outputStream, connectionIsClosed);
 
 		int propperLength = DataOutputBlobWriter.length(outputStream);

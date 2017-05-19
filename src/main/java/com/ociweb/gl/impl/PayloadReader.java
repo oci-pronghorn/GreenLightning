@@ -256,6 +256,42 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		}
 		throw new UnsupportedOperationException("unknown type "+type);
 	}
+
+	@Override
+	public boolean isEqual(byte[] fieldName, byte[] equalText) {
+		return isEqual(getFieldId(fieldName),equalText);
+	}
+
+	@Override
+	public boolean isEqual(long fieldId, byte[] equalText) {
+		
+		position(computePosition(fieldId));
+		
+		int type = fieldType(fieldId);
+		if (type == TrieParser.ESCAPE_CMD_BYTES) {
+			return equalUTF(equalText);
+		}
+		throw new UnsupportedOperationException("unsupported type "+type);
+	}
+
+
+
+	@Override
+	public long trieText(byte[] fieldName, TrieParserReader reader, TrieParser trie) {
+		return trieText(getFieldId(fieldName),reader,trie);
+	}
+
+	@Override
+	public long trieText(long fieldId, TrieParserReader reader, TrieParser trie) {
+
+		position(computePosition(fieldId));
+		
+		int type = fieldType(fieldId);
+		if (type == TrieParser.ESCAPE_CMD_BYTES) {			
+			return parseUTF(reader, trie);
+		}
+		throw new UnsupportedOperationException("unsupported type "+type);
+	}
     
 
 }

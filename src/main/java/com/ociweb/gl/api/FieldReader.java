@@ -1,5 +1,8 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.util.TrieParser;
+import com.ociweb.pronghorn.util.TrieParserReader;
+
 public interface FieldReader {
 
 	public long getFieldId(byte[] fieldName);
@@ -27,6 +30,12 @@ public interface FieldReader {
 	
 	public <A extends Appendable> A getText(byte[] fieldName, A appendable);
 	public <A extends Appendable> A getText(long fieldId, A appendable);
+	
+	public boolean isEqual(byte[] fieldName, byte[] equalText);
+	public boolean isEqual(long fieldId, byte[] equalText);
+	
+	public long trieText(byte[] fieldName, TrieParserReader reader, TrieParser trie);
+	public long trieText(long fieldId, TrieParserReader reader, TrieParser trie);	
 		
 	public long getLongDirect(long fieldId);	
 	public double getDoubleDirect(long fieldId);	

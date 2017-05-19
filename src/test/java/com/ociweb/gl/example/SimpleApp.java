@@ -38,7 +38,7 @@ public class SimpleApp implements GreenApp {
 		String bindHost = "127.0.0.1";
 		builder.enableServer(isTLS, isLarge, bindHost, port);
 		
-		ADD_ID2 = builder.registerRoute("/add/$a/$b");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
+		ADD_ID2 = builder.registerRoute("/add/^{a}/^{b}");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
 		ADD_ID1 = builder.registerRoute("/groovyadd/^{a}/^{b}",HTTPHeaderDefaults.COOKIE.rootBytes());
 		
 		FILE_ID1 = builder.registerRoute("/${unknown}");//TODO: if this is first it ignores the rest of the paths, TODO: should fix bug

@@ -35,8 +35,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     protected final Pipe<?>[]           inputPipes;
     protected final Pipe<?>[]           outputPipes;
-    private int[]                       routeIds;
-    private int[]                       parallelIds;
+    protected int[]                     routeIds;
+    protected int[]                     parallelIds;
         
     protected long                      timeTrigger;
     protected long                      timeRate;   
@@ -168,8 +168,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                consumeNetResponse((HTTPResponseListener)listener, (Pipe<NetResponseSchema>) localPipe);
             
             } else if (Pipe.isForSchema(localPipe, HTTPRequestSchema.instance)) {
-            	
-     //       	System.err.println("ZZZZZZZZZZ    p"+p+" parallel "+parallelIds[p]+" array "+Arrays.toString(parallelIds)+"   "+Arrays.toString(routeIds));
             	
             	consumeRestRequest((RestListener)listener, (Pipe<HTTPRequestSchema>) localPipe, routeIds[p], parallelIds[p]);
             

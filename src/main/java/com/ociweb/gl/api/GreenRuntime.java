@@ -548,7 +548,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				idx--;
 				int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? x : parallelInstanceUnderActiveConstruction;
 				inputs[idx] = builder.createHTTPRequestPipe(builder.restPipeConfig.grow2x(), routes[r], parallelIndex);
-				outputs[idx] = builder.newNetResposnePipe(fileResponseConfig, parallelIndex);
+				outputs[idx] = builder.newNetResponsePipe(fileResponseConfig, parallelIndex);
 			}
 		}
 	}
