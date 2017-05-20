@@ -111,15 +111,14 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
         this.length = 0;
         DataOutputBlobWriter.openField(this);
     }
-
-    
+   
     
     private static void checkLimit(NetResponseWriter that, int x) {
     	if ( (that.length+=x) > that.maxLength ) {
     		throw new RuntimeException("This field is limited to a maximum length of "+that.maxLength+". Write less data or declare a larger max payload size. Already wrote "+that.length+" attempting to add "+x);
     	}
     }
-    
+   
     
 	@Override
 	public void write(int b) {

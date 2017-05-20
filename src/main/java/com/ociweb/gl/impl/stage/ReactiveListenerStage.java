@@ -212,7 +212,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  int verbId = Pipe.takeInt(p);
     	    	      	    	  
     	    	  HTTPPayloadReader<HTTPRequestSchema> request = (HTTPPayloadReader<HTTPRequestSchema>)Pipe.inputStream(p);
-    	    	  DataInputBlobReader.openLowLevelAPIField(request); //NOTE: this will take meta then take len
+    	    	  request.openLowLevelAPIField(); //NOTE: this will take meta then take len
     	        	
     	    	  
     	    	  
@@ -276,7 +276,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 
 	            	 if (null!=cc) {
 		            	 PayloadReader reader = (PayloadReader)Pipe.inputStream(p);
-		            	 DataInputBlobReader.openLowLevelAPIField(reader);
+		            	 reader.openLowLevelAPIField();
 		            	 
 		            	 short statusId = reader.readShort();	
 		            	 short typeHeader = reader.readShort();
@@ -367,7 +367,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	                    assert(null!=topic) : "Callers must be free to write topic.equals(x) with no fear that topic is null.";
 	                    
 	                    PayloadReader reader = (PayloadReader)Pipe.inputStream(p);
-	                    DataInputBlobReader.openLowLevelAPIField(reader);
+	                    reader.openLowLevelAPIField();
 	                    
 	                    
 	                    boolean isDone = ((PubSubListener)listener).message(topic,reader);

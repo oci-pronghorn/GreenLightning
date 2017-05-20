@@ -1,7 +1,10 @@
 package com.ociweb.gl.impl;
 
+import java.io.IOException;
+
 import com.ociweb.gl.api.FieldReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
+import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.util.Appendables;
@@ -15,11 +18,35 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 	private TrieParser extractionParser;
 	private TrieParserReader reader = new TrieParserReader(true);
+	private int limit = -1;
 	
 	public PayloadReader(Pipe<S> pipe) {
         super(pipe);
     }
+	
 
+    private static void checkLimit(PayloadReader that, int min) {
+    	if ( (that.position+min) > that.limit ) {
+    		
+    		throw new RuntimeException("Read attempted beyond the end of the field data");
+    	}
+    }
+   
+	
+	@Override
+	public int openHighLevelAPIField(int loc) {		
+		int len = super.openHighLevelAPIField(loc);
+		limit = len + position;
+		return len;
+	}
+	
+	@Override
+	public int openLowLevelAPIField() {		
+		int len = super.openLowLevelAPIField();
+		limit = len + position;
+		return len;
+	}
+	
 	public void setFieldNameParser(TrieParser extractionParser) {
 		this.extractionParser = extractionParser;
 	}
@@ -81,6 +108,8 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		
 		position(computePosition(fieldId));
 		
+		checkLimit(this,1);
+		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
 			return DataInputBlobReader.readPackedLong(this);			
@@ -99,18 +128,21 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public long getLongDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_SIGNED_INT == fieldType(fieldId));
 		position(computePosition(fieldId));
+		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
 	public double getDoubleDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
 		position(computePosition(fieldId));
+		checkLimit(this,2);
 		return Decimal.asDouble(readPackedLong(this), readByte());
 	}
 	
 	public <A extends Appendable> A getTextDirect(long fieldId, A appendable) {
 		assert(TrieParser.ESCAPE_CMD_BYTES == fieldType(fieldId));
-		position(computePosition(fieldId));		
+		position(computePosition(fieldId));	
+		checkLimit(this,2);
 		readUTF(appendable);
 		return appendable;
 	}
@@ -122,6 +154,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public long getRationalNumeratorDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
 		position(computePosition(fieldId));
+		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
@@ -132,6 +165,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public long getRationalDenominatorDirect(long fieldId) {		
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
 		position(computePositionSecond(fieldId));
+		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
@@ -142,6 +176,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public long getDecimalMantissaDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
 		position(computePosition(fieldId));
+		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
@@ -152,6 +187,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public byte getDecimalExponentDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
 		position(computePositionSecond(fieldId));
+		checkLimit(this,1);
 		return readByte();
 	}
 	
@@ -163,6 +199,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public double getDouble(long fieldId) {
 		
 		position(computePosition(fieldId));
+		checkLimit(this,1);
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
@@ -187,6 +224,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public long getRationalNumerator(long fieldId) {
 		
 		position(computePosition(fieldId));
+		checkLimit(this,1);
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
@@ -213,9 +251,11 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
 			position(computePositionSecond(fieldId));
+			checkLimit(this,1);
 			return DataInputBlobReader.readPackedLong(this);
 		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
 			position(computePosition(fieldId));
+			checkLimit(this,1);
 			DataInputBlobReader.readPackedLong(this); 
 			byte e = readByte();
 			return e<0 ? (long)(1d/Decimal.powdi[64 - e]) : 1;
@@ -235,6 +275,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public <A extends Appendable> A getText(long fieldId, A appendable) {
 		
 		position(computePosition(fieldId));
+		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_BYTES) {			
@@ -266,6 +307,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public boolean isEqual(long fieldId, byte[] equalText) {
 		
 		position(computePosition(fieldId));
+		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_BYTES) {
@@ -285,6 +327,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public long trieText(long fieldId, TrieParserReader reader, TrieParser trie) {
 
 		position(computePosition(fieldId));
+		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_BYTES) {			
@@ -292,6 +335,197 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		}
 		throw new UnsupportedOperationException("unsupported type "+type);
 	}
-    
+
+	/////////////////////
+
+	@Override
+	public int read(byte[] b) {
+		checkLimit(this,2);
+		return super.read(b);
+	}
+
+
+	@Override
+	public int read(byte[] b, int off, int len) {
+		checkLimit(this,2);//not len because read will read less
+		return super.read(b, off, len);
+	}
+
+
+	@Override
+	public void readFully(byte[] b) {
+		checkLimit(this,2);
+		super.readFully(b);
+	}
+
+
+	@Override
+	public void readFully(byte[] b, int off, int len) {
+		checkLimit(this,2);//not len because read will read less
+		super.readFully(b, off, len);
+	}
+
+
+	@Override
+	public int skipBytes(int n) {
+		checkLimit(this,n);
+		return super.skipBytes(n);
+	}
+
+
+	@Override
+	public boolean readBoolean() {
+		checkLimit(this,1);
+		return super.readBoolean();
+	}
+
+
+	@Override
+	public byte readByte() {
+		checkLimit(this,1);
+		return super.readByte();
+	}
+
+
+	@Override
+	public int readUnsignedByte() {
+		checkLimit(this,1);
+		return super.readUnsignedByte();
+	}
+
+
+	@Override
+	public short readShort() {
+		checkLimit(this,2);
+		return super.readShort();
+	}
+
+
+	@Override
+	public int readUnsignedShort() {
+		checkLimit(this,2);
+		return super.readUnsignedShort();
+	}
+
+
+	@Override
+	public char readChar() {
+		checkLimit(this,1);
+		return super.readChar();
+	}
+
+
+	@Override
+	public int readInt() {
+		checkLimit(this,4);
+		return super.readInt();
+	}
+
+
+	@Override
+	public long readLong() {
+		checkLimit(this,8);
+		return super.readLong();
+	}
+
+
+	@Override
+	public float readFloat() {
+		checkLimit(this,4);
+		return super.readFloat();
+	}
+
+
+	@Override
+	public double readDouble() {
+		checkLimit(this,8);
+		return super.readDouble();
+	}
+
+
+	@Override
+	public int read() {
+		checkLimit(this,1);
+		return super.read();
+	}
+
+
+	@Override
+	public String readLine() {
+		checkLimit(this,1);
+		return super.readLine();
+	}
+
+
+	@Override
+	public String readUTF() {
+		checkLimit(this,2);
+		return super.readUTF();
+	}
+
+
+	@Override
+	public <A extends Appendable> A readUTF(A target) {
+		checkLimit(this,2);
+		return super.readUTF(target);
+	}
+
+
+	@Override
+	public Object readObject() {
+		checkLimit(this,1);
+		return super.readObject();
+	}
+
+
+	@Override
+	public <T extends MessageSchema<T>> void readInto(DataOutputBlobWriter<T> writer, int length) {
+		checkLimit(this,length);
+		super.readInto(writer, length);
+	}
+
+
+	@Override
+	public <A extends Appendable> A readPackedChars(A target) throws IOException {
+		checkLimit(this,1);
+		return super.readPackedChars(target);
+	}
+
+
+	@Override
+	public long readPackedLong() {
+		checkLimit(this,1);
+		return super.readPackedLong();
+	}
+
+
+	@Override
+	public int readPackedInt() {
+		checkLimit(this,1);
+		return super.readPackedInt();
+	}
+
+
+	@Override
+	public double readDecimalAsDouble() {
+		checkLimit(this,2);
+		return super.readDecimalAsDouble();
+	}
+
+
+	@Override
+	public long readDecimalAsLong() {
+		checkLimit(this,2);
+		return super.readDecimalAsLong();
+	}
+
+
+	@Override
+	public short readPackedShort() {
+		checkLimit(this,1);
+		return super.readPackedShort();
+	}
+
+	
 
 }
