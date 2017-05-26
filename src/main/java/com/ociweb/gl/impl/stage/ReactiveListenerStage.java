@@ -3,6 +3,7 @@ package com.ociweb.gl.impl.stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.PubSubListener;
@@ -211,7 +212,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  
     	    	  int verbId = Pipe.takeInt(p);
     	    	      	    	  
-    	    	  HTTPPayloadReader<HTTPRequestSchema> request = (HTTPPayloadReader<HTTPRequestSchema>)Pipe.inputStream(p);
+    	    	  HTTPRequestReader request = (HTTPRequestReader)Pipe.inputStream(p);
     	    	  request.openLowLevelAPIField(); //NOTE: this will take meta then take len
     	        	
     	    	  

@@ -1,20 +1,15 @@
 package com.ociweb.gl.impl;
-
-import java.util.Optional;
-
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HeaderReader;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
-import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
-public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader<S> implements HTTPFieldReader, HeaderReader {
+public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader<S> implements HTTPFieldReader<S>, HeaderReader {
 
 	private IntHashTable headerHash;
 	private int paraIndexCount;
@@ -24,8 +19,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	private int routeId;
 	private long connectionId;
 	private long sequenceCode;
-	private final Optional<HeaderReader> optionalHeaderReader;
-	private final Optional<DataInputBlobReader<S>> optionalPostReader;
+
 	private TrieParser headerTrieParser;
 	private TrieParserReader reader = new TrieParserReader(0, true);
 	
@@ -39,8 +33,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 
 	public HTTPPayloadReader(Pipe<S> pipe) {
 		super(pipe);
-		optionalHeaderReader = Optional.of(this);
-		optionalPostReader = Optional.of(this);
+
 	}
 	
 	public void setHeaderTable(IntHashTable table, int paraIndexCount, TrieParser headerTrieParser) {
@@ -49,27 +42,31 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		this.headerTrieParser = headerTrieParser;
 	}
 
-	public Optional<HeaderReader> openHeaderData(byte[] header) {
-		return openHeaderData(headerId(header));
+	public boolean openHeaderData(byte[] header, Headable<S> headReader) {
+		return openHeaderData(headerId(header), headReader);
 	}
 
-	public Optional<HeaderReader> openHeaderData(int headerId) {
+	public boolean openHeaderData(int headerId, Headable<S> headReader) {
 	
 		if (headerId>=0) {
 			int item = IntHashTable.getItem(headerHash, HTTPHeader.HEADER_BIT | headerId);
 			
 			if (item!=0) {				
 				position(readFromEndLastInt(paraIndexCount + 1+ (0xFFFF & item)));
-				return optionalHeaderReader;
+				
+				headReader.read(this);
+				
+				return true;
 			}
 		}
-		return Optional.empty();
+		return false;
 		
 	}
 	
-	public Optional<DataInputBlobReader<S>> openPayloadData() {
+	public boolean openPayloadData(Payloadable<S> reader) {
 		position(readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)));
-		return optionalPostReader;
+		reader.read(this);//even when we have zero length...
+		return true;
 	}
 
 	public void setRevisionId(int value) {

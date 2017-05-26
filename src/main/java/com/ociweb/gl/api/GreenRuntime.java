@@ -610,7 +610,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
 
     
-    public GreenCommandChannel newCommandChannel(int features) { 
+    public GreenCommandChannel<B> newCommandChannel(int features) { 
       
     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
 
@@ -625,7 +625,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		  );    	
     }
 
-    public GreenCommandChannel newCommandChannel(int features, int customChannelLength) { 
+    public GreenCommandChannel<B> newCommandChannel(int features, int customChannelLength) { 
        
     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
     	

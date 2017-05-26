@@ -1,14 +1,12 @@
 package com.ociweb.gl.example;
 
-import java.util.Optional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
-import com.ociweb.gl.api.HeaderReader;
+import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.NetResponseTemplate;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.RestListener;
@@ -21,7 +19,7 @@ public class MathUnit implements RestListener {
 
 	private final Logger logger = LoggerFactory.getLogger(MathUnit.class);
 	
-	private final GreenCommandChannel cc;
+	private final GreenCommandChannel<?> cc;
 	private String lastCookie;
 	private final byte[] fieldA = "a".getBytes();
 	private final byte[] fieldB = "b".getBytes();
@@ -49,28 +47,23 @@ public class MathUnit implements RestListener {
 	
 	
 	@Override
-	public boolean restRequest(HTTPFieldReader request) {
+	public boolean restRequest(HTTPRequestReader request) {
 		
 		final StringBuilder cookieValue = new StringBuilder();
-		Optional<HeaderReader> cookieReader = request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes());
-		cookieReader.ifPresent((c)->{
+		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(),(c)->{
 			
 			c.readUTF(cookieValue);
 			lastCookie = cookieValue.toString();
 			//System.out.println("cookie from browser: "+cookieValue);
 		});
 				
-		
-		Optional<NetResponseWriter> writer = cc.openHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, HTTPContentTypeDefaults.JSON); 
-				
-		writer.ifPresent( (outputStream) -> {
-			
-			template.render(outputStream, request);
-			outputStream.close();
-						
-		});		
-
-		return writer.isPresent(); //if false is returned then this method will be called again later with the same inputs.
+		return cc.openHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE,
+				                   HTTPContentTypeDefaults.JSON, (outputStream) -> {
+										
+										template.render(((NetResponseWriter)outputStream), request);
+										((NetResponseWriter)outputStream).close();
+													
+									});		
 
 	}
 

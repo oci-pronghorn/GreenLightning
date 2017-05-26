@@ -19,7 +19,7 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     private long key;
     private int loc=-1;
     
-    public PayloadWriter(Pipe<T> p) {
+    protected PayloadWriter(Pipe<T> p) {
     	
     	super(p);
     	this.p = p;    

@@ -1,27 +1,24 @@
 package com.ociweb.gl.example;
 
-import java.util.Optional;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
-import com.ociweb.gl.api.HeaderReader;
+import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.NetResponseTemplate;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.util.Appendables;
-import com.ociweb.pronghorn.util.math.Decimal;
 
 public class MathUnitSimple implements RestListener {
 
 	private final Logger logger = LoggerFactory.getLogger(MathUnitSimple.class);
 	
-	private final GreenCommandChannel cc;
+	private final GreenCommandChannel<?> cc;
 	private String lastCookie;
 	private final byte[] fieldA = "a".getBytes();
 	private final byte[] fieldB = "b".getBytes();
@@ -42,11 +39,10 @@ public class MathUnitSimple implements RestListener {
 	}
 	
 	@Override
-	public boolean restRequest(HTTPFieldReader request) {
+	public boolean restRequest(HTTPRequestReader request) {
 		
 		final StringBuilder cookieValue = new StringBuilder();
-		Optional<HeaderReader> cookieReader = request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes());
-		cookieReader.ifPresent((c)->{
+		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(), (c)->{
 			
 			c.readUTF(cookieValue);
 			lastCookie = cookieValue.toString();
@@ -54,16 +50,13 @@ public class MathUnitSimple implements RestListener {
 		});
 				
 		
-		Optional<NetResponseWriter> writer = cc.openHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, HTTPContentTypeDefaults.JSON); 
-				
-		writer.ifPresent( (outputStream) -> {
+		return cc.openHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, 
+				                   HTTPContentTypeDefaults.JSON, (outputStream) -> {
 			
-			template.render(outputStream, request);
-			outputStream.close();
+			template.render(((NetResponseWriter)outputStream), request);
+			((NetResponseWriter)outputStream).close();
 						
 		});		
-
-		return writer.isPresent(); //if false is returned then this method will be called again later with the same inputs.
 
 	}
 

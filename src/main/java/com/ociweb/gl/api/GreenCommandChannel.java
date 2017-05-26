@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
@@ -34,10 +34,6 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     private final Pipe<ClientHTTPRequestSchema> httpRequest;
     
     private final Pipe<ServerResponseSchema>[] netResponse;
-    private Optional<NetResponseWriter>[] optionalResponseWriter;
-    
-    
-    private Optional<PayloadWriter<MessagePubSub>> optionalPipSubWriter;
     
     private int lastResponseWriterFinished = 1;//starting in the "end" state
     
@@ -116,17 +112,13 @@ public class GreenCommandChannel<B extends BuilderImpl> {
        if (null != this.netResponse) {
     	   
     	   int x = this.netResponse.length;
-    	   optionalResponseWriter = (Optional<NetResponseWriter>[])new Optional[x];
-    	   
+ 
     	   while(--x>=0) {
     	   
 	    	   if (!Pipe.isInit(netResponse[x])) {
 	    		   //hack for now.
 	    		   netResponse[x].initBuffers();
 	    	   }
-	    	   //prebuild optionals so they need not be created at runtime and can be re-used
-	    	   optionalResponseWriter[x] = Optional.of((NetResponseWriter)Pipe.outputStream(netResponse[x]));
-	    	   
     	   }
        }
        
@@ -134,11 +126,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     	   if (!Pipe.isInit(messagePubSub)) {
     		   messagePubSub.initBuffers();
     	   }
-    	   //prebuild optionals so they need not be created at runtime and can be re-used
-    	   optionalPipSubWriter = Optional.of((PayloadWriter)Pipe.outputStream(messagePubSub));
        }
-       
-       
+              
        //we only need go pipe for some features and when they are used we create the go pipe
        this.goPipe        = (this.messagePubSub == null)          ? null : newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
 
@@ -237,7 +226,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataOutputBlobWriter<MessagePubSub> createNewBlobWriter() {
-				return new PayloadWriter<MessagePubSub>(this);
+				return new PubSubWriter(this);
 			}    		
     	};
     }
@@ -479,20 +468,18 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      *
      * @return {@link PayloadWriter} attached to the given topic.
      */
-    public Optional<PayloadWriter<MessagePubSub>> openTopic(CharSequence topic) { //TODO: urgent, must add support for MQTT style routing and wild cards.
-        
+    public boolean openTopic(CharSequence topic, PubSubWritable writable) { //TODO: urgent, must add support for MQTT style routing and wild cards.
+        assert(writable != null);
         if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
             
             PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
-            PayloadWriter<MessagePubSub> pw = (PayloadWriter<MessagePubSub>) Pipe.outputStream(messagePubSub);
+            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
             pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);            
-                        
-            return optionalPipSubWriter;
+            writable.write(pw);            
+            return true;
             
         } else {
-            //breaks fluent api use because there is no place to write the data.
-            //makers/students will have a lesson where we do new Optional(openTopic("topic"))  then  ifPresent() to only send when we can
-            return Optional.empty();
+            return false;
         }
     }
 
@@ -501,24 +488,25 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		
 		//logger.info("Building response for connection {} sequence {} ",w.getConnectionId(),w.getSequenceCode());
 		
-		Optional<NetResponseWriter> opt = openHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
+		return openHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
 				statusCode,
 				HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION,
-				null); //no type and no body so use null
-		opt.ifPresent(NetResponseWriter::close); //zero length just send back the status code.
-		return opt.isPresent();
+				null,
+				NetResponseWriter::close); //no type and no body so use null
 	}
 
-	public Optional<NetResponseWriter> openHTTPResponse(HTTPFieldReader w, 
+	public boolean openHTTPResponse(HTTPFieldReader w, 
 										            int statusCode, final int context, 
-										            HTTPContentTypeDefaults contentType) {
+										            HTTPContentTypeDefaults contentType,
+										            NetWritable writable) {
 		return openHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
-				                statusCode, context, contentType);
+				                statusCode, context, contentType, writable);
 	}	
 
-	public Optional<NetResponseWriter> openHTTPResponse(long connectionId, long sequenceCode, 
+	public boolean openHTTPResponse(long connectionId, long sequenceCode, 
 			                                            int statusCode, final int context, 
-			                                            HTTPContentTypeDefaults contentType) {
+			                                            HTTPContentTypeDefaults contentType,
+			                                            NetWritable writable) {
 
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
 		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
@@ -528,7 +516,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		Pipe<ServerResponseSchema> pipe = netResponse.length>1 ? netResponse[parallelIndex] : netResponse[0];
 		
 		if (!Pipe.hasRoomForWrite(pipe)) {
-			return Optional.empty();
+			return false;
 		}		
 
 		///////////////////////////////////////
@@ -569,14 +557,17 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 		outputStream.openField(headerBlobPosition, positionOfLen, statusCode, context, contentType);
 				
-		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
 		//TODO: keep track of was this the end and flag error??
+		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
 
-		return optionalResponseWriter.length > 1 ? optionalResponseWriter[parallelIndex] : optionalResponseWriter[0]; 
+		writable.write(outputStream);
+		return true;
+
 	}
 
 
-	public Optional<NetResponseWriter> openHTTPResponseContinuation(long connectionId, long sequenceCode, int context) {
+	public boolean openHTTPResponseContinuation(long connectionId, long sequenceCode, 
+			                                    int context, NetWritable writable) {
 		
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
 		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);		
@@ -586,10 +577,9 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		Pipe<ServerResponseSchema> pipe = netResponse.length>1 ? netResponse[parallelIndex] : netResponse[0];
 
 		if (!Pipe.hasRoomForWrite(pipe)) {
-			return Optional.empty();
+			return false;
 		}
-		
-		
+				
 		Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
 		Pipe.addLongValue(connectionId, pipe);
 		Pipe.addIntValue(sequenceNo, pipe);	
@@ -599,7 +589,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 				
 		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
 		
-		return optionalResponseWriter[parallelIndex];
+		writable.write(outputStream);		
+		return true;
 	}
 
 	public void publishGo(int count, int pipeIdx) {

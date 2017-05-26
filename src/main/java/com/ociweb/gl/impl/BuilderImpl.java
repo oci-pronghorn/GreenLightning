@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PubSubListener;
@@ -539,7 +540,7 @@ public class BuilderImpl implements Builder {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<HTTPRequestSchema> createNewBlobReader() {
-				return new HTTPPayloadReader<HTTPRequestSchema>(this);
+				return new HTTPRequestReader(this);
 			}
 		};
 		return pipe;
