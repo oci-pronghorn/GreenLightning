@@ -111,7 +111,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return (L) registerListenerImpl(listener);
     }
     
-    public final L registerListener(Object listener) {
+    public L registerListener(Object listener) {
     	return (L) registerListenerImpl(listener);
     }
 
@@ -642,7 +642,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
 
     
-    protected ListenerFilter registerListenerImpl(Object listener, int ... optionalInts) {
+    private ListenerFilter registerListenerImpl(Object listener, int ... optionalInts) {
                 
     	extractPipeData(listener, optionalInts);
 		
