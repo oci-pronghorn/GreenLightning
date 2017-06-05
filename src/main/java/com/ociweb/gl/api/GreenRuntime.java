@@ -305,7 +305,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				@SuppressWarnings("unchecked")
 				@Override
 				protected DataInputBlobReader<MessageSubscription> createNewBlobReader() {
-					return new PayloadReader<MessageSubscription>(this);
+					return new MessageReader(this);
 				}
 			};
 			

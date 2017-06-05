@@ -1,7 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.PayloadReader;
-
 /**
  * Functional interface for a publish-subscribe subscriber registered
  * with the {@link GreenRuntime}.
@@ -15,7 +13,7 @@ public interface PubSubListener {
      * Invoked when a new publication is received from the {@link GreenRuntime}.
      *
      * @param topic Topic of the publication.
-     * @param payload {@link PayloadReader} for the topic contents.
+     * @param payload {@link MessageReader} for the topic contents.
      */
-    boolean message(CharSequence topic, PayloadReader payload);
+    boolean message(CharSequence topic, MessageReader payload);
 }

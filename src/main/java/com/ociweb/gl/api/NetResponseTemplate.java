@@ -9,7 +9,7 @@ public class NetResponseTemplate<T> {
 		script = new NetResponseTemplateData[8];
 	}
 	
-	private void append(NetResponseTemplateData fetchData) {
+	private void append(NetResponseTemplateData<T> fetchData) {
 		
 		if (count==script.length) {			
 			NetResponseTemplateData[] newScript = new NetResponseTemplateData[script.length*2];

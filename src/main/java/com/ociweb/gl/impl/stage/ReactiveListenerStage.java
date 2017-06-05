@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.ListenerFilter;
+import com.ociweb.gl.api.MessageReader;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.StartupListener;
@@ -367,7 +368,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	  
 	                    assert(null!=topic) : "Callers must be free to write topic.equals(x) with no fear that topic is null.";
 	                    
-	                    PayloadReader reader = (PayloadReader)Pipe.inputStream(p);
+	                    MessageReader reader = (MessageReader)Pipe.inputStream(p);
 	                    reader.openLowLevelAPIField();
 	                    
 	                    

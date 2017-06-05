@@ -16,7 +16,6 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     private final Pipe<ServerResponseSchema> p;
     private final int maxLength;
     private int length;
-    private long key;
     private int context;
     private int headerBlobPosition;
     private long positionOfLen;

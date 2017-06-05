@@ -1,8 +1,7 @@
 package com.ociweb.gl.api;
 
-public interface CommandChannelVisitor {
+interface CommandChannelVisitor {
 
 	public void visit(GreenCommandChannel cmdChnl);
-
 	
 }

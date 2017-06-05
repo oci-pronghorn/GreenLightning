@@ -13,8 +13,6 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.math.Decimal;
 
 public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobReader<S> implements FieldReader{
-	//TODO: Extend class as HTTPPayload reader to hold other fields
-	//      extended class provides a header visitor of some kind.
 
 	private TrieParser extractionParser;
 	private TrieParserReader reader = new TrieParserReader(true);
@@ -25,9 +23,8 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
     }
 	
 
-    private static void checkLimit(PayloadReader that, int min) {
+    private static <S extends MessageSchema<S>> void checkLimit(PayloadReader<S> that, int min) {
     	if ( (that.position+min) > that.limit ) {
-    		
     		throw new RuntimeException("Read attempted beyond the end of the field data");
     	}
     }

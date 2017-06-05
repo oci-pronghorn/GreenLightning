@@ -1,6 +1,5 @@
 package com.ociweb.gl.api;
 
-import java.util.concurrent.Callable;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.slf4j.Logger;
