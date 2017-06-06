@@ -175,7 +175,7 @@ public class GreenLightning {
 			@Override
 			public CharSequence getPathRoute(int a) {
 				if (fileServerIndex == a) {
-					return "/%b";
+					return "/${path}";
 				} else {
 					return null;
 				}
