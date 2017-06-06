@@ -50,7 +50,7 @@ public class MathUnitSimple implements RestListener {
 		});
 				
 		
-		return cc.openHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, 
+		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, 
 				                   HTTPContentTypeDefaults.JSON, (outputStream) -> {
 			
 			template.render(((NetResponseWriter)outputStream), request);

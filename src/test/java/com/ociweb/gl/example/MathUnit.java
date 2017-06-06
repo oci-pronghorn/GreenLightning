@@ -57,7 +57,7 @@ public class MathUnit implements RestListener {
 			//System.out.println("cookie from browser: "+cookieValue);
 		});
 				
-		return cc.openHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE,
+		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE,
 				                   HTTPContentTypeDefaults.JSON, (outputStream) -> {
 										
 										template.render(((NetResponseWriter)outputStream), request);

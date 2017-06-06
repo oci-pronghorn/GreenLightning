@@ -487,22 +487,22 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		
 		//logger.info("Building response for connection {} sequence {} ",w.getConnectionId(),w.getSequenceCode());
 		
-		return openHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
+		return publishHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
 				statusCode,
 				HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION,
 				null,
 				NetResponseWriter::close); //no type and no body so use null
 	}
 
-	public boolean openHTTPResponse(HTTPFieldReader w, 
+	public boolean publishHTTPResponse(HTTPFieldReader w, 
 										            int statusCode, final int context, 
 										            HTTPContentTypeDefaults contentType,
 										            NetWritable writable) {
-		return openHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
+		return publishHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
 				                statusCode, context, contentType, writable);
 	}	
 
-	public boolean openHTTPResponse(long connectionId, long sequenceCode, 
+	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
 			                                            int statusCode, final int context, 
 			                                            HTTPContentTypeDefaults contentType,
 			                                            NetWritable writable) {
