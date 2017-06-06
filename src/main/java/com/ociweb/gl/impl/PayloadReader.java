@@ -275,11 +275,11 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
-		if (type == TrieParser.ESCAPE_CMD_BYTES) {			
+		if (type == TrieParser.ESCAPE_CMD_BYTES) {
 			readUTF(appendable);
 			return appendable;
 		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
-			Appendables.appendValue(appendable, readLong());
+			Appendables.appendValue(appendable, readPackedLong());
 			return appendable;			
 		} else if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
 			long numerator = DataInputBlobReader.readPackedLong(this);
