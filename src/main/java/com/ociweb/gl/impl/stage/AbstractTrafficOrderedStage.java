@@ -158,7 +158,6 @@ public abstract class AbstractTrafficOrderedStage<H extends BuilderImpl> extends
 
     protected boolean processReleasedCommands(long timeoutNS) {
    	
-    	
         boolean foundWork;
 		int[] localActiveCounts = activeCounts;
 		long now = hardware.currentTimeMillis();
