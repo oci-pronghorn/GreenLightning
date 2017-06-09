@@ -69,7 +69,11 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	}
 
 	public long getFieldId(byte[] fieldName) {
-		return reader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
+		long id = reader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
+		if (id<0) {
+			throw new UnsupportedOperationException("unknown field name '"+new String(fieldName)+"'");
+		}
+		return id;
 	}
 	
 	public long getLong(byte[] fieldName) {
@@ -271,6 +275,9 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	@SuppressWarnings("unchecked")
 	public <A extends Appendable> A getText(long fieldId, A appendable) {
 		
+		if (fieldId<0) {
+			throw new UnsupportedOperationException("unknown field name");
+		}
 		position(computePosition(fieldId));
 		checkLimit(this,2);
 		

@@ -158,9 +158,11 @@ public abstract class AbstractTrafficOrderedStage<H extends BuilderImpl> extends
 
     protected boolean processReleasedCommands(long timeoutNS) {
    	
+    	
         boolean foundWork;
 		int[] localActiveCounts = activeCounts;
-		long timeLimitNS = timeoutNS + hardware.nanoTime();
+		long now = hardware.currentTimeMillis();
+		long timeLimit = (int) (1+(timeoutNS/1000)) + now; //rounds timeout up to next MS 
         long unblockChannelLimit = -1;
         long windowLimit = 0;
         boolean holdForWindow = false;
@@ -169,8 +171,7 @@ public abstract class AbstractTrafficOrderedStage<H extends BuilderImpl> extends
 			int a = startLoopAt;
 			
 				while (--a >= 0) {
-				    long now = hardware.currentTimeMillis();
-				    				
+				    				    				
 				    //do not call again if we already know nothing will result from it.
 				    if (now>unblockChannelLimit) {
 				    	unblockChannelLimit = now+hardware.releaseChannelBlocks(now);
@@ -179,7 +180,7 @@ public abstract class AbstractTrafficOrderedStage<H extends BuilderImpl> extends
 				    if (isChannelBlocked(a) ) {
 				        return true;            
 				    }   
-				    if (hardware.nanoTime() >= timeLimitNS) {
+				    if (now >= timeLimit) {
 				        //stop here because we have run out of time, do save our location to start back here.
 				        startLoopAt = a+1;
                         return false;
@@ -245,14 +246,13 @@ public abstract class AbstractTrafficOrderedStage<H extends BuilderImpl> extends
 							}							
 						}
 					}
-															
+					now = hardware.currentTimeMillis();									
 					
 				} 
 				startLoopAt = activeCounts.length;
 			    
 				//only stop after we have 1 cycle where no work was done, this ensure all pipes are as empty as possible before releasing the thread.
 			    //we also check for 'near' work but only when there is no found work since its more expensive
-				long now = hardware.currentTimeMillis();
 				if (now>windowLimit) {
 					windowLimit = now+releaseWindow;
 					holdForWindow = connectionBlocker.willReleaseInWindow(windowLimit);

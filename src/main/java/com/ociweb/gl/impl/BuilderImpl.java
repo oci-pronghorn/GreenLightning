@@ -94,8 +94,8 @@ public class BuilderImpl implements Builder {
 	/////////////////
 	/////////////////
     
-    private long defaultSleepRateNS = 1_200;//10_000;   //we will only check for new work 100 times per second to keep CPU usage low.
-
+    private long defaultSleepRateNS = 1_200;// should normally be between 900 and 10_000; 
+    
 	private final int shutdownTimeoutInSeconds = 1;
 
 

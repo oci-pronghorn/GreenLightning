@@ -15,6 +15,7 @@ import com.ociweb.pronghorn.pipe.PipeReader;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
@@ -168,6 +169,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private void processStartupSubscriptions(Pipe<MessagePubSub> pipe) {
     	 
     	if (null==pipe) {
+    		logger.info("warning this stage was created but there are no subscriptions to be routed.");
     		return; //no subscriptions were added.
     	}
     	/////////////////////////
@@ -178,6 +180,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		while (PipeReader.tryReadFragment(pipe)) {
             
             int msgIdx = PipeReader.getMsgIdx(pipe);
+           
             switch (msgIdx)  {
             	case MessagePubSub.MSG_CHANGESTATE_70:
             		
@@ -405,7 +408,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
 		
 		int listIdx = (int) TrieParserReader.query(localSubscriptionTrieReader, localSubscriptionTrie, backing, pos, len, mask);
-		//logger.info("adding new subscription {} found it {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
+		
+		boolean debug = false;
+		if (debug) {
+			logger.info("adding new subscription {} found it {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
+		}
 		
 		if (listIdx<0) {
 		    //create new subscription
@@ -432,6 +439,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
         if (PipeWriter.tryWriteFragment(outPipe, MessageSubscription.MSG_PUBLISH_103)) {
             
+        	boolean debug = false;
+        	if (debug) {
+        		logger.info("published message of topic: "+PipeReader.readUTF8(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, new StringBuilder()));
+        	}
         	
             PipeReader.copyBytes(pipe, outPipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1);
             PipeReader.copyBytes(pipe, outPipe, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
