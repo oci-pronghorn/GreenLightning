@@ -22,6 +22,7 @@ import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
+import com.ociweb.pronghorn.network.module.AbstractPayloadResponseStage;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
@@ -378,7 +379,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);           
 		
-		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, routerCount, serverConfig, encryptedIncomingGroup);
+		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, routerCount, serverConfig, encryptedIncomingGroup, -1);
 		               
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
@@ -386,7 +387,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		if (builder.isTLS()) {
 			planIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);
 			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
-					                      encryptedIncomingGroup, planIncomingGroup, acks);
+					                      encryptedIncomingGroup, planIncomingGroup, acks, -1);
 		} else {
 			planIncomingGroup = encryptedIncomingGroup;
 		}
@@ -458,15 +459,15 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);			
 		}
 		
-		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, fromRouterToModules, errorResponsePipes, routerConfig, serverCoord);
+		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, fromRouterToModules, errorResponsePipes, routerConfig, serverCoord, -1);
 
 		final GraphManager graphManager = gm; 
 		
 				
 		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOfServerStages(graphManager, serverCoord,
-				                                            serverConfig, handshakeIncomingGroup);
+				                                            serverConfig, handshakeIncomingGroup, -1);
 		
-		NetGraphBuilder.buildOrderingSupers(graphManager, serverCoord, routerCount, fromModulesToOrderSuper, fromOrderedContent);
+		NetGraphBuilder.buildOrderingSupers(graphManager, serverCoord, routerCount, fromModulesToOrderSuper, fromOrderedContent, -1);
 	}
 	//////////////////
 	//end of server and other behavior
@@ -528,6 +529,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
 				
 	}
+
 
 	private int computeParaMulti() {
 		if (-1==parallelInstanceUnderActiveConstruction ) {
@@ -711,8 +713,8 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			               
 			   runtime.logStageScheduleRates();
 			      
-			   if ( runtime.builder.isTelemetryEnabled()) {	   
-				   MonitorConsoleStage.attach(runtime.gm);//documents what was buit.
+			   if (runtime.builder.isTelemetryEnabled()) {	
+				   runtime.gm.enableTelemetry("127.0.0.1", 8098);
 			   }
 			
 		    
@@ -743,7 +745,7 @@ public class GreenRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			   runtime.logStageScheduleRates();
 			      
 			   if ( runtime.builder.isTelemetryEnabled()) {	   
-				   MonitorConsoleStage.attach(runtime.gm);//documents what was buit.
+				   runtime.gm.enableTelemetry("127.0.0.1", 8098);
 			   }
 			
 		    

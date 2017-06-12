@@ -13,21 +13,14 @@ import com.ociweb.pronghorn.pipe.Pipe;
 
 public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema> implements Appendable {
 
-    private final Pipe<ServerResponseSchema> p;
-    private final int maxLength;
-    private int length;
     private int context;
     private int headerBlobPosition;
     private long positionOfLen;
     private int statusCode;
     private HTTPContentTypeDefaults contentType;
     
-    public NetResponseWriter(Pipe<ServerResponseSchema> p) {
-    	
+    public NetResponseWriter(Pipe<ServerResponseSchema> p) {    	
     	super(p);
-    	this.p = p;    
-    	this.maxLength = p.maxVarLen;
-        
     }
         
     public void writeString(CharSequence value) {
@@ -77,8 +70,8 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     public void publish() {
     	
     	int len = closeLowLevelField(this); //end of writing the payload    	
-    	Pipe.addIntValue(context, p);  //real context    	
-    	Pipe.confirmLowLevelWrite(p);
+    	Pipe.addIntValue(context, backingPipe);  //real context    	
+    	Pipe.confirmLowLevelWrite(backingPipe);
     	
     	//update the header to match length
     	if (0 == (ServerCoordinator.END_RESPONSE_MASK&context) ) {
@@ -89,13 +82,13 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     	writeHeader(this, headerBlobPosition, positionOfLen, statusCode, context, contentType, len);
     	
     	//now publish both header and payload
-    	Pipe.publishWrites(p);
+    	Pipe.publishWrites(backingPipe);
  
     }
 
     void openField(final int context) {
 		this.context = context;
-		this.length = 0;
+
 		DataOutputBlobWriter.openField(this);
 	}
     
@@ -106,17 +99,13 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     	this.positionOfLen = positionOfLen;
     	this.statusCode = statusCode;
     	this.contentType = contentType;
+    	
     	this.context = context;
-        this.length = 0;
+
         DataOutputBlobWriter.openField(this);
     }
    
-    
-    private static void checkLimit(NetResponseWriter that, int x) {
-    	if ( (that.length+=x) > that.maxLength ) {
-    		throw new RuntimeException("This field is limited to a maximum length of "+that.maxLength+". Write less data or declare a larger max payload size. Already wrote "+that.length+" attempting to add "+x);
-    	}
-    }
+
    
     
 	@Override
@@ -279,14 +268,14 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 	public void writeUTFArray(String[] utfs) {
 		int i = utfs.length;
 		while (--i>=0) {
-			checkLimit(this,utfs[i].length()*6); //Estimate (maximum length)
+			checkLimit(this,utfs[i].length() * 6); //Estimate (maximum length)
 		}
 		super.writeUTFArray(utfs);
 	}
 
 	@Override
 	public Appendable append(CharSequence csq) {
-		checkLimit(this,csq.length()*6); //Estimate (maximum length)
+		checkLimit(this,csq.length() * 6); //Estimate (maximum length)
 		return super.append(csq);
 	}
 
