@@ -74,13 +74,7 @@ public class GreenLightning {
 	    boolean large = Boolean.parseBoolean(isLarge);
 	    
 	    if (null==bindHost) {
-		    boolean noIPV6 = true;//TODO: we really do need to add ipv6 support.
-		    List<InetAddress> addrList = NetGraphBuilder.homeAddresses(noIPV6);
-			if (addrList.isEmpty()) {
-				bindHost = "127.0.0.1";
-			} else {
-				bindHost = addrList.get(0).toString().replace("/", "");
-			}		
+		    bindHost = bindHost();		
 	    }
 	   	
 	    final int fileOutgoing = large ? 2048 : 1024;//makes big performance difference.
@@ -99,6 +93,19 @@ public class GreenLightning {
 		} while (value!=10);
 	    System.exit(0);
 		
+	}
+
+    @Deprecated //use NetGraphBuilder.bindHost
+	public static String bindHost() {
+		String bindHost;
+		boolean noIPV6 = true;//TODO: we really do need to add ipv6 support.
+		List<InetAddress> addrList = NetGraphBuilder.homeAddresses(noIPV6);
+		if (addrList.isEmpty()) {
+			bindHost = "127.0.0.1";
+		} else {
+			bindHost = addrList.get(0).toString().replace("/", "");
+		}
+		return bindHost;
 	}
 
 	
