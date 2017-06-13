@@ -467,7 +467,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      *
      * @return {@link PayloadWriter} attached to the given topic.
      */
-    public boolean openTopic(CharSequence topic, PubSubWritable writable) { //TODO: urgent, must add support for MQTT style routing and wild cards.
+    public boolean openTopic(CharSequence topic, PubSubWritable writable) {
         assert(writable != null);
         if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
             
@@ -482,6 +482,20 @@ public class GreenCommandChannel<B extends BuilderImpl> {
         }
     }
 
+    public boolean openStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
+        assert(writable != null);
+        if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+            
+            PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
+            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);            
+            writable.write(pw);            
+            return true;
+            
+        } else {
+            return false;
+        }
+    }
 
 	public boolean publishHTTPResponse(HTTPFieldReader w, int statusCode) {
 		

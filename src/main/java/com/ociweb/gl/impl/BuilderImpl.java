@@ -322,6 +322,13 @@ public class BuilderImpl implements Builder {
 			                                    PipeConfigManager pcm
 			                                ) {
 		return (G) new GreenCommandChannel(gm, this, features, parallelInstanceId, pcm);
+	}	
+	
+	public <G extends GreenCommandChannel> G newCommandChannel(
+            int parallelInstanceId,
+            PipeConfigManager pcm
+        ) {
+		return (G) new GreenCommandChannel(gm, this, 0, parallelInstanceId, pcm);
 	}
 
 	static final boolean debug = false;
