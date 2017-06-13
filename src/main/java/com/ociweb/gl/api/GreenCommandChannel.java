@@ -126,10 +126,10 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     		   messagePubSub.initBuffers();
     	   }
        }
-              
-       //we only need go pipe for some features and when they are used we create the go pipe
-       this.goPipe        = (this.messagePubSub == null)          ? null : newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
 
+       //we always need a go pipe
+       this.goPipe = newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
+       
        ///////////////////
 
        int e = this.exclusiveTopics.length;
@@ -385,6 +385,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      *         otherwise.
      */
     public boolean subscribe(CharSequence topic, PubSubListener listener) {
+    	assert(null!=goPipe) : "must turn on Dynamic Messaging for this channel";
         if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100)) {
             
             PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, System.identityHashCode(listener));
