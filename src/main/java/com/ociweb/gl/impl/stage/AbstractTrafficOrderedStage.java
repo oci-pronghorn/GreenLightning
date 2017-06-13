@@ -161,7 +161,7 @@ public abstract class AbstractTrafficOrderedStage<H extends BuilderImpl> extends
         boolean foundWork;
 		int[] localActiveCounts = activeCounts;
 		long now = hardware.currentTimeMillis();
-		long timeLimit = (int) (1+(timeoutNS/1000)) + now; //rounds timeout up to next MS 
+		long timeLimit = (int) (1+(timeoutNS/1_000_000)) + now; //rounds timeout up to next MS 
         long unblockChannelLimit = -1;
         long windowLimit = 0;
         boolean holdForWindow = false;

@@ -551,7 +551,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	@Override
-	public final void enableTelemetry(boolean enable) {
+	public void enableTelemetry(boolean enable) {
 		isTelemetryEnabled = enable;
 	}
 
