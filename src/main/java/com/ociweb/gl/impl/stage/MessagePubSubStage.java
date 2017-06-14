@@ -93,7 +93,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
        this.incomingSubsAndPubsPipe = incomingSubsAndPubsPipe;
        this.outgoingMessagePipes = outgoingMessagePipes;
        
-       assert(incomingSubsAndPubsPipe.length == goPipe.length) : "should be one go pipe for every incoming message pipe.";
        assert(goPipe.length == ackPipe.length) : "should be one ack pipe for every go pipe";
        
        this.subscriberListSize = outgoingMessagePipes.length;//can never hava more subscribers than ALL

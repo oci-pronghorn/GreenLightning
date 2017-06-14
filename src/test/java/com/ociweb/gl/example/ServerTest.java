@@ -35,14 +35,16 @@ public class ServerTest {
     	
     	SimpleApp app = new SimpleApp(port, false, isTLS);
 		GreenRuntime runtime = GreenRuntime.test(app);
-    	NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();
+    	final NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();
     	
     	final AtomicBoolean isLive = new AtomicBoolean(true);
     	
-    	Thread thread = new Thread(()->{
-    		while (isLive.get()) {    		
-    			scheduler.run();
-    			Thread.yield();
+    	Thread thread = new Thread(new Runnable(){    		
+    		public void run() {
+				    		while (isLive.get()) {    		
+				    			scheduler.run();
+				    			Thread.yield();
+				    		}
     		}
     	});
 

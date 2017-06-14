@@ -47,7 +47,7 @@ public class MathUnit implements RestListener {
 	
 	
 	@Override
-	public boolean restRequest(HTTPRequestReader request) {
+	public boolean restRequest(final HTTPRequestReader request) {
 		
 		final StringBuilder cookieValue = new StringBuilder();
 		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(),(c)->{

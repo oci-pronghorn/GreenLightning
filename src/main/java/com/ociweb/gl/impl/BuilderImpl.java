@@ -358,7 +358,7 @@ public class BuilderImpl implements Builder {
 
 	}
 
-	public StageScheduler createScheduler(GreenRuntime runtime) {
+	public StageScheduler createScheduler(final GreenRuntime runtime) {
 				
 		final StageScheduler scheduler =  runtime.builder.threadLimit <= 0 ? new ThreadPerStageScheduler(runtime.builder.gm): 
 			                                                 new FixedThreadsScheduler(runtime.builder.gm, runtime.builder.threadLimit, runtime.builder.threadLimitHard);

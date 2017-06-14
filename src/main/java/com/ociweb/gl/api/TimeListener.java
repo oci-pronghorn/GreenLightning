@@ -14,5 +14,5 @@ public interface TimeListener {
      *
      * @param time Time of the event in milliseconds since the UNIX epoch.
      */
-    void timeEvent(long time);
+    void timeEvent(long time, int iteration);
 }

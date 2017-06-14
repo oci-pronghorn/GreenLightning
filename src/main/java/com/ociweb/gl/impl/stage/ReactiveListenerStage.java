@@ -81,7 +81,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     
     private final ClientCoordinator ccm;
-    
+
+	protected static final long MS_to_NS = 1_000_000;
+    private int iteration = 0;
     
     
     public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H builder) {
@@ -423,9 +425,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         }
     }        
 
-	private static final long MS_to_NS = 1_000_000;
-
-	private final void processTimeEvents(TimeListener listener, long trigger) {
+	
+	protected final void processTimeEvents(TimeListener listener, long trigger) {
 		
 		long msRemaining = (trigger-builder.currentTimeMillis()); 
 		if (msRemaining > timeProcessWindow) {
@@ -442,29 +443,26 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			Thread.yield();                	
 		}
 		
-		listener.timeEvent(trigger);
+		listener.timeEvent(trigger, iteration++);
 		timeTrigger += timeRate;
 	}
-
-
-
-            
+   
     
-    private final boolean isNotExcluded(int newOrdinal, long[] excluded) {
+	protected final boolean isNotExcluded(int newOrdinal, long[] excluded) {
     	if (null!=excluded) {
     		return 0 == (excluded[newOrdinal>>6] & (1L<<(newOrdinal & 0x3F)));			
 		}
 		return true;
 	}
 
-	private final boolean isIncluded(int newOrdinal, long[] included) {
+    protected final boolean isIncluded(int newOrdinal, long[] included) {
 		if (null!=included) {			
 			return 0 != (included[newOrdinal>>6] & (1L<<(newOrdinal & 0x3F)));
 		}
 		return true;
 	}
 	
-	private final <T> boolean isNotExcluded(T port, T[] excluded) {
+	protected final <T> boolean isNotExcluded(T port, T[] excluded) {
 		if (null!=excluded) {
 			int e = excluded.length;
 			while (--e>=0) {
@@ -476,7 +474,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		return true;
 	}
 
-	private final boolean isNotExcluded(int a, int[] excluded) {
+	protected final boolean isNotExcluded(int a, int[] excluded) {
 		if (null!=excluded) {
 			int e = excluded.length;
 			while (--e>=0) {
@@ -488,7 +486,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		return true;
 	}
 	
-	private final <T> boolean isIncluded(T port, T[] included) {
+	protected final <T> boolean isIncluded(T port, T[] included) {
 		if (null!=included) {
 			int i = included.length;
 			while (--i>=0) {
@@ -501,7 +499,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		return true;
 	}
 	
-	private final boolean isIncluded(int a, int[] included) {
+	protected final boolean isIncluded(int a, int[] included) {
 		if (null!=included) {
 			int i = included.length;
 			while (--i>=0) {
