@@ -198,6 +198,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	  
     	      if (HTTPRequestSchema.MSG_RESTREQUEST_300==msgIdx) {
     	    	  
+    	    	  //logger.info("consumeRestRequest");
+    	    	  
 //    	    	    public static final int MSG_RESTREQUEST_300_FIELD_CHANNELID_21 = 0x00800001;
 //    	    	    public static final int MSG_RESTREQUEST_300_FIELD_SEQUENCE_26 = 0x00400003;
 //    	    	    public static final int MSG_RESTREQUEST_300_FIELD_VERB_23 = 0x00000004;
@@ -244,8 +246,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
              	  
              	 request.setFieldNameParser(null);//just for safety
              	 
-    	      } else  if (HTTPRequestSchema.MSG_RESTREQUEST_300==msgIdx) {
-    	    	  throw new UnsupportedOperationException("File requests are not supported at this level.");
     	      } else {
     	    	  logger.error("unrecognized message on {} ",p);
     	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);
@@ -270,6 +270,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
              int msgIdx = Pipe.takeMsgIdx(p);
              switch (msgIdx) {
 	             case NetResponseSchema.MSG_RESPONSE_101:
+	            	 
+	            	// logger.info("consumeNetResponse");
 	            	 
 	//            	    public static final int MSG_RESPONSE_101 = 0x00000000;
 	//            	    public static final int MSG_RESPONSE_101_FIELD_CONNECTIONID_1 = 0x00800001;

@@ -7,4 +7,5 @@ public interface FieldConsumer {
 	public void store(byte e, long m);
 	public void store(long numerator, long denominator);
 	
+	public boolean run();
 }

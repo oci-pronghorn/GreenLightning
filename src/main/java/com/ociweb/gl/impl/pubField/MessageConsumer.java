@@ -14,12 +14,42 @@ public class MessageConsumer {
 
 	List<FieldConsumer> list = new ArrayList<FieldConsumer>();
 	TrieParserReader reader = new TrieParserReader();
+	FieldConsumer[][] consumers = new FieldConsumer[4][]; //how many for all the fields?
 	
-	IntHashTable fieldIdToIndex = new IntHashTable(12);
-	FieldConsumer[][] consumers;
+	public MessageConsumer() {
+				
+	}
 	
-	
-	public void readField(DataInputBlobReader reader) {
+    private void storeField(int fieldId, FieldConsumer fc) {
+    	
+    	if (fieldId >= consumers.length) {
+    		
+    		int newLength = Math.max(consumers.length*2,fieldId+1);    		
+    		FieldConsumer[][] newConsumers = new FieldConsumer[newLength][];    		
+    		System.arraycopy(consumers, 0, newConsumers, 0, consumers.length);    		
+    		consumers = newConsumers;
+    		
+    	}
+    	
+    	FieldConsumer[] fieldConsumers = consumers[fieldId];    	
+    	int len = null==fieldConsumers?0:fieldConsumers.length;
+    	FieldConsumer[] fieldConsumersTemp = new FieldConsumer[len+1];
+    	if (len>0) {
+    		System.arraycopy(fieldConsumers, 0, fieldConsumersTemp, 0, len);
+    	}
+    	fieldConsumersTemp[len] = fc;
+    	consumers[fieldId] = fieldConsumersTemp;
+    	
+    }
+
+    public boolean process(DataInputBlobReader reader) {
+    	storeFields(reader);
+    	return consumeFields();
+    }
+    
+    
+	private void storeFields(DataInputBlobReader reader) {
+		
 		//These asserts are required to ensure no one refactors the TypeMask to modify 
 		//the order value of these constants.
 		assert(TypeMask.IntegerSigned   == 0x02);// integer
@@ -28,18 +58,31 @@ public class MessageConsumer {
 		assert(TypeMask.Decimal         == 0x0C);// decimal
 		assert(TypeMask.DecimalOptional == 0x0D);// rational
 		assert(TypeMask.ByteVector      == 0x0E);// bytes
-		
-		
-		int token = DataInputBlobReader.readPackedInt(reader);
-		
-		int type = TokenBuilder.extractType(token);
-		int fieldId = TokenBuilder.extractId(token);
-		
-		
-		FieldConsumer consumer = null; //must look up consumers from fieldId...
 				
-		storeValue(reader, type, consumer);
+		while (reader.hasRemainingBytes()) {
 		
+			int token = DataInputBlobReader.readPackedInt(reader);
+			
+			int type = TokenBuilder.extractType(token);
+			int fieldId = TokenBuilder.extractId(token);
+			
+			FieldConsumer[] localConsumers = consumers[fieldId];
+			if (null!=localConsumers) {
+				int i = localConsumers.length;
+				while (--i >= 0) {
+					storeValue(reader, type, localConsumers[i]);
+				}
+			}
+		}		
+	}
+		
+	private boolean consumeFields() {
+		for(int i = 0; i<list.size(); i++) {
+			if (!list.get(i).run()) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	private void storeValue(DataInputBlobReader reader, int type, FieldConsumer consumer) {
@@ -81,32 +124,40 @@ public class MessageConsumer {
 	
 	public MessageConsumer add(int fieldId, BytesFieldProcessor processor) {
 		
+		FieldConsumer consumer = new BytesFieldConsumer(processor);		
+		storeField(fieldId,consumer);
 		//index field id to list.size();?
-		list.add(new BytesFieldConsumer(processor));
+		list.add(consumer);
 		
 		return this;
 	}
 	
     public MessageConsumer add(int fieldId, DecimalFieldProcessor processor) {
-		
+    	
+    	FieldConsumer consumer = new DecimalFieldConsumer(processor, reader);
+    	storeField(fieldId,consumer);
 		//index field id to list.size();?
-		list.add(new DecimalFieldConsumer(processor, reader));
+		list.add(consumer);
 		
 		return this;
 	}
 
     public MessageConsumer add(int fieldId, IntFieldProcessor processor) {
-		
+    	
+    	FieldConsumer consumer = new IntFieldConsumer(processor, reader);
+    	storeField(fieldId,consumer);
 		//index field id to list.size();?
-		list.add(new IntFieldConsumer(processor, reader));
+		list.add(consumer);
 		
 		return this;
 	}
     
     public MessageConsumer add(int fieldId, RationalFieldProcessor processor) {
-		
+    	
+    	FieldConsumer consumer = new RationalFieldConsumer(processor, reader);
+    	storeField(fieldId,consumer);
 		//index field id to list.size();?
-		list.add(new RationalFieldConsumer(processor, reader));
+		list.add(consumer);
 		
 		return this;
 	}

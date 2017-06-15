@@ -13,5 +13,4 @@ public interface PubSubStructuredWriter {
 	public void writeDouble(int fieldId, double value, byte places);
 	public void writeFloat(int fieldId, float value, byte places);		
 	public void writeRational(int fieldId, long numerator, long denominator);
-	
 }
