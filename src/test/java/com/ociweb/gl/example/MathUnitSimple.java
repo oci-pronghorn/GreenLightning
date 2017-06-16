@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.NetResponseTemplate;
@@ -25,7 +25,7 @@ public class MathUnitSimple implements RestListener {
 	
 	private final NetResponseTemplate<HTTPFieldReader> template;
 
-	public MathUnitSimple(final GreenRuntime runtime) {
+	public MathUnitSimple(final MsgRuntime runtime) {
 
 		this.cc = runtime.newCommandChannel(GreenCommandChannel.NET_RESPONDER);
        

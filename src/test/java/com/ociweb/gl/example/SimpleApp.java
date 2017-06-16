@@ -1,12 +1,12 @@
 package com.ociweb.gl.example;
 
 import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.MsgApp;
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.TimeTrigger;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
-public class SimpleApp implements GreenApp {
+public class SimpleApp implements MsgApp {
 
 	public int ADD_ID1;
 	public int ADD_ID2;
@@ -25,7 +25,7 @@ public class SimpleApp implements GreenApp {
 	}
 	
     public static void main( String[] args ) {
-        GreenRuntime.run(new SimpleApp(8081,true,false));
+        MsgRuntime.run(new SimpleApp(8081,true,false));
     }
 	
     
@@ -50,14 +50,14 @@ public class SimpleApp implements GreenApp {
 	
 	
 	@Override
-	public void declareBehavior(GreenRuntime runtime) {		
+	public void declareBehavior(MsgRuntime runtime) {		
 				
-		runtime.addRestListener(new MathUnitSimple((GreenRuntime) runtime), SIMPLE_ADD_ID1);
-		runtime.addRestListener(singleInstance = new MathUnit((GreenRuntime) runtime), ADD_ID1, ADD_ID2); //accept all registered routes
+		runtime.addRestListener(new MathUnitSimple((MsgRuntime) runtime), SIMPLE_ADD_ID1);
+		runtime.addRestListener(singleInstance = new MathUnit((MsgRuntime) runtime), ADD_ID1, ADD_ID2); //accept all registered routes
 	}
 
 	@Override
-	public void declareParallelBehavior(GreenRuntime runtime) {	
+	public void declareParallelBehavior(MsgRuntime runtime) {	
 
 	}
 	

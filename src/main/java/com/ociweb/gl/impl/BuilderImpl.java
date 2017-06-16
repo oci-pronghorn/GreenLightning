@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.NetResponseWriter;
@@ -358,7 +358,7 @@ public class BuilderImpl implements Builder {
 
 	}
 
-	public StageScheduler createScheduler(final GreenRuntime runtime) {
+	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
 		final StageScheduler scheduler =  runtime.builder.threadLimit <= 0 ? new ThreadPerStageScheduler(runtime.builder.gm): 
 			                                                 new FixedThreadsScheduler(runtime.builder.gm, runtime.builder.threadLimit, runtime.builder.threadLimitHard);

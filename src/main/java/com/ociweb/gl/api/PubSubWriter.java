@@ -1,6 +1,7 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.schema.MessagePubSub;
+import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.token.OperatorMask;
@@ -19,6 +20,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.IntegerSigned, 
 				                                    OperatorMask.Field_None, 
 				                                    fieldId));
+		writeShort(-1); //room for future field name
 	    writePackedInt(this,value);
 		
 	}
@@ -29,7 +31,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.LongSigned, 
 									                OperatorMask.Field_None, 
 									                fieldId));
-		
+		writeShort(-1); //room for future field name
 		writePackedLong(this,value);
 	}
 	
@@ -38,7 +40,8 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.ByteVector, 
 				OperatorMask.Field_None, 
-				fieldId));		
+				fieldId));
+		writeShort(-1); //room for future field name
 		writeShort(backing.length);
 		write(backing,offset,length);
 		
@@ -49,6 +52,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.ByteVector, 
 				OperatorMask.Field_None, 
 				fieldId));
+		writeShort(-1); //room for future field name
 		writeShort(backing.length);
 		write(backing);
 	}
@@ -59,6 +63,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.ByteVector, 
                 									OperatorMask.Field_None, 
                 									fieldId));
+		writeShort(-1); //room for future field name
 		writeShort(length);
 		write(backing, offset, length, mask);
 		
@@ -70,8 +75,11 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.TextUTF8, 
 									                OperatorMask.Field_None, 
 									                fieldId));
-		writeUTF8(fieldId, text, offset, length);
+		writeShort(-1); //room for future field name
 		
+		writeShort(length);
+		DataOutputBlobWriter.encodeAsUTF8(this, text, offset, length);
+
 	}
 
 	@Override
@@ -80,7 +88,8 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.TextUTF8, 
 									                OperatorMask.Field_None, 
 									                fieldId));
-		writeUTF8(fieldId, text);
+		writeShort(-1); //room for future field name		
+		writeUTF(text);
 	}
 
 
@@ -89,7 +98,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.Decimal, 
                 OperatorMask.Field_None, 
                 fieldId));
-		
+		writeShort(-1); //room for future field name
 		writeByte(e);
 		writePackedLong(this, m);
 	}
@@ -100,7 +109,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.Decimal, 
 									                OperatorMask.Field_None, 
 									                fieldId));
-		
+		writeShort(-1); //room for future field name
 		writeByte(-places);
 		writePackedLong((long)Math.rint(value*PipeWriter.powd[64+places]));
 
@@ -112,7 +121,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.Decimal, 
 									                OperatorMask.Field_None, 
 									                fieldId));
-		
+		writeShort(-1); //room for future field name
 		writeByte(-places);
 		writePackedLong((long)Math.rint(value*PipeWriter.powd[64+places]));
 		
@@ -124,6 +133,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.DecimalOptional, //NB: re-use of type for two purposes 
 									                OperatorMask.Field_None, 
 									                fieldId));
+		writeShort(-1); //room for future field name
 		writePackedLong(numerator);
 		writePackedLong(denominator);
 	}

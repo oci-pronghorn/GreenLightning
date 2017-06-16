@@ -66,6 +66,9 @@ public class MessageConsumer {
 			int type = TokenBuilder.extractType(token);
 			int fieldId = TokenBuilder.extractId(token);
 			
+			int fieldNameLength = reader.readShort();
+			assert(fieldNameLength == -1);
+			
 			FieldConsumer[] localConsumers = consumers[fieldId];
 			if (null!=localConsumers) {
 				int i = localConsumers.length;
@@ -122,41 +125,46 @@ public class MessageConsumer {
 		}
 	}
 	
-	public MessageConsumer add(int fieldId, BytesFieldProcessor processor) {
+	public <A extends Appendable> MessageConsumer utf8Processor(int fieldId, UTF8FieldProcessor<A> processor, A target) {
 		
-		FieldConsumer consumer = new BytesFieldConsumer(processor);		
+		FieldConsumer consumer = new UTF8FieldConsumer<A>(processor, target);		
 		storeField(fieldId,consumer);
-		//index field id to list.size();?
 		list.add(consumer);
 		
 		return this;
 	}
 	
-    public MessageConsumer add(int fieldId, DecimalFieldProcessor processor) {
+	public MessageConsumer bytesProcessor(int fieldId, BytesFieldProcessor processor) {
+		
+		FieldConsumer consumer = new BytesFieldConsumer(processor);		
+		storeField(fieldId,consumer);
+		list.add(consumer);
+		
+		return this;
+	}
+	
+    public MessageConsumer decimalProcessor(int fieldId, DecimalFieldProcessor processor) {
     	
     	FieldConsumer consumer = new DecimalFieldConsumer(processor, reader);
     	storeField(fieldId,consumer);
-		//index field id to list.size();?
 		list.add(consumer);
 		
 		return this;
 	}
 
-    public MessageConsumer add(int fieldId, IntFieldProcessor processor) {
+    public MessageConsumer integerProcessor(int fieldId, IntegerFieldProcessor processor) {
     	
     	FieldConsumer consumer = new IntFieldConsumer(processor, reader);
     	storeField(fieldId,consumer);
-		//index field id to list.size();?
 		list.add(consumer);
 		
 		return this;
 	}
     
-    public MessageConsumer add(int fieldId, RationalFieldProcessor processor) {
+    public MessageConsumer rationalProcessor(int fieldId, RationalFieldProcessor processor) {
     	
     	FieldConsumer consumer = new RationalFieldConsumer(processor, reader);
     	storeField(fieldId,consumer);
-		//index field id to list.size();?
 		list.add(consumer);
 		
 		return this;

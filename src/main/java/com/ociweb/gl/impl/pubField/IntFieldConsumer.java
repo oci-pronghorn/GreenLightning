@@ -7,11 +7,11 @@ import com.ociweb.pronghorn.util.math.Decimal;
 
 public class IntFieldConsumer implements FieldConsumer {
 
-	private final IntFieldProcessor processor;
+	private final IntegerFieldProcessor processor;
 	private final TrieParserReader reader;
 	private long value;
 	
-	public IntFieldConsumer(IntFieldProcessor processor, TrieParserReader reader) {
+	public IntFieldConsumer(IntegerFieldProcessor processor, TrieParserReader reader) {
 		this.processor = processor;
 		this.reader = reader;
 	}

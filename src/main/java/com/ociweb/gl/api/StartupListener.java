@@ -1,7 +1,7 @@
 package com.ociweb.gl.api;
 
 /**
- * Functional interface that can be registered with a {@link GreenRuntime}
+ * Functional interface that can be registered with a {@link MsgRuntime}
  * to receive a single event when the device starts.
  *
  * @author Nathan Tippy
@@ -10,7 +10,7 @@ package com.ociweb.gl.api;
 public interface StartupListener {
 
     /**
-     * Invoked once when the {@link GreenRuntime} starts up the IoT application.
+     * Invoked once when the {@link MsgRuntime} starts up the IoT application.
      */
     void startup();
     

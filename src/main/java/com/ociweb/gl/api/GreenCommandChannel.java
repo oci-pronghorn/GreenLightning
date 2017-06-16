@@ -461,6 +461,18 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     	
     }
 
+    public void presumePublishTopic(CharSequence topic, PubSubWritable writable) {
+    	
+    	if (publishTopic(topic, writable)) {
+			return;
+		} else { 
+			logger.warn("unable to publish on topic {} must wait.",topic);
+			while (!publishTopic(topic, writable)) {
+				Thread.yield();
+			}
+		}
+    }
+    
     /**
      * Opens a topic on this channel for writing.
      *
@@ -468,15 +480,18 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      *
      * @return {@link PayloadWriter} attached to the given topic.
      */
-    //TODO: rename as publishTopic
-    public boolean openTopic(CharSequence topic, PubSubWritable writable) {
+    public boolean publishTopic(CharSequence topic, PubSubWritable writable) {
         assert(writable != null);
-        if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+        if (PipeWriter.hasRoomForWrite(goPipe) && 
+        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
             
-            PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
+        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+        	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
             pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);            
-            writable.write(pw);
+            writable.write(pw);//TODO: cool feature, writable to return false to abandon write.. 
+            
+
             pw.publish();
             return true;
             
@@ -485,19 +500,33 @@ public class GreenCommandChannel<B extends BuilderImpl> {
         }
     }
 
-    //TODO: rename as publishTopic
-    public boolean openStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
+    public void presumePublishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
+    	
+    	if (publishStructuredTopic(topic, writable)) {
+			return;
+		} else { 
+			logger.warn("unable to publish on topic {} must wait.",topic);
+			while (!publishStructuredTopic(topic, writable)) {
+				Thread.yield();
+			}
+		}
+    }
+        
+    public boolean publishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
         assert(writable != null);
         assert(null != goPipe);
         assert(null != messagePubSub);
         if (PipeWriter.hasRoomForWrite(goPipe) 
         	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-            
-            PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
+
+        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
+                    	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
             pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);            
-            writable.write(pw);  
+            writable.write(pw); //TODO: cool feature, writable to return false to abandon write.. 
             pw.publish();
+
+
             return true;
             
         } else {

@@ -4,7 +4,7 @@ package com.ociweb.gl.api;
  * Base interface for an IoT device's hardware.
  * <p>
  * This interface is most commonly used in conjunction with a call
- * to {@link GreenApp#declareConfiguration(Builder)} in order for
+ * to {@link MsgApp#declareConfiguration(Builder)} in order for
  * a maker's code to declare any hardware connections and resources
  * that it makes use of.
  *
