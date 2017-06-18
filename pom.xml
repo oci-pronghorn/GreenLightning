@@ -210,9 +210,9 @@
               <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
               <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
             </manifest>
-            <manifestEntries>
+            <!--  manifestEntries>
               <Build-Time>${maven.build.timestamp}</Build-Time>
-            </manifestEntries>
+            </manifestEntries  -->
           </archive>
         </configuration>
       </plugin>
