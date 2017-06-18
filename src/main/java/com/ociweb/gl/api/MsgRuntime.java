@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.HTTPPayloadReader;
-import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -22,10 +21,12 @@ import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
-import com.ociweb.pronghorn.network.module.AbstractPayloadResponseStage;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
+import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
+import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
+import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -35,7 +36,6 @@ import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
-import com.ociweb.pronghorn.stage.monitor.MonitorConsoleStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
@@ -125,13 +125,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
     	
 		//extract pipes used by listener
-    	visitCommandChannelsUsedByListener(listener, gatherPipesVisitor);//populates  httpRequestPipes and outputPipes
+    	visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor);//populates  httpRequestPipes and outputPipes
 	}
 	
-    protected void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor) {
+		
+    protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
 
         Class<? extends Object> c = listener.getClass();
         Field[] fields = c.getDeclaredFields();
+        
+                
         int f = fields.length;
         while (--f >= 0) {
             try {
@@ -144,6 +147,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                     GreenCommandChannel.setListener(cmdChnl, listener);
                     visitor.visit(cmdChnl);
                                         
+                } else {                
+                	if (depth<5) { //stop recursive depth
+                		//recursive check for command channels
+                		visitCommandChannelsUsedByListener(obj, depth+1, visitor);
+            		}
                 }
                 
             } catch (Throwable e) {
@@ -348,6 +356,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//server and other behavior
 	//////////////////
 	public void declareBehavior(MsgApp app) {
+		
+		///TODO: if MQTT used setup the server
+		//Pipe<MQTTClientRequestSchema> clientRequest=null;
+		//Pipe<MQTTClientResponseSchema> result = MQTTClientGraphBuilder.buildMQTTClientGraph(gm, clientRequest);
+		//
+		
 		if (builder.isUseNetServer()) {
 		    buildGraphForServer(app);
 		} else {            	
@@ -685,7 +699,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		int testId = -1;
 		int i = inputPipes.length;
 		while (--i>=0) {
-			if (inputPipes[i]!=null && Pipe.isForSchema(inputPipes[i], MessageSubscription.instance)) {
+			if (inputPipes[i]!=null && Pipe.isForSchema((Pipe<MessageSubscription>)inputPipes[i], MessageSubscription.class)) {
 				testId = inputPipes[i].id;
 			}
 		}

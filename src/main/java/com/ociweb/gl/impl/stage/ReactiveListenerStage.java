@@ -85,6 +85,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	protected static final long MS_to_NS = 1_000_000;
     private int iteration = 0;
     
+    //////////////////////////////////////////////////
+    ///NOTE: keep all the work here to a minimum, we should just
+    //      take data off pipes and hand off to the application
+    //      the thread here is the applications thread if
+    //      much work needs to be done is must be done elsewhere
+    /////////////////////////////////////////////////////
     
     public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H builder) {
 
@@ -134,7 +140,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         
         while (--p >= 0) {
         	 Pipe<?> localPipe = inputPipes[p];
-        	 if (Pipe.isForSchema(localPipe, HTTPRequestSchema.instance)) {
+        	 if (Pipe.isForSchema((Pipe<HTTPRequestSchema>)localPipe, HTTPRequestSchema.class)) {
         		 builder.lookupRouteAndPara(localPipe, p, routeIds, parallelIds);
         	 } else {
         		 routeIds[p]=Integer.MIN_VALUE;
@@ -163,15 +169,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
         	Pipe<?> localPipe = inputPipes[p];
   
-            if (Pipe.isForSchema(localPipe, MessageSubscription.instance)) {                
+            if (Pipe.isForSchema((Pipe<MessageSubscription>)localPipe, MessageSubscription.class)) {                
             	
             	consumePubSubMessage(listener, (Pipe<MessageSubscription>) localPipe);
             	
-            } else if (Pipe.isForSchema(localPipe, NetResponseSchema.instance)) {
+            } else if (Pipe.isForSchema((Pipe<NetResponseSchema>)localPipe, NetResponseSchema.class)) {
      
                consumeNetResponse((HTTPResponseListener)listener, (Pipe<NetResponseSchema>) localPipe);
             
-            } else if (Pipe.isForSchema(localPipe, HTTPRequestSchema.instance)) {
+            } else if (Pipe.isForSchema((Pipe<HTTPRequestSchema>)localPipe, HTTPRequestSchema.class)) {
             	
             	consumeRestRequest((RestListener)listener, (Pipe<HTTPRequestSchema>) localPipe, routeIds[p], parallelIds[p]);
             

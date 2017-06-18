@@ -346,7 +346,7 @@ public class BuilderImpl implements Builder {
 		return !IntHashTable.isEmpty(netPipeLookup) && (netResponsePipes.length!=0) && (netRequestPipes.length!=0);
 	}
 
-	private final void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
+	protected final void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
 			Pipe<MessagePubSub>[] messagePubSub,
 			Pipe<TrafficReleaseSchema>[] masterMsggoOut, 
 			Pipe<TrafficAckSchema>[] masterMsgackIn, 
@@ -557,6 +557,7 @@ public class BuilderImpl implements Builder {
 		return isTelemetryEnabled;
 	}
 
+	//TODO: this must be fixed because it eliminates the ability to remove this from the code...
 	@Override
 	public void enableTelemetry(boolean enable) {
 		isTelemetryEnabled = enable;
@@ -572,7 +573,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	public void releasePubSubTraffic(int count, GreenCommandChannel<?> gcc) {
-		gcc.publishGo(count, IDX_MSG);
+		GreenCommandChannel.publishGo(count, IDX_MSG, gcc);
 	}
 
 	public void buildStages(IntHashTable subscriptionPipeLookup2, IntHashTable netPipeLookup2, GraphManager gm2) {

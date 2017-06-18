@@ -64,7 +64,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 	public final int maxHTTPContentLength;
 	
 	protected Pipe<?>[] optionalOutputPipes;
-	
+	protected final int initFeatures;
     
     public GreenCommandChannel(GraphManager gm, B hardware,
 			      		    int parallelInstanceId,
@@ -78,7 +78,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     					  int parallelInstanceId,
     					  PipeConfigManager pcm
     		             ) {
-    	
+    
+       this.initFeatures = features;//this is held so we can check at every method call that its configured right
                              
        this.messagePubSub = ((features & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class));
        this.httpRequest   = ((features & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class));
@@ -367,6 +368,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      *         otherwise.
      */
     public boolean subscribe(CharSequence topic) {
+    			
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
     	
     	if (null==listener || null == goPipe) {
     		throw new UnsupportedOperationException("Can not subscribe before startup. Call addSubscription when registering listener."); 
@@ -385,6 +388,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      *         otherwise.
      */
     public boolean subscribe(CharSequence topic, PubSubListener listener) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+
     	assert(null!=goPipe) : "must turn on Dynamic Messaging for this channel";
         if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100)) {
             
@@ -409,6 +414,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      * @return True if the topic was successfully unsubscribed from, and false otherwise.
      */
     public boolean unsubscribe(CharSequence topic) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+
         return unsubscribe(topic, (PubSubListener)listener);
     }
 
@@ -421,6 +428,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      * @return True if the topic was successfully unsubscribed from, and false otherwise.
      */
     public boolean unsubscribe(CharSequence topic, PubSubListener listener) {
+		 assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+
         if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101)) {
             
             PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, System.identityHashCode(listener));
@@ -443,6 +452,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      * @return True if the state was successfully transitioned, and false otherwise.
      */
     public <E extends Enum<E>> boolean changeStateTo(E state) {
+		 assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+
     	 assert(builder.isValidState(state));
     	 if (!builder.isValidState(state)) {
     		 throw new UnsupportedOperationException("no match "+state.getClass());
@@ -481,6 +492,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
      * @return {@link PayloadWriter} attached to the given topic.
      */
     public boolean publishTopic(CharSequence topic, PubSubWritable writable) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+
         assert(writable != null);
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
@@ -488,11 +501,12 @@ public class GreenCommandChannel<B extends BuilderImpl> {
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
         	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);            
-            writable.write(pw);//TODO: cool feature, writable to return false to abandon write.. 
             
-
+            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);
+            writable.write(pw);//TODO: cool feature, writable to return false to abandon write..
+            
             pw.publish();
+            
             return true;
             
         } else {
@@ -513,7 +527,9 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     }
         
     public boolean publishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
-        assert(writable != null);
+ 	    assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+
+    	assert(writable != null);
         assert(null != goPipe);
         assert(null != messagePubSub);
         if (PipeWriter.hasRoomForWrite(goPipe) 
@@ -525,8 +541,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
             pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);            
             writable.write(pw); //TODO: cool feature, writable to return false to abandon write.. 
             pw.publish();
-
-
+    
             return true;
             
         } else {
@@ -536,6 +551,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 
 	public boolean publishHTTPResponse(HTTPFieldReader w, int statusCode) {
 		
+		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
+
 		//logger.info("Building response for connection {} sequence {} ",w.getConnectionId(),w.getSequenceCode());
 		
 		return publishHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
@@ -549,6 +566,9 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 										            int statusCode, final int context, 
 										            HTTPContentTypeDefaults contentType,
 										            NetWritable writable) {
+		
+		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
+
 		return publishHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
 				                statusCode, context, contentType, writable);
 	}	
@@ -557,6 +577,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 			                                            int statusCode, final int context, 
 			                                            HTTPContentTypeDefaults contentType,
 			                                            NetWritable writable) {
+		
+		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
 		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
@@ -616,9 +638,11 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 	}
 
 
-	public boolean openHTTPResponseContinuation(long connectionId, long sequenceCode, 
+	public boolean publishHTTPResponseContinuation(long connectionId, long sequenceCode, 
 			                                    int context, NetWritable writable) {
 		
+    	assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
+
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
 		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);		
 		
@@ -643,12 +667,12 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		return true;
 	}
 
-	public void publishGo(int count, int pipeIdx) {
+	public static void publishGo(int count, int pipeIdx, GreenCommandChannel<?> gcc) {
 		
-		if(PipeWriter.tryWriteFragment(goPipe, TrafficOrderSchema.MSG_GO_10)) {                 
-            PipeWriter.writeInt(goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11, pipeIdx);
-            PipeWriter.writeInt(goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12, count);
-            PipeWriter.publishWrites(goPipe);
+		if(PipeWriter.tryWriteFragment(gcc.goPipe, TrafficOrderSchema.MSG_GO_10)) {                 
+            PipeWriter.writeInt(gcc.goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11, pipeIdx);
+            PipeWriter.writeInt(gcc.goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12, count);
+            PipeWriter.publishWrites(gcc.goPipe);
         } else {
             throw new UnsupportedOperationException("Was already check and should not have run out of space.");
         }

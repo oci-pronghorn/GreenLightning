@@ -56,7 +56,7 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     //TODO: add method for wait on publish until this time.
     //public void publish(AtTime time);
     
-    
+
     public void publish() {
         if (loc!=-1) {
 	        closeHighLevelField(loc);

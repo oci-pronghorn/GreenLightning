@@ -51,7 +51,7 @@ public interface Builder {
       
 	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
     
-	void enableTelemetry(boolean enable);
+	void enableTelemetry(boolean value);
 	
 	void setDefaultRate(long ns);
 	
