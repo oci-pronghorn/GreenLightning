@@ -15,16 +15,17 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     private final int maxLength;
     private int length;
     private GreenCommandChannel commandChannel;
-    private BuilderImpl builder;
+    private final int goIndex;
     private long key;
     private int loc=-1;
     
-    protected PayloadWriter(Pipe<T> p) {
+    protected PayloadWriter(Pipe<T> p, int goIndex) {
     	
     	super(p);
     	this.p = p;    
     	this.maxLength = p.maxVarLen;
-        
+    	this.goIndex = goIndex;
+        assert(goIndex>=0);
     }
         
     public void writeString(CharSequence value) {
@@ -63,15 +64,16 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
 	        loc = -1;//clear field
 	        PipeWriter.publishWrites(p);     
 	        
-	        builder.releasePubSubTraffic(1, (GreenCommandChannel)commandChannel);
+	        GreenCommandChannel.publishGo(1, 
+	        		goIndex, 
+	        		(GreenCommandChannel<?>) (GreenCommandChannel)commandChannel);
 	        
         }
     }
 
-    public void openField(int loc, GreenCommandChannel commandChannel, BuilderImpl builder) {
+    public void openField(int loc, GreenCommandChannel commandChannel) {
     	//assert(this.loc == -1) : "Already open for writing, can not open again.";
     	this.commandChannel = commandChannel;
-    	this.builder = builder;
         this.loc = loc;
         this.length = 0;
         DataOutputBlobWriter.openField(this);

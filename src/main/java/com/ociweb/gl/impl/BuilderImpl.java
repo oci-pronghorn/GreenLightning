@@ -9,9 +9,9 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
@@ -124,6 +124,50 @@ public class BuilderImpl implements Builder {
 	//////////////////////////////
 	//////////////////////////////
 
+	public int pubSubIndex() {
+		return IDX_MSG;
+	}
+	
+	public int netIndex() {
+		return IDX_NET;
+	}
+	
+	public void releasePubSubTraffic(int count, GreenCommandChannel<?> gcc) {
+		GreenCommandChannel.publishGo(count, IDX_MSG, gcc);
+	}
+	
+	//must have values here then fluent api to add the rest.
+	public void enableMQTT(String host, int port, String clientId) {
+
+		//    .addAuth(user, pass)
+		//    .addWill(will topic, payload)
+		//    .setFlag() //clean
+		//    .setKeep alive
+		
+		//send upon startup.		
+//		Pipe<MQTTClientRequestSchema> output;
+//		CharSequence fieldHost;
+//		int fieldPort;		
+//		MQTTClientRequestSchema.instance.publishBrokerConfig(output, fieldHost, fieldPort);
+		
+		//send upon startup.
+//		int fieldKeepAliveSec; //default time
+//		int fieldFlags; //default flags
+//		CharSequence fieldClientId;
+//		CharSequence fieldWillTopic;  //no will
+//		byte[] fieldWillPayloadBacking;
+//		int fieldWillPayloadPosition;
+//		int fieldWillPayloadLength;
+//		CharSequence fieldUser; //no user
+//		CharSequence fieldPass; //no pass
+//		MQTTClientRequestSchema.instance.publishConnect(output, fieldKeepAliveSec, fieldFlags, fieldClientId, fieldWillTopic, fieldWillPayloadBacking, fieldWillPayloadPosition, fieldWillPayloadLength, fieldUser, fieldPass);
+		
+		
+		//Pipe<MQTTClientRequestSchema> clientRequest;
+		//Pipe<MQTTClientResponseSchema> response = MQTTClientGraphBuilder.buildMQTTClientGraph(gm, clientRequest)
+		
+	}
+	
 	
 	public final boolean isLarge() {
 		return isLarge;
@@ -478,10 +522,8 @@ public class BuilderImpl implements Builder {
 	}
 
 	@Override
-	public long fieldId(int routeId, byte[] fieldName) {
-	
+	public long fieldId(int routeId, byte[] fieldName) {	
 		return TrieParserReader.query(localReader, this.extractionParser(routeId), fieldName, 0, fieldName.length, Integer.MAX_VALUE);
-
 	}
 		
 	@Override
@@ -557,9 +599,9 @@ public class BuilderImpl implements Builder {
 		return isTelemetryEnabled;
 	}
 
-	//TODO: this must be fixed because it eliminates the ability to remove this from the code...
 	@Override
 	public void enableTelemetry(boolean enable) {
+		//TODO: this must be fixed because it eliminates the ability to remove this from the code...
 		isTelemetryEnabled = enable;
 	}
 
@@ -572,9 +614,7 @@ public class BuilderImpl implements Builder {
 		defaultSleepRateNS = ns;
 	}
 
-	public void releasePubSubTraffic(int count, GreenCommandChannel<?> gcc) {
-		GreenCommandChannel.publishGo(count, IDX_MSG, gcc);
-	}
+
 
 	public void buildStages(IntHashTable subscriptionPipeLookup2, IntHashTable netPipeLookup2, GraphManager gm2) {
 		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfType(gm2, MessageSubscription.instance);
@@ -585,7 +625,7 @@ public class BuilderImpl implements Builder {
 		int commandChannelCount = orderPipes.length;
 		int eventSchemas = 0;
 		
-		IDX_MSG = eventSchemas++;
+		IDX_MSG = (IntHashTable.isEmpty(subscriptionPipeLookup2) && subscriptionPipes.length==0 && messagePubSub.length==0) ? -1 : eventSchemas++;
 		IDX_NET = useNetClient(netPipeLookup2, netResponsePipes, netRequestPipes) ? eventSchemas++ : -1;
 						
 		Pipe<TrafficReleaseSchema>[][] masterGoOut = new Pipe[eventSchemas][commandChannelCount];
@@ -659,13 +699,10 @@ public class BuilderImpl implements Builder {
 		//always create the pub sub and state management stage?
 		/////////
 		//TODO: only create when subscriptionPipeLookup is not empty and subscriptionPipes has zero length.
-		if (IntHashTable.isEmpty(subscriptionPipeLookup2) 
-			&& subscriptionPipes.length==0
-			&& messagePubSub.length==0
-			&& masterGoOut[IDX_MSG].length==0
-			&& masterAckIn[IDX_MSG].length==0) {
+		if (IDX_MSG<0) {
 			logger.trace("saved some resources by not starting up the unused pub sub service.");
 		} else {
+			//logger.info("builder created pub sub");
 		 	createMessagePubSubStage(subscriptionPipeLookup2, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
 		}
 	}

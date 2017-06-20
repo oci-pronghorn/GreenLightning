@@ -310,6 +310,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         }
         
         if (this.builder.isListeningToSubscription(listener)) {
+   
             Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(messageSubscriptionConfig) {
 				@SuppressWarnings("unchecked")
 				@Override
@@ -318,13 +319,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				}
 			};
 			
+			
+			
             inputPipes[--pipesCount]=(subscriptionPipe);
             //store this value for lookup later
-            //logger.debug("adding hash listener {} to pipe {} ",System.identityHashCode(listener), subPipeIdx);
+            //logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
             boolean addedItem = IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++);
             if (!addedItem) {
             	throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
             }
+            assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
         }
 
         

@@ -81,8 +81,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     
        this.initFeatures = features;//this is held so we can check at every method call that its configured right
                              
-       this.messagePubSub = ((features & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class));
-       this.httpRequest   = ((features & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class));
+       this.messagePubSub = ((features & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
+       this.httpRequest   = ((features & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
 
        this.digitBuffer.initBuffers();
        
@@ -121,12 +121,6 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 	    	   }
     	   }
        }
-       
-       if (null != this.messagePubSub) {
-    	   if (!Pipe.isInit(messagePubSub)) {
-    		   messagePubSub.initBuffers();
-    	   }
-       }
 
        //we always need a go pipe
        this.goPipe = newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
@@ -136,7 +130,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
        int e = this.exclusiveTopics.length;
        this.exclusivePubSub = (Pipe<MessagePubSub>[])new Pipe[e];
        while (--e>=0) {
-    	   exclusivePubSub[e] = newPubSubPipe(pcm.getConfig(MessagePubSub.class));
+    	   exclusivePubSub[e] = newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
        }
        ///////////////////       
 
@@ -221,23 +215,23 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     }
     
     
-    private static Pipe<MessagePubSub> newPubSubPipe(PipeConfig<MessagePubSub> config) {
+    private static <B extends BuilderImpl> Pipe<MessagePubSub> newPubSubPipe(PipeConfig<MessagePubSub> config, B builder) {
     	return new Pipe<MessagePubSub>(config) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataOutputBlobWriter<MessagePubSub> createNewBlobWriter() {
-				return new PubSubWriter(this);
+				return new PubSubWriter(this, builder.pubSubIndex());
 			}    		
     	};
     }
     
-    private static Pipe<ClientHTTPRequestSchema> newNetRequestPipe(PipeConfig<ClientHTTPRequestSchema> config) {
+    private static <B extends BuilderImpl> Pipe<ClientHTTPRequestSchema> newNetRequestPipe(PipeConfig<ClientHTTPRequestSchema> config, B builder) {
 
     	return new Pipe<ClientHTTPRequestSchema>(config) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataOutputBlobWriter<ClientHTTPRequestSchema> createNewBlobWriter() {
-				return new PayloadWriter<ClientHTTPRequestSchema>(this);
+				return new PayloadWriter<ClientHTTPRequestSchema>(this, builder.netIndex());
 			}    		
     	};
     }
@@ -351,7 +345,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
             
             PayloadWriter<ClientHTTPRequestSchema> pw = (PayloadWriter<ClientHTTPRequestSchema>) Pipe.outputStream(httpRequest);
            
-            pw.openField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5, this, builder);  
+            pw.openField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5, this);  
             return pw;
         } else {
         	return null;
@@ -502,7 +496,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
         	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
             
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);
+            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);
             writable.write(pw);//TODO: cool feature, writable to return false to abandon write..
             
             pw.publish();
@@ -538,7 +532,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
                     	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this,builder);            
+            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);            
             writable.write(pw); //TODO: cool feature, writable to return false to abandon write.. 
             pw.publish();
     
@@ -668,7 +662,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 	}
 
 	public static void publishGo(int count, int pipeIdx, GreenCommandChannel<?> gcc) {
-		
+		assert(pipeIdx>=0);
 		if(PipeWriter.tryWriteFragment(gcc.goPipe, TrafficOrderSchema.MSG_GO_10)) {                 
             PipeWriter.writeInt(gcc.goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11, pipeIdx);
             PipeWriter.writeInt(gcc.goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12, count);

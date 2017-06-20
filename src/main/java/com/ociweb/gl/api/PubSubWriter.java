@@ -10,8 +10,8 @@ import com.ociweb.pronghorn.pipe.token.TypeMask;
 
 public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSubStructuredWriter {
 
-	public PubSubWriter(Pipe<MessagePubSub> p) {
-		super(p);
+	public PubSubWriter(Pipe<MessagePubSub> p, int goIndex) {
+		super(p,goIndex);
 	}
 
 	@Override

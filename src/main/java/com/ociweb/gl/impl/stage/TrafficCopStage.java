@@ -32,6 +32,7 @@ public class TrafficCopStage extends PronghornStage {
     public TrafficCopStage(GraphManager graphManager, long msAckTimeout, Pipe<TrafficOrderSchema> primaryIn, Pipe<TrafficAckSchema>[] ackIn,  Pipe<TrafficReleaseSchema>[] goOut) {
     	super(graphManager, join(ackIn, primaryIn), goOut);
     	
+    	assert(ackIn.length==goOut.length);
     	this.msAckTimeout = msAckTimeout;
         this.primaryIn = primaryIn;
         this.ackIn = ackIn;
