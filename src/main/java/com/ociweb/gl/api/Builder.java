@@ -57,4 +57,5 @@ public interface Builder {
 	
 	long fieldId(int routeId, byte[] fieldName);
 	
+	MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientId);
 }

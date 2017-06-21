@@ -220,7 +220,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataOutputBlobWriter<MessagePubSub> createNewBlobWriter() {
-				return new PubSubWriter(this, builder.pubSubIndex());
+				return new PubSubWriter(this);
 			}    		
     	};
     }
@@ -231,7 +231,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataOutputBlobWriter<ClientHTTPRequestSchema> createNewBlobWriter() {
-				return new PayloadWriter<ClientHTTPRequestSchema>(this, builder.netIndex());
+				return new PayloadWriter<ClientHTTPRequestSchema>(this);
 			}    		
     	};
     }
@@ -298,8 +298,9 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, "");
     		    		
     		PipeWriter.publishWrites(httpRequest);
-            
-    		builder.releasePubSubTraffic(1, this);
+                		
+    		publishGo(1, builder.netIndex(), this);
+    		
     	            
             return true;
         }        
@@ -341,7 +342,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
     		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_LISTENER_10, System.identityHashCode(listener));
 
-    		builder.releasePubSubTraffic(1, this);
+    		publishGo(1, builder.netIndex(), this);
             
             PayloadWriter<ClientHTTPRequestSchema> pw = (PayloadWriter<ClientHTTPRequestSchema>) Pipe.outputStream(httpRequest);
            
@@ -498,9 +499,10 @@ public class GreenCommandChannel<B extends BuilderImpl> {
             
             pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);
             writable.write(pw);//TODO: cool feature, writable to return false to abandon write..
-            
+                        
             pw.publish();
-            
+            publishGo(1,builder.pubSubIndex(), this);
+                        
             return true;
             
         } else {
@@ -534,7 +536,10 @@ public class GreenCommandChannel<B extends BuilderImpl> {
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
             pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);            
             writable.write(pw); //TODO: cool feature, writable to return false to abandon write.. 
+            
             pw.publish();
+           	publishGo(1,builder.pubSubIndex(), this);
+           
     
             return true;
             
@@ -627,6 +632,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
 
 		writable.write(outputStream);
+
 		return true;
 
 	}
@@ -657,7 +663,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 				
 		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
 		
-		writable.write(outputStream);		
+		writable.write(outputStream);
 		return true;
 	}
 

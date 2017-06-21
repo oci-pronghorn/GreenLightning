@@ -11,6 +11,7 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.MQTTConfig;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PubSubListener;
@@ -98,10 +99,10 @@ public class BuilderImpl implements Builder {
     
 	private final int shutdownTimeoutInSeconds = 1;
 
-
 	protected ReentrantLock devicePinConfigurationLock = new ReentrantLock();
 
-	
+	protected MQTTConfig mqtt = null;
+		
 	private String bindHost = null;
 	private int bindPort = -1;
 	private boolean isLarge = false;
@@ -135,39 +136,6 @@ public class BuilderImpl implements Builder {
 	public void releasePubSubTraffic(int count, GreenCommandChannel<?> gcc) {
 		GreenCommandChannel.publishGo(count, IDX_MSG, gcc);
 	}
-	
-	//must have values here then fluent api to add the rest.
-	public void enableMQTT(String host, int port, String clientId) {
-
-		//    .addAuth(user, pass)
-		//    .addWill(will topic, payload)
-		//    .setFlag() //clean
-		//    .setKeep alive
-		
-		//send upon startup.		
-//		Pipe<MQTTClientRequestSchema> output;
-//		CharSequence fieldHost;
-//		int fieldPort;		
-//		MQTTClientRequestSchema.instance.publishBrokerConfig(output, fieldHost, fieldPort);
-		
-		//send upon startup.
-//		int fieldKeepAliveSec; //default time
-//		int fieldFlags; //default flags
-//		CharSequence fieldClientId;
-//		CharSequence fieldWillTopic;  //no will
-//		byte[] fieldWillPayloadBacking;
-//		int fieldWillPayloadPosition;
-//		int fieldWillPayloadLength;
-//		CharSequence fieldUser; //no user
-//		CharSequence fieldPass; //no pass
-//		MQTTClientRequestSchema.instance.publishConnect(output, fieldKeepAliveSec, fieldFlags, fieldClientId, fieldWillTopic, fieldWillPayloadBacking, fieldWillPayloadPosition, fieldWillPayloadLength, fieldUser, fieldPass);
-		
-		
-		//Pipe<MQTTClientRequestSchema> clientRequest;
-		//Pipe<MQTTClientResponseSchema> response = MQTTClientGraphBuilder.buildMQTTClientGraph(gm, clientRequest)
-		
-	}
-	
 	
 	public final boolean isLarge() {
 		return isLarge;
@@ -705,6 +673,11 @@ public class BuilderImpl implements Builder {
 			//logger.info("builder created pub sub");
 		 	createMessagePubSubStage(subscriptionPipeLookup2, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
 		}
+	}
+
+	@Override
+	public MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientId) {		
+		return mqtt = new MQTTConfig(host, port, clientId);
 	}
 
 

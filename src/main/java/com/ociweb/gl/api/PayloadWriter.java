@@ -15,17 +15,14 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     private final int maxLength;
     private int length;
     private GreenCommandChannel commandChannel;
-    private final int goIndex;
-    private long key;
+
     private int loc=-1;
     
-    protected PayloadWriter(Pipe<T> p, int goIndex) {
+    protected PayloadWriter(Pipe<T> p) {
     	
     	super(p);
     	this.p = p;    
     	this.maxLength = p.maxVarLen;
-    	this.goIndex = goIndex;
-        assert(goIndex>=0);
     }
         
     public void writeString(CharSequence value) {
@@ -42,33 +39,22 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     }
     
     public void close() {
-    	if (loc!=-1) {
-    		publish();
-    	}
-    	
-    	try {
-			super.close();
-		} catch (IOException e) {
-			throw new RuntimeException();
-		}
-    	
+    	throw new UnsupportedOperationException();
     }
     
     //TODO: add method for wait on publish until this time.
     //public void publish(AtTime time);
     
 
-    public void publish() {
+    public boolean publish() {
         if (loc!=-1) {
 	        closeHighLevelField(loc);
 	        loc = -1;//clear field
 	        PipeWriter.publishWrites(p);     
-	        
-	        GreenCommandChannel.publishGo(1, 
-	        		goIndex, 
-	        		(GreenCommandChannel<?>) (GreenCommandChannel)commandChannel);
+	        return true;	       
 	        
         }
+        return false;
     }
 
     public void openField(int loc, GreenCommandChannel commandChannel) {
