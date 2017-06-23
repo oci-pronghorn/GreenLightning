@@ -3,10 +3,13 @@ package com.ociweb.gl.example;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.MessageReader;
 import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.PubSubStructuredWritable;
 import com.ociweb.gl.api.PubSubStructuredWriter;
+import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.impl.MQTTConfigImpl;
 import com.ociweb.gl.impl.pubField.BytesFieldProcessor;
 import com.ociweb.gl.impl.pubField.DecimalFieldProcessor;
@@ -130,33 +133,46 @@ public class MessageApp implements GreenApp {
 		
 		
 		final GreenCommandChannel gccA = runtime.newCommandChannel(DYNAMIC_MESSAGING);
-		runtime.addPubSubListener((topic, payload)->{
+		PubSubListener listenerA = new PubSubListener() {
 
-		    if (consumer.process(payload)) {
-		    	return gccA.publishStructuredTopic("B", writable);
-		    } else {
-		    	runtime.shutdownRuntime();
-		    	return true;
-		    }
-		}).addSubscription("A");
+			@Override
+			public boolean message(CharSequence topic, MessageReader payload) {
+				 if (consumer.process(payload)) {
+				    	return gccA.publishStructuredTopic("B", writable);
+				    } else {
+				    	runtime.shutdownRuntime();
+				    	return true;
+				    }
+			};
+		
+		};
+		runtime.addPubSubListener(listenerA ).addSubscription("A");
 		
 		
 		final GreenCommandChannel gccB = runtime.newCommandChannel(DYNAMIC_MESSAGING);
-		runtime.addPubSubListener((topic, payload)->{
+		PubSubListener listenerB = new PubSubListener() {
 
-		    if (consumer.process(payload)) {
-		    	return gccB.publishStructuredTopic("A", writable);
-		    } else {
-		    	runtime.shutdownRuntime();
-		    	return true;
-		    }
-		}).addSubscription("B");
+			@Override
+			public boolean message(CharSequence topic, MessageReader payload) {
+				 if (consumer.process(payload)) {
+				    	return gccB.publishStructuredTopic("A", writable);
+				    } else {
+				    	runtime.shutdownRuntime();
+				    	return true;
+				    }
+			}
+			
+		};
+		runtime.addPubSubListener(listenerB ).addSubscription("B");
 		
 		final GreenCommandChannel gccC = runtime.newCommandChannel(DYNAMIC_MESSAGING);
-		runtime.addStartupListener(()->{			
-			gccC.presumePublishStructuredTopic("A", writable);
-		} 
-		);
+		StartupListener startupListener = new StartupListener() {
+			@Override
+			public void startup() {
+				gccC.presumePublishStructuredTopic("A", writable);
+			}			
+		};
+		runtime.addStartupListener(startupListener);
 		
 	}
 

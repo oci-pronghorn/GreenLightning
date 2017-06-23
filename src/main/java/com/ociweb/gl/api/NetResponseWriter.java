@@ -16,7 +16,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     private int context;
     private int headerBlobPosition;
     private long positionOfLen;
-    private int statusCode;
+    private int statusCode = -1; //NONE, must start with this.
     private HTTPContentTypeDefaults contentType;
     
     public NetResponseWriter(Pipe<ServerResponseSchema> p) {    	
@@ -37,14 +37,16 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     }
     
     public void close() {
-    	try {
-    		super.close();
-    	} catch (IOException e) {
-    		throw new RuntimeException();
+    	if (statusCode>=0) { //safety check here in case callback calls close    	
+	    	try {
+	    		super.close();
+	    	} catch (IOException e) {
+	    		throw new RuntimeException();
+	    	}
+	
+	    	publish();
+	    	statusCode = -1;//marked as done.
     	}
-
-    	publish();
-    	
     }
 
 	private static void writeHeader(NetResponseWriter outputStream, final int headerBlobPosition, 

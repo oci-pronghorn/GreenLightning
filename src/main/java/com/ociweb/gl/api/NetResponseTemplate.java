@@ -24,9 +24,14 @@ public class NetResponseTemplate<T> {
 		
 		final byte[] byteData = text.getBytes();
 		
-		append((w,s)->{
-			w.write(byteData);
-		});
+		append(
+				new NetResponseTemplateData<T>() {
+					@Override
+					public void fetch(NetResponseWriter writer, T source) {
+						writer.write(byteData);				
+					}					
+				}
+				);
 		
 		return this;
 		

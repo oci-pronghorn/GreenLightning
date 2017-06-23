@@ -8,12 +8,18 @@ import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.NetResponseTemplate;
+import com.ociweb.gl.api.NetResponseTemplateData;
 import com.ociweb.gl.api.NetResponseWriter;
+import com.ociweb.gl.api.NetWritable;
 import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.gl.impl.Headable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.math.Decimal;
+import com.ociweb.pronghorn.util.math.DecimalResult;
 
 public class MathUnit implements RestListener {
 
@@ -30,17 +36,48 @@ public class MathUnit implements RestListener {
 
 		this.cc = runtime.newCommandChannel(GreenCommandChannel.NET_RESPONDER);
 		
+		NetResponseTemplateData<HTTPFieldReader> consumeX = new NetResponseTemplateData<HTTPFieldReader>() {
+
+			@Override
+			public void fetch(NetResponseWriter writer, HTTPFieldReader source) {
+				source.getText(fieldA, writer);
+			}
+			
+		};
+		
+		NetResponseTemplateData<HTTPFieldReader> consumeY = new NetResponseTemplateData<HTTPFieldReader>() {
+
+			@Override
+			public void fetch(NetResponseWriter writer, HTTPFieldReader source) {
+				source.getText(fieldB, writer);
+			}
+			
+		};
+		
+		NetResponseTemplateData<HTTPFieldReader> consumeSum = new NetResponseTemplateData<HTTPFieldReader>() {
+
+			@Override
+			public void fetch(final NetResponseWriter writer, HTTPFieldReader source) {
+				 DecimalResult adder = new DecimalResult() {
+						@Override
+						public void result(long m, byte e) {
+							Appendables.appendDecimalValue(writer, m, e);
+						}				    		 
+			    	 };
+					Decimal.sum(
+							source.getDecimalMantissaDirect(fieldA),
+							source.getDecimalExponentDirect(fieldA), 
+							source.getDecimalMantissaDirect(fieldB),
+							source.getDecimalExponentDirect(fieldB),
+			    			 adder);		
+			}
+			
+		};
+		
 		template = new NetResponseTemplate<HTTPFieldReader>()
-				     .add("{\"x\":").add((w,s)->{s.getText(fieldA, w);})
-				     .add(",\"y\":").add((w,s)->{s.getText(fieldB, w);})
-				     .add(",\"groovySum\":").add((w,s)->{				    	 
-				    	 Decimal.sum(
-				    			 s.getDecimalMantissaDirect(fieldA),
-				    			 s.getDecimalExponentDirect(fieldA), 
-				    			 s.getDecimalMantissaDirect(fieldB),
-				    			 s.getDecimalExponentDirect(fieldB),
-				    			 (m,e)->{Appendables.appendDecimalValue(w, m, e);});				    	
-				     })
+				     .add("{\"x\":").add(consumeX)
+				     .add(",\"y\":").add(consumeY)
+				     .add(",\"groovySum\":").add(consumeSum)
 				     .add("}");		
 	}
 	
@@ -50,20 +87,27 @@ public class MathUnit implements RestListener {
 	public boolean restRequest(final HTTPRequestReader request) {
 		
 		final StringBuilder cookieValue = new StringBuilder();
-		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(),(c)->{
+		Headable<HTTPRequestSchema> eat = new Headable<HTTPRequestSchema>() {
+
+			@Override
+			public void read(HTTPPayloadReader<HTTPRequestSchema> httpPayloadReader) {
+				httpPayloadReader.readUTF(cookieValue);
+				lastCookie = cookieValue.toString();
+			}
 			
-			c.readUTF(cookieValue);
-			lastCookie = cookieValue.toString();
-			//System.out.println("cookie from browser: "+cookieValue);
-		});
+		};
+		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(),eat);
 				
+		NetWritable render = new NetWritable() {
+
+			@Override
+			public void write(NetResponseWriter writer) {
+					template.render(writer, request);
+			}
+			
+		};
 		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE,
-				                   HTTPContentTypeDefaults.JSON, (outputStream) -> {
-										
-										template.render(((NetResponseWriter)outputStream), request);
-										((NetResponseWriter)outputStream).close();
-													
-									});		
+				                   HTTPContentTypeDefaults.JSON, render );		
 
 	}
 

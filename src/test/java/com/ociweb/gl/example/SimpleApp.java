@@ -1,12 +1,12 @@
 package com.ociweb.gl.example;
 
 import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.MsgApp;
+import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.TimeTrigger;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
-public class SimpleApp implements MsgApp {
+public class SimpleApp implements GreenApp {
 
 	public int ADD_ID1;
 	public int ADD_ID2;
@@ -46,8 +46,6 @@ public class SimpleApp implements MsgApp {
 		SIMPLE_ADD_ID1 = builder.registerRoute("/simpleadd/#{a}/#{b}",HTTPHeaderDefaults.COOKIE.rootBytes());
 
 	}
-
-	
 	
 	@Override
 	public void declareBehavior(MsgRuntime runtime) {		
@@ -56,10 +54,6 @@ public class SimpleApp implements MsgApp {
 		runtime.addRestListener(singleInstance = new MathUnit((MsgRuntime) runtime), ADD_ID1, ADD_ID2); //accept all registered routes
 	}
 
-	@Override
-	public void declareParallelBehavior(MsgRuntime runtime) {	
-
-	}
 	
 	public String getLastCookie() {
 		return singleInstance.getLastCookie();

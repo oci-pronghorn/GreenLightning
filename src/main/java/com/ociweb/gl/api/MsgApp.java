@@ -36,7 +36,5 @@ public interface MsgApp<B extends Builder, G extends MsgRuntime> {
      * @see MsgRuntime
      */
     void declareBehavior(G runtime);
-    
-	default void declareParallelBehavior(G runtime) {		
-	}
+
 }

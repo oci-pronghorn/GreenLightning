@@ -8,10 +8,15 @@ import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.NetResponseTemplate;
+import com.ociweb.gl.api.NetResponseTemplateData;
 import com.ociweb.gl.api.NetResponseWriter;
+import com.ociweb.gl.api.NetWritable;
 import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.gl.impl.Headable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class MathUnitSimple implements RestListener {
@@ -29,12 +34,37 @@ public class MathUnitSimple implements RestListener {
 
 		this.cc = runtime.newCommandChannel(GreenCommandChannel.NET_RESPONDER);
        
+		NetResponseTemplateData<HTTPFieldReader> consumeX = new NetResponseTemplateData<HTTPFieldReader>() {
+
+			@Override
+			public void fetch(NetResponseWriter writer, HTTPFieldReader source) {
+				source.getText(fieldA, writer);
+			}
+			
+		};
+		
+		NetResponseTemplateData<HTTPFieldReader> consumeY = new NetResponseTemplateData<HTTPFieldReader>() {
+
+			@Override
+			public void fetch(NetResponseWriter writer, HTTPFieldReader source) {
+				source.getText(fieldB, writer);
+			}
+			
+		};
+		
+		NetResponseTemplateData<HTTPFieldReader> consumeSum = new NetResponseTemplateData<HTTPFieldReader>() {
+
+			@Override
+			public void fetch(NetResponseWriter writer, HTTPFieldReader source) {
+				Appendables.appendValue(writer, source.getInt(fieldA) +source.getInt(fieldB));	
+			}
+			
+		};
+		
 		template = new NetResponseTemplate<HTTPFieldReader>()
-				     .add("{\"x\":").add((w,s)->{s.getText(fieldA, w);})
-				     .add(",\"y\":").add((w,s)->{s.getText(fieldB, w);})
-				     .add(",\"groovySum\":").add((w,s)->{
-				    	 Appendables.appendValue(w, s.getInt(fieldA) +s.getInt(fieldB));				    	
-				     })
+				     .add("{\"x\":").add(consumeX)
+				     .add(",\"y\":").add(consumeY)
+				     .add(",\"groovySum\":").add(consumeSum)
 				     .add("}");		
 	}
 	
@@ -42,21 +72,29 @@ public class MathUnitSimple implements RestListener {
 	public boolean restRequest(final HTTPRequestReader request) {
 		
 		final StringBuilder cookieValue = new StringBuilder();
-		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(), (c)->{
-			
-			c.readUTF(cookieValue);
-			lastCookie = cookieValue.toString();
-			//System.out.println("cookie from browser: "+cookieValue);
-		});
+		Headable<HTTPRequestSchema> eat = new Headable<HTTPRequestSchema> () {
+
+			@Override
+			public void read(HTTPPayloadReader<HTTPRequestSchema> httpPayloadReader) {
+				httpPayloadReader.readUTF(cookieValue);
+				lastCookie = cookieValue.toString();
+			}
+
+		};
+		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(), eat);
 				
 		
-		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, 
-				                   HTTPContentTypeDefaults.JSON, (outputStream) -> {
+		NetWritable consume = new NetWritable() {
+
+			@Override
+			public void write(NetResponseWriter writer) {
+				template.render(writer, request);
+			}
 			
-			template.render(((NetResponseWriter)outputStream), request);
-			((NetResponseWriter)outputStream).close();
-						
-		});		
+		};
+		
+		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, 
+				                   HTTPContentTypeDefaults.JSON, consume);		
 
 	}
 

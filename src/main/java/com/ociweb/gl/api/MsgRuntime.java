@@ -389,13 +389,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		} else {            	
 			app.declareBehavior(this);
 			
-			int parallelism = builder.parallelism();
-			//since server was not started and did not create each parallel instance this will need to be done here
-   
-			for(int i = 0;i<parallelism;i++) { //do not use this loop, we will loop inside server setup..
-		    	constructingParallelInstance(i);
-		    	app.declareParallelBehavior(this);                
-		    }
+			if (app instanceof MsgAppParallel) {
+				int parallelism = builder.parallelism();
+				//since server was not started and did not create each parallel instance this will need to be done here
+	   
+				for(int i = 0;i<parallelism;i++) { //do not use this loop, we will loop inside server setup..
+			    	constructingParallelInstance(i);
+			    	((MsgAppParallel)app).declareParallelBehavior(this);                
+			    }
+			}
 		}
 		constructingParallelInstancesEnding();
 	}
@@ -442,12 +444,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//create the working modules
 		//////////////////////////
 
-		int p = builder.parallelism();
-		
-		for (int i = 0; i < p; i++) {
-			constructingParallelInstance(i);
-			app.declareParallelBehavior(this);  //this creates all the modules for this parallel instance								
-		}	
+		if (app instanceof MsgAppParallel) {
+			int p = builder.parallelism();
+			
+			for (int i = 0; i < p; i++) {
+				constructingParallelInstance(i);
+				((MsgAppParallel)app).declareParallelBehavior(this);  //this creates all the modules for this parallel instance								
+			}	
+		}
 
 		//////////////////
 		//////////////////

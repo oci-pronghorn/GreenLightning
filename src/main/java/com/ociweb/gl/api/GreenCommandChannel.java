@@ -558,7 +558,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 				statusCode,
 				HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION,
 				null,
-				NetResponseWriter::close); //no type and no body so use null
+				NetWritable.NO_OP); //no type and no body so use null
 	}
 
 	public boolean publishHTTPResponse(HTTPFieldReader w, 
@@ -631,8 +631,9 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		//TODO: keep track of was this the end and flag error??
 		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
 
-		writable.write(outputStream);
-
+		writable.write(outputStream); //TODO: possible feature, return false to abandon write
+		outputStream.close();
+		
 		return true;
 
 	}
@@ -663,7 +664,8 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 				
 		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
 		
-		writable.write(outputStream);
+		writable.write(outputStream); //TODO: possible feature, return false to abandon write
+		outputStream.close();
 		return true;
 	}
 
