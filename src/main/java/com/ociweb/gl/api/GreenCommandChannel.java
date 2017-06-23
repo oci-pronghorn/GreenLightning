@@ -600,7 +600,7 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		
 		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);	
 		final int headerBlobPosition = Pipe.getWorkingBlobHeadPosition(pipe);
-		//outputStream.length = 0; //TODO: for lenghth check...
+
 		DataOutputBlobWriter.openFieldAtPosition(outputStream, headerBlobPosition); 	//no context, that will come in the second message 
         
 		//for the var field we store this as meta then length
