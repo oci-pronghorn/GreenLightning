@@ -7,6 +7,7 @@ import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.PubSubStructuredWritable;
 import com.ociweb.gl.api.PubSubStructuredWriter;
+import com.ociweb.gl.impl.MQTTConfigImpl;
 import com.ociweb.gl.impl.pubField.BytesFieldProcessor;
 import com.ociweb.gl.impl.pubField.DecimalFieldProcessor;
 import com.ociweb.gl.impl.pubField.IntegerFieldProcessor;
@@ -22,8 +23,14 @@ public class MessageApp implements GreenApp {
         MsgRuntime.run(new MessageApp());
     }
 			
+//	MQTTConfig mqttConfig;
+	
 	@Override
 	public void declareConfiguration(Builder builder) {
+		
+//		mqttConfig = builder.useMQTT("127.0.0.1", 1883, "my name")
+//					        .cleanSession(true)
+//					        .keepAliveSeconds(20);
 		
 	}
 
@@ -115,6 +122,12 @@ public class MessageApp implements GreenApp {
 	
 	@Override
 	public void declareBehavior(final MsgRuntime runtime) {
+		
+		
+	//	runtime.subscriptionBridge(topic, mqttConfig); //optional 2 topics, optional transform lambda
+	//	runtime.transmissionBridge(topic, mqttConfig); //optional 2 topics, optional transform lambda
+		
+		
 		
 		final GreenCommandChannel gccA = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		runtime.addPubSubListener((topic, payload)->{

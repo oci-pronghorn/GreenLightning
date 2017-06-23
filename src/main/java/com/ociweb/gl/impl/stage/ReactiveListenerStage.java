@@ -91,7 +91,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     //      the thread here is the applications thread if
     //      much work needs to be done is must be done elsewhere
     /////////////////////////////////////////////////////
-    
+
+    ///TODO: try to create this actual listener lazy and late so we can filter graph more effectivly
     public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H builder) {
 
         

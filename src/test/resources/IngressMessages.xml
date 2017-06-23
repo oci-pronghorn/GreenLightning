@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xmlns="http://www.fixprotocol.org/ns/fast/td/1.1">
+
+   <template name="Publish" id="103">
+     <string name="Topic" id="1" charset="unicode"/>
+     <byteVector name="Payload" id="3"/>
+   </template>   
+   
+</templates>

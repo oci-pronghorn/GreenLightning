@@ -65,7 +65,8 @@ public abstract class AbstractTrafficOrderedStage<H extends BuilderImpl> extends
 	public AbstractTrafficOrderedStage(GraphManager graphManager, 
 			H hardware,
 			Pipe<?>[] output,
-			Pipe<TrafficReleaseSchema>[] goPipe, Pipe<TrafficAckSchema>[] ackPipe, Pipe<?> ... otherResponse ) {
+			Pipe<TrafficReleaseSchema>[] goPipe,
+			Pipe<TrafficAckSchema>[] ackPipe, Pipe<?> ... otherResponse ) {
 
 		super(graphManager, join(goPipe, output), join(ackPipe, otherResponse));
 

@@ -1,5 +1,7 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.gl.impl.MQTTConfigImpl;
+
 /**
  * Base interface for an IoT device's hardware.
  * <p>
@@ -57,5 +59,5 @@ public interface Builder {
 	
 	long fieldId(int routeId, byte[] fieldName);
 	
-	MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientId);
+	MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId);
 }

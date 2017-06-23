@@ -11,13 +11,13 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
-import com.ociweb.gl.api.MQTTConfig;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.StateChangeListener;
 import com.ociweb.gl.api.TimeTrigger;
+import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
@@ -101,7 +101,7 @@ public class BuilderImpl implements Builder {
 
 	protected ReentrantLock devicePinConfigurationLock = new ReentrantLock();
 
-	protected MQTTConfig mqtt = null;
+	protected MQTTConfigImpl mqtt = null;
 		
 	private String bindHost = null;
 	private int bindPort = -1;
@@ -359,13 +359,14 @@ public class BuilderImpl implements Builder {
 	}
 
 	protected final void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
+			Pipe<IngressMessages>[] ingressMessagePipes,
 			Pipe<MessagePubSub>[] messagePubSub,
 			Pipe<TrafficReleaseSchema>[] masterMsggoOut, 
 			Pipe<TrafficAckSchema>[] masterMsgackIn, 
 			Pipe<MessageSubscription>[] subscriptionPipes) {
 
 
-		new MessagePubSubStage(this.gm, subscriptionPipeLookup, this, messagePubSub, masterMsggoOut, masterMsgackIn, subscriptionPipes);
+		new MessagePubSubStage(this.gm, subscriptionPipeLookup, this, ingressMessagePipes, messagePubSub, masterMsggoOut, masterMsgackIn, subscriptionPipes);
 
 
 	}
@@ -454,7 +455,7 @@ public class BuilderImpl implements Builder {
 	private final Pipe<MessagePubSub> getTempPipeOfStartupSubscriptions() {
 		if (null==tempPipeOfStartupSubscriptions) {
 
-			final PipeConfig<MessagePubSub> messagePubSubConfig = new PipeConfig<MessagePubSub>(MessagePubSub.instance, maxStartupSubs,maxTopicLengh);   
+			final PipeConfig<MessagePubSub> messagePubSubConfig = new PipeConfig<MessagePubSub>(MessagePubSub.instance, maxStartupSubs, maxTopicLengh);   
 			tempPipeOfStartupSubscriptions = new Pipe<MessagePubSub>(messagePubSubConfig);
 
 		}		
@@ -548,6 +549,9 @@ public class BuilderImpl implements Builder {
 
 	public final Pipe<HTTPRequestSchema> createHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig, int routeIndex, int parallelInstance) {
 		Pipe<HTTPRequestSchema> pipe = newHTTPRequestPipe(restPipeConfig);		
+		
+		//TODO: move this to later, so we can wait for subscription calls later.
+		//      would still need the count of routes OR, can we build Reactor after fluent calls?
 		recordPipeMapping(pipe, routeIndex, parallelInstance);		
 		return pipe;
 	}
@@ -590,6 +594,8 @@ public class BuilderImpl implements Builder {
 		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfType(gm2, TrafficOrderSchema.instance);
 		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfType(gm2, MessagePubSub.instance);
 		Pipe<ClientHTTPRequestSchema>[] netRequestPipes = GraphManager.allPipesOfType(gm2, ClientHTTPRequestSchema.instance);
+		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfType(gm2, IngressMessages.instance);
+		
 		int commandChannelCount = orderPipes.length;
 		int eventSchemas = 0;
 		
@@ -654,14 +660,10 @@ public class BuilderImpl implements Builder {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}
 			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
-			
-			
-			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, netPipeLookup2, 10, 1<<15, clientRequests, 
-					                             netResponsePipes);
 						
-		}// else {
-			//System.err.println("skipped  "+IntHashTable.isEmpty(netPipeLookup)+"  "+netResponsePipes.length+"   "+netRequestPipes.length  );
-		//}
+			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, netPipeLookup2, 10, 1<<15, clientRequests, netResponsePipes);
+						
+		}
 		
 		/////////
 		//always create the pub sub and state management stage?
@@ -671,13 +673,13 @@ public class BuilderImpl implements Builder {
 			logger.trace("saved some resources by not starting up the unused pub sub service.");
 		} else {
 			//logger.info("builder created pub sub");
-		 	createMessagePubSubStage(subscriptionPipeLookup2, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
+		 	createMessagePubSubStage(subscriptionPipeLookup2, ingressMessagePipes, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
 		}
 	}
 
 	@Override
-	public MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientId) {		
-		return mqtt = new MQTTConfig(host, port, clientId);
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
+		return mqtt = new MQTTConfigImpl(host, port, clientId, this);
 	}
 
 

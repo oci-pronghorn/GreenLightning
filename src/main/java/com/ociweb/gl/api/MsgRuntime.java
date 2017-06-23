@@ -86,6 +86,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		 gm = new GraphManager();
 	}
 	
+	//TODO: add optional lambda for data transformation
+	//TODO: add optional second topic.
+	public final void subscriptionBridge(CharSequence topic, BridgeConfig config) {		
+		config.addSubscription(topic);
+	}
+	public final void transmissionBridge(CharSequence topic, BridgeConfig config) {		
+		config.addTransmission(topic);
+	}
+	
+	
 	
     public final L addRestListener(RestListener listener, int ... routes) {
     	return (L) registerListenerImpl(listener, routes);
@@ -311,24 +321,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         
         if (this.builder.isListeningToSubscription(listener)) {
    
-            Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(messageSubscriptionConfig) {
-				@SuppressWarnings("unchecked")
-				@Override
-				protected DataInputBlobReader<MessageSubscription> createNewBlobReader() {
-					return new MessageReader(this);
-				}
-			};
-			
-			
-			
+            Pipe<MessageSubscription> subscriptionPipe = buildPublishPipe(listener);
+            
             inputPipes[--pipesCount]=(subscriptionPipe);
-            //store this value for lookup later
-            //logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
-            boolean addedItem = IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++);
-            if (!addedItem) {
-            	throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
-            }
-            assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
         }
 
         
@@ -346,6 +341,29 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         		inputPipes[--pipesCount] = httpRequestPipes[i];                		
         	}
         }
+	}
+
+    /**
+     * This pipe returns all the data this object has requested via subscriptions elewhere.
+     * @param listener
+     */
+	private Pipe<MessageSubscription> buildPublishPipe(Object listener) {
+		Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(messageSubscriptionConfig) {
+			@SuppressWarnings("unchecked")
+			@Override
+			protected DataInputBlobReader<MessageSubscription> createNewBlobReader() {
+				return new MessageReader(this);
+			}
+		};
+					
+		
+		//store this value for lookup later
+		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
+		if (!IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++)) {
+			throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
+		}
+		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+		return subscriptionPipe;
 	}
 	
 	protected void constructingParallelInstance(int i) {
@@ -682,7 +700,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
         populateGreenPipes(listener, pipesCount, inputPipes);                
 
-		
         //////////////////////
         //////////////////////
         
