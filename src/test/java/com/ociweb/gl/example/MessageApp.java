@@ -22,6 +22,7 @@ import com.ociweb.pronghorn.util.math.Decimal;
 
 public class MessageApp implements GreenApp {
 	
+	//TODO: convert this into a unit test.
 	public static void main( String[] args ) {
         MsgRuntime.run(new MessageApp());
     }

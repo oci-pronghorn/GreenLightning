@@ -47,14 +47,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
   
     private static final Logger logger = LoggerFactory.getLogger(ReactiveListenerStage.class); 
      
-    private boolean startupCompleted;
-    private boolean shutdownCompleted;
+    protected boolean startupCompleted;
+    protected boolean shutdownCompleted;
     
     //all non shutdown listening reactors will be shutdown only after the listeners have finished.
-    private static AtomicInteger liveShutdownListeners = new AtomicInteger();
-    private static AtomicInteger totalLiveReactors = new AtomicInteger();    
-    private static AtomicBoolean shutdownRequsted = new AtomicBoolean(false);
-    private static Runnable lastCall;
+    protected static AtomicInteger liveShutdownListeners = new AtomicInteger();
+    protected static AtomicInteger totalLiveReactors = new AtomicInteger();    
+    protected static AtomicBoolean shutdownRequsted = new AtomicBoolean(false);
+    protected static Runnable lastCall;
     ///////////////////////////
     
     protected int[] oversampledAnalogValues;
