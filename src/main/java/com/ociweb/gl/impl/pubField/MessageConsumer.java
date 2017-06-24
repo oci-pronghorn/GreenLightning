@@ -7,7 +7,6 @@ import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.token.TokenBuilder;
 import com.ociweb.pronghorn.pipe.token.TypeMask;
-import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class MessageConsumer {
@@ -67,7 +66,7 @@ public class MessageConsumer {
 			int token = DataInputBlobReader.readPackedInt(reader);
 			
 			int type = TokenBuilder.extractType(token);
-
+			
 			int fieldId = TokenBuilder.extractId(token);
 			
 			///////////
@@ -80,9 +79,11 @@ public class MessageConsumer {
 			//consume type
 			//////////
 			FieldConsumer[] localConsumers = consumers[fieldId];
-			if (null!=localConsumers) {
+			if (null != localConsumers) {
 				int i = localConsumers.length;
+				int p = reader.absolutePosition();//keep this position so we can roll-back reader each time.
 				while (--i >= 0) {
+					reader.absolutePosition(p);					
 					storeValue(reader, type, localConsumers[i]);
 				}
 			}
@@ -112,21 +113,19 @@ public class MessageConsumer {
 				Pipe backingPipe = DataInputBlobReader.getBackingPipe(reader);
 				short length = reader.readShort();	
 				
-				int position = reader.position();
-				consumer.store(backingPipe.blobRing, position, length, backingPipe.blobMask);
+				consumer.store(backingPipe.blobRing, reader.absolutePosition(), length, backingPipe.blobMask);
 				if (length>0) {
 					reader.skipBytes(length);
 				}
 			}			
 		} else {
 			if (type == TypeMask.ByteVector) {
-				// bytes	
+				// bytes
 				
 				Pipe backingPipe = DataInputBlobReader.getBackingPipe(reader);
 				short length = reader.readShort();	
 	
-				int position = reader.position();
-				consumer.store(backingPipe.blobRing, position, length, backingPipe.blobMask);			
+				consumer.store(backingPipe.blobRing, reader.absolutePosition(), length, backingPipe.blobMask);			
 				if (length>0) {
 					reader.skipBytes(length);
 				}

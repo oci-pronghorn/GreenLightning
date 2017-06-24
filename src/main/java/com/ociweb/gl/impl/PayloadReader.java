@@ -107,7 +107,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	@SuppressWarnings("unchecked")
 	public long getLong(long fieldId) {
 		
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		
 		checkLimit(this,1);
 		
@@ -128,21 +128,21 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	
 	public long getLongDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_SIGNED_INT == fieldType(fieldId));
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
 	public double getDoubleDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,2);
 		return Decimal.asDouble(readPackedLong(this), readByte());
 	}
 	
 	public <A extends Appendable> A getTextDirect(long fieldId, A appendable) {
 		assert(TrieParser.ESCAPE_CMD_BYTES == fieldType(fieldId));
-		position(computePosition(fieldId));	
+		setPositionBytesFromStart(computePosition(fieldId));	
 		checkLimit(this,2);
 		readUTF(appendable);
 		return appendable;
@@ -154,7 +154,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	
 	public long getRationalNumeratorDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
@@ -165,7 +165,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	
 	public long getRationalDenominatorDirect(long fieldId) {		
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
-		position(computePositionSecond(fieldId));
+		setPositionBytesFromStart(computePositionSecond(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
@@ -176,7 +176,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	
 	public long getDecimalMantissaDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
@@ -187,7 +187,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	
 	public byte getDecimalExponentDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		position(computePositionSecond(fieldId));
+		setPositionBytesFromStart(computePositionSecond(fieldId));
 		checkLimit(this,1);
 		return readByte();
 	}
@@ -199,7 +199,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	@SuppressWarnings("unchecked")
 	public double getDouble(long fieldId) {
 		
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,1);
 		
 		int type = fieldType(fieldId);
@@ -224,7 +224,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	@SuppressWarnings("unchecked")
 	public long getRationalNumerator(long fieldId) {
 		
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,1);
 		
 		int type = fieldType(fieldId);
@@ -251,11 +251,11 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 				
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			position(computePositionSecond(fieldId));
+			setPositionBytesFromStart(computePositionSecond(fieldId));
 			checkLimit(this,1);
 			return DataInputBlobReader.readPackedLong(this);
 		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
-			position(computePosition(fieldId));
+			setPositionBytesFromStart(computePosition(fieldId));
 			checkLimit(this,1);
 			DataInputBlobReader.readPackedLong(this); 
 			byte e = readByte();
@@ -278,7 +278,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		if (fieldId<0) {
 			throw new UnsupportedOperationException("unknown field name");
 		}
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
@@ -310,7 +310,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	@Override
 	public boolean isEqual(long fieldId, byte[] equalText) {
 		
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
@@ -330,7 +330,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	@Override
 	public long trieText(long fieldId, TrieParserReader reader, TrieParser trie) {
 
-		position(computePosition(fieldId));
+		setPositionBytesFromStart(computePosition(fieldId));
 		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);

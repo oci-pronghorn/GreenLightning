@@ -53,7 +53,7 @@ public class MessageApp implements GreenApp {
 		@Override
 		public boolean process(long value) {					
 			globalValue = value-1;
-			System.out.append("fifth").println(globalValue);
+			//System.out.append("fifth").println(globalValue);
 			return globalValue>0;
 		}		
 	};
@@ -64,7 +64,7 @@ public class MessageApp implements GreenApp {
 			rationalValueNumerator = numerator-1;
 			rationalValueDenominator = denominator+1;
 			
-			System.out.append("second").println(rationalValueNumerator+"/"+rationalValueDenominator);
+			//System.out.append("second").println(rationalValueNumerator+"/"+rationalValueDenominator);
 			
 			return true;
 		}		
@@ -77,7 +77,7 @@ public class MessageApp implements GreenApp {
 			decimalE = e;
 			decimalM = m-1L;
 			
-			Appendables.appendDecimalValue(System.out.append("first"), decimalM, decimalE).append('\n');
+			//Appendables.appendDecimalValue(System.out.append("first"), decimalM, decimalE).append('\n');
 			
 			return true;
 		}		
@@ -97,7 +97,7 @@ public class MessageApp implements GreenApp {
 				text1.setLength(0);
 				text1.append(x);				
 			}
-			System.out.println("third");
+			//System.out.println("third");
 			return true;
 		}		
 	};
@@ -115,7 +115,7 @@ public class MessageApp implements GreenApp {
 				text2.setLength(0);
 				text2.append(x);				
 			}
-			System.out.println("fourth");
+			//System.out.println("fourth");
 			
 			return true;
 		}		
@@ -126,8 +126,8 @@ public class MessageApp implements GreenApp {
 			.rationalProcessor(3, rationalProc)
 			.bytesProcessor(7, byteProc)
 			.utf8Processor(8, utf8Proc, text2)
-		//	.decimalProcessor(5, decimalProc) //TODO: must add support for multiple consume
-			//.bytesProcessor(7, byteProc) //TODO: must add support for multiple consume
+			.decimalProcessor(5, decimalProc)
+			.bytesProcessor(7, byteProc) 
 			.integerProcessor(1, intProc);
 
 	PubSubStructuredWritable writable = new PubSubStructuredWritable() {

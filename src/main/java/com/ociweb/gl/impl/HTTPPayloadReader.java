@@ -51,7 +51,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 			int item = IntHashTable.getItem(headerHash, HTTPHeader.HEADER_BIT | headerId);
 			
 			if (item!=0) {				
-				position(readFromEndLastInt(paraIndexCount + 1+ (0xFFFF & item)));
+				setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + 1+ (0xFFFF & item)));
 				
 				headReader.read(this);
 				
@@ -63,7 +63,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	}
 	
 	public boolean openPayloadData(Payloadable<S> reader) {
-		position(readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)));
+		setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)));
 		reader.read(this);//even when we have zero length...
 		return true;
 	}
