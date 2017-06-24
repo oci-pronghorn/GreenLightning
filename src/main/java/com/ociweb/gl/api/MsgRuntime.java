@@ -240,11 +240,26 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     		System.exit(0);
     		return;
     	}
-        //clean shutdown providing time for the pipe to empty
-        scheduler.shutdown();
-        scheduler.awaitTermination(3, TimeUnit.SECONDS); //timeout error if this does not exit cleanly withing this time.
-        //all the software has now stopped so now shutdown the hardware.
-        builder.shutdown();
+    	
+    	final Runnable lastCall = new Runnable() {    		
+    		@Override
+    		public void run() {
+    			//all the software has now stopped so shutdown the hardware now.
+    			builder.shutdown();
+    		}    		
+    	};
+    	
+    	//notify all the reactors to begin shutdown.
+    	ReactiveListenerStage.requestSystemShutdown(new Runnable() {
+
+			@Override
+			public void run() {
+				scheduler.shutdown();
+				scheduler.awaitTermination(3, TimeUnit.SECONDS, lastCall, lastCall);
+			}
+    		
+    	});
+
     }
 
     public void shutdownRuntime(int timeoutInSeconds) {
@@ -708,7 +723,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         //////////////////////
         
         ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, inputPipes, outputPipes);
-		
+	//	GraphManager.addNota(gm, GraphManager.PRODUCER, GraphManager.PRODUCER, reactiveListener);
+        
+        
         if (listener instanceof RestListener) {
 			GraphManager.addNota(gm, GraphManager.DOT_RANK_NAME, "ModuleStage", reactiveListener);
 		}

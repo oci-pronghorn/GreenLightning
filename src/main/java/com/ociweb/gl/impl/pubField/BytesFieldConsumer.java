@@ -34,12 +34,12 @@ public class BytesFieldConsumer implements FieldConsumer {
 	}
 	
 	public void store(byte[] backing, int pos, int len, int mask) {
-		
+
 		this.backing = backing;
 		this.position = pos;
 		this.length = len;
 		this.mask = mask;
-		
+
 	}
 	
 	public void store(byte e, long m) {

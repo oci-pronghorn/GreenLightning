@@ -31,10 +31,14 @@ public class MessageApp implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 		
+		// never started shutdown
+		builder.limitThreads();
+		
 //		mqttConfig = builder.useMQTT("127.0.0.1", 1883, "my name")
 //					        .cleanSession(true)
 //					        .keepAliveSeconds(20);
 		
+		//builder.enableTelemetry(true);
 	}
 
 	long globalValue = 100;
@@ -49,7 +53,7 @@ public class MessageApp implements GreenApp {
 		@Override
 		public boolean process(long value) {					
 			globalValue = value-1;
-			System.out.println(globalValue);
+			System.out.append("fifth").println(globalValue);
 			return globalValue>0;
 		}		
 	};
@@ -59,8 +63,10 @@ public class MessageApp implements GreenApp {
 		public boolean process(long numerator, long denominator) {					
 			rationalValueNumerator = numerator-1;
 			rationalValueDenominator = denominator+1;
-			System.out.println(rationalValueNumerator+"/"+rationalValueDenominator);
-			return globalValue>0;
+			
+			System.out.append("second").println(rationalValueNumerator+"/"+rationalValueDenominator);
+			
+			return true;
 		}		
 	};
 	
@@ -71,7 +77,7 @@ public class MessageApp implements GreenApp {
 			decimalE = e;
 			decimalM = m-1L;
 			
-			Appendables.appendDecimalValue(System.out, decimalM, decimalE);
+			Appendables.appendDecimalValue(System.out.append("first"), decimalM, decimalE).append('\n');
 			
 			return true;
 		}		
@@ -83,9 +89,15 @@ public class MessageApp implements GreenApp {
 			
 			text1.setLength(0);
 			Appendables.appendUTF8(text1, backing, position, length, mask);
-			text1.append('A'+(0x0F & text1.length()));
-			System.out.println("1 "+text1);
+			text1.append('A'+(0x0F & globalValue));
 			
+			int maxLen = 37;
+			if (text1.length() > maxLen) {				
+				String x = text1.substring(text1.length()-maxLen, text1.length()).toString();
+				text1.setLength(0);
+				text1.append(x);				
+			}
+			System.out.println("third");
 			return true;
 		}		
 	};
@@ -95,8 +107,15 @@ public class MessageApp implements GreenApp {
 		public boolean process(StringBuilder target ) {
 			
 			text2 = target;
-			text2.append('A'+(0x0F&text2.length()));
-			System.out.println("2 "+text2);
+			text2.append('A'+(0x0F&rationalValueDenominator));
+			
+			int maxLen = 13;
+			if (text2.length() > maxLen) {				
+				String x = text2.substring(text2.length()-maxLen, text2.length()).toString();
+				text2.setLength(0);
+				text2.append(x);				
+			}
+			System.out.println("fourth");
 			
 			return true;
 		}		
@@ -105,8 +124,10 @@ public class MessageApp implements GreenApp {
 	MessageConsumer consumer = new MessageConsumer()			
 			.decimalProcessor(5, decimalProc)
 			.rationalProcessor(3, rationalProc)
-		//	.bytesProcessor(7, byteProc)
-		//	.utf8Processor(8, utf8Proc, text2)
+			.bytesProcessor(7, byteProc)
+			.utf8Processor(8, utf8Proc, text2)
+		//	.decimalProcessor(5, decimalProc) //TODO: must add support for multiple consume
+			//.bytesProcessor(7, byteProc) //TODO: must add support for multiple consume
 			.integerProcessor(1, intProc);
 
 	PubSubStructuredWritable writable = new PubSubStructuredWritable() {
@@ -114,14 +135,16 @@ public class MessageApp implements GreenApp {
 		@Override
 		public void write(PubSubStructuredWriter writer) {
 			
-			writer.writeDecimal(5, decimalE, decimalM);
-			writer.writeLong(1, globalValue);
 			writer.writeRational(3, rationalValueNumerator, rationalValueDenominator);
-		//	writer.writeUTF8(7, text1);
-		//	writer.writeUTF8(8, text2);
+			writer.writeDecimal(5, decimalE, decimalM);
+			writer.writeUTF8(8, text2);
+			writer.writeLong(1, globalValue);
+			writer.writeUTF8(7, text1);
 			
 		}		
 	};
+	
+	boolean shutdown = false;
 	
 	@Override
 	public void declareBehavior(final MsgRuntime runtime) {
@@ -137,10 +160,14 @@ public class MessageApp implements GreenApp {
 
 			@Override
 			public boolean message(CharSequence topic, MessageReader payload) {
-				 if (consumer.process(payload)) {
+				 if (!shutdown && consumer.process(payload)) {
 				    	return gccA.publishStructuredTopic("B", writable);
 				    } else {
-				    	runtime.shutdownRuntime();
+				    	if (!shutdown) {
+				    		shutdown = true;
+				    		System.err.println("MessageApp done");
+				    		runtime.shutdownRuntime();
+				    	}
 				    	return true;
 				    }
 			};
@@ -154,10 +181,14 @@ public class MessageApp implements GreenApp {
 
 			@Override
 			public boolean message(CharSequence topic, MessageReader payload) {
-				 if (consumer.process(payload)) {
+				 if (!shutdown && consumer.process(payload)) {
 				    	return gccB.publishStructuredTopic("A", writable);
 				    } else {
-				    	runtime.shutdownRuntime();
+				    	if (!shutdown) {
+				    		shutdown = true;
+				    		System.err.println("done");
+				    		runtime.shutdownRuntime();
+				    	}
 				    	return true;
 				    }
 			}

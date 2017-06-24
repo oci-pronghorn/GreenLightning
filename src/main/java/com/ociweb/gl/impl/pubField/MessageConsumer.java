@@ -60,15 +60,25 @@ public class MessageConsumer {
 		assert(TypeMask.ByteVector      == 0x0E);// bytes
 				
 		while (reader.hasRemainingBytes()) {
-		
+
+			//////////////
+			//read type
+			////////////
 			int token = DataInputBlobReader.readPackedInt(reader);
 			
 			int type = TokenBuilder.extractType(token);
+
 			int fieldId = TokenBuilder.extractId(token);
 			
+			///////////
+			//read name length
+			//////////
 			int fieldNameLength = reader.readShort();
 			assert(fieldNameLength == -1);
 			
+			//////////
+			//consume type
+			//////////
 			FieldConsumer[] localConsumers = consumers[fieldId];
 			if (null!=localConsumers) {
 				int i = localConsumers.length;
@@ -76,6 +86,7 @@ public class MessageConsumer {
 					storeValue(reader, type, localConsumers[i]);
 				}
 			}
+
 		}		
 	}
 		
@@ -89,6 +100,7 @@ public class MessageConsumer {
 	}
 
 	private void storeValue(DataInputBlobReader reader, int type, FieldConsumer consumer) {
+		
 		//NB: must not use more than 3 conditionals to find any specific value.
 		//NB: the order of these are from most common to least common
 		if (type < 0x0B) {
@@ -98,21 +110,26 @@ public class MessageConsumer {
 			} else {
 				
 				Pipe backingPipe = DataInputBlobReader.getBackingPipe(reader);
-				short length = reader.readShort();				
+				short length = reader.readShort();	
+				
 				int position = reader.position();
 				consumer.store(backingPipe.blobRing, position, length, backingPipe.blobMask);
-				reader.skipBytes(length);
+				if (length>0) {
+					reader.skipBytes(length);
+				}
 			}			
 		} else {
 			if (type == TypeMask.ByteVector) {
 				// bytes	
 				
 				Pipe backingPipe = DataInputBlobReader.getBackingPipe(reader);
-				short length = reader.readShort();				
+				short length = reader.readShort();	
+	
 				int position = reader.position();
 				consumer.store(backingPipe.blobRing, position, length, backingPipe.blobMask);			
-				reader.skipBytes(length);
-			
+				if (length>0) {
+					reader.skipBytes(length);
+				}
 			} else {
 				if (type == TypeMask.Decimal) {
 					//decimal

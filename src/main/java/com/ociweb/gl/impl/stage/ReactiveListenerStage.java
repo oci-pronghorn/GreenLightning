@@ -1,5 +1,8 @@
 package com.ociweb.gl.impl.stage;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,25 +12,22 @@ import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MessageReader;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.api.ShutdownListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.HTTPPayloadReader;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.network.ClientConnection;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
-import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
-import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
@@ -48,6 +48,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private static final Logger logger = LoggerFactory.getLogger(ReactiveListenerStage.class); 
      
     private boolean startupCompleted;
+    private boolean shutdownCompleted;
+    
+    //all non shutdown listening reactors will be shutdown only after the listeners have finished.
+    private static AtomicInteger liveShutdownListeners = new AtomicInteger();
+    private static AtomicInteger totalLiveReactors = new AtomicInteger();    
+    private static AtomicBoolean shutdownRequsted = new AtomicBoolean(false);
+    private static Runnable lastCall;
+    ///////////////////////////
     
     protected int[] oversampledAnalogValues;
 
@@ -108,9 +116,19 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
              
         this.ccm = builder.getClientCoordinator();
         
-        //allow for shutdown upon shutdownRequest we have new content
-        GraphManager.addNota(graphManager, GraphManager.PRODUCER, GraphManager.PRODUCER, this);
+        int totalCount = totalLiveReactors.incrementAndGet();
+        assert(totalCount>=0);
+        if (listener instanceof ShutdownListener) {
+        	int shudownListenrCount = liveShutdownListeners.incrementAndGet();
+        	assert(shudownListenrCount>=0);
+        }
                 
+    }
+    
+    
+    public static void requestSystemShutdown(Runnable shutdownRunnable) {
+    	lastCall = shutdownRunnable;
+    	shutdownRequsted.set(true);
     }
 
     
@@ -160,6 +178,36 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     @Override
     public void run() {
         
+    	if (shutdownRequsted.get()) {
+    		if (!shutdownCompleted) {
+    			
+    			if (listener instanceof ShutdownListener) {    				
+    				if (((ShutdownListener)listener).acceptShutdown()) {
+    					int remaining = liveShutdownListeners.decrementAndGet();
+    					assert(remaining>=0);
+    					requestShutdown();
+    					return;
+    				}
+    				//else continue with normal run processing
+    				
+    			} else {
+    				//this one is not a listener so we must wait for all the listeners to close first
+    				
+    				if (0 == liveShutdownListeners.get()) {    					
+    					requestShutdown();
+    					return;
+    				}
+    				//else continue with normal run processing.
+    				
+    			}
+    		} else {
+    			assert(shutdownCompleted);
+    			assert(false) : "run should not have been called if this stage was shut down.";
+    			return;
+    		}
+    	}
+    	
+    	
         if (timeEvents) {         	
 			processTimeEvents((TimeListener)listener, timeTrigger);            
 		}
@@ -189,9 +237,25 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         
         
     }
-    
-    @Override    
+
+
+	@Override    
     public void shutdown() {
+		assert(!shutdownCompleted) : "already shut down why was this called a second time?";
+		int i = outputPipes.length;
+		while (--i>=0) {
+			Pipe<?> output = outputPipes[i];
+			Pipe.spinBlockForRoom(output, Pipe.EOF_SIZE);
+			Pipe.publishEOF(output);
+		}		
+
+		if (totalLiveReactors.decrementAndGet()==0) {
+			//ready for full system shutdown.
+			if (null!=lastCall) {
+				lastCall.run();
+			}
+		}
+		shutdownCompleted = true;
     }
 
     

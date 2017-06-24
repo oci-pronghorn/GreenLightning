@@ -88,6 +88,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 		writePackedInt(this,TokenBuilder.buildToken(TypeMask.TextUTF8, 
 									                OperatorMask.Field_None, 
 									                fieldId));
+		
 		writeShort(-1); //room for future field name		
 		writeUTF(text);
 	}
