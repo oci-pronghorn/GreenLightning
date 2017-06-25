@@ -2,6 +2,7 @@ package com.ociweb.gl.example;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.TimeTrigger;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
@@ -48,10 +49,10 @@ public class SimpleApp implements GreenApp {
 	}
 	
 	@Override
-	public void declareBehavior(MsgRuntime runtime) {		
+	public void declareBehavior(GreenRuntime runtime) {		
 				
-		runtime.addRestListener(new MathUnitSimple((MsgRuntime) runtime), SIMPLE_ADD_ID1);
-		runtime.addRestListener(singleInstance = new MathUnit((MsgRuntime) runtime), ADD_ID1, ADD_ID2); //accept all registered routes
+		runtime.addRestListener(new MathUnitSimple(runtime), SIMPLE_ADD_ID1);
+		runtime.addRestListener(singleInstance = new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
 	}
 
 	

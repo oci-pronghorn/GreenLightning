@@ -3,6 +3,7 @@ package com.ociweb.gl.api;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
 
 public class ListenerConfig {
 
@@ -16,38 +17,66 @@ public class ListenerConfig {
 	
 			assert(routes.length>0) : "API requires 1 or more routes";
 			
-			int r = routes.length;
-					
-			int p;
+			///////////
+			//use a single pipe to consume all the rout requests to ensure they remain in order
+			///////////
+			PipeConfig<HTTPRequestSchema> pipeConfig = builder.restPipeConfig.grow2x();
+			
+			int count;
 			if (-1 == parallelInstance) {
-				p = builder.parallelism();
+				count = builder.parallelism();
 			} else {
-				p = 1;
+				count = 1;
 			}
-			int count = r*p;
-			
 			restRequests = new Pipe[count];
-			int idx = count;
-			
-			while (--r >= 0) {	
-				int routeIndex = routes[r];
-				//if parallel is -1 we need to do one for each
-							
-				int x = p;
-				while (--x>=0) {
-								
-					Pipe<HTTPRequestSchema> pipe = builder.createHTTPRequestPipe(builder.restPipeConfig.grow2x(), routeIndex, -1 == parallelInstance ? x : parallelInstance);				
-					
-					restRequests[--idx] = pipe;
-		            
-				}            
+			int i = count;
+			while (--i>=0) {
+				Pipe<HTTPRequestSchema> pipe = restRequests[i] = builder.newHTTPRequestPipe(pipeConfig);
+				int r = routes.length;
+				while (--r >= 0) {
+					//map all these routes to the same pipe
+					builder.recordPipeMapping(pipe, routes[r], i);
+				}
 			}
+			
+		
+			/////////////////
+			//old
+			/////////////////
+//			
+//			int r = routes.length;
+//					
+//			int p;
+//			if (-1 == parallelInstance) {
+//				p = builder.parallelism();
+//			} else {
+//				p = 1;
+//			}
+//			int count = r*p;
+//			
+//			restRequests = new Pipe[count];
+//			
+//			int idx = count;
+//			
+//			while (--r >= 0) {	
+//				int routeIndex = routes[r];
+//				//if parallel is -1 we need to do one for each
+//							
+//				int x = p;
+//				while (--x>=0) {
+//								
+//					Pipe<HTTPRequestSchema> pipe = builder.newHTTPRequestPipe(pipeConfig);				
+//					builder.recordPipeMapping(pipe, routeIndex, parallelInstance);
+//					restRequests[--idx] = pipe;
+//		            
+//				}            
+//			}
 	
 	}
 	
 
 
-    Pipe<HTTPRequestSchema>[] getHTTPRequestPipes() {
+    public Pipe<HTTPRequestSchema>[] getHTTPRequestPipes() {
     	return restRequests;
     }
 

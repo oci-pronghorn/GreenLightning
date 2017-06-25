@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Test;
 
+import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 
@@ -34,7 +35,7 @@ public class ServerTest {
     	SSLUtilities.trustAllHttpsCertificates();
     	
     	SimpleApp app = new SimpleApp(port, false, isTLS);
-		MsgRuntime runtime = MsgRuntime.test(app);
+		MsgRuntime runtime = MsgRuntime.test((GreenApp)app);
     	final NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();
     	
     	final AtomicBoolean isLive = new AtomicBoolean(true);

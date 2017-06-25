@@ -176,6 +176,12 @@ public class BuilderImpl implements Builder {
     
 	public final void recordPipeMapping(Pipe<HTTPRequestSchema> httpRequestPipe, int routeIdx, int parallelId) {
 		
+		lazyCreatePipeLookupMatrix();
+		collectedHTTPRequstPipes[parallelId][routeIdx].add(httpRequestPipe);
+
+	}
+
+	private void lazyCreatePipeLookupMatrix() {
 		if (null==collectedHTTPRequstPipes) {
 			
 			int parallelism = parallelism();
@@ -196,11 +202,6 @@ public class BuilderImpl implements Builder {
 			
 	
 		}
-	
-		//logger.info("added pipe "+httpRequestPipe.id+" to Path "+routeIdx+" to RouterPara: "+parallelId);
-		
-		collectedHTTPRequstPipes[parallelId][routeIdx].add(httpRequestPipe);
-
 	}
 	
 	
@@ -545,15 +546,6 @@ public class BuilderImpl implements Builder {
 		boolean isTLS = true;
 		return useNetClient ? new ClientCoordinator(connectionsInBit, maxPartialResponse, isTLS) : null;
 		
-	}
-
-	public final Pipe<HTTPRequestSchema> createHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig, int routeIndex, int parallelInstance) {
-		Pipe<HTTPRequestSchema> pipe = newHTTPRequestPipe(restPipeConfig);		
-		
-		//TODO: move this to later, so we can wait for subscription calls later.
-		//      would still need the count of routes OR, can we build Reactor after fluent calls?
-		recordPipeMapping(pipe, routeIndex, parallelInstance);		
-		return pipe;
 	}
 
 	public final Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {

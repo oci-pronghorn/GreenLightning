@@ -26,18 +26,14 @@ public class MessageApp implements GreenApp {
 	public static void main( String[] args ) {
         MsgRuntime.run(new MessageApp());
     }
-			
-//	MQTTConfig mqttConfig;
 	
+
 	@Override
 	public void declareConfiguration(Builder builder) {
 		
 		// never started shutdown
 		builder.limitThreads();
 		
-//		mqttConfig = builder.useMQTT("127.0.0.1", 1883, "my name")
-//					        .cleanSession(true)
-//					        .keepAliveSeconds(20);
 		
 		//builder.enableTelemetry(true);
 	}
@@ -148,13 +144,9 @@ public class MessageApp implements GreenApp {
 	boolean shutdown = false;
 	
 	@Override
-	public void declareBehavior(final MsgRuntime runtime) {
+	public void declareBehavior(final GreenRuntime runtime) {
 		
-		
-	//	runtime.subscriptionBridge(topic, mqttConfig); //optional 2 topics, optional transform lambda
-	//	runtime.transmissionBridge(topic, mqttConfig); //optional 2 topics, optional transform lambda
-		
-		
+
 		
 		final GreenCommandChannel gccA = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		PubSubListener listenerA = new PubSubListener() {

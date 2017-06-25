@@ -1,8 +1,6 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.BuilderImpl;
-
-public interface GreenApp extends MsgApp<Builder, MsgRuntime<BuilderImpl, ListenerFilter>> {
+public interface GreenApp extends MsgApp<Builder, GreenRuntime> {
 	
 	public static final int ALL = GreenCommandChannel.DYNAMIC_MESSAGING | 
             GreenCommandChannel.NET_REQUESTER | 

@@ -126,20 +126,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return (L) registerListenerImpl(listener);
     }
 
-	protected void extractPipeData(Object listener, int... optionalInts) {
-		outputPipes = new Pipe<?>[0];
-		httpRequestPipes = (Pipe<HTTPRequestSchema>[]) new Pipe<?>[0];     	
-    	
-		if (optionalInts.length>0 && listener instanceof RestListener) {
-			httpRequestPipes = PronghornStage.join(httpRequestPipes, new ListenerConfig(builder, optionalInts, parallelInstanceUnderActiveConstruction).getHTTPRequestPipes());
-		}
-    	
-		//extract pipes used by listener
-    	visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor);//populates  httpRequestPipes and outputPipes
-	}
-	
-		
-    protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
+	protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
 
         Class<? extends Object> c = listener.getClass();
         Field[] fields = c.getDeclaredFields();
@@ -604,7 +591,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			while (--x >= 0) {
 				idx--;
 				int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? x : parallelInstanceUnderActiveConstruction;
-				inputs[idx] = builder.createHTTPRequestPipe(builder.restPipeConfig.grow2x(), routes[r], parallelIndex);
+				inputs[idx] = builder.newHTTPRequestPipe(builder.restPipeConfig.grow2x());
+				builder.recordPipeMapping(inputs[idx], routes[r], parallelIndex);
 				outputs[idx] = builder.newNetResponsePipe(fileResponseConfig, parallelIndex);
 			}
 		}
@@ -700,7 +688,20 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     private ListenerFilter registerListenerImpl(Object listener, int ... optionalInts) {
                 
-    	extractPipeData(listener, optionalInts);
+    	outputPipes = new Pipe<?>[0];
+		
+		if (optionalInts.length>0 && listener instanceof RestListener) {
+			
+			ListenerConfig listenerConfig = new ListenerConfig(builder, optionalInts, parallelInstanceUnderActiveConstruction);
+
+			httpRequestPipes = listenerConfig.getHTTPRequestPipes();
+		} else {
+			httpRequestPipes = (Pipe<HTTPRequestSchema>[]) new Pipe<?>[0];     	
+			
+		}
+		
+		//extract pipes used by listener
+		visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor);//populates  httpRequestPipes and outputPipes
 		
 		
     	/////////
@@ -754,7 +755,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
   
     public static MsgRuntime run(MsgApp app) {
-	    MsgRuntime runtime = new MsgRuntime(); 
+    	GreenRuntime runtime = new GreenRuntime(); 
         try {
 		    app.declareConfiguration(runtime.getBuilder());
 		         
@@ -784,8 +785,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return runtime;
     }
 	
-	public static MsgRuntime test(MsgApp app) {
-	    MsgRuntime runtime = new MsgRuntime(); 
+	public static <M extends MsgApp> MsgRuntime test(M app) {
+		GreenRuntime runtime = new GreenRuntime(); 
         try {
 		    app.declareConfiguration(runtime.getBuilder());
 		         
