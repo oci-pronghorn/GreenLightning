@@ -161,6 +161,11 @@ public class MessageApp implements GreenApp {
 
 			@Override
 			public boolean message(CharSequence topic, MessageReader payload) {
+				
+				//if (gccA.copyStructuredTopic(topic, payload, consumer)) {
+				//	//did copy
+				//}
+				
 				 if (!shutdown && consumer.process(payload)) {
 				    	return gccA.publishStructuredTopic("B", writable);
 				    } else {

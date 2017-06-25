@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.pubField.MessageConsumer;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ServerCoordinator;
@@ -522,6 +523,34 @@ public class GreenCommandChannel<B extends BuilderImpl> {
 		}
     }
         
+    public boolean copyStructuredTopic(CharSequence topic, 
+    		                           MessageReader reader, 
+    		                           MessageConsumer consumer) {
+    	
+    	int pos = reader.absolutePosition();    	
+    	if (consumer.process(reader) 
+    		&& PipeWriter.hasRoomForWrite(goPipe) 
+        	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)  ) {
+    		
+    		PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
+        	
+            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this); 
+            
+            reader.absolutePosition(pos);//restore position as unread
+            //direct copy from one to the next
+            reader.readInto(pw, reader.available());
+
+            pw.publish();
+           	publishGo(1,builder.pubSubIndex(), this);  		
+    		
+    		return true;
+    	} else {
+    		reader.absolutePosition(pos);//restore position as unread
+    		return false;
+    	}
+    }
+    
     public boolean publishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
  	    assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 

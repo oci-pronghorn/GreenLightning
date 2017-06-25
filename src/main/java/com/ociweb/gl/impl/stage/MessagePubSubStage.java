@@ -35,11 +35,13 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private short[] subscriberLists;
     private int totalSubscriberLists;
     
+    
     private TrieParser localSubscriptionTrie;
     private TrieParserReader localSubscriptionTrieReader;
         
     private IntHashTable subscriptionPipeLookup;
     
+    private boolean pendingIngress = false;
     private int[] pendingPublish; //remaining pipes that this pending message must be published to
     private long[][] consumedMarks; //ack only is sent after every subscribers tail has passed these marks
     private boolean[] pendingAck; //this input needs an ack and should be sent once all consumed marks are cleared.
@@ -244,20 +246,31 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         	switch(pendingDeliveryType) {
 	        	case Message:
 		        	{
-		        		//TODO: if this is ingress pull those and looop.
-		        		//TODO: if ingress is done release it.
-		        		
-		            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];		           	 	
-		        		Pipe<MessagePubSub> pipe = incomingSubsAndPubsPipe[pendingReleaseCountIdx];
-		                
-		        		for(int i = 0; i<limit; i++) {
-		        			copyToSubscriber(pipe, pendingPublish[i], targetMakrs, 
-		        					         MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+		        		if (pendingIngress) {
+		        			
+		        			Pipe<IngressMessages> pipe = ingressMessagePipes[pendingReleaseCountIdx];
+			                
+			        		for(int i = 0; i<limit; i++) {
+			        			copyToSubscriber(pipe, pendingPublish[i],
+			        					IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+			        					IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+			        		}
+		        			
+		        		} else {
+			            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];		           	 	
+			        		Pipe<MessagePubSub> pipe = incomingSubsAndPubsPipe[pendingReleaseCountIdx];
+			                
+			        		for(int i = 0; i<limit; i++) {
+			        			copyToSubscriber(pipe, pendingPublish[i], targetMakrs, 
+			        					 MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+			        					 MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+			        		}
 		        		}
 		        	}
 	        		break;
 	        	case State:
 		        	{
+		        		assert(!pendingIngress);
 		            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];
 		           	 
 		        		//finishing the remaining copies that could not be done before because the pipes were full
@@ -308,9 +321,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                     				);
 							
                     	}
-                    	
-                    	//TODO: how is this going to be released at the right time??
-                                   
+                    	        
                 	}
         			
                     if (pendingPublishCount>0) {
@@ -326,8 +337,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         			
         			
         		}
-        		//TODO: call the common logic for publish.
-        		
         		
         	}
         }
@@ -534,7 +543,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             PipeWriter.publishWrites(outPipe);
         } else {
         	//add this one back to the list so we can send again later
-            pendingPublish[pendingPublishCount++] = pipeIdx;                                    
+            pendingPublish[pendingPublishCount++] = pipeIdx;
+            pendingIngress = false;
         }
     }
     
@@ -548,7 +558,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             PipeWriter.publishWrites(outPipe);
         } else {
         	//add this one back to the list so we can send again later
-            pendingPublish[pendingPublishCount++] = pipeIdx;                                    
+            pendingPublish[pendingPublishCount++] = pipeIdx;    
+            pendingIngress = true;
         }
     }
 
@@ -565,7 +576,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             		
             PipeWriter.publishWrites(outPipe);
         } else {
-        	pendingPublish[pendingPublishCount++] = pipeIdx;                                     
+        	pendingPublish[pendingPublishCount++] = pipeIdx;
+        	pendingIngress = false;
         }
     }
     
