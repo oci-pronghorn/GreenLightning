@@ -94,14 +94,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	public final void transmissionBridge(CharSequence topic, BridgeConfig config) {		
 		config.addTransmission(topic);
 	}
+		
 	
-	
-	
-    public final L addRestListener(RestListener listener, int ... routes) {
-    	return (L) registerListenerImpl(listener, routes);
+    public final L addRestListener(RestListener listener) {
+    	return (L) registerListenerImpl(listener);
     }
-    
-    
+        
     public final L addStartupListener(StartupListener listener) {
         return (L) registerListenerImpl(listener);
     }
@@ -470,17 +468,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			
 		    while (--path >= 0) {
 		    	
-		    	Pipe<HTTPRequestSchema>[] array = builder.buildFromRequestArray(t, path);
+		    	ArrayList<Pipe<HTTPRequestSchema>> requestPipes = builder.buildFromRequestArray(t, path);
 		    	//with a single pipe just pass it one, otherwise use the replicator to fan out from a new single pipe.
-		    	if (1==array.length) {
-		    		fromRouterToModules[t][path] = array[0];
+		    	if (1==requestPipes.size()) {
+		    		fromRouterToModules[t][path] = requestPipes.get(0);
 		    	} else {	
 		    		fromRouterToModules[t][path] = builder.newHTTPRequestPipe(builder.restPipeConfig);		    		
-		    		if (0==array.length) {
+		    		if (0==requestPipes.size()) {
 		    			//we have no consumer so tie it to pipe cleaner		    		
 		    			forPipeCleaner.add(fromRouterToModules[t][path]);
 		    		} else {
-		    			ReplicatorStage.instance(gm, fromRouterToModules[t][path], array);	
+		    			ReplicatorStage.instance(gm, fromRouterToModules[t][path], requestPipes.toArray(new Pipe[requestPipes.size()]));	
 		    		}
 		    	}
 		    }
@@ -592,7 +590,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				idx--;
 				int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? x : parallelInstanceUnderActiveConstruction;
 				inputs[idx] = builder.newHTTPRequestPipe(builder.restPipeConfig.grow2x());
-				builder.recordPipeMapping(inputs[idx], routes[r], parallelIndex);
+				builder.appendPipeMapping(inputs[idx], routes[r], parallelIndex);
 				outputs[idx] = builder.newNetResponsePipe(fileResponseConfig, parallelIndex);
 			}
 		}
@@ -686,15 +684,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
 
     
-    private ListenerFilter registerListenerImpl(Object listener, int ... optionalInts) {
+    private ListenerFilter registerListenerImpl(Object listener) {
                 
     	outputPipes = new Pipe<?>[0];
 		
-		if (optionalInts.length>0 && listener instanceof RestListener) {
+		if (listener instanceof RestListener) {
 			
-			ListenerConfig listenerConfig = new ListenerConfig(builder, optionalInts, parallelInstanceUnderActiveConstruction);
+			final int p = ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
+						
+			httpRequestPipes = ListenerConfig.newHTTPRequestPipes(builder,  p);
 
-			httpRequestPipes = listenerConfig.getHTTPRequestPipes();
 		} else {
 			httpRequestPipes = (Pipe<HTTPRequestSchema>[]) new Pipe<?>[0];     	
 			
@@ -723,12 +722,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         //////////////////////
         //////////////////////
         
-        ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, inputPipes, outputPipes);
-	//	GraphManager.addNota(gm, GraphManager.PRODUCER, GraphManager.PRODUCER, reactiveListener);
-        
+        ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
+        		                                inputPipes, outputPipes, parallelInstanceUnderActiveConstruction);
+
         
         if (listener instanceof RestListener) {
 			GraphManager.addNota(gm, GraphManager.DOT_RANK_NAME, "ModuleStage", reactiveListener);
+			
 		}
 		
 		/////////////////////

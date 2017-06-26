@@ -42,9 +42,7 @@ public interface ListenerFilter {
 	
 	ListenerFilter includeRoutes(int ... routeIds);
 	
-	
-	ListenerFilter excludeRoutes(int ... routeIds);
-	
+		
 	
 	
 }

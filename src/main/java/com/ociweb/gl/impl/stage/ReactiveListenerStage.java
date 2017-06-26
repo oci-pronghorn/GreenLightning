@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.ListenerConfig;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MessageReader;
 import com.ociweb.gl.api.PubSubListener;
@@ -56,7 +57,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     protected static AtomicBoolean shutdownRequsted = new AtomicBoolean(false);
     protected static Runnable lastCall;
     ///////////////////////////
-    
+    	
+    private boolean restRoutesDefined = false;	
     protected int[] oversampledAnalogValues;
 
     private static final int MAX_PORTS = 10;
@@ -91,8 +93,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private final ClientCoordinator ccm;
 
 	protected static final long MS_to_NS = 1_000_000;
-    private int iteration = 0;
-    
+    private int timeIteration = 0;
+    private int parallelInstance;
     //////////////////////////////////////////////////
     ///NOTE: keep all the work here to a minimum, we should just
     //      take data off pipes and hand off to the application
@@ -101,12 +103,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     /////////////////////////////////////////////////////
 
     ///TODO: try to create this actual listener lazy and late so we can filter graph more effectivly
-    public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H builder) {
-
+    public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H builder, int parallelInstance) {
         
         super(graphManager, inputPipes, outputPipes);
         this.listener = listener;
-
+        this.parallelInstance = parallelInstance;
         this.inputPipes = inputPipes;
         this.outputPipes = outputPipes;       
         this.builder = builder;
@@ -142,7 +143,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     @Override
     public void startup() {              
-                
+ 
+    	if (listener instanceof RestListener) {
+    		if (!restRoutesDefined) {
+    			throw new UnsupportedOperationException("a RestListener requires a call to includeRoutes() first to define which routes it consumes.");
+    		}
+    	}
+    	
     	httpSpec = HTTPSpecification.defaultSpec();
     	 
         stageRate = (Number)GraphManager.getNota(graphManager, this.stageId,  GraphManager.SCHEDULE_RATE, null);
@@ -516,7 +523,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			Thread.yield();                	
 		}
 		
-		listener.timeEvent(trigger, iteration++);
+		listener.timeEvent(trigger, timeIteration++);
 		timeTrigger += timeRate;
 	}
    
@@ -584,37 +591,32 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		}
 		return true;
 	}
-	
 
 	@Override
 	public final ListenerFilter includeRoutes(int... routeIds) {
-		if (listener instanceof RestListener) {
-			
-			throw new UnsupportedOperationException("Not yet implemented");
-			// TODO Auto-generated method stub
 
-			
-			//return null;
+		if (listener instanceof RestListener) {
+			int count = 0;
+			int i =	inputPipes.length;
+			while (--i>=0) {
+				//we only expect to find a single request pipe
+				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
+				   //NOTE: count may be backwards !!if so reverse while on 595?
+					int x = routeIds.length;
+					int p = parallelInstance==-1?count:parallelInstance;
+					while (--x>=0) {
+						restRoutesDefined = true;
+						builder.appendPipeMapping((Pipe<HTTPRequestSchema>) inputPipes[i], routeIds[x], p);
+					}
+					count++;
+				}
+			}
+			return this;
 		} else {
 			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
 		}
 	}
 
-
-	@Override
-	public final ListenerFilter excludeRoutes(int... routeIds) {
-		if (listener instanceof RestListener) {
-			
-			throw new UnsupportedOperationException("Not yet implemented");
-			// TODO Auto-generated method stub
-
-			
-			//return null;
-		} else {
-			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
-		}
-	}
-	
 	
 	@Override
 	public final ListenerFilter addSubscription(CharSequence topic) {		

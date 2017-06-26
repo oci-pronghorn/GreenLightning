@@ -51,8 +51,8 @@ public class SimpleApp implements GreenApp {
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {		
 				
-		runtime.addRestListener(new MathUnitSimple(runtime), SIMPLE_ADD_ID1);
-		runtime.addRestListener(singleInstance = new MathUnit(runtime), ADD_ID1, ADD_ID2); //accept all registered routes
+		runtime.addRestListener(new MathUnitSimple(runtime)).includeRoutes(SIMPLE_ADD_ID1);
+		runtime.addRestListener(singleInstance = new MathUnit(runtime)).includeRoutes(ADD_ID1, ADD_ID2); //accept all registered routes
 	}
 
 	

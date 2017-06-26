@@ -7,77 +7,49 @@ import com.ociweb.pronghorn.pipe.PipeConfig;
 
 public class ListenerConfig {
 
-    private final static Pipe[] EMPTY_PIPES = new Pipe[0];
-    
-    private Pipe<HTTPRequestSchema>[] restRequests = EMPTY_PIPES;
-	
-        
-	public ListenerConfig(BuilderImpl builder, int[] routes, int parallelInstance) {
 
-	
-			assert(routes.length>0) : "API requires 1 or more routes";
-			
-			///////////
-			//use a single pipe to consume all the rout requests to ensure they remain in order
-			///////////
-			PipeConfig<HTTPRequestSchema> pipeConfig = builder.restPipeConfig.grow2x();
-			
-			int count;
-			if (-1 == parallelInstance) {
-				count = builder.parallelism();
-			} else {
-				count = 1;
-			}
-			restRequests = new Pipe[count];
-			int i = count;
-			while (--i>=0) {
-				Pipe<HTTPRequestSchema> pipe = restRequests[i] = builder.newHTTPRequestPipe(pipeConfig);
-				int r = routes.length;
-				while (--r >= 0) {
-					//map all these routes to the same pipe
-					builder.recordPipeMapping(pipe, routes[r], i);
-				}
-			}
-			
+        
+	public static void recordPipeMapings(BuilderImpl builder, int[] routes, int parallelInstance,
+			Pipe<HTTPRequestSchema>[] restRequests) {
+		int r;
+		int idx = restRequests.length;
 		
-			/////////////////
-			//old
-			/////////////////
-//			
-//			int r = routes.length;
-//					
-//			int p;
-//			if (-1 == parallelInstance) {
-//				p = builder.parallelism();
-//			} else {
-//				p = 1;
-//			}
-//			int count = r*p;
-//			
-//			restRequests = new Pipe[count];
-//			
-//			int idx = count;
-//			
-//			while (--r >= 0) {	
-//				int routeIndex = routes[r];
-//				//if parallel is -1 we need to do one for each
-//							
-//				int x = p;
-//				while (--x>=0) {
-//								
-//					Pipe<HTTPRequestSchema> pipe = builder.newHTTPRequestPipe(pipeConfig);				
-//					builder.recordPipeMapping(pipe, routeIndex, parallelInstance);
-//					restRequests[--idx] = pipe;
-//		            
-//				}            
-//			}
-	
+		final int p = ListenerConfig.computeParallel(builder, parallelInstance);
+		
+		int x = p;
+		while (--x>=0) {	
+			int parallelId = -1 == parallelInstance ? x : parallelInstance;
+			Pipe<HTTPRequestSchema> pipe = restRequests[--idx];
+			r = routes.length;
+			while (--r >= 0) {	
+				int routeIndex = routes[r];
+				builder.appendPipeMapping(pipe, routeIndex, parallelId);          
+			}            
+		}
+	}
+
+	public static Pipe<HTTPRequestSchema>[] newHTTPRequestPipes(BuilderImpl builder, final int parallelInstance) {
+		Pipe<HTTPRequestSchema>[] restRequests = new Pipe[parallelInstance];
+		
+		PipeConfig<HTTPRequestSchema> pipeConfig = builder.restPipeConfig.grow2x();
+		int idx = restRequests.length;
+		while (--idx>=0) {
+			Pipe<HTTPRequestSchema> pipe = builder.newHTTPRequestPipe(pipeConfig);
+			restRequests[idx] = pipe;
+		}
+		return restRequests;
+	}
+
+	public static int computeParallel(BuilderImpl builder, int parallelInstance) {
+		final int p;
+		if (-1 == parallelInstance) {
+			p = builder.parallelism();
+		} else {
+			p = 1;
+		}
+		return p;
 	}
 	
 
-
-    public Pipe<HTTPRequestSchema>[] getHTTPRequestPipes() {
-    	return restRequests;
-    }
 
 }

@@ -115,7 +115,15 @@ public class BuilderImpl implements Builder {
 	
 	private int IDX_MSG = -1;
 	private int IDX_NET = -1;
+	   
+    ////////////////////////////
+    ///gather and store the server module pipes
+    /////////////////////////////
+    private ArrayList<Pipe<HTTPRequestSchema>>[][] collectedHTTPRequstPipes;
+	private ArrayList<Pipe<ServerResponseSchema>>[] collectedServerResponsePipes;
+	
 
+	
 	//////////////////////////////
 	//support for REST modules and routing
 	//////////////////////////////
@@ -167,14 +175,9 @@ public class BuilderImpl implements Builder {
     public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {
     	return routerConfig;
     }
+ 
     
-    ////////////////////////////
-    ///gather and store the server module pipes
-    /////////////////////////////
-    private ArrayList<Pipe<HTTPRequestSchema>>[][] collectedHTTPRequstPipes;
-	private ArrayList<Pipe<ServerResponseSchema>>[] collectedServerResponsePipes;
-    
-	public final void recordPipeMapping(Pipe<HTTPRequestSchema> httpRequestPipe, int routeIdx, int parallelId) {
+	public final void appendPipeMapping(Pipe<HTTPRequestSchema> httpRequestPipe, int routeIdx, int parallelId) {
 		
 		lazyCreatePipeLookupMatrix();
 		collectedHTTPRequstPipes[parallelId][routeIdx].add(httpRequestPipe);
@@ -205,11 +208,9 @@ public class BuilderImpl implements Builder {
 	}
 	
 	
-	public final Pipe<HTTPRequestSchema>[] buildFromRequestArray(int r, int p) {
-		ArrayList<Pipe<HTTPRequestSchema>> list = collectedHTTPRequstPipes[r][p];
-		return (Pipe<HTTPRequestSchema>[]) list.toArray(new Pipe[list.size()]);
+	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int r, int p) {
+		return null!=collectedHTTPRequstPipes ? collectedHTTPRequstPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>();
 	}
-	
 	
 	
 	public final void recordPipeMapping(Pipe<ServerResponseSchema> netResponse, int parallelInstanceId) {
@@ -248,17 +249,15 @@ public class BuilderImpl implements Builder {
  	   return pipe;
     }
 	
-    //liniear search only used once in startup method for the stage.
+    //Linear search only used once in startup method for the stage.
 	public final void lookupRouteAndPara(Pipe<?> localPipe, int idx, int[] routes, int[] para) {
-		int p = parallelism();
 
+		int p = parallelism();
 		while (--p >= 0) {
 
 			int r = routerConfig().routesCount();
 			while (--r >= 0) {
-				ArrayList<Pipe<HTTPRequestSchema>> pipeList = collectedHTTPRequstPipes[p][r];
-			
-				if (pipeList.contains(localPipe)) {
+				if (collectedHTTPRequstPipes[p][r].contains(localPipe)) {
 					routes[idx] = r;
 					para[idx] = p;	
 					return;
@@ -273,6 +272,7 @@ public class BuilderImpl implements Builder {
 
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
+
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {
@@ -325,8 +325,8 @@ public class BuilderImpl implements Builder {
 		return timeTriggerStart;
 	}
 
-    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes) {
-        return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this);
+    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, int parallelInstance) {
+        return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this, parallelInstance);
     }
 
 	public <G extends GreenCommandChannel> G newCommandChannel(
