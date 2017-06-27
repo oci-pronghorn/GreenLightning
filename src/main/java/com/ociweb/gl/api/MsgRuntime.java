@@ -127,14 +127,26 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
 
         Class<? extends Object> c = listener.getClass();
-        Field[] fields = c.getDeclaredFields();
+
+        while (c!=null) {        
+        	visitClass(listener, depth, visitor, c);
+        	c = c.getSuperclass();
+        }
         
-                
+    }
+
+	public void visitClass(Object listener, int depth, CommandChannelVisitor visitor, Class<? extends Object> c) {
+		Field[] fields = c.getDeclaredFields();
+                                               
+                        
         int f = fields.length;
         while (--f >= 0) {
             try {
                 fields[f].setAccessible(true);   
                 Object obj = fields[f].get(listener);
+                
+                
+                
                 if (obj instanceof GreenCommandChannel) {
                     GreenCommandChannel cmdChnl = (GreenCommandChannel)obj;                 
                     
@@ -143,7 +155,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                     visitor.visit(cmdChnl);
                                         
                 } else {                
-                	if (depth<5) { //stop recursive depth
+                	if (depth<16) { //stop recursive depth
                 		//recursive check for command channels
                 		visitCommandChannelsUsedByListener(obj, depth+1, visitor);
             		}
@@ -153,8 +165,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                 logger.debug("unable to find CommandChannel",e);
             }
         }
-
-    }
+	}
     
     public long fieldId(int routeId, byte[] fieldName) {
     	return builder.fieldId(routeId, fieldName);
