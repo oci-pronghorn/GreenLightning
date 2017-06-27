@@ -30,7 +30,6 @@ import com.ociweb.gl.impl.stage.TrafficCopStage;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
@@ -491,6 +490,9 @@ public class BuilderImpl implements Builder {
 		parallelism = parallel;
 	}
 
+	
+	private final TrieParserReader localReader = new TrieParserReader(0, true);
+	
 	@Override
 	public long fieldId(int routeId, byte[] fieldName) {	
 		return TrieParserReader.query(localReader, this.extractionParser(routeId), fieldName, 0, fieldName.length, Integer.MAX_VALUE);
@@ -498,7 +500,7 @@ public class BuilderImpl implements Builder {
 		
 	@Override
 	public final int registerRoute(CharSequence route, byte[] ... headers) {		
-		return routerConfig.registerRoute(route, headerTable(headers), httpSpec.headerParser());
+		return routerConfig.registerRoute(route, headers);
 	}
 
 	public final TrieParser extractionParser(int route) {
@@ -516,31 +518,6 @@ public class BuilderImpl implements Builder {
 	public TrieParser headerTrieParser(int routeId) {
 		return routerConfig.headerTrieParser(routeId);
 	}
-	
-	private final TrieParserReader localReader = new TrieParserReader(0, true);
-	
-	private final IntHashTable headerTable(byte[] ... headers) {
-		
-		IntHashTable headerToPosTable = IntHashTable.newTableExpectingCount(headers.length);		
-		int count = 0;
-		int i = headers.length;
-		
-		while (--i>=0) {	
-			
-			byte[] h = headers[i];
-			int ord = (int)localReader.query(localReader, httpSpec.headerParser(), h, 0, h.length, Integer.MAX_VALUE);
-			
-			if (ord<0) {
-				throw new UnsupportedOperationException("unsupported header "+new String(h));
-			}
-			
-			boolean ok = IntHashTable.setItem(headerToPosTable, HTTPHeader.HEADER_BIT | ord, HTTPHeader.HEADER_BIT | (count++));
-			assert(ok);
-		}
-		
-		return headerToPosTable;
-	}
-
 
 	public final ClientCoordinator getClientCoordinator() {
 		boolean isTLS = true;

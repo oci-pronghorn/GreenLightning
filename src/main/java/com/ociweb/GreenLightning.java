@@ -15,7 +15,9 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.http.ModuleConfig;
+import com.ociweb.pronghorn.network.http.RouterStageConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -141,73 +143,52 @@ public class GreenLightning {
 		
 		//using the basic no-fills API
 		ModuleConfig config = new ModuleConfig() {
-		
 			
 		    final PipeConfig<ServerResponseSchema> fileServerOutgoingDataConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, fileOutgoing, fileChunkSize);//from modules  to  supervisor
-		
-		    //must create here to ensure we have the same instance for both the module and outgoing pipes
-		    Pipe<ServerResponseSchema>[][] staticFileOutputs;
-		    
-			@Override
-			public IntHashTable addModule(int a, 
-					GraphManager graphManager, Pipe<HTTPRequestSchema>[] inputs,
-					HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> spec) {
-				
-				//
-				if (fileServerIndex == a) {
-					
-					//the file server is stateless therefore we can build 1 instance for every input pipe
-					int instances = inputs.length;
-					
-					staticFileOutputs = new Pipe[instances][1];
-					
-					int i = instances;
-					while (--i>=0) {
-						staticFileOutputs[i][0] = new Pipe<ServerResponseSchema>(fileServerOutgoingDataConfig); //TODO: old code which will be removed.
-						if (null != pathRoot) {
-							//file based site
-							FileReadModuleStage.newInstance(graphManager, inputs[i], staticFileOutputs[i][0], spec, pathRoot);	
-						} else {
-							//jar resources based site
-							FileReadModuleStage.newInstance(graphManager, inputs[i], staticFileOutputs[i][0], spec, resourcesRoot, resourcesDefault);	
-						}
-					}
-					
-				}
 
-				//return needed headers
-				return IntHashTable.EMPTY;
-			}
-		
-			@Override
-			public CharSequence getPathRoute(int a) {
-				if (fileServerIndex == a) {
-					return "/${path}";
-				} else {
-					return null;
-				}
-				
-				
-			}
-			
-			
-			@Override
-			public Pipe<ServerResponseSchema>[][] outputPipes(int a) {
-				if (fileServerIndex == a) {
-					if (null==staticFileOutputs) {
-						throw new UnsupportedOperationException("the addModule method must be called first");
-					}
-					return staticFileOutputs;
-				} else {
-					return null;
-				}
-			}
-		
 			@Override
 			public int moduleCount() {
 				return finalModuleCount;
 			}        
 		 	
+			@Override
+			public Pipe<ServerResponseSchema>[] registerModule(int a,
+					GraphManager graphManager, RouterStageConfig routerConfig,
+					Pipe<HTTPRequestSchema>[] inputPipes) {
+				
+				Pipe<ServerResponseSchema>[] staticFileOutputs = null;
+				if (fileServerIndex == a) {
+					
+					//the file server is stateless therefore we can build 1 instance for every input pipe
+					int instances = inputPipes.length;
+					
+					staticFileOutputs = new Pipe[instances];
+					
+					int i = instances;
+					while (--i>=0) {
+						staticFileOutputs[i] = new Pipe<ServerResponseSchema>(fileServerOutgoingDataConfig); //TODO: old code which will be removed.
+						if (null != pathRoot) {
+							//file based site
+							FileReadModuleStage.newInstance(graphManager, inputPipes[i], staticFileOutputs[i], (HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>) ((HTTP1xRouterStageConfig)routerConfig).httpSpec, pathRoot);	
+						} else {
+							//jar resources based site
+							FileReadModuleStage.newInstance(graphManager, inputPipes[i], staticFileOutputs[i], ((HTTP1xRouterStageConfig)routerConfig).httpSpec, resourcesRoot, resourcesDefault);	
+						}
+					}
+					
+				}
+				
+				routerConfig.registerRoute(
+                        (CharSequence) ((fileServerIndex == a) ? "/${path}" : null)
+                        ); //NOTE: we did not request any headers here
+
+				if (fileServerIndex == a) {
+					return staticFileOutputs;
+				} else {
+					return null;
+				}				
+			}  
+			
 		 };
 		return config;
 	}
