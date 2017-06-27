@@ -7,6 +7,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,24 +128,22 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
 
         Class<? extends Object> c = listener.getClass();
-
-        while (c!=null) {        
-        	visitClass(listener, depth, visitor, c);
+        while (null != c) {
+        	visitCommandChannelsByClass(listener, depth, visitor, c);
         	c = c.getSuperclass();
         }
-        
+
     }
 
-	public void visitClass(Object listener, int depth, CommandChannelVisitor visitor, Class<? extends Object> c) {
+	private void visitCommandChannelsByClass(Object listener, int depth, CommandChannelVisitor visitor,
+			Class<? extends Object> c) {
 		Field[] fields = c.getDeclaredFields();
-                                               
                         
         int f = fields.length;
         while (--f >= 0) {
             try {
                 fields[f].setAccessible(true);   
                 Object obj = fields[f].get(listener);
-                
                 
                 
                 if (obj instanceof GreenCommandChannel) {
@@ -154,8 +153,20 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                     GreenCommandChannel.setListener(cmdChnl, listener);
                     visitor.visit(cmdChnl);
                                         
-                } else {                
-                	if (depth<16) { //stop recursive depth
+                } else {      
+                	
+                	if ((!obj.getClass().isPrimitive()) 
+                		&& (!obj.getClass().isArray())	
+                		&& (!(obj instanceof Integer))
+                		&& (!(obj instanceof Long))
+                		&& (!(obj instanceof Class))
+                		&& (!(obj instanceof Boolean))
+                		&& (!(obj instanceof Byte))
+                		&& (!(obj instanceof Character))
+                		&& (!(obj instanceof Float))
+                		&& (!(obj instanceof String))
+                		&& fields[f].isAccessible() 
+                		&& depth<=7) { //stop recursive depth
                 		//recursive check for command channels
                 		visitCommandChannelsUsedByListener(obj, depth+1, visitor);
             		}
