@@ -135,8 +135,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     }
 
-	private void visitCommandChannelsByClass(Object listener, int depth, CommandChannelVisitor visitor,
-			Class<? extends Object> c) {
+	private void visitCommandChannelsByClass(Object listener, int depth, 
+											 CommandChannelVisitor visitor,
+											 Class<? extends Object> c) {
+		
 		Field[] fields = c.getDeclaredFields();
                         
         int f = fields.length;
