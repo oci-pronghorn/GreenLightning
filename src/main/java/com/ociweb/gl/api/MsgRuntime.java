@@ -4,10 +4,10 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -166,17 +166,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                 } else {      
                 	
                 	if ((!obj.getClass().isPrimitive()) 
-                		&& (!obj.getClass().isArray())	
-                		&& (!(obj instanceof Integer))
-                		&& (!(obj instanceof Long))
-                		&& (!(obj instanceof Class))
-                		&& (!(obj instanceof Boolean))
-                		&& (!(obj instanceof Byte))
-                		&& (!(obj instanceof Character))
-                		&& (!(obj instanceof Float))
-                		&& (!(obj instanceof String))
+                		&& (obj != listener) 
+                		&& (!obj.getClass().getName().startsWith("java."))  
+                		&& (!obj.getClass().isEnum())  
                 		&& fields[f].isAccessible() 
-                		&& depth<=7) { //stop recursive depth
+                		&& depth<=42) { //stop recursive depth
+          
                 		//recursive check for command channels
                 		visitCommandChannelsUsedByListener(obj, depth+1, visitor);
             		}
