@@ -54,16 +54,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     protected StageScheduler scheduler;
     
-    protected final int defaultCommandChannelLength = 16;
-    protected final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
-    protected final int defaultCommandChannelHTTPResponseMaxPayload = 1<<12;
+    protected static final int defaultCommandChannelLength = 16;
+    protected static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
+    protected static final int defaultCommandChannelHTTPResponseMaxPayload = 1<<12;
     
     
-    protected final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);   
-    protected final PipeConfig<ClientHTTPRequestSchema> requestNetConfig = new PipeConfig<ClientHTTPRequestSchema>(ClientHTTPRequestSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
-    protected final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPResponseMaxPayload);
-    protected final PipeConfig<MessageSubscription> messageSubscriptionConfig = new PipeConfig<MessageSubscription>(MessageSubscription.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
-    protected final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPResponseMaxPayload);
+    protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);   
+    protected static final PipeConfig<ClientHTTPRequestSchema> requestNetConfig = new PipeConfig<ClientHTTPRequestSchema>(ClientHTTPRequestSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+    protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPResponseMaxPayload);
+    protected static final PipeConfig<MessageSubscription> messageSubscriptionConfig = new PipeConfig<MessageSubscription>(MessageSubscription.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+    protected static final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPResponseMaxPayload);
     
     protected int netResponsePipeIdx = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
     protected int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
@@ -88,14 +88,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 	
 	//TODO: add optional lambda for data transformation
-	//TODO: add optional second topic.
 	public final void subscriptionBridge(CharSequence topic, BridgeConfig config) {		
 		config.addSubscription(topic);
+	}
+	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
+		config.addSubscription(internalTopic,extrnalTopic);
 	}
 	public final void transmissionBridge(CharSequence topic, BridgeConfig config) {		
 		config.addTransmission(topic);
 	}
-		
+	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
+		config.addTransmission(internalTopic,extrnalTopic);
+	}	
 	
     public final L addRestListener(RestListener listener) {
     	return (L) registerListenerImpl(listener);
@@ -105,6 +109,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return (L) registerListenerImpl(listener);
     }
 	    
+    public final L addShutdownListener(ShutdownListener listener) {
+        return (L) registerListenerImpl(listener);
+    }	
+    
     public final L addTimeListener(TimeListener listener) {
         return (L) registerListenerImpl(listener);
     }
@@ -371,7 +379,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
      * This pipe returns all the data this object has requested via subscriptions elewhere.
      * @param listener
      */
-	private Pipe<MessageSubscription> buildPublishPipe(Object listener) {
+	public Pipe<MessageSubscription> buildPublishPipe(Object listener) {
 		Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(messageSubscriptionConfig) {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -379,7 +387,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				return new MessageReader(this);
 			}
 		};
-					
 		
 		//store this value for lookup later
 		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
