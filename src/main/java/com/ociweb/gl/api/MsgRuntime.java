@@ -95,10 +95,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		config.addSubscription(internalTopic,extrnalTopic);
 	}
 	public final void transmissionBridge(CharSequence topic, BridgeConfig config) {		
-		config.addTransmission(topic);
+		config.addTransmission(this, topic);
 	}
 	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
-		config.addTransmission(internalTopic,extrnalTopic);
+		config.addTransmission(this, internalTopic,extrnalTopic);
 	}	
 	
     public final L addRestListener(RestListener listener) {
@@ -170,8 +170,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                 		&& (!obj.getClass().getName().startsWith("java."))  
                 		&& (!obj.getClass().isEnum())  
                 		&& fields[f].isAccessible() 
-                		&& depth<=42) { //stop recursive depth
+                		&& depth<=5) { //stop recursive depth
           
+//                		if (depth == 2) {
+//                			System.out.println(obj.getClass().getName());
+//                		}
                 		//recursive check for command channels
                 		visitCommandChannelsUsedByListener(obj, depth+1, visitor);
             		}
