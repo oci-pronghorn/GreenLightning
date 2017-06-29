@@ -4,15 +4,19 @@ import com.ociweb.gl.api.BridgeConfig;
 import com.ociweb.gl.api.MQTTConfig;
 import com.ociweb.gl.api.MQTTWritable;
 import com.ociweb.gl.api.MQTTWriter;
-import com.ociweb.pronghorn.network.NetGraphBuilder;
+import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.impl.schema.IngressMessages;
+import com.ociweb.gl.impl.schema.MessageSubscription;
+import com.ociweb.gl.impl.stage.EgressMQTTStage;
+import com.ociweb.gl.impl.stage.IngressMQTTStage;
 import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.mqtt.MQTTEncoder;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeWriter;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 
@@ -28,72 +32,75 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	private MQTTWritable willPayload = null;
 	//
 	private int flags;
-	private boolean isTLS;
-	private short maxInFlight;
-	private int maximumLenghOfVariableLengthFields = 1<<18;
+	private boolean isTLS; //derive from host/port args
+	private short maxInFlight = 10; //add as args
+	private int maximumLenghOfVariableLengthFields = 1<<18; //add as args
 	//
 	private final BuilderImpl builder;
 	//
 	private boolean isImmutable;
+	
+	private final Pipe<MQTTClientRequestSchema> clientRequest;
+	private final Pipe<MQTTClientResponseSchema> clientResponse;
 	
 	MQTTConfigImpl(CharSequence host, int port, CharSequence clientId, BuilderImpl builder) {
 		this.host = host;
 		this.port = port;
 		this.clientId = clientId;
 		this.builder = builder;
+		
+		clientRequest = newClientRequestPipe(MQTTClientRequestSchema.instance.newPipeConfig(maxInFlight, maximumLenghOfVariableLengthFields));
+		clientRequest.initBuffers();
+		
+		clientResponse = MQTTClientResponseSchema.instance.newPipe(maxInFlight, maximumLenghOfVariableLengthFields);
+		
+		MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, isTLS, maxInFlight, maximumLenghOfVariableLengthFields, clientRequest, clientResponse);
+	
+		publishBrokerConfig(clientRequest);
 	}
 	
-	private void build(GraphManager gm) {
-		
-		Pipe<MQTTClientRequestSchema> clientRequest = 
-				MQTTClientRequestSchema.instance.newPipe(maxInFlight, maximumLenghOfVariableLengthFields);
-		
-		Pipe<MQTTClientResponseSchema> clientResponse = 
-				MQTTClientResponseSchema.instance.newPipe(maxInFlight, maximumLenghOfVariableLengthFields);
-		
-		MQTTClientGraphBuilder.buildMQTTClientGraph(gm, isTLS, maxInFlight, maximumLenghOfVariableLengthFields, clientRequest, clientResponse);
 	
-	}
+    private static Pipe<MQTTClientRequestSchema> newClientRequestPipe(PipeConfig<MQTTClientRequestSchema> config) {
+    	return new Pipe<MQTTClientRequestSchema>(config) {
+			@SuppressWarnings("unchecked")
+			@Override
+			protected DataOutputBlobWriter<MQTTClientRequestSchema> createNewBlobWriter() {
+				return new MQTTWriter(this);
+			}    		
+    	};
+    }
 	
 	//send on construction, do not save		
-	public boolean publishBrokerConfig(Pipe<MQTTClientRequestSchema> output) {
-		if (PipeWriter.tryWriteFragment(output, MQTTClientRequestSchema.MSG_BROKERCONFIG_100)) {
+	private void publishBrokerConfig(Pipe<MQTTClientRequestSchema> output) {
+		PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_BROKERCONFIG_100);
 			
-		    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_BROKERCONFIG_100_FIELD_HOST_26, (CharSequence) host);
-		    PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_BROKERCONFIG_100_FIELD_PORT_27, port);
-		    PipeWriter.publishWrites(output);
-		    return true;
-		
-		} else {
-			return false;
-		}
+	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_BROKERCONFIG_100_FIELD_HOST_26, (CharSequence) host);
+	    PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_BROKERCONFIG_100_FIELD_PORT_27, port);
+	    PipeWriter.publishWrites(output);
 				
 	}
 	
 	//send upon complete construction
-	public boolean publishConnect(Pipe<MQTTClientRequestSchema> output) {
-		if (PipeWriter.tryWriteFragment(output, MQTTClientRequestSchema.MSG_CONNECT_1)) {
-			
-		    PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_KEEPALIVESEC_28, keepAliveSeconds);
-		    PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_FLAGS_29, flags);
-		    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_CLIENTID_30, (CharSequence) clientId);
-		    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_WILLTOPIC_31, (CharSequence) willTopic);
-		    
-		    DataOutputBlobWriter<MQTTClientRequestSchema> writer = PipeWriter.outputStream(output);
-		    DataOutputBlobWriter.openField(writer);		    
-		    willPayload.write((MQTTWriter)writer);
-		    DataOutputBlobWriter.closeHighLevelField(writer, MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_WILLPAYLOAD_32);
-		    
+	private void publishConnect(Pipe<MQTTClientRequestSchema> output) {
 
-		    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_USER_33, (CharSequence) user);
-		    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_PASS_34, (CharSequence) pass);
-		    PipeWriter.publishWrites(output);
-		    
-		    return true;
-		} else {
-			return false;
-		}
-				
+		PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_CONNECT_1);
+			
+	    PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_KEEPALIVESEC_28, keepAliveSeconds);
+	    PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_FLAGS_29, flags);
+	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_CLIENTID_30, (CharSequence) clientId);
+	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_WILLTOPIC_31, (CharSequence) willTopic);
+	    
+	    DataOutputBlobWriter<MQTTClientRequestSchema> writer = PipeWriter.outputStream(output);
+	    DataOutputBlobWriter.openField(writer);	
+	    if(null!=willPayload) {
+	    	willPayload.write((MQTTWriter)writer);
+	    }
+	    DataOutputBlobWriter.closeHighLevelField(writer, MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_WILLPAYLOAD_32);
+	    
+	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_USER_33, (CharSequence) user);
+	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_PASS_34, (CharSequence) pass);
+	    PipeWriter.publishWrites(output);
+			
 	}
 	
 	public MQTTConfig keepAliveSeconds(int seconds) {
@@ -169,13 +176,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 		if (isImmutable) {
 			return;
 		} else {
-			
 			//send the connect msg
-			
-			
+			publishConnect(clientRequest);			
 			isImmutable = true;
 		}
-		
 	}
 	
 	
@@ -183,30 +187,25 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	public BridgeConfig addSubscription(CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
 		
-		// TODO need place to hook transform
-		//send subscriptions to Pipe<MQTTClientRequestSchema> clientRequest in behavior??
-		
-		//create new ingressMessage pipe for this stage, it will be consumed later
-		//create stage to take data from MQTT Response pipe and publish to where?
-		//TODO: build new schema for just messages with payload..
-		
+		Pipe<IngressMessages> ingressPipe = IngressMessages.instance.newPipe(10, 1024);
+
+		new IngressMQTTStage(builder.gm, clientResponse, ingressPipe);
+
 		return this;
 	}
 
 	@Override
-	public BridgeConfig addTransmission(CharSequence internalTopic, CharSequence externalTopic) {
+	public BridgeConfig addTransmission(MsgRuntime msgRuntime, CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
-		
-		// TODO need place to hook transform
-//		builder.addStartupSubscription(topic, System.identityHashCode(this));
-//		//Pipe msgRuntime.buildPublishPipe(this) //data from the pipe is to be routed to MQTT
-		
-		//create stage to consume this pipe and write to MQTT output
-		// must take transform
-		
+
+		builder.addStartupSubscription(internalTopic, System.identityHashCode(this));
+		Pipe<MessageSubscription> pubSubPipe = msgRuntime.buildPublishPipe(this);
+	
+		new EgressMQTTStage(builder.gm, pubSubPipe, clientRequest);
+			
 		return this;
 	}
 
-	
-	
+
+
 }

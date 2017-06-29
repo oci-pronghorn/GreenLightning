@@ -5,7 +5,7 @@ import com.ociweb.pronghorn.pipe.Pipe;
 
 public class MQTTWriter extends PayloadWriter<MQTTClientRequestSchema> {
 
-	protected MQTTWriter(Pipe<MQTTClientRequestSchema> p) {
+	public MQTTWriter(Pipe<MQTTClientRequestSchema> p) {
 		super(p);
 	}
 

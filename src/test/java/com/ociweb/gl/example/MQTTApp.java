@@ -50,6 +50,7 @@ public class MQTTApp implements GreenApp {
 						
 						writer.writeUTF8Text("egress body");
 						
+						System.err.println("publish");
 					}
 				};
 				cmdChnl.publishTopic("topic/egress", writable);

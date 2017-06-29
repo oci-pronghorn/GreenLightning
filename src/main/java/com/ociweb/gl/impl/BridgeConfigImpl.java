@@ -1,6 +1,7 @@
 package com.ociweb.gl.impl;
 
 import com.ociweb.gl.api.BridgeConfig;
+import com.ociweb.gl.api.MsgRuntime;
 
 public abstract class BridgeConfigImpl implements BridgeConfig {
 
@@ -10,8 +11,8 @@ public abstract class BridgeConfigImpl implements BridgeConfig {
 	}
 
 	@Override
-	public BridgeConfig addTransmission(CharSequence topic) {
-		return addTransmission(topic,topic);
+	public BridgeConfig addTransmission(MsgRuntime msgRuntime, CharSequence topic) {
+		return addTransmission(msgRuntime, topic,topic);
 	}
 
 
