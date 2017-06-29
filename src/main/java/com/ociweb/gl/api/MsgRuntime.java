@@ -248,30 +248,33 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }    
 
     public void shutdownRuntime() {
-    	if (null == scheduler || null == builder) {
-    		System.exit(0);
-    		return;
+    	//only do if not already done.
+    	if (!ReactiveListenerStage.isShutdownRequested()) {
+    	
+	    	if (null == scheduler || null == builder) {
+	    		System.exit(0);
+	    		return;
+	    	}
+	    	
+	    	final Runnable lastCall = new Runnable() {    		
+	    		@Override
+	    		public void run() {
+	    			//all the software has now stopped so shutdown the hardware now.
+	    			builder.shutdown();
+	    		}    		
+	    	};
+	    	
+	    	//notify all the reactors to begin shutdown.
+	    	ReactiveListenerStage.requestSystemShutdown(new Runnable() {
+	
+				@Override
+				public void run() {
+					scheduler.shutdown();
+					scheduler.awaitTermination(3, TimeUnit.SECONDS, lastCall, lastCall);
+				}
+	    		
+	    	});
     	}
-    	
-    	final Runnable lastCall = new Runnable() {    		
-    		@Override
-    		public void run() {
-    			//all the software has now stopped so shutdown the hardware now.
-    			builder.shutdown();
-    		}    		
-    	};
-    	
-    	//notify all the reactors to begin shutdown.
-    	ReactiveListenerStage.requestSystemShutdown(new Runnable() {
-
-			@Override
-			public void run() {
-				scheduler.shutdown();
-				scheduler.awaitTermination(3, TimeUnit.SECONDS, lastCall, lastCall);
-			}
-    		
-    	});
-
     }
 
     public void shutdownRuntime(int timeoutInSeconds) {

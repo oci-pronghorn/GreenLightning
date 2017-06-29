@@ -126,12 +126,20 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                 
     }
     
+    public static boolean isShutdownRequested() {
+    	return shutdownRequsted.get();
+    }
     
     public static void requestSystemShutdown(Runnable shutdownRunnable) {
     	lastCall = shutdownRunnable;
     	shutdownRequsted.set(true);
     }
 
+
+	private String toStringDetails = "\n";
+    public String toString() {
+    	return super.toString()+toStringDetails;    	
+    }
     
     public final void setTimeEventSchedule(long rate, long start) {
         
@@ -622,6 +630,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	public final ListenerFilter addSubscription(CharSequence topic) {		
 		if (!startupCompleted && listener instanceof PubSubListener) {
 			builder.addStartupSubscription(topic, System.identityHashCode(listener));		
+			
+			toStringDetails = toStringDetails+"sub:'"+topic+"'\n";
+								
 			return this;
 		} else {
 			if (startupCompleted) {
