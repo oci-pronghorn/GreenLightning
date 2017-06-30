@@ -17,6 +17,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     private int headerBlobPosition;
     private long positionOfLen;
     private int statusCode = -1; //NONE, must start with this.
+	private int lastStatusCode = -1;
     private HTTPContentTypeDefaults contentType;
     
     public NetResponseWriter(Pipe<ServerResponseSchema> p) {    	
@@ -91,6 +92,10 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     void openField(final int context) {
 		this.context = context;
 
+		if (this.statusCode < 0) {
+			this.statusCode = lastStatusCode;
+		}
+
 		DataOutputBlobWriter.openField(this);
 	}
     
@@ -100,6 +105,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     	this.headerBlobPosition = headerBlobPosition;
     	this.positionOfLen = positionOfLen;
     	this.statusCode = statusCode;
+    	this.lastStatusCode = statusCode;
     	this.contentType = contentType;
     	
     	this.context = context;
