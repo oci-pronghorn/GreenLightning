@@ -10,7 +10,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentType;
  * @author Nathan Tippy
  */
 @FunctionalInterface
-public interface HTTPResponseListener {
+public interface HTTPResponseListener extends Behavior {
 
     /**
      * Invoked when an HTTP response is received by this listener.

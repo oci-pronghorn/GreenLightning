@@ -11,7 +11,7 @@ public abstract class BridgeConfigImpl implements BridgeConfig {
 	}
 
 	@Override
-	public BridgeConfig addTransmission(MsgRuntime msgRuntime, CharSequence topic) {
+	public BridgeConfig addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence topic) {
 		return addTransmission(msgRuntime, topic,topic);
 	}
 

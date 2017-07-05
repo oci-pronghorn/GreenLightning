@@ -10,7 +10,7 @@ import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
  * @author Nathan Tippy
  */
 @FunctionalInterface
-public interface RestListener {
+public interface RestListener extends Behavior {
 
 	public static final int END_OF_RESPONSE = ServerCoordinator.END_RESPONSE_MASK;
 	public static final int CLOSE_CONNECTION = ServerCoordinator.CLOSE_CONNECTION_MASK;

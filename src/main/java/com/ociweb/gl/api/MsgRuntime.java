@@ -510,7 +510,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    			//we have no consumer so tie it to pipe cleaner		    		
 		    			forPipeCleaner.add(fromRouterToModules[t][path]);
 		    		} else {
-		    			ReplicatorStage.instance(gm, fromRouterToModules[t][path], requestPipes.toArray(new Pipe[requestPipes.size()]));	
+		    			ReplicatorStage.newInstance(gm, fromRouterToModules[t][path], requestPipes.toArray(new Pipe[requestPipes.size()]));	
 		    		}
 		    	}
 		    }
@@ -799,11 +799,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			
 			   //find all the instances of CommandChannel stage to startup first, note they are also unscheduled.
 			               
-			   runtime.logStageScheduleRates();
+			runtime.logStageScheduleRates();
 			      
-			   if (runtime.builder.isTelemetryEnabled()) {	
+			if (runtime.builder.isTelemetryEnabled()) {	
 				   runtime.gm.enableTelemetry("127.0.0.1", 8098);
-			   }
+			}
 			
 		    
 		} catch (Throwable t) {

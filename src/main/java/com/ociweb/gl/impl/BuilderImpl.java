@@ -648,7 +648,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this);
+		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS);
 	}
 
 
