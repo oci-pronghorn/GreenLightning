@@ -26,7 +26,7 @@ public class EgressMQTTStage extends PronghornStage {
 
 		@Override
 		public void convert(DataInputBlobReader<MessageSubscription> inputStream,
-							DataOutputBlobWriter<MQTTClientRequestSchema> outputStream) {
+							DataOutputBlobWriter<?> outputStream) {
 			
 			inputStream.readInto(outputStream,inputStream.available());
 			

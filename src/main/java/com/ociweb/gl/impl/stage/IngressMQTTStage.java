@@ -20,7 +20,7 @@ public class IngressMQTTStage extends PronghornStage {
 	
 	private static final IngressConverter directCopy = new IngressConverter() {		
 		@Override
-		public void convertData(DataInputBlobReader<MQTTClientResponseSchema> inputStream,
+		public void convertData(DataInputBlobReader<?> inputStream,
 								DataOutputBlobWriter<IngressMessages> outputStream) {
 			
 			inputStream.readInto(outputStream, inputStream.available());

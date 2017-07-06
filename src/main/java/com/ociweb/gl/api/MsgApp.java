@@ -3,10 +3,6 @@ package com.ociweb.gl.api;
 /**
  * Base interface for a green lightning application.
  *
- * An implementation of this interface should be supplied
- * to {@link MsgRuntime#run(MsgApp)} in order to declare
- * the used features and/or URL templates.
- *
  * @author Nathan Tippy
  */
 public interface MsgApp<B extends Builder, G extends MsgRuntime> {

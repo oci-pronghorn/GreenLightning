@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 
@@ -35,13 +36,15 @@ public class ServerTest {
     	SSLUtilities.trustAllHttpsCertificates();
     	
     	SimpleApp app = new SimpleApp(port, false, isTLS);
-		MsgRuntime runtime = MsgRuntime.test((GreenApp)app);
+    	GreenRuntime runtime = GreenRuntime.test((GreenApp)app);
     	final NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();
     	
     	final AtomicBoolean isLive = new AtomicBoolean(true);
+    	   	
     	
     	Thread thread = new Thread(new Runnable(){    		
     		public void run() {
+    						scheduler.startup();
 				    		while (isLive.get()) {    		
 				    			scheduler.run();
 				    			Thread.yield();
@@ -50,7 +53,14 @@ public class ServerTest {
     	});
 
     	thread.start();
-    	    	
+    	    
+    	try { //must wait just a little to make sure server is running before test.
+			Thread.sleep(100);
+		} catch (InterruptedException e1) {
+			e1.printStackTrace();
+			fail();
+		}
+    	
     	try {
 
     		URL testCall = new URL("http"+(isTLS?"s":"")+"://127.0.0.1:"+port+"/groovyadd/2.3/2.8");

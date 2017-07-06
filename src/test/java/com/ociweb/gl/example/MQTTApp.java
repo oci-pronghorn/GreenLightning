@@ -22,7 +22,7 @@ public class MQTTApp implements GreenApp {
 	//test       mosquitto_pub -h 127.0.0.1 -t 'topic/ingress' -m 'hello'
 	
 	public static void main( String[] args ) {
-        MsgRuntime.run(new MQTTApp());
+		GreenRuntime.run(new MQTTApp());
     }
 		
 	@Override
