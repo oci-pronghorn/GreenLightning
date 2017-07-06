@@ -4,7 +4,7 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 
-public class GreenTestOne implements GreenApp
+public class ${artifactId} implements GreenApp
 {
     ///////////////////////
     //Connection constants 

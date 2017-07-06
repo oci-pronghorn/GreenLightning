@@ -17,7 +17,7 @@ public class AppTest {
 	 @Test
 	    public void testApp()
 	    {
-		    GreenRuntime runtime = GreenRuntime.test(new GreenTestOne());	    	
+		    GreenRuntime runtime = GreenRuntime.test(new ${artifactId}());	    	
 	    	NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();    	
 
 	    	scheduler.startup();
