@@ -55,8 +55,8 @@ public class MessageConsumer {
 		assert(TypeMask.LongSigned      == 0x06);// integer
 		assert(TypeMask.TextUTF8        == 0x0A);// bytes 
 		assert(TypeMask.Decimal         == 0x0C);// decimal
-		assert(TypeMask.DecimalOptional == 0x0D);// rational
 		assert(TypeMask.ByteVector      == 0x0E);// bytes
+		assert(TypeMask.Rational        == 0x20);// rational
 				
 		while (reader.hasRemainingBytes()) {
 
@@ -119,6 +119,7 @@ public class MessageConsumer {
 				}
 			}			
 		} else {
+			//>=0x0B
 			if (type == TypeMask.ByteVector) {
 				// bytes
 				
