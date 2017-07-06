@@ -56,7 +56,7 @@ public class MessageConsumer {
 		assert(TypeMask.TextUTF8        == 0x0A);// bytes 
 		assert(TypeMask.Decimal         == 0x0C);// decimal
 		assert(TypeMask.ByteVector      == 0x0E);// bytes
-		assert(TypeMask.Rational        == 0x20);// rational
+		assert(TypeMask.Rational        == 0x1A);// rational
 				
 		while (reader.hasRemainingBytes()) {
 
@@ -79,13 +79,16 @@ public class MessageConsumer {
 			//consume type
 			//////////
 			FieldConsumer[] localConsumers = consumers[fieldId];
-			if (null != localConsumers) {
-				int i = localConsumers.length;
+			int i;
+			if (null != localConsumers && ((i=localConsumers.length)>0)) {
+				
 				int p = reader.absolutePosition();//keep this position so we can roll-back reader each time.
 				while (--i >= 0) {
 					reader.absolutePosition(p);					
 					storeValue(reader, type, localConsumers[i]);
 				}
+			} else {
+				skipValue(reader, type);
 			}
 
 		}		
@@ -137,6 +140,43 @@ public class MessageConsumer {
 				} else {
 					//rational
 					consumer.store(DataInputBlobReader.readPackedLong(reader), DataInputBlobReader.readPackedLong(reader));
+				}
+			}
+		}
+	}
+	
+	private void skipValue(DataInputBlobReader reader, int type) {
+		
+		//NB: must not use more than 3 conditionals to find any specific value.
+		//NB: the order of these are from most common to least common
+		if (type < 0x0B) {
+			if (type < 0x0A) {
+					//integers
+				    DataInputBlobReader.readPackedLong(reader);
+			} else {				
+				short length = reader.readShort();					
+				if (length>0) {
+					reader.skipBytes(length);
+				}
+			}			
+		} else {
+			//>=0x0B
+			if (type == TypeMask.ByteVector) {
+				// bytes
+				
+				short length = reader.readShort();				
+				if (length>0) {
+					reader.skipBytes(length);
+				}
+			} else {
+				if (type == TypeMask.Decimal) {
+					//decimal
+					reader.readByte();
+					DataInputBlobReader.readPackedLong(reader);
+				} else {
+					//rational
+					DataInputBlobReader.readPackedLong(reader);
+					DataInputBlobReader.readPackedLong(reader);
 				}
 			}
 		}

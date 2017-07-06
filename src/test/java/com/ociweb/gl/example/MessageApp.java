@@ -30,7 +30,7 @@ public class MessageApp implements GreenApp {
 	public void declareConfiguration(Builder builder) {
 		
 		// never started shutdown
-		builder.limitThreads();
+		//builder.limitThreads(); //TODO: fixed thread scheduler no longer shuts down.
 		
 		
 		//builder.enableTelemetry(true);
@@ -161,7 +161,7 @@ public class MessageApp implements GreenApp {
 				    } else {
 				    	if (!shutdown) {
 				    		shutdown = true;
-				    		System.err.println("MessageApp done");
+				    		System.err.println("done");
 				    		runtime.shutdownRuntime();
 				    	}
 				    	return true;
