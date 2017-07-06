@@ -7,7 +7,7 @@ package com.ociweb.gl.api;
  * @author Nathan Tippy
  */
 @FunctionalInterface
-public interface PubSubListener {
+public interface PubSubListener extends Behavior {
 
     /**
      * Invoked when a new publication is received from the {@link MsgRuntime}.

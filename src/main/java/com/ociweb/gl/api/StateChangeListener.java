@@ -7,7 +7,7 @@ package com.ociweb.gl.api;
  * @author Nathan Tippy
  */
 @FunctionalInterface
-public interface StateChangeListener<E extends Enum<E>> {
+public interface StateChangeListener<E extends Enum<E>> extends Behavior {
 
 	/**
 	 * Invoked when a state machine registered with the {@link MsgRuntime}

@@ -26,7 +26,7 @@ public class SimpleApp implements GreenApp {
 	}
 	
     public static void main( String[] args ) {
-        MsgRuntime.run(new SimpleApp(8081,true,false));
+    	GreenRuntime.run(new SimpleApp(8081,true,false));
     }
 	
     

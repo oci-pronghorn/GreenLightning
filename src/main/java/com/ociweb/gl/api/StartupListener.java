@@ -7,7 +7,7 @@ package com.ociweb.gl.api;
  * @author Nathan Tippy
  */
 @FunctionalInterface
-public interface StartupListener {
+public interface StartupListener extends Behavior {
 
     /**
      * Invoked once when the {@link MsgRuntime} starts up the IoT application.

@@ -7,7 +7,7 @@ package com.ociweb.gl.api;
  * @author Nathan Tippy
  */
 @FunctionalInterface
-public interface TimeListener {
+public interface TimeListener extends Behavior {
 
     /**
      * Invoked when a time event is received from the {@link MsgRuntime}.

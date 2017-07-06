@@ -133,7 +133,14 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     	if (pendingAck[incomingPipeId]) {   
     		//logger.info("sending ack to  {} ",incomingPipeId);
     		
-    		PipeReader.releaseReadLock( incomingSubsAndPubsPipe[incomingPipeId]);                
+//    		if (pendingIngress) {
+//    			//still testing... this is not working...
+//    			PipeReader.releaseReadLock( ingressMessagePipes[pendingReleaseCountIdx]);    			
+//    		} else {
+    			PipeReader.releaseReadLock( incomingSubsAndPubsPipe[incomingPipeId]); 
+ //   		}
+    		
+    		
             decReleaseCount(incomingPipeId);    		
     		
             pendingAck[incomingPipeId] = false;
@@ -260,7 +267,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 			            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];		           	 	
 			        		Pipe<MessagePubSub> pipe = incomingSubsAndPubsPipe[pendingReleaseCountIdx];
 			                
-			        		for(int i = 0; i<limit; i++) {
+			        		for(int i = 0; i<limit; i++) {			        			
 			        			copyToSubscriber(pipe, pendingPublish[i], targetMakrs, 
 			        					 MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
 			        					 MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
@@ -287,6 +294,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             if (pendingPublishCount>0) {
             	//do not pick up new work until this is done or we may get out of order messages.
                 return;//try again later
+            } else {
+            	if (pendingIngress) { //and pendingPublishCount==0 since we are in the else
+            		//we just finished an ingress message so release it
+                  	PipeReader.releaseReadLock(ingressMessagePipes[pendingReleaseCountIdx]);                   
+            	}
             }
         }
         /////////////////////
@@ -295,7 +307,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         
         //ingressMessagePipes
         int i = ingressMessagePipes.length;
-        while (--i>=0) {
+        while (--i >= 0) {
         	Pipe<IngressMessages> ingessPipe = ingressMessagePipes[i];  
 
         	while (PipeReader.tryReadFragment(ingessPipe)) {
@@ -316,8 +328,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 							int pipeIdx = subscriberLists[j];
                     		
 							copyToSubscriber(ingessPipe, pipeIdx,
-									IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-									IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3
+										IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+										IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3
                     				);
 							
                     	}
@@ -325,14 +337,16 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                 	}
         			
                     if (pendingPublishCount>0) {
-                    	logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing");
-                    	pendingDeliveryType = PubType.Message;
-                    	//TODO: must store which array is to be used for index
-                    	//TODO: what is the targetMakrs
                     	
-                     //   pendingReleaseCountIdx = i a; //keep so this is only cleared after we have had successful transmit to all subscribers.
+                    	logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing");
+                    	pendingDeliveryType = PubType.Message;                   	
+                        pendingReleaseCountIdx = i; 
+                        
                         return;//must try again later
-                    } 
+                    } else {
+                    	
+                    	PipeReader.releaseReadLock(ingessPipe);
+                    }
         			
         			
         			
@@ -455,7 +469,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                             }                            
                             
                         } else {
-                        	logger.trace("no subscribers so release and clear");
+                        	logger.info("no subscribers so release and clear");
                         	PipeReader.releaseReadLock( incomingSubsAndPubsPipe[a]);                
                             decReleaseCount(a);   
                         }
@@ -551,6 +565,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private void copyToSubscriber(Pipe<?> pipe, int pipeIdx, int topicLOC, int payloadLOC) {
         Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
         if (PipeWriter.tryWriteFragment(outPipe, MessageSubscription.MSG_PUBLISH_103)) {
+        	
+        	//debug -- this string is the old value not the new one...
+        	StringBuilder b = new StringBuilder("MessagePubSub:");
+        	PipeReader.readUTF8(pipe, payloadLOC, b);
+        	System.err.println(b);
         	
             PipeReader.copyBytes(pipe, outPipe, topicLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1);
             PipeReader.copyBytes(pipe, outPipe, payloadLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);

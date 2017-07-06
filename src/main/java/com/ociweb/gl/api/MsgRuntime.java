@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
@@ -17,17 +16,16 @@ import com.ociweb.gl.impl.HTTPPayloadReader;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
+import com.ociweb.gl.impl.stage.EgressConverter;
+import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
-import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
-import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -52,6 +50,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	public B builder;
     protected final GraphManager gm;
 
+    protected final String[] args;
+    
     protected StageScheduler scheduler;
     
     protected static final int defaultCommandChannelLength = 16;
@@ -83,22 +83,33 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     };
     
     
-	public MsgRuntime() {
-		 gm = new GraphManager();
+	public MsgRuntime(String[] args) {
+		 this.gm = new GraphManager();
+		 this.args = args;
 	}
-	
-	//TODO: add optional lambda for data transformation
+
+    public String[] args() {
+    	return args;
+    }
+    
 	public final void subscriptionBridge(CharSequence topic, BridgeConfig config) {		
 		config.addSubscription(topic);
 	}
 	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
 		config.addSubscription(internalTopic,extrnalTopic);
 	}
+	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, IngressConverter converter) {		
+		config.addSubscription(internalTopic,extrnalTopic,converter);
+	}
+	
 	public final void transmissionBridge(CharSequence topic, BridgeConfig config) {		
 		config.addTransmission(this, topic);
 	}
 	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
 		config.addTransmission(this, internalTopic,extrnalTopic);
+	}	
+	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, EgressConverter converter) {		
+		config.addTransmission(this, internalTopic,extrnalTopic, converter);
 	}	
 	
     public final L addRestListener(RestListener listener) {
@@ -510,7 +521,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    			//we have no consumer so tie it to pipe cleaner		    		
 		    			forPipeCleaner.add(fromRouterToModules[t][path]);
 		    		} else {
-		    			ReplicatorStage.instance(gm, fromRouterToModules[t][path], requestPipes.toArray(new Pipe[requestPipes.size()]));	
+		    			ReplicatorStage.newInstance(gm, fromRouterToModules[t][path], requestPipes.toArray(new Pipe[requestPipes.size()]));	
 		    		}
 		    	}
 		    }
@@ -784,71 +795,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return reactiveListener;
         
     }
-
-  
-    public static MsgRuntime run(MsgApp app) {
-    	GreenRuntime runtime = new GreenRuntime(); 
-        try {
-		    app.declareConfiguration(runtime.getBuilder());
-		         
-		    GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
-		    
-		    runtime.declareBehavior(app);
-		            
-		    runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.netPipeLookup, runtime.gm);
-			
-			   //find all the instances of CommandChannel stage to startup first, note they are also unscheduled.
-			               
-			   runtime.logStageScheduleRates();
-			      
-			   if (runtime.builder.isTelemetryEnabled()) {	
-				   runtime.gm.enableTelemetry("127.0.0.1", 8098);
-			   }
-			
-		    
-		} catch (Throwable t) {
-		    t.printStackTrace();
-		    System.exit(-1);
-		}
-		
-		runtime.scheduler = runtime.builder.createScheduler(runtime);            
-		runtime.scheduler.startup();
-		
-		return runtime;
-    }
-	
-	public static <M extends MsgApp> MsgRuntime test(M app) {
-		GreenRuntime runtime = new GreenRuntime(); 
-        try {
-		    app.declareConfiguration(runtime.getBuilder());
-		         
-		    GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
-		    
-		    runtime.declareBehavior(app);
-		            
-		    runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.netPipeLookup, runtime.gm);
-			
-			   //find all the instances of CommandChannel stage to startup first, note they are also unscheduled.
-			               
-			   runtime.logStageScheduleRates();
-			      
-			   if ( runtime.builder.isTelemetryEnabled()) {	   
-				   runtime.gm.enableTelemetry("127.0.0.1", 8098);
-			   }
-			
-		    
-		} catch (Throwable t) {
-		    t.printStackTrace();
-		    System.exit(-1);
-		}
-		
-		runtime.scheduler = new NonThreadScheduler(runtime.builder.gm);            
-		runtime.scheduler.startup();
-		
-		return runtime;
-    }
-
-	
 
     
 }
