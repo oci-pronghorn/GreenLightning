@@ -136,11 +136,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     public final <E extends Enum<E>> L addStateChangeListener(StateChangeListener<E> listener) {
         return (L) registerListenerImpl(listener);
     }
-    
-    public final L addListener(Object listener) {
-        return (L) registerListenerImpl(listener);
-    }
-    
+      
     public L registerListener(Object listener) {
     	return (L) registerListenerImpl(listener);
     }
