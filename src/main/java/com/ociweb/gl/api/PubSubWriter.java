@@ -131,7 +131,7 @@ public class PubSubWriter extends PayloadWriter<MessagePubSub> implements PubSub
 	@Override
 	public void writeRational(int fieldId, long numerator, long denominator) {
 		//NB: the type DecimalOptional is used to indicate rational value since Nulls are never sent
-		writePackedInt(this,TokenBuilder.buildToken(TypeMask.DecimalOptional, //NB: re-use of type for two purposes 
+		writePackedInt(this,TokenBuilder.buildToken(TypeMask.Rational, 
 									                OperatorMask.Field_None, 
 									                fieldId));
 		writeShort(-1); //room for future field name

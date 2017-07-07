@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.gl.impl.pubField.MessageConsumer;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -135,13 +136,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     public final <E extends Enum<E>> L addStateChangeListener(StateChangeListener<E> listener) {
         return (L) registerListenerImpl(listener);
     }
-    
-    public final L addListener(Object listener) {
-        return (L) registerListenerImpl(listener);
-    }
-    
+      
     public L registerListener(Object listener) {
     	return (L) registerListenerImpl(listener);
+    }
+    public L registerBehavior(Behavior behavior) {
+    	return (L) registerListenerImpl(behavior);
     }
 
 	protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
@@ -170,6 +170,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                 if (obj instanceof GreenCommandChannel) {
                     GreenCommandChannel cmdChnl = (GreenCommandChannel)obj;                 
                     
+                    //System.out.println(depth+" checking "+cmdChnl+" wiht "+System.identityHashCode(cmdChnl));
+                    
                     assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
                     GreenCommandChannel.setListener(cmdChnl, listener);
                     visitor.visit(cmdChnl);
@@ -179,12 +181,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                 	if ((!obj.getClass().isPrimitive()) 
                 		&& (obj != listener) 
                 		&& (!obj.getClass().getName().startsWith("java."))  
-                		&& (!obj.getClass().isEnum())  
+                		&& (!obj.getClass().isEnum())
+                		&& (!(obj instanceof MsgRuntime))
+                		&& (!(obj instanceof MessageConsumer))                		
+                		&& !fields[f].isSynthetic()
                 		&& fields[f].isAccessible() 
                 		&& depth<=5) { //stop recursive depth
           
 //                		if (depth == 2) {
-//                			System.out.println(obj.getClass().getName());
+//                			System.out.println(depth+" "+obj.getClass().getName());
 //                		}
                 		//recursive check for command channels
                 		visitCommandChannelsUsedByListener(obj, depth+1, visitor);
@@ -312,8 +317,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return true;
     }
     protected boolean channelNotPreviouslyUsed(GreenCommandChannel cmdChnl) {
-        int hash = cmdChnl.hashCode();
-        
+        int hash = System.identityHashCode(cmdChnl);
+           
         if (IntHashTable.hasItem(cmdChannelUsageChecker, hash)) {
                 //this was already assigned somewhere so this is  an error
                 logger.error("A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.", new UnsupportedOperationException());
