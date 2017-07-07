@@ -140,6 +140,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     public L registerListener(Object listener) {
     	return (L) registerListenerImpl(listener);
     }
+    public L registerBehavior(Behavior behavior) {
+    	return (L) registerListenerImpl(behavior);
+    }
 
 	protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
 
