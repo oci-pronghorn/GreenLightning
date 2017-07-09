@@ -223,7 +223,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     }
 
 	private void addSubscription(Pipe<MessagePubSub> pipe) {
-		int hash = PipeReader.readInt(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4); //HOW is this known?? TOOD: must be wrong??
+		int hash = PipeReader.readInt(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4); 
 		final short pipeIdx = (short)IntHashTable.getItem(subscriptionPipeLookup, hash);
 		//System.out.println("adding subscription hash was "+hash+" to send to pipe "+pipeIdx);
 		       

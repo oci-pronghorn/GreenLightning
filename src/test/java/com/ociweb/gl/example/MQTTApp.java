@@ -4,7 +4,7 @@ import java.util.Date;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MQTTConfig;
 import com.ociweb.gl.api.MessageReader;
@@ -45,7 +45,7 @@ public class MQTTApp implements GreenApp {
 		runtime.subscriptionBridge("topic/ingress", mqttConfig); //optional 2 topics, optional transform lambda
 		runtime.transmissionBridge("topic/egress", mqttConfig); //optional 2 topics, optional transform lambda
 		
-		final GreenCommandChannel cmdChnl = runtime.newCommandChannel(DYNAMIC_MESSAGING);		
+		final MsgCommandChannel cmdChnl = runtime.newCommandChannel(DYNAMIC_MESSAGING);		
 		TimeListener timeListener = new TimeListener() {
 			@Override
 			public void timeEvent(long time, int iteration) {
@@ -65,7 +65,7 @@ public class MQTTApp implements GreenApp {
 		runtime.addTimeListener(timeListener);
 		
 		
-		final GreenCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		final MsgCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		
 		PubSubListener listener = new PubSubListener() {
 			

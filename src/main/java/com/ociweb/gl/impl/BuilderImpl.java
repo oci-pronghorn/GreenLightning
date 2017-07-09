@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.MsgRuntime;
@@ -140,8 +141,8 @@ public class BuilderImpl implements Builder {
 		return IDX_NET;
 	}
 	
-	public void releasePubSubTraffic(int count, GreenCommandChannel<?> gcc) {
-		GreenCommandChannel.publishGo(count, IDX_MSG, gcc);
+	public void releasePubSubTraffic(int count, MsgCommandChannel<?> gcc) {
+		MsgCommandChannel.publishGo(count, IDX_MSG, gcc);
 	}
 	
 	public final boolean isLarge() {
@@ -328,19 +329,23 @@ public class BuilderImpl implements Builder {
         return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this, parallelInstance);
     }
 
-	public <G extends GreenCommandChannel> G newCommandChannel(
+	public <G extends MsgCommandChannel> G newCommandChannel(
 												int features,
 			                                    int parallelInstanceId,
-			                                    PipeConfigManager pcm
+			                                    PipeConfigManager pcm,
+			                                    CharSequence ... supportedTopics
 			                                ) {
-		return (G) new GreenCommandChannel(gm, this, features, parallelInstanceId, pcm);
+		return (G) new GreenCommandChannel(gm, this, features, parallelInstanceId,
+				                           pcm, supportedTopics);
 	}	
 	
-	public <G extends GreenCommandChannel> G newCommandChannel(
+	public <G extends MsgCommandChannel> G newCommandChannel(
             int parallelInstanceId,
-            PipeConfigManager pcm
+            PipeConfigManager pcm,
+            CharSequence ... supportedTopics
         ) {
-		return (G) new GreenCommandChannel(gm, this, 0, parallelInstanceId, pcm);
+		return (G) new GreenCommandChannel(gm, this, 0, parallelInstanceId,
+				                           pcm, supportedTopics);
 	}
 
 	static final boolean debug = false;

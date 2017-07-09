@@ -3,7 +3,8 @@ package com.ociweb.gl.example;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.MsgCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
@@ -23,16 +24,16 @@ public class MathUnitSimple implements RestListener {
 
 	private final Logger logger = LoggerFactory.getLogger(MathUnitSimple.class);
 	
-	private final GreenCommandChannel<?> cc;
+	private final MsgCommandChannel<?> cc;
 	private String lastCookie;
 	private final byte[] fieldA = "a".getBytes();
 	private final byte[] fieldB = "b".getBytes();
 	
 	private final NetResponseTemplate<HTTPFieldReader> template;
 
-	public MathUnitSimple(final MsgRuntime runtime) {
+	public MathUnitSimple(final GreenRuntime runtime) {
 
-		this.cc = runtime.newCommandChannel(GreenCommandChannel.NET_RESPONDER);
+		this.cc = runtime.newCommandChannel(MsgCommandChannel.NET_RESPONDER);
        
 		NetResponseTemplateData<HTTPFieldReader> consumeX = new NetResponseTemplateData<HTTPFieldReader>() {
 

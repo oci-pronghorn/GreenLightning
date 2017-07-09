@@ -2,7 +2,7 @@ package com.ociweb.gl.example;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MessageReader;
 import com.ociweb.gl.api.MsgRuntime;
@@ -146,7 +146,7 @@ public class MessageApp implements GreenApp {
 		
 
 		
-		final GreenCommandChannel gccA = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		final MsgCommandChannel gccA = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		PubSubListener listenerA = new PubSubListener() {
 
 			@Override
@@ -172,7 +172,7 @@ public class MessageApp implements GreenApp {
 		runtime.addPubSubListener(listenerA ).addSubscription("A");
 		
 		
-		final GreenCommandChannel gccB = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		final MsgCommandChannel gccB = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		PubSubListener listenerB = new PubSubListener() {
 
 			@Override
@@ -193,7 +193,7 @@ public class MessageApp implements GreenApp {
 		};
 		runtime.addPubSubListener(listenerB ).addSubscription("B");
 		
-		final GreenCommandChannel gccC = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		final MsgCommandChannel gccC = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		StartupListener startupListener = new StartupListener() {
 			@Override
 			public void startup() {

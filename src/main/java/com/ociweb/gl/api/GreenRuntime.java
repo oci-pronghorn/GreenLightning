@@ -1,6 +1,10 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.schema.MessagePubSub;
+import com.ociweb.gl.impl.schema.TrafficOrderSchema;
+import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
+import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 
@@ -13,6 +17,37 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      public GreenRuntime(String[] args) {
          super(args);
       }
+     
+     public GreenCommandChannel newCommandChannel(int features, CharSequence ... supportedTopics) { 
+         
+     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+
+     	pcm.addConfig(requestNetConfig);
+     	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
+     	pcm.addConfig(serverResponseNetConfig);
+     	    	
+     	return this.builder.newCommandChannel(
+ 				features,
+ 				parallelInstanceUnderActiveConstruction,
+ 				pcm, supportedTopics
+ 		  );    	
+     }
+
+     public GreenCommandChannel newCommandChannel(int features, int customChannelLength, CharSequence ... supportedTopics) { 
+        
+     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+     	
+     	pcm.addConfig(customChannelLength,defaultCommandChannelMaxPayload,MessagePubSub.class);
+     	pcm.addConfig(requestNetConfig);
+     	pcm.addConfig(customChannelLength,0,TrafficOrderSchema.class);
+     	pcm.addConfig(customChannelLength,defaultCommandChannelHTTPResponseMaxPayload,ServerResponseSchema.class);
+     	   	
+         return this.builder.newCommandChannel(
+ 				features,
+ 				parallelInstanceUnderActiveConstruction,
+ 				pcm, supportedTopics
+ 		  );        
+     }
      
     public static GreenRuntime run(GreenApp app) {
     	return run(app,null);
