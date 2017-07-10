@@ -406,10 +406,35 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 
     /**
-     * This pipe returns all the data this object has requested via subscriptions elewhere.
+     * This pipe returns all the data this object has requested via subscriptions elsewhere.
      * @param listener
      */
 	public Pipe<MessageSubscription> buildPublishPipe(Object listener) {
+		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();		
+		return attachListenerIndexToMessageSubscriptionPipe(listener, subscriptionPipe);
+	}
+	
+	public Pipe<MessageSubscription> buildPublishPipe(int listenerHash) {
+		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();	
+		if (!IntHashTable.setItem(subscriptionPipeLookup, listenerHash, subscriptionPipeIdx++)) {
+			throw new RuntimeException("HashCode must be unique");
+		}
+		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+		return subscriptionPipe;
+	}
+
+	private Pipe<MessageSubscription> attachListenerIndexToMessageSubscriptionPipe(Object listener,
+			Pipe<MessageSubscription> subscriptionPipe) {
+		//store this value for lookup later
+		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
+		if (!IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++)) {
+			throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
+		}
+		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+		return subscriptionPipe;
+	}
+
+	private Pipe<MessageSubscription> buildMessageSubscriptionPipe() {
 		Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(messageSubscriptionConfig) {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -417,13 +442,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				return new MessageReader(this);
 			}
 		};
-		
-		//store this value for lookup later
-		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
-		if (!IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++)) {
-			throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
-		}
-		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
 		return subscriptionPipe;
 	}
 	
