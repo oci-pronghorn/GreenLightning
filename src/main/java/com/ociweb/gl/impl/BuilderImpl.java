@@ -91,7 +91,8 @@ public class BuilderImpl implements Builder {
 
 	/////////////////
 	///Pipes for initial startup declared subscriptions. (Not part of graph)
-	private final int maxStartupSubs = 64;
+    //TODO: should be zero unless startup is used.
+	private final int maxStartupSubs = 256; //TODO: make a way to adjust this outside???
 	private final int maxTopicLengh  = 128;
 	private Pipe<MessagePubSub> tempPipeOfStartupSubscriptions;
 	/////////////////
