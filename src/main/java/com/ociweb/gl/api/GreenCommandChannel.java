@@ -7,8 +7,8 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 public class GreenCommandChannel extends MsgCommandChannel<BuilderImpl> {
 
 	public GreenCommandChannel(GraphManager gm, BuilderImpl builder, int features, int parallelInstanceId,
-			PipeConfigManager pcm, CharSequence ... supportedTopics) {
-		super(gm, builder, features, parallelInstanceId, pcm, supportedTopics);
+			PipeConfigManager pcm) {
+		super(gm, builder, features, parallelInstanceId, pcm);
 	}
 
 }

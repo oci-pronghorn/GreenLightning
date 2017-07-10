@@ -29,15 +29,6 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
         writeUTF(value);
     }
     
-    public void writeObject(Object object) {
-    	
-    	try {
-			super.writeObject(object);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-    }
-    
     public void close() {
     	throw new UnsupportedOperationException();
     }

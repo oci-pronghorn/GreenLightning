@@ -18,7 +18,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
          super(args);
       }
      
-     public GreenCommandChannel newCommandChannel(int features, CharSequence ... supportedTopics) { 
+     public GreenCommandChannel newCommandChannel(int features) { 
          
      	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
 
@@ -29,7 +29,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      	return this.builder.newCommandChannel(
  				features,
  				parallelInstanceUnderActiveConstruction,
- 				pcm, supportedTopics
+ 				pcm
  		  );    	
      }
 
@@ -45,7 +45,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
          return this.builder.newCommandChannel(
  				features,
  				parallelInstanceUnderActiveConstruction,
- 				pcm, supportedTopics
+ 				pcm
  		  );        
      }
      

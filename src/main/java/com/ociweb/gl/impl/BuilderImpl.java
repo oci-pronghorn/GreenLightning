@@ -7,6 +7,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.MsgCommandChannel;
@@ -116,6 +117,17 @@ public class BuilderImpl implements Builder {
 	private int IDX_MSG = -1;
 	private int IDX_NET = -1;
 	   
+    ///////
+	//These topics are enforced so that they only go from one producer to a single consumer
+	//No runtime subscriptions can pick them up
+	//They do not go though the public router
+	//private topics never share a pipe so the topic is not sent on the pipe only the payload
+	//private topics are very performant and much more secure than pub/sub.
+	//private topics have their own private pipe and can not be "imitated" by public messages
+	//WARNING: private topics do not obey traffic cops and allow for immediate communications.
+	///////
+	private String[] privateTopics = null;
+	
     ////////////////////////////
     ///gather and store the server module pipes
     /////////////////////////////
@@ -170,7 +182,19 @@ public class BuilderImpl implements Builder {
     	this.bindPort = bindPort;
     	
     }
-
+ 
+    public final void enableServer(boolean isTLS, int bindPort) {
+    	enableServer(isTLS,false,NetGraphBuilder.bindHost(),bindPort);
+    }
+    
+    public final void enableServer(int bindPort) {
+    	enableServer(true,false,NetGraphBuilder.bindHost(),bindPort);
+    }
+    
+    
+    public int behaviorId(Behavior b) {
+    	return System.identityHashCode(b); //TODO: we may want to find a beter way to compute this, not sure.
+    }
     
     public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {
     	return routerConfig;
@@ -232,8 +256,12 @@ public class BuilderImpl implements Builder {
 	
 
 	public final Pipe<ServerResponseSchema>[] buildToOrderArray(int r) {
-		ArrayList<Pipe<ServerResponseSchema>> list = collectedServerResponsePipes[r];
-		return (Pipe<ServerResponseSchema>[]) list.toArray(new Pipe[list.size()]);
+		if (null==collectedServerResponsePipes || collectedServerResponsePipes.length==0) {
+			return new Pipe[0];
+		} else {
+			ArrayList<Pipe<ServerResponseSchema>> list = collectedServerResponsePipes[r];
+			return (Pipe<ServerResponseSchema>[]) list.toArray(new Pipe[list.size()]);
+		}
 	}
 	
 	
@@ -288,13 +316,23 @@ public class BuilderImpl implements Builder {
 		return this;
 	}
 
+	@Deprecated
 	public final Builder setTriggerRate(long rateInMS) {
+		return setTimerPulseRate(rateInMS);
+	}
+	
+	public final Builder setTimerPulseRate(long rateInMS) {
 		timeTriggerRate = rateInMS;
 		timeTriggerStart = System.currentTimeMillis()+rateInMS;
 		return this;
 	}
 	
-	public final Builder setTriggerRate(TimeTrigger trigger) {	
+	@Deprecated
+	public final Builder setTriggerRate(TimeTrigger trigger) {
+		return setTimerPulseRate(trigger);
+	}
+	
+	public final Builder setTimerPulseRate(TimeTrigger trigger) {	
 		long period = trigger.getRate();
 		timeTriggerRate = period;
 		long now = System.currentTimeMillis();		
@@ -332,20 +370,18 @@ public class BuilderImpl implements Builder {
 	public <G extends MsgCommandChannel> G newCommandChannel(
 												int features,
 			                                    int parallelInstanceId,
-			                                    PipeConfigManager pcm,
-			                                    CharSequence ... supportedTopics
+			                                    PipeConfigManager pcm
 			                                ) {
 		return (G) new GreenCommandChannel(gm, this, features, parallelInstanceId,
-				                           pcm, supportedTopics);
+				                           pcm);
 	}	
 	
 	public <G extends MsgCommandChannel> G newCommandChannel(
             int parallelInstanceId,
-            PipeConfigManager pcm,
-            CharSequence ... supportedTopics
+            PipeConfigManager pcm
         ) {
 		return (G) new GreenCommandChannel(gm, this, 0, parallelInstanceId,
-				                           pcm, supportedTopics);
+				                           pcm);
 	}
 
 	static final boolean debug = false;
@@ -654,6 +690,11 @@ public class BuilderImpl implements Builder {
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
 		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS);
+	}
+	
+	@Override
+	public void privateTopics(String... topic) {
+		privateTopics=topic;
 	}
 
 

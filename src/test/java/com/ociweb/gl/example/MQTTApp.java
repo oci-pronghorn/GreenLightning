@@ -13,6 +13,7 @@ import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.PubSubWritable;
 import com.ociweb.gl.api.PubSubWriter;
 import com.ociweb.gl.api.TimeListener;
+import com.ociweb.pronghorn.pipe.BlobWriter;
 
 public class MQTTApp implements GreenApp {
 
@@ -51,7 +52,7 @@ public class MQTTApp implements GreenApp {
 			public void timeEvent(long time, int iteration) {
 				PubSubWritable writable = new PubSubWritable() {
 					@Override
-					public void write(PubSubWriter writer) {	
+					public void write(BlobWriter writer) {	
 						Date d =new Date(System.currentTimeMillis());
 						
 						System.err.println("sent "+d);
@@ -80,7 +81,7 @@ public class MQTTApp implements GreenApp {
 				PubSubWritable writable = new PubSubWritable() {
 
 					@Override
-					public void write(PubSubWriter writer) {
+					public void write(BlobWriter writer) {
 						
 						writer.writeUTF("second step test message");
 					}

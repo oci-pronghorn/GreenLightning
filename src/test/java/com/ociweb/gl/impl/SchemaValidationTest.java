@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 import com.ociweb.gl.impl.schema.IngressMessages;
+import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
@@ -19,6 +20,11 @@ public class SchemaValidationTest {
         assertTrue(FROMValidation.checkSchema("/MessagePubSub.xml", MessagePubSub.class));
     }
 
+    @Test
+    public void messagePrivateTest() {
+        assertTrue(FROMValidation.checkSchema("/MessagePrivate.xml", MessagePrivate.class));
+    }
+    
     @Test
     public void messageSubscriptionFROMTest() {
         assertTrue(FROMValidation.checkSchema("/MessageSubscriber.xml", MessageSubscription.class));

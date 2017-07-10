@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.NetResponseTemplate;
 import com.ociweb.gl.api.NetResponseTemplateData;
@@ -13,10 +14,10 @@ import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.NetWritable;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.impl.HTTPPayloadReader;
-import com.ociweb.gl.impl.Headable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
+import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.math.Decimal;
 import com.ociweb.pronghorn.util.math.DecimalResult;
@@ -87,10 +88,10 @@ public class MathUnit implements RestListener {
 	public boolean restRequest(final HTTPRequestReader request) {
 		
 		final StringBuilder cookieValue = new StringBuilder();
-		Headable<HTTPRequestSchema> eat = new Headable<HTTPRequestSchema>() {
+		Headable eat = new Headable() {
 
 			@Override
-			public void read(HTTPPayloadReader<HTTPRequestSchema> httpPayloadReader) {
+			public void read(BlobReader httpPayloadReader) {
 				httpPayloadReader.readUTF(cookieValue);
 				lastCookie = cookieValue.toString();
 			}

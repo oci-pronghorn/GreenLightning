@@ -1,6 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.Headable;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 
@@ -27,6 +26,6 @@ public interface HTTPFieldReader<S extends MessageSchema<S>> extends FieldReader
 	public long getConnectionId();	
 	public long getSequenceCode();
 	
-	public boolean openHeaderData(byte[] header, Headable<S> headReader);
+	public boolean openHeaderData(byte[] header, Headable headReader);
 	
 }

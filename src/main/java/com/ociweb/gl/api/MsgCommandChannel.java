@@ -1,12 +1,13 @@
 package com.ociweb.gl.api;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.DoubleUnaryOperator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.pubField.MessageConsumer;
+import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ServerCoordinator;
@@ -22,6 +23,7 @@ import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
+import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 /**
  * Represents a dedicated channel for communicating with a single device
@@ -68,35 +70,37 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	
 	protected Pipe<?>[] optionalOutputPipes;
 	protected final int initFeatures;
-	///
-	private CharSequence[] supportedTopics;
-
+	
+	///////////
+	///////////
+	private String[] privateTopics = null;
+	private Pipe<MessagePrivate>[] privateTopicPipes = null;
+	private TrieParser privateTopicsTrie = null;
+	private TrieParserReader privateTopicsTrieReader = null;
+	private PipeConfigManager pcm;
+	//////////
+    //////////
 	
     public MsgCommandChannel(GraphManager gm, B hardware,
 				  		    int parallelInstanceId,
-				  		    PipeConfigManager pcm,
-				  		    CharSequence ... supportedTopics
+				  		    PipeConfigManager pcm
 				           ) {
-    	this(gm,hardware,ALL, parallelInstanceId, pcm, supportedTopics);
+    	this(gm,hardware,ALL, parallelInstanceId, pcm);
     }
     
     public MsgCommandChannel(GraphManager gm, B builder,
     					  int features,
     					  int parallelInstanceId,
-    					  PipeConfigManager pcm,
-    					  CharSequence ... supportedTopics
+    					  PipeConfigManager pcm
     		             ) {
 
-       ///Required for short direct message delivery optimization
-       this.supportedTopics = supportedTopics;
-              
        this.initFeatures = features;//this is held so we can check at every method call that its configured right
                              
        this.messagePubSub = ((features & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
        this.httpRequest   = ((features & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
 
        this.digitBuffer.initBuffers();
-       
+       this.pcm = pcm;
        /////////////////////////
        //build pipes for sending out the REST server responses
        ////////////////////////       
@@ -161,11 +165,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.builder = builder;
        
     }
-
-    
-   	CharSequence[] supportedTopics() {
-   		return supportedTopics;
-   	}
     
 	protected boolean goHasRoom() {
 		return PipeWriter.hasRoomForWrite(goPipe);
@@ -197,6 +196,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	if (null!=optionalOutputPipes) {
     		length+=optionalOutputPipes.length;
     	}
+    	
+    	if (null!=privateTopicPipes) {
+    		length+=privateTopicPipes.length;
+    	}
   
     	int idx = 0;
     	Pipe[] results = new Pipe[length];
@@ -220,6 +223,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	if (null!=optionalOutputPipes) {
     		System.arraycopy(optionalOutputPipes, 0, results, idx, optionalOutputPipes.length);
     		idx+=optionalOutputPipes.length;
+    	}
+    	
+    	if (null!=privateTopicPipes) {
+    		System.arraycopy(privateTopicPipes, 0, results, idx, privateTopicPipes.length);
+    		idx+=privateTopicPipes.length;
     	}
     	
     	if (null != goPipe) {//last
@@ -283,12 +291,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @param domain Root domain to submit the request to (e.g., google.com)
      * @param port Port to submit the request to.
-     * @param route Route on the domain to submit the request to (e.g., /api/hello)
+     * @param path Route on the domain to submit the request to (e.g., /api/hello)
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    public boolean httpGet(CharSequence domain, int port, CharSequence route) {
-    	return httpGet(domain,port,route,(HTTPResponseListener)listener);
+    public boolean httpGet(CharSequence domain, int port, CharSequence path) {
+    	return httpGet(domain,port,path,(HTTPResponseListener)listener);
 
     }
 
@@ -303,25 +311,29 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the request was successfully submitted, and false otherwise.
      */
     public boolean httpGet(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
+
+    	return httpGet(host, port, route, builder.behaviorId(listener));
     	
-    	if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
+    }
+
+	public boolean httpGet(CharSequence host, int port, CharSequence route, int behaviorId) {
+		
+		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
                 	    
     		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1, port);
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, host);
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, route);
-    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_LISTENER_10, System.identityHashCode(listener));
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_LISTENER_10, behaviorId);
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, "");
     		    		
     		PipeWriter.publishWrites(httpRequest);
                 		
     		publishGo(1, builder.netIndex(), this);
-    		
-    	            
+    		    	            
             return true;
         }        
         return false;
-    	
-    }
+	}
 
     /**
      * Submits an HTTP POST request asynchronously.
@@ -483,7 +495,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
     public void presumePublishTopic(CharSequence topic, PubSubWritable writable) {
-    	assert(isTopicSupported(topic)) : "add topic '"+topic+"' to the newCommandChannel method call.";
     	if (publishTopic(topic, writable)) {
 			return;
 		} else { 
@@ -503,8 +514,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      */
     public boolean publishTopic(CharSequence topic, PubSubWritable writable) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-		assert(isTopicSupported(topic)) : "add topic '"+topic+"' to the newCommandChannel method call.";
         assert(writable != null);
+        assert(isNotPrivate(topic)) : "private topics may not be selected by CharSequence.";
+        
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
             
@@ -524,27 +536,115 @@ public class MsgCommandChannel<B extends BuilderImpl> {
             return false;
         }
     }
+    
+    
+    public boolean publishTopic(byte[] topic, PubSubWritable writable) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+        assert(writable != null);
+        
+        int token = (int)privateTopicsTrieReader.query(privateTopicsTrieReader,
+        		                                   privateTopicsTrie, 
+        		                                   topic, 0, topic.length, Integer.MAX_VALUE);
+        
+        if (token>=0) {
+        	//this is a private topic
+            
+			Pipe<MessagePrivate> output = privateTopicPipes[token];
+			if (PipeWriter.tryWriteFragment(output, MessagePrivate.MSG_PUBLISH_1)) {
+			
+//			PubSubWriter pw = (PubSubWriter) Pipe.outputStream(output);
+//            pw.openField(MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3,this);
+//            writable.write(pw);//TODO: cool feature, writable to return false to abandon write..
+//            pw.publish();
+		        	
+				throw new UnsupportedOperationException();
+        	
+        		//return true;
+			} else {
+				return false;
+			}
+        } else {
+        	//should not be called when	DYNAMIC_MESSAGING is not on.
+        	
+	        //this is a public topic
+        	if (PipeWriter.hasRoomForWrite(goPipe) && 
+	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+	            
+	        	PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+	        	
+	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+	            
+	            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);
+	            writable.write(pw);//TODO: cool feature, writable to return false to abandon write..
+	                        
+	            pw.publish();
+	            publishGo(1,builder.pubSubIndex(), this);
+	                        
+	            return true;
+	            
+	        } else {
+	            return false;
+	        }
+        }
+    }
+    
+    
+    public void presumePublishTopic(TopicWritable topic, PubSubWritable writable) {
+    	if (publishTopic(topic, writable)) {
+			return;
+		} else { 
+			logger.warn("unable to publish on topic {} must wait.",topic);
+			while (!publishTopic(topic, writable)) {
+				Thread.yield();
+			}
+		}
+    }
+    
+    public boolean publishTopic(TopicWritable topic, PubSubWritable writable) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+        assert(writable != null);
+        assert(isNotPrivate(topic)) : "private topics may not be dynamicaly constructed.";
+                
+        if (PipeWriter.hasRoomForWrite(goPipe) && 
+        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+        	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+        	
+        	pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1,this);
+        	topic.write(pw);
+        	pw.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+           
+            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);
+            writable.write(pw);
+                        
+            pw.publish();
+            publishGo(1,builder.pubSubIndex(), this);
+                        
+            return true;
+            
+        } else {
+            return false;
+        }
+    }
+    
 
-    private boolean isTopicSupported(CharSequence topic) {
-    	if (null == supportedTopics || 0==supportedTopics.length) {
-    		return true;//no data so do not check
-    	}
-    	int i = supportedTopics.length;
-    	while (--i>=0) {    		
-    		if (supportedTopics[i].length() == topic.length()) {    			
-    			int j = topic.length();
-    			while (--j>=0 && supportedTopics[i].charAt(j)==topic.charAt(j)) {
-    			}
-    			if (j<0) {
-    				return true;
-    			}
-    		}
-    	}		
-		return false;
+	private boolean isNotPrivate(TopicWritable topic) {
+		StringBuilder target = new StringBuilder();
+		topic.write(target);
+		String topicString = target.toString();
+		return isNotPrivate(topicString);
+	}
+
+	private boolean isNotPrivate(CharSequence topicString) {
+		int i = privateTopics.length;
+		while (--i>=0) {
+			if (topicString.equals(privateTopics[i])) {
+				return false;
+			}
+		}
+		return true;
 	}
 
 	public void presumePublishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
-		assert(isTopicSupported(topic)) : "add topic '"+topic+"' to the newCommandChannel method call.";
     	if (publishStructuredTopic(topic, writable)) {
 			return;
 		} else { 
@@ -585,8 +685,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     public boolean publishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
  	    assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
- 	    assert(isTopicSupported(topic)) : "add topic '"+topic+"' to the newCommandChannel method call.";
-    	assert(writable != null);
+     	assert(writable != null);
         assert(null != goPipe);
         assert(null != messagePubSub);
         if (PipeWriter.hasRoomForWrite(goPipe) 
@@ -741,6 +840,27 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
 		
 	}
+
+	public String[] privateTopics() {
+		return privateTopics;
+	}
 	
+	public void privateTopics(String... topic) {
+		privateTopics = topic;
+		///
+		int i = topic.length;
+		privateTopicPipes = new Pipe[i];
+		PipeConfig<MessagePrivate> config = pcm.getConfig(MessagePrivate.class);
+		while (--i >= 0) {
+			 privateTopicPipes[i] = new Pipe(config);
+		}
+		///
+		int j= topic.length;
+		privateTopicsTrie = new TrieParser(j,1,false,false,false);//a topic is case-sensitive
+		while (--j>=0) {
+			privateTopicsTrie.setUTF8Value(topic[j], j);//to matching pipe index
+		}
+		privateTopicsTrieReader = new TrieParserReader(0,true);
+	}
 	
 }

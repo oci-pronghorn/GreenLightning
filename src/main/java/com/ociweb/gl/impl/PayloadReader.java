@@ -490,7 +490,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 
 	@Override
-	public <A extends Appendable> A readPackedChars(A target) throws IOException {
+	public <A extends Appendable> A readPackedChars(A target) {
 		checkLimit(this,1);
 		return super.readPackedChars(target);
 	}

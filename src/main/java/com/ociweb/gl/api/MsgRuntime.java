@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.HTTPPayloadReader;
-import com.ociweb.gl.impl.pubField.MessageConsumer;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -41,6 +40,7 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
+import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
@@ -124,6 +124,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return (L) registerListenerImpl(listener);
     }
         
+    public final L addResponseListener(HTTPResponseListener listener) {
+    	return (L) registerListenerImpl(listener);
+    }
+    
     public final L addStartupListener(StartupListener listener) {
         return (L) registerListenerImpl(listener);
     }
@@ -132,8 +136,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return (L) registerListenerImpl(listener);
     }	
     
-    public final L addTimeListener(TimeListener listener) {
+    public final L addTimePulseListener(TimeListener listener) {
         return (L) registerListenerImpl(listener);
+    }
+    
+    @Deprecated
+    public final L addTimeListener(TimeListener listener) {
+        return (L) addTimePulseListener(listener);
     }
     
     public final L addPubSubListener(PubSubListener listener) {
@@ -359,13 +368,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				@SuppressWarnings("unchecked")
 				@Override
 				protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
-					return new HTTPPayloadReader<NetResponseSchema>(this);
+					return new HTTPResponseReader(this);
 				}
 			};
 			Pipe<NetResponseSchema> netResponsePipe = netResponsePipe1;        	
             int pipeIdx = netResponsePipeIdx++;
-            inputPipes[--pipesCount] = netResponsePipe;
-            boolean addedItem = IntHashTable.setItem(netPipeLookup, System.identityHashCode(listener), pipeIdx);
+            inputPipes[--pipesCount] = netResponsePipe;            
+            boolean addedItem = IntHashTable.setItem(netPipeLookup, builder.behaviorId((Behavior)listener), pipeIdx);
             if (!addedItem) {
             	throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
             }

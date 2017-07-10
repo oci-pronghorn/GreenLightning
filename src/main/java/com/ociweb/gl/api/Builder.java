@@ -31,6 +31,8 @@ public interface Builder {
      *
      * @return A reference to this hardware instance.
      */
+    Builder setTimerPulseRate(long rateInMS);
+    @Deprecated
     Builder setTriggerRate(long rateInMS);
 
     /**
@@ -40,7 +42,10 @@ public interface Builder {
      *
      * @return A reference to this hardware instance.
      */
+    Builder setTimerPulseRate(TimeTrigger trigger);
+    @Deprecated
     Builder setTriggerRate(TimeTrigger trigger);
+    
 
     
     void limitThreads(int threadLimit);
@@ -52,7 +57,11 @@ public interface Builder {
 	int registerRoute(CharSequence route, byte[] ... headers);
       
 	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
-    
+	
+	void enableServer(boolean isTLS, int bindPort);
+	
+	void enableServer(int bindPort);
+	
 	void enableTelemetry(boolean value);
 	
 	void setDefaultRate(long ns);
@@ -60,4 +69,7 @@ public interface Builder {
 	long fieldId(int routeId, byte[] fieldName);
 	
 	MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientId);
+	
+	void privateTopics(String ... topic);
+	
 }
