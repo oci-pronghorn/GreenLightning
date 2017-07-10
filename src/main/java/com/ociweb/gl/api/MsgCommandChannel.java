@@ -635,6 +635,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 	private boolean isNotPrivate(CharSequence topicString) {
+		if (null == privateTopics) {
+			return true;
+		}
 		int i = privateTopics.length;
 		while (--i>=0) {
 			if (topicString.equals(privateTopics[i])) {
