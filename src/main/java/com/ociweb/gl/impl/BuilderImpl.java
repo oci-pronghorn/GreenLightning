@@ -68,6 +68,7 @@ public class BuilderImpl implements Builder {
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
+	public final String[] args;
 	
 	private int threadLimit = -1;
 	private boolean threadLimitHard = false;
@@ -296,11 +297,11 @@ public class BuilderImpl implements Builder {
 	}
 	////////////////////////////////
 	
-	public BuilderImpl(GraphManager gm) {	
+	public BuilderImpl(GraphManager gm, String[] args) {	
 
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
-
+		this.args = args;
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {
@@ -414,13 +415,13 @@ public class BuilderImpl implements Builder {
 
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
-		final StageScheduler scheduler =  runtime.builder.threadLimit <= 0 ? new ThreadPerStageScheduler(runtime.builder.gm): 
-			                                                 new FixedThreadsScheduler(runtime.builder.gm, runtime.builder.threadLimit, runtime.builder.threadLimitHard);
+		final StageScheduler scheduler =  threadLimit <= 0 ? new ThreadPerStageScheduler(this.gm): 
+			                                                 new FixedThreadsScheduler(this.gm, this.threadLimit, this.threadLimitHard);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				scheduler.shutdown();
-				scheduler.awaitTermination(runtime.builder.getShutdownSeconds(), TimeUnit.SECONDS);
+				scheduler.awaitTermination(getShutdownSeconds(), TimeUnit.SECONDS);
 			}
 		});
 		
@@ -695,6 +696,14 @@ public class BuilderImpl implements Builder {
 	@Override
 	public void privateTopics(String... topic) {
 		privateTopics=topic;
+	}
+
+	@Override
+	public String[] args() {
+		
+		// TODO Auto-generated method stub
+		
+		return null;
 	}
 
 

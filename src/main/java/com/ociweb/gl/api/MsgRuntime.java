@@ -707,7 +707,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	
     public Builder getBuilder(){
     	if(this.builder==null){    	    
-    	    this.builder = (B) new BuilderImpl(gm);
+    	    this.builder = (B) new BuilderImpl(gm,args);
     	}
     	return this.builder;
     }
