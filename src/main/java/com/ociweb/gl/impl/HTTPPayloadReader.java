@@ -1,6 +1,8 @@
 package com.ociweb.gl.impl;
 import com.ociweb.gl.api.HTTPFieldReader;
+import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.HeaderReader;
+import com.ociweb.gl.api.Payloadable;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.pipe.MessageSchema;
@@ -41,11 +43,11 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		this.headerTrieParser = headerTrieParser;
 	}
 
-	public boolean openHeaderData(byte[] header, Headable<S> headReader) {
+	public boolean openHeaderData(byte[] header, Headable headReader) {
 		return openHeaderData(headerId(header), headReader);
 	}
 
-	public boolean openHeaderData(int headerId, Headable<S> headReader) {
+	public boolean openHeaderData(int headerId, Headable headReader) {
 	
 		if (headerId>=0) {
 			int item = IntHashTable.getItem(headerHash, HTTPHeader.HEADER_BIT | headerId);
@@ -53,7 +55,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 			if (item!=0) {				
 				setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + 1+ (0xFFFF & item)));
 				
-				headReader.read(this);
+				headReader.read(this);//HTTPRequestReader
 				
 				return true;
 			}
@@ -62,7 +64,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		
 	}
 	
-	public boolean openPayloadData(Payloadable<S> reader) {
+	public boolean openPayloadData(Payloadable reader) {
 		setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)));
 		reader.read(this);//even when we have zero length...
 		return true;

@@ -6,8 +6,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.ListenerConfig;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MessageReader;
@@ -124,6 +126,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         	assert(shudownListenrCount>=0);
         }
                 
+    }
+    
+    public int getId() {
+    	return builder.behaviorId((Behavior)listener);
     }
     
     public static boolean isShutdownRequested() {
@@ -370,7 +376,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 ClientConnection cc = (ClientConnection)ccm.get(ccId1);
 	            	 
 	            	 if (null!=cc) {
-		            	 PayloadReader reader = (PayloadReader)Pipe.inputStream(p);
+	            		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
 		            	 reader.openLowLevelAPIField();
 		            	 
 		            	 short statusId = reader.readShort();	

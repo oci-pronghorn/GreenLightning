@@ -13,7 +13,6 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.HTTPPayloadReader;
-import com.ociweb.gl.impl.pubField.MessageConsumer;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -41,6 +40,7 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
+import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
@@ -77,7 +77,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected CommandChannelVisitor gatherPipesVisitor = new CommandChannelVisitor() {
     	
 		@Override
-		public void visit(GreenCommandChannel cmdChnl) {
+		public void visit(MsgCommandChannel cmdChnl) {
+			
+            
+            //add this to the count of publishers
+            //CharSequence[] supportedTopics = cmdChnl.supportedTopics();
+            //get count of subscribers per topic as well.
+			//get the pipe ID of the singular PubSub...
+			
 			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());			
 		}
 
@@ -117,6 +124,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return (L) registerListenerImpl(listener);
     }
         
+    public final L addResponseListener(HTTPResponseListener listener) {
+    	return (L) registerListenerImpl(listener);
+    }
+    
     public final L addStartupListener(StartupListener listener) {
         return (L) registerListenerImpl(listener);
     }
@@ -125,8 +136,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return (L) registerListenerImpl(listener);
     }	
     
-    public final L addTimeListener(TimeListener listener) {
+    public final L addTimePulseListener(TimeListener listener) {
         return (L) registerListenerImpl(listener);
+    }
+    
+    @Deprecated
+    public final L addTimeListener(TimeListener listener) {
+        return (L) addTimePulseListener(listener);
     }
     
     public final L addPubSubListener(PubSubListener listener) {
@@ -165,15 +181,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
             try {
                 fields[f].setAccessible(true);   
                 Object obj = fields[f].get(listener);
-                
-                
-                if (obj instanceof GreenCommandChannel) {
-                    GreenCommandChannel cmdChnl = (GreenCommandChannel)obj;                 
-                    
-                    //System.out.println(depth+" checking "+cmdChnl+" wiht "+System.identityHashCode(cmdChnl));
-                    
+                                
+                if (obj instanceof MsgCommandChannel) {
+                    MsgCommandChannel cmdChnl = (MsgCommandChannel)obj;                 
                     assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
-                    GreenCommandChannel.setListener(cmdChnl, listener);
+                    MsgCommandChannel.setListener(cmdChnl, listener);
+                    
                     visitor.visit(cmdChnl);
                                         
                 } else {      
@@ -316,7 +329,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         cmdChannelUsageChecker = new IntHashTable(9);
         return true;
     }
-    protected boolean channelNotPreviouslyUsed(GreenCommandChannel cmdChnl) {
+    protected boolean channelNotPreviouslyUsed(MsgCommandChannel cmdChnl) {
         int hash = System.identityHashCode(cmdChnl);
            
         if (IntHashTable.hasItem(cmdChannelUsageChecker, hash)) {
@@ -355,13 +368,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				@SuppressWarnings("unchecked")
 				@Override
 				protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
-					return new HTTPPayloadReader<NetResponseSchema>(this);
+					return new HTTPResponseReader(this);
 				}
 			};
 			Pipe<NetResponseSchema> netResponsePipe = netResponsePipe1;        	
             int pipeIdx = netResponsePipeIdx++;
-            inputPipes[--pipesCount] = netResponsePipe;
-            boolean addedItem = IntHashTable.setItem(netPipeLookup, System.identityHashCode(listener), pipeIdx);
+            inputPipes[--pipesCount] = netResponsePipe;            
+            boolean addedItem = IntHashTable.setItem(netPipeLookup, builder.behaviorId((Behavior)listener), pipeIdx);
             if (!addedItem) {
             	throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
             }
@@ -562,7 +575,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//////////////////
 	
 	
-	public void setExclusiveTopics(GreenCommandChannel cc, String ... exlusiveTopics) {
+	public void setExclusiveTopics(MsgCommandChannel cc, String ... exlusiveTopics) {
 		// TODO Auto-generated method stub
 		
 		throw new UnsupportedOperationException("Not yet implemented");
@@ -700,36 +713,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
     
     
-    public GreenCommandChannel<B> newCommandChannel(int features) { 
-      
-    	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
 
-    	pcm.addConfig(requestNetConfig);
-    	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
-    	pcm.addConfig(serverResponseNetConfig);
-    	    	
-    	return this.builder.newCommandChannel(
-				features,
-				parallelInstanceUnderActiveConstruction,
-				pcm
-		  );    	
-    }
-
-    public GreenCommandChannel<B> newCommandChannel(int features, int customChannelLength) { 
-       
-    	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
-    	
-    	pcm.addConfig(customChannelLength,defaultCommandChannelMaxPayload,MessagePubSub.class);
-    	pcm.addConfig(requestNetConfig);
-    	pcm.addConfig(customChannelLength,0,TrafficOrderSchema.class);
-    	pcm.addConfig(customChannelLength,defaultCommandChannelHTTPResponseMaxPayload,ServerResponseSchema.class);
-    	   	
-        return this.builder.newCommandChannel(
-				features,
-				parallelInstanceUnderActiveConstruction,
-				pcm
-		  );        
-    }
 
     
     private ListenerFilter registerListenerImpl(Object listener) {

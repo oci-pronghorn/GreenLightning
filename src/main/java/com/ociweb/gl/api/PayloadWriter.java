@@ -14,7 +14,7 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     private final Pipe<T> p;
     private final int maxLength;
     private int length;
-    private GreenCommandChannel commandChannel;
+    private MsgCommandChannel commandChannel;
 
     private int loc=-1;
     
@@ -27,15 +27,6 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
         
     public void writeString(CharSequence value) {
         writeUTF(value);
-    }
-    
-    public void writeObject(Object object) {
-    	
-    	try {
-			super.writeObject(object);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
     }
     
     public void close() {
@@ -57,7 +48,7 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
         return false;
     }
 
-    public void openField(int loc, GreenCommandChannel commandChannel) {
+    public void openField(int loc, MsgCommandChannel commandChannel) {
     	//assert(this.loc == -1) : "Already open for writing, can not open again.";
     	this.commandChannel = commandChannel;
         this.loc = loc;

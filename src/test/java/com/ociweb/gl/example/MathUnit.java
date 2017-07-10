@@ -3,20 +3,21 @@ package com.ociweb.gl.example;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.Headable;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.NetResponseTemplate;
 import com.ociweb.gl.api.NetResponseTemplateData;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.NetWritable;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.impl.HTTPPayloadReader;
-import com.ociweb.gl.impl.Headable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
+import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.math.Decimal;
 import com.ociweb.pronghorn.util.math.DecimalResult;
@@ -25,16 +26,16 @@ public class MathUnit implements RestListener {
 
 	private final Logger logger = LoggerFactory.getLogger(MathUnit.class);
 	
-	private final GreenCommandChannel<?> cc;
+	private final MsgCommandChannel<?> cc;
 	private String lastCookie;
 	private final byte[] fieldA = "a".getBytes();
 	private final byte[] fieldB = "b".getBytes();
 	
 	private final NetResponseTemplate<HTTPFieldReader> template;
 
-	public MathUnit(final MsgRuntime runtime) {
+	public MathUnit(final GreenRuntime runtime) {
 
-		this.cc = runtime.newCommandChannel(GreenCommandChannel.NET_RESPONDER);
+		this.cc = runtime.newCommandChannel(MsgCommandChannel.NET_RESPONDER);
 		
 		NetResponseTemplateData<HTTPFieldReader> consumeX = new NetResponseTemplateData<HTTPFieldReader>() {
 
@@ -87,10 +88,10 @@ public class MathUnit implements RestListener {
 	public boolean restRequest(final HTTPRequestReader request) {
 		
 		final StringBuilder cookieValue = new StringBuilder();
-		Headable<HTTPRequestSchema> eat = new Headable<HTTPRequestSchema>() {
+		Headable eat = new Headable() {
 
 			@Override
-			public void read(HTTPPayloadReader<HTTPRequestSchema> httpPayloadReader) {
+			public void read(BlobReader httpPayloadReader) {
 				httpPayloadReader.readUTF(cookieValue);
 				lastCookie = cookieValue.toString();
 			}

@@ -2,21 +2,20 @@ package com.ociweb.gl.example;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MessageReader;
-import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.PubSubStructuredWritable;
-import com.ociweb.gl.api.PubSubStructuredWriter;
 import com.ociweb.gl.api.StartupListener;
-import com.ociweb.gl.impl.pubField.BytesFieldProcessor;
-import com.ociweb.gl.impl.pubField.DecimalFieldProcessor;
-import com.ociweb.gl.impl.pubField.IntegerFieldProcessor;
-import com.ociweb.gl.impl.pubField.MessageConsumer;
-import com.ociweb.gl.impl.pubField.RationalFieldProcessor;
-import com.ociweb.gl.impl.pubField.UTF8FieldProcessor;
 import com.ociweb.pronghorn.util.Appendables;
+import com.ociweb.pronghorn.util.field.BytesFieldProcessor;
+import com.ociweb.pronghorn.util.field.DecimalFieldProcessor;
+import com.ociweb.pronghorn.util.field.IntegerFieldProcessor;
+import com.ociweb.pronghorn.util.field.MessageConsumer;
+import com.ociweb.pronghorn.util.field.RationalFieldProcessor;
+import com.ociweb.pronghorn.util.field.StructuredBlobWriter;
+import com.ociweb.pronghorn.util.field.UTF8FieldProcessor;
 
 public class MessageApp implements GreenApp {
 	
@@ -128,7 +127,7 @@ public class MessageApp implements GreenApp {
 	PubSubStructuredWritable writable = new PubSubStructuredWritable() {
 		
 		@Override
-		public void write(PubSubStructuredWriter writer) {
+		public void write(StructuredBlobWriter writer) {
 			
 			writer.writeRational(3, rationalValueNumerator, rationalValueDenominator);
 			writer.writeDecimal(5, decimalE, decimalM);
@@ -146,7 +145,7 @@ public class MessageApp implements GreenApp {
 		
 
 		
-		final GreenCommandChannel gccA = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		final MsgCommandChannel gccA = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		PubSubListener listenerA = new PubSubListener() {
 
 			@Override
@@ -172,7 +171,7 @@ public class MessageApp implements GreenApp {
 		runtime.addPubSubListener(listenerA ).addSubscription("A");
 		
 		
-		final GreenCommandChannel gccB = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		final MsgCommandChannel gccB = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		PubSubListener listenerB = new PubSubListener() {
 
 			@Override
@@ -193,7 +192,7 @@ public class MessageApp implements GreenApp {
 		};
 		runtime.addPubSubListener(listenerB ).addSubscription("B");
 		
-		final GreenCommandChannel gccC = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		final MsgCommandChannel gccC = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		StartupListener startupListener = new StartupListener() {
 			@Override
 			public void startup() {

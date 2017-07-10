@@ -42,7 +42,7 @@ public interface ListenerFilter {
 	
 	ListenerFilter includeRoutes(int ... routeIds);
 	
-		
+	int getId();	
 	
 	
 }

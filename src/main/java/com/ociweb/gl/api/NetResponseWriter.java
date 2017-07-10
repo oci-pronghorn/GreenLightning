@@ -28,15 +28,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
         writeUTF(value);
     }
     
-    public void writeObject(Object object) {
-    	
-    	try {
-			super.writeObject(object);
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-    }
-    
+   
     public void close() {
     	if (statusCode>=0) { //safety check here in case callback calls close    	
 	    	try {

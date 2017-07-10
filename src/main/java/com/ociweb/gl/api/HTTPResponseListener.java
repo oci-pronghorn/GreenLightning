@@ -22,6 +22,6 @@ public interface HTTPResponseListener extends Behavior {
      * @param type {@link HTTPContentType} of the response.
      * @param reader {@link PayloadReader} for the response body.
      */
-	boolean responseHTTP(CharSequence host, int port, short statusCode, HTTPContentType type, PayloadReader reader);
+	boolean responseHTTP(CharSequence host, int port, short statusCode, HTTPContentType type, HTTPResponseReader reader);
 
 }
