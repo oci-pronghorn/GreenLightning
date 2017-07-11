@@ -335,7 +335,8 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_BYTES) {			
-			return parseUTF(reader, trie);
+			int length = readShort();
+			return parse(reader, trie, length);
 		}
 		throw new UnsupportedOperationException("unsupported type "+type);
 	}
