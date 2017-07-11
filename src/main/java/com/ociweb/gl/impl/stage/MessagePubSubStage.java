@@ -99,9 +99,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
        this.ingressMessagePipes = ingressMessagePipes;
        this.incomingSubsAndPubsPipe = incomingSubsAndPubsPipe;
        this.outgoingMessagePipes = outgoingMessagePipes;
-       
+       assert(noNulls(incomingSubsAndPubsPipe));
+       assert(noNulls(goPipe)) : "Go Pipe must not contain nulls";
+       assert(noNulls(ackPipe));
        assert(goPipe.length == ackPipe.length) : "should be one ack pipe for every go pipe";
-       assert(goPipe.length == incomingSubsAndPubsPipe.length) : "should be one pub sub pipe for evey go "+goPipe.length+" vs "+incomingSubsAndPubsPipe.length;
+        
+       assert(goPipe.length == incomingSubsAndPubsPipe.length) : "Publish/Subscribe should be one pub sub pipe for every go "+goPipe.length+" vs "+incomingSubsAndPubsPipe.length;
        
        this.subscriberListSize = outgoingMessagePipes.length;//can never have more subscribers than ALL
        this.totalSubscriberLists = 0;

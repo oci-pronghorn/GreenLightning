@@ -116,8 +116,8 @@ public class BuilderImpl implements Builder {
 	private int connectionsInBit = 3; 
 	private int maxPartialResponse = 10;
 	
-	private int IDX_MSG = -1;
-	private int IDX_NET = -1;
+	protected int IDX_MSG = -1;
+	protected int IDX_NET = -1;
 	   
     ///////
 	//These topics are enforced so that they only go from one producer to a single consumer
@@ -409,7 +409,9 @@ public class BuilderImpl implements Builder {
 			Pipe<MessageSubscription>[] subscriptionPipes) {
 
 
-		new MessagePubSubStage(this.gm, subscriptionPipeLookup, this, ingressMessagePipes, messagePubSub, masterMsggoOut, masterMsgackIn, subscriptionPipes);
+		new MessagePubSubStage(this.gm, subscriptionPipeLookup, this, 
+				                ingressMessagePipes, messagePubSub, 
+				                masterMsggoOut, masterMsgackIn, subscriptionPipes);
 
 
 	}
@@ -633,6 +635,8 @@ public class BuilderImpl implements Builder {
 				masterAckIn[p][t] = ackIn[p]=new Pipe<TrafficAckSchema>(ackPipesConfig);								
 			}
 			
+			//TODO: GO out array may have nulls and must contain IDX_ values at those indexes.
+			
 			TrafficCopStage trafficCopStage = new TrafficCopStage(gm, timeout, orderPipes[t], ackIn, goOut);
 		}
 		initChannelBlocker(maxGoPipeId);
@@ -701,10 +705,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public String[] args() {
-		
-		// TODO Auto-generated method stub
-		
-		return null;
+		return args;
 	}
 
 

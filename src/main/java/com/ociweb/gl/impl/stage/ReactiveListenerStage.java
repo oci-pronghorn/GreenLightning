@@ -10,9 +10,9 @@ import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.ListenerConfig;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MessageReader;
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.ShutdownListener;
@@ -22,6 +22,7 @@ import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.schema.MessageSubscription;
+import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ClientConnection;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
@@ -145,7 +146,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	private String toStringDetails = "\n";
     public String toString() {
-    	return super.toString()+toStringDetails;    	
+    
+    	return listener.getClass().getSimpleName()+"\n"+
+    	       super.toString()+toStringDetails;    	
     }
     
     public final void setTimeEventSchedule(long rate, long start) {
@@ -739,7 +742,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		return maxOrdinal;
 	}
 
+	//used for looking up the features used by this TrafficOrder goPipe
+	private CommandChannelWithMatchingPipe ccmwp = new CommandChannelWithMatchingPipe();
 
+	public int getFeatures(Pipe<TrafficOrderSchema> pipe) {
+		ccmwp.init(pipe);
+		MsgRuntime.visitCommandChannelsUsedByListener(listener, ccmwp);		
+		return ccmwp.features();
+	}
     
     
 }

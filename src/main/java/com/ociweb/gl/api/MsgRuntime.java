@@ -159,8 +159,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     public L registerBehavior(Behavior behavior) {
     	return (L) registerListenerImpl(behavior);
     }
+    
+    public static void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor) {
 
-	protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
+    	visitCommandChannelsUsedByListener(listener, 0, visitor);
+    }
+	protected static void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
 
         Class<? extends Object> c = listener.getClass();
         while (null != c) {
@@ -170,7 +174,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     }
 
-	private void visitCommandChannelsByClass(Object listener, int depth, 
+	private static void visitCommandChannelsByClass(Object listener, int depth, 
 											 CommandChannelVisitor visitor,
 											 Class<? extends Object> c) {
 		
@@ -183,14 +187,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                 Object obj = fields[f].get(listener);
                                 
                 if (obj instanceof MsgCommandChannel) {
+                	logger.trace("found command channel in {} ",listener.getClass().getSimpleName());
                     MsgCommandChannel cmdChnl = (MsgCommandChannel)obj;                 
-                    assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
+                   // assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
                     MsgCommandChannel.setListener(cmdChnl, listener);
                     
                     visitor.visit(cmdChnl);
                                         
                 } else {      
-                	
+          
                 	if ((!obj.getClass().isPrimitive()) 
                 		&& (obj != listener) 
                 		&& (!obj.getClass().getName().startsWith("java."))  

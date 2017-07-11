@@ -20,6 +20,7 @@ public class TrafficCopStage extends PronghornStage {
     private Pipe<TrafficOrderSchema> primaryIn; 
     private Pipe<TrafficAckSchema>[] ackIn;
     private Pipe<TrafficReleaseSchema>[] goOut;
+    
     private int ackExpectedOn = -1;   
     private GraphManager graphManager;
     private final long msAckTimeout;
@@ -32,7 +33,7 @@ public class TrafficCopStage extends PronghornStage {
     public TrafficCopStage(GraphManager graphManager, long msAckTimeout, Pipe<TrafficOrderSchema> primaryIn, Pipe<TrafficAckSchema>[] ackIn,  Pipe<TrafficReleaseSchema>[] goOut) {
     	super(graphManager, join(ackIn, primaryIn), goOut);
     	
-    	assert(ackIn.length==goOut.length);
+    	assert(ackIn.length == goOut.length);
     	this.msAckTimeout = msAckTimeout;
         this.primaryIn = primaryIn;
         this.ackIn = ackIn;
@@ -48,7 +49,10 @@ public class TrafficCopStage extends PronghornStage {
     public String toString() {
         String result = super.toString();
         
-        return result+ ( (ackExpectedOn>=0) ? " AckExpectedOn:"+ackExpectedOn+" "+GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id) : "" );
+        return result+ ( ((ackExpectedOn>=0)&&(ackExpectedOn<ackIn.length)&&(null!=ackIn[ackExpectedOn])) ? 
+        		" AckExpectedOn:"+ackExpectedOn+" "
+        		   +GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id)
+        		: "" );
     }
     
     
@@ -60,7 +64,7 @@ public class TrafficCopStage extends PronghornStage {
             ////////////////////////////////////////////////
             //check first if we are waiting for an ack back
             ////////////////////////////////////////////////
-            if (ackExpectedOn>=0) {                              
+            if (ackExpectedOn>=0 && null!=ackIn[ackExpectedOn]) {                              
                 
                 if (!PipeReader.tryReadFragment(ackIn[ackExpectedOn])) {
                     
@@ -88,6 +92,8 @@ public class TrafficCopStage extends PronghornStage {
             		if (TrafficOrderSchema.MSG_GO_10 == PipeReader.getMsgIdx(primaryIn)) {
             			
             			goPendingOnPipe = ackExpectedOn = PipeReader.readInt(primaryIn, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11);
+            			assert(goPendingOnPipe < goOut.length) : "Go command is out of bounds "+goPendingOnPipe+" vs "+goOut.length;
+            			assert(goPendingOnPipe >= 0) : "Go command pipe must be positive";
             			goPendingOnPipeCount = PipeReader.readInt(primaryIn, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12);
             			//NOTE: since we might not send release right  away and we have released the input pipe the outgoing release
             			//      may be dropped upon clean shutdown.  This is OK since dropping work is what we want during a shutdown request.
@@ -128,7 +134,8 @@ public class TrafficCopStage extends PronghornStage {
             //check third for room to send the pending go release message
             /////////////////////////////////////////////////////////            
         	Pipe<TrafficReleaseSchema> releasePipe = goOut[goPendingOnPipe];
-            if (PipeWriter.tryWriteFragment(releasePipe, TrafficReleaseSchema.MSG_RELEASE_20)) { 
+        	//can be null for event types which are not used in this particular runtime
+            if (null!=releasePipe && PipeWriter.tryWriteFragment(releasePipe, TrafficReleaseSchema.MSG_RELEASE_20)) { 
             	PipeWriter.writeInt(releasePipe, TrafficReleaseSchema.MSG_RELEASE_20_FIELD_COUNT_22, goPendingOnPipeCount);                	
             	PipeWriter.publishWrites(releasePipe);
             	goPendingOnPipe = -1;

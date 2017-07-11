@@ -69,7 +69,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	public final int maxHTTPContentLength;
 	
 	protected Pipe<?>[] optionalOutputPipes;
-	protected final int initFeatures;
+	public final int initFeatures;
 	
 	///////////
 	///////////
@@ -267,7 +267,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     
     public static void setListener(MsgCommandChannel c, Object listener) {
-        if (null != c.listener) {
+        if (null != c.listener && c.listener!=listener) {
             throw new UnsupportedOperationException("Bad Configuration, A CommandChannel can only be held and used by a single listener lambda/class");
         }
         c.listener = listener;
@@ -879,5 +879,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 		privateTopicsTrieReader = new TrieParserReader(0,true);
 	}
+
+	public boolean isGoPipe(Pipe<TrafficOrderSchema> target) {
+		return target==goPipe;
+	}
+	
 	
 }
