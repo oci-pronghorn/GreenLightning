@@ -10,9 +10,9 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PubSubListener;
@@ -44,15 +44,18 @@ import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
+import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.FixedThreadsScheduler;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.scheduling.ThreadPerStageScheduler;
+import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
@@ -68,6 +71,7 @@ public class BuilderImpl implements Builder {
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
+	public final String[] args;
 	
 	private int threadLimit = -1;
 	private boolean threadLimitHard = false;
@@ -90,7 +94,8 @@ public class BuilderImpl implements Builder {
 
 	/////////////////
 	///Pipes for initial startup declared subscriptions. (Not part of graph)
-	private final int maxStartupSubs = 64;
+    //TODO: should be zero unless startup is used.
+	private final int maxStartupSubs = 256; //TODO: make a way to adjust this outside???
 	private final int maxTopicLengh  = 128;
 	private Pipe<MessagePubSub> tempPipeOfStartupSubscriptions;
 	/////////////////
@@ -114,8 +119,8 @@ public class BuilderImpl implements Builder {
 	private int connectionsInBit = 3; 
 	private int maxPartialResponse = 10;
 	
-	private int IDX_MSG = -1;
-	private int IDX_NET = -1;
+	protected int IDX_MSG = -1;
+	protected int IDX_NET = -1;
 	   
     ///////
 	//These topics are enforced so that they only go from one producer to a single consumer
@@ -296,11 +301,11 @@ public class BuilderImpl implements Builder {
 	}
 	////////////////////////////////
 	
-	public BuilderImpl(GraphManager gm) {	
+	public BuilderImpl(GraphManager gm, String[] args) {	
 
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
-
+		this.args = args;
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {
@@ -407,20 +412,22 @@ public class BuilderImpl implements Builder {
 			Pipe<MessageSubscription>[] subscriptionPipes) {
 
 
-		new MessagePubSubStage(this.gm, subscriptionPipeLookup, this, ingressMessagePipes, messagePubSub, masterMsggoOut, masterMsgackIn, subscriptionPipes);
+		new MessagePubSubStage(this.gm, subscriptionPipeLookup, this, 
+				                ingressMessagePipes, messagePubSub, 
+				                masterMsggoOut, masterMsgackIn, subscriptionPipes);
 
 
 	}
 
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
-		final StageScheduler scheduler =  runtime.builder.threadLimit <= 0 ? new ThreadPerStageScheduler(runtime.builder.gm): 
-			                                                 new FixedThreadsScheduler(runtime.builder.gm, runtime.builder.threadLimit, runtime.builder.threadLimitHard);
+		final StageScheduler scheduler =  threadLimit <= 0 ? new ThreadPerStageScheduler(this.gm): 
+			                                                 new FixedThreadsScheduler(this.gm, this.threadLimit, this.threadLimitHard);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				scheduler.shutdown();
-				scheduler.awaitTermination(runtime.builder.getShutdownSeconds(), TimeUnit.SECONDS);
+				scheduler.awaitTermination(getShutdownSeconds(), TimeUnit.SECONDS);
 			}
 		});
 		
@@ -612,27 +619,55 @@ public class BuilderImpl implements Builder {
 		IDX_MSG = (IntHashTable.isEmpty(subscriptionPipeLookup2) && subscriptionPipes.length==0 && messagePubSub.length==0) ? -1 : eventSchemas++;
 		IDX_NET = useNetClient(netPipeLookup2, netResponsePipes, netRequestPipes) ? eventSchemas++ : -1;
 						
-		Pipe<TrafficReleaseSchema>[][] masterGoOut = new Pipe[eventSchemas][commandChannelCount];
-		Pipe<TrafficAckSchema>[][]     masterAckIn = new Pipe[eventSchemas][commandChannelCount];
-		
-		long timeout = 20_000; //20 seconds
+        long timeout = 20_000; //20 seconds
 		
 		int maxGoPipeId = 0;
+					
 		int t = commandChannelCount;
+								
+		Pipe<TrafficReleaseSchema>[][] masterGoOut = new Pipe[eventSchemas][0];
+		Pipe<TrafficAckSchema>[][]     masterAckIn = new Pipe[eventSchemas][0];
+
+		if (IDX_MSG >= 0) {
+			System.err.println("msg pipe counts "+messagePubSub.length);
+			masterGoOut[IDX_MSG] = new Pipe[messagePubSub.length];
+			masterAckIn[IDX_MSG] = new Pipe[messagePubSub.length];
+		}		
+		if (IDX_NET >= 0) {
+			masterGoOut[IDX_NET] = new Pipe[netResponsePipes.length];
+			masterAckIn[IDX_NET] = new Pipe[netResponsePipes.length];
+		}		
+				
 		while (--t>=0) {
 		
-			int p = eventSchemas;//major command requests that can come from commandChannels
-			Pipe<TrafficReleaseSchema>[] goOut = new Pipe[p];
-			Pipe<TrafficAckSchema>[] ackIn = new Pipe[p];
-			while (--p>=0) {
-				masterGoOut[p][t] = goOut[p] = new Pipe<TrafficReleaseSchema>(releasePipesConfig);
-				maxGoPipeId = Math.max(maxGoPipeId, goOut[p].id);
-				
-				masterAckIn[p][t] = ackIn[p]=new Pipe<TrafficAckSchema>(ackPipesConfig);								
-			}
+			int features = getFeatures(gm2, orderPipes[t]);
 			
-			TrafficCopStage trafficCopStage = new TrafficCopStage(gm, timeout, orderPipes[t], ackIn, goOut);
+			Pipe<TrafficReleaseSchema>[] goOut = new Pipe[eventSchemas];
+			Pipe<TrafficAckSchema>[] ackIn = new Pipe[eventSchemas];
+			
+			boolean isDynamicMessaging = (features&Behavior.DYNAMIC_MESSAGING) != 0;
+			boolean isNetRequester     = (features&Behavior.NET_REQUESTER) != 0;
+
+			boolean hasConnections = false;
+			if (isDynamicMessaging) {
+				hasConnections = true;		 		
+		 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_MSG);
+			}
+			if (isNetRequester) {
+				hasConnections = true;		 		
+		 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_NET);
+			}
+
+			if (hasConnections) {
+				TrafficCopStage trafficCopStage = new TrafficCopStage(gm, timeout, orderPipes[t], ackIn, goOut);
+			} else {
+				PipeCleanerStage.newInstance(gm, orderPipes[t]);
+			}
 		}
+		
+		
+		
+		
 		initChannelBlocker(maxGoPipeId);
 		
 		
@@ -687,6 +722,39 @@ public class BuilderImpl implements Builder {
 		}
 	}
 
+
+	protected int populateGoAckPipes(int maxGoPipeId, Pipe<TrafficReleaseSchema>[][] masterGoOut,
+			Pipe<TrafficAckSchema>[][] masterAckIn, Pipe<TrafficReleaseSchema>[] goOut, Pipe<TrafficAckSchema>[] ackIn,
+			int p) {
+		addToLastNonNull(masterGoOut[p], goOut[p] = new Pipe<TrafficReleaseSchema>(releasePipesConfig));
+		
+		maxGoPipeId = Math.max(maxGoPipeId, goOut[p].id);				
+		
+		addToLastNonNull(masterAckIn[p], ackIn[p] = new Pipe<TrafficAckSchema>(ackPipesConfig));
+		return maxGoPipeId;
+	}
+	
+
+	private <S extends MessageSchema<S>> void addToLastNonNull(Pipe<S>[] pipes, Pipe<S> pipe) {
+		int i = pipes.length;
+		while (--i>=0) {
+			if (null == pipes[i]) {
+				pipes[i] = pipe;
+				return;
+			}
+		}		
+	}
+
+	
+	protected int getFeatures(GraphManager gm2, Pipe<TrafficOrderSchema> orderPipe) {
+		PronghornStage producer = gm2.getRingProducer(gm,orderPipe.id);
+		assert(producer instanceof ReactiveListenerStage) : "TrafficOrderSchema must only come from Reactor stages but was "+producer.getClass().getSimpleName();
+		
+		ReactiveListenerStage reactor =  (ReactiveListenerStage)producer;			
+		int features = reactor.getFeatures(orderPipe);
+		return features;
+	}
+	
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
 		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS);
@@ -695,6 +763,11 @@ public class BuilderImpl implements Builder {
 	@Override
 	public void privateTopics(String... topic) {
 		privateTopics=topic;
+	}
+
+	@Override
+	public String[] args() {
+		return args;
 	}
 
 

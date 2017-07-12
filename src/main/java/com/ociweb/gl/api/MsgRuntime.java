@@ -159,8 +159,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     public L registerBehavior(Behavior behavior) {
     	return (L) registerListenerImpl(behavior);
     }
+    
+    public static void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor) {
 
-	protected void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
+    	visitCommandChannelsUsedByListener(listener, 0, visitor);
+    }
+	protected static void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
 
         Class<? extends Object> c = listener.getClass();
         while (null != c) {
@@ -170,7 +174,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     }
 
-	private void visitCommandChannelsByClass(Object listener, int depth, 
+	private static void visitCommandChannelsByClass(Object listener, int depth, 
 											 CommandChannelVisitor visitor,
 											 Class<? extends Object> c) {
 		
@@ -183,14 +187,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                 Object obj = fields[f].get(listener);
                                 
                 if (obj instanceof MsgCommandChannel) {
+                	logger.trace("found command channel in {} ",listener.getClass().getSimpleName());
                     MsgCommandChannel cmdChnl = (MsgCommandChannel)obj;                 
-                    assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
+                   // assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
                     MsgCommandChannel.setListener(cmdChnl, listener);
                     
                     visitor.visit(cmdChnl);
                                         
                 } else {      
-                	
+          
                 	if ((!obj.getClass().isPrimitive()) 
                 		&& (obj != listener) 
                 		&& (!obj.getClass().getName().startsWith("java."))  
@@ -406,10 +411,35 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 
     /**
-     * This pipe returns all the data this object has requested via subscriptions elewhere.
+     * This pipe returns all the data this object has requested via subscriptions elsewhere.
      * @param listener
      */
 	public Pipe<MessageSubscription> buildPublishPipe(Object listener) {
+		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();		
+		return attachListenerIndexToMessageSubscriptionPipe(listener, subscriptionPipe);
+	}
+	
+	public Pipe<MessageSubscription> buildPublishPipe(int listenerHash) {
+		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();	
+		if (!IntHashTable.setItem(subscriptionPipeLookup, listenerHash, subscriptionPipeIdx++)) {
+			throw new RuntimeException("HashCode must be unique");
+		}
+		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+		return subscriptionPipe;
+	}
+
+	private Pipe<MessageSubscription> attachListenerIndexToMessageSubscriptionPipe(Object listener,
+			Pipe<MessageSubscription> subscriptionPipe) {
+		//store this value for lookup later
+		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
+		if (!IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++)) {
+			throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
+		}
+		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+		return subscriptionPipe;
+	}
+
+	private Pipe<MessageSubscription> buildMessageSubscriptionPipe() {
 		Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(messageSubscriptionConfig) {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -417,13 +447,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				return new MessageReader(this);
 			}
 		};
-		
-		//store this value for lookup later
-		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
-		if (!IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++)) {
-			throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
-		}
-		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
 		return subscriptionPipe;
 	}
 	
@@ -707,7 +730,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	
     public Builder getBuilder(){
     	if(this.builder==null){    	    
-    	    this.builder = (B) new BuilderImpl(gm);
+    	    this.builder = (B) new BuilderImpl(gm,args);
     	}
     	return this.builder;
     }

@@ -240,13 +240,15 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 		return this;
 	}
 
+	private int transmissionTopicCounts;
 	
 	@Override
 	public BridgeConfig addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
 
-		builder.addStartupSubscription(internalTopic, System.identityHashCode(this));
-		Pipe<MessageSubscription> pubSubPipe = msgRuntime.buildPublishPipe(this);
+		int code =  ++transmissionTopicCounts+System.identityHashCode(this);
+		builder.addStartupSubscription(internalTopic, code);
+		Pipe<MessageSubscription> pubSubPipe = msgRuntime.buildPublishPipe(code);
 	
 		new EgressMQTTStage(builder.gm, pubSubPipe, clientRequest, internalTopic, externalTopic, transmissionFieldQOS, transmissionFieldRetain);
 			
@@ -257,8 +259,9 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	public BridgeConfig addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
 		ensureConnected();
 
-		builder.addStartupSubscription(internalTopic, System.identityHashCode(this));
-		Pipe<MessageSubscription> pubSubPipe = msgRuntime.buildPublishPipe(this);
+		int code =  ++transmissionTopicCounts+System.identityHashCode(this);
+		builder.addStartupSubscription(internalTopic, code);
+		Pipe<MessageSubscription> pubSubPipe = msgRuntime.buildPublishPipe(code);
 	
 		new EgressMQTTStage(builder.gm, pubSubPipe, clientRequest, internalTopic, externalTopic, converter, transmissionFieldQOS, transmissionFieldRetain);
 			

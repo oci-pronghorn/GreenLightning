@@ -29,7 +29,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private final Pipe<MessageSubscription>[] outgoingMessagePipes;
     
     private static final int estimatedTopicLength = 100;
-    private static final int maxLists = 10; //TODO: make this grow as needed based on growing count of subscriptions.
+    private static final int maxLists = 100; //TODO: make this grow as needed based on growing count of subscriptions.
   
     private final int subscriberListSize;
     private short[] subscriberLists;
@@ -99,9 +99,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
        this.ingressMessagePipes = ingressMessagePipes;
        this.incomingSubsAndPubsPipe = incomingSubsAndPubsPipe;
        this.outgoingMessagePipes = outgoingMessagePipes;
-       
+       assert(noNulls(incomingSubsAndPubsPipe));
+       assert(noNulls(goPipe)) : "Go Pipe must not contain nulls";
+       assert(noNulls(ackPipe));
        assert(goPipe.length == ackPipe.length) : "should be one ack pipe for every go pipe";
-       assert(goPipe.length == incomingSubsAndPubsPipe.length) : "should be one pub sub pipe for evey go "+goPipe.length+" vs "+incomingSubsAndPubsPipe.length;
+        
+       assert(goPipe.length == incomingSubsAndPubsPipe.length) : "Publish/Subscribe should be one pub sub pipe for every go "+goPipe.length+" vs "+incomingSubsAndPubsPipe.length;
        
        this.subscriberListSize = outgoingMessagePipes.length;//can never have more subscribers than ALL
        this.totalSubscriberLists = 0;
@@ -167,7 +170,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         
         pendingAck = new boolean[incomingPipeCount];
         
-        this.subscriberLists = new short[maxLists*subscriberListSize];       
+        this.subscriberLists = new short[maxLists*subscriberListSize];   
+        
+        logger.info("maximum subscribers per topic {}  maximum topics {} ", subscriberListSize, maxLists);
         Arrays.fill(this.subscriberLists, (short)-1);
         this.localSubscriptionTrie = new TrieParser(maxLists * estimatedTopicLength,1,false,true);//must support extraction for wild cards.
 
@@ -469,7 +474,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                             }                            
                             
                         } else {
-                        	logger.info("no subscribers so release and clear");
+                        	logger.trace("no subscribers so release and clear");
                         	PipeReader.releaseReadLock( incomingSubsAndPubsPipe[a]);                
                             decReleaseCount(a);   
                         }

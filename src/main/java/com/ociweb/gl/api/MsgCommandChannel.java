@@ -69,7 +69,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	public final int maxHTTPContentLength;
 	
 	protected Pipe<?>[] optionalOutputPipes;
-	protected final int initFeatures;
+	public final int initFeatures;
 	
 	///////////
 	///////////
@@ -267,7 +267,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     
     public static void setListener(MsgCommandChannel c, Object listener) {
-        if (null != c.listener) {
+        if (null != c.listener && c.listener!=listener) {
             throw new UnsupportedOperationException("Bad Configuration, A CommandChannel can only be held and used by a single listener lambda/class");
         }
         c.listener = listener;
@@ -635,6 +635,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 	private boolean isNotPrivate(CharSequence topicString) {
+		if (null == privateTopics) {
+			return true;
+		}
 		int i = privateTopics.length;
 		while (--i>=0) {
 			if (topicString.equals(privateTopics[i])) {
@@ -798,7 +801,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	}
 
-
+	public boolean publishHTTPResponseContinuation(HTTPFieldReader w, 
+										int context, NetWritable writable) {
+		return publishHTTPResponseContinuation(w.getConnectionId(),w.getSequenceCode(), context, writable);
+	}
+	
 	public boolean publishHTTPResponseContinuation(long connectionId, long sequenceCode, 
 			                                    int context, NetWritable writable) {
 		
@@ -814,18 +821,28 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		if (!Pipe.hasRoomForWrite(pipe)) {
 			return false;
 		}
-				
+		
 		Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
 		Pipe.addLongValue(connectionId, pipe);
 		Pipe.addIntValue(sequenceNo, pipe);	
 		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 	
 		outputStream.openField(context);
-				
-		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
+		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);		
+		writable.write(outputStream); 
 		
-		writable.write(outputStream); //TODO: possible feature, return false to abandon write
-		outputStream.close();
+		//outputStream.close(); this close is special and does side effect publish, look out.
+		DataOutputBlobWriter.closeLowLevelField(outputStream);
+		
+		Pipe.addIntValue(context, pipe);
+		
+		Pipe.confirmLowLevelWrite(pipe); 
+		Pipe.publishWrites(pipe);
+		//TODO: not sure this part is right yet.
+		//Stores this publish until the next message is complete and published
+		///Pipe.storeUnpublishedWrites(outputStream.getPipe());
+		//Pipe.publishAllBatchedWrites(outputStream.getPipe());
+		
 		return true;
 	}
 
@@ -862,5 +879,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 		privateTopicsTrieReader = new TrieParserReader(0,true);
 	}
+
+	public boolean isGoPipe(Pipe<TrafficOrderSchema> target) {
+		return target==goPipe;
+	}
+	
 	
 }

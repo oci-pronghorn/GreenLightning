@@ -91,7 +91,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
     	GreenRuntime runtime = new GreenRuntime();
         //force hardware to TestHardware regardless of where or what platform its run on.
         //this is done because this is the test() method and must behave the same everywhere.
-        runtime.builder = new BuilderImpl(runtime.gm);
+        runtime.builder = new BuilderImpl(runtime.gm,runtime.args);
 
         try {
         	app.declareConfiguration(runtime.builder);
