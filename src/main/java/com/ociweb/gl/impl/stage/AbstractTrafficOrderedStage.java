@@ -70,6 +70,9 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 
 		super(graphManager, join(goPipe, output), join(ackPipe, otherResponse));
 
+	    assert(noNulls(goPipe)) : "Go Pipe must not contain nulls";
+	    assert(noNulls(ackPipe)) : "Ack Pipe must not contain nulls";
+	       
 		this.hardware = hardware;
 		this.ackPipe = ackPipe;
 		this.goPipe = goPipe;

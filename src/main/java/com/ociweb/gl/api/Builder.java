@@ -62,6 +62,9 @@ public interface Builder {
 	
 	void enableServer(int bindPort);
 	
+	void enableTelemetry();
+	
+	@Deprecated
 	void enableTelemetry(boolean value);
 	
 	void setDefaultRate(long ns);

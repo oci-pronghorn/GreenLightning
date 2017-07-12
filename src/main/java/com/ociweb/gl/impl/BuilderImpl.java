@@ -594,6 +594,13 @@ public class BuilderImpl implements Builder {
 		isTelemetryEnabled = enable;
 	}
 
+	@Override
+	public void enableTelemetry() {
+		isTelemetryEnabled = true;
+		
+		//TODO: build more of the object here if possible
+	}
+	
 	public final long getDefaultSleepRateNS() {
 		return defaultSleepRateNS;
 	}
@@ -629,7 +636,6 @@ public class BuilderImpl implements Builder {
 		Pipe<TrafficAckSchema>[][]     masterAckIn = new Pipe[eventSchemas][0];
 
 		if (IDX_MSG >= 0) {
-			System.err.println("msg pipe counts "+messagePubSub.length);
 			masterGoOut[IDX_MSG] = new Pipe[messagePubSub.length];
 			masterAckIn[IDX_MSG] = new Pipe[messagePubSub.length];
 		}		

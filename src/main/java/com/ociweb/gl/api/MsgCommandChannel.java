@@ -33,15 +33,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	private final Logger logger = LoggerFactory.getLogger(MsgCommandChannel.class);
 	
-    private final Pipe<TrafficOrderSchema> goPipe;
-    private final Pipe<MessagePubSub> messagePubSub;
-    private final Pipe<ClientHTTPRequestSchema> httpRequest;
-    
-    private final Pipe<ServerResponseSchema>[] netResponse;
-    
+    private Pipe<TrafficOrderSchema> goPipe;
+    private Pipe<MessagePubSub> messagePubSub;
+    private Pipe<ClientHTTPRequestSchema> httpRequest;
+    private Pipe<ServerResponseSchema>[] netResponse;
+    private Pipe<MessagePubSub>[] exclusivePubSub;
+       
     private int lastResponseWriterFinished = 1;//starting in the "end" state
     
-    private final Pipe<MessagePubSub>[] exclusivePubSub;
     private String[] exclusiveTopics =  new String[0];//TODO: make empty
 
     
@@ -58,18 +57,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public static final int NET_RESPONDER     = 1<<2;
     public static final int ALL = DYNAMIC_MESSAGING | NET_REQUESTER | NET_RESPONDER;
       
-    protected B builder;
-
-    private final static int[] EMPTY = new int[0];
-    private final static Pipe[] EMPTY_PIPES = new Pipe[0];
+    protected final B builder;
 
     private final int MAX_TEXT_LENGTH = 64;
     private final Pipe<RawDataSchema> digitBuffer = new Pipe<RawDataSchema>(new PipeConfig<RawDataSchema>(RawDataSchema.instance,3,MAX_TEXT_LENGTH));
     
-	public final int maxHTTPContentLength;
+	public int maxHTTPContentLength;
 	
 	protected Pipe<?>[] optionalOutputPipes;
-	public final int initFeatures;
+	public int initFeatures; //this can be modified up to the moment that we build the pipes.
 	
 	///////////
 	///////////
@@ -77,9 +73,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	private Pipe<MessagePrivate>[] privateTopicPipes = null;
 	private TrieParser privateTopicsTrie = null;
 	private TrieParserReader privateTopicsTrieReader = null;
-	private PipeConfigManager pcm;
+	protected PipeConfigManager pcm;
 	//////////
     //////////
+	private final int parallelInstanceId;
 	
     public MsgCommandChannel(GraphManager gm, B hardware,
 				  		    int parallelInstanceId,
@@ -95,76 +92,85 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		             ) {
 
        this.initFeatures = features;//this is held so we can check at every method call that its configured right
-                             
+	   
+       this.builder = builder;                   
        this.messagePubSub = ((features & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
        this.httpRequest   = ((features & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
 
        this.digitBuffer.initBuffers();
        this.pcm = pcm;
-       /////////////////////////
-       //build pipes for sending out the REST server responses
-       ////////////////////////       
-       Pipe<ServerResponseSchema>[] netResponse = null;
-       if ((features & NET_RESPONDER) != 0) {
-    	   //int parallelInstanceId = hardware.ac
-    	   if (-1 == parallelInstanceId) {
-    		   //we have only a single instance of this object so we must have 1 pipe for each parallel track
-    		   int p = builder.parallelism();
-    		   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[p];
-    		   while (--p>=0) {
-    			   netResponse[p] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), p);
-    		   }
-    	   } else {
-    		   //we have multiple instances of this object so each only has 1 pipe
-    		   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[1];
-    		   netResponse[0] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), parallelInstanceId);
-    	   }
-       }
-       this.netResponse = netResponse;
-       ///////////////////////////
+       this.parallelInstanceId = parallelInstanceId;
        
-       
-       if (null != this.netResponse) {
-    	   
-    	   int x = this.netResponse.length;
- 
-    	   while(--x>=0) {
-    	   
-	    	   if (!Pipe.isInit(netResponse[x])) {
-	    		   //hack for now.
-	    		   netResponse[x].initBuffers();
-	    	   }
-    	   }
-       }
-
-       //we always need a go pipe
-       this.goPipe = newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
-       
-       ///////////////////
-
-       int e = this.exclusiveTopics.length;
-       this.exclusivePubSub = (Pipe<MessagePubSub>[])new Pipe[e];
-       while (--e>=0) {
-    	   exclusivePubSub[e] = newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
-       }
-       ///////////////////       
-
-       ////////////////////////////////////////
-	   int temp = 0;
-	   if (null!=netResponse && netResponse.length>0) {
-		   int x = netResponse.length;
-		   int min = Integer.MAX_VALUE;
-		   while (--x>=0) {
-			   min = Math.min(min, netResponse[x].maxVarLen);
-		   }
-		   temp= min;
-	   }
-	   this.maxHTTPContentLength = temp;		
-	   ///////////////////////////////////////
-	   
-       this.builder = builder;
+      
        
     }
+
+	private void buildAllPipes() {
+		   
+		   if (null == this.goPipe) {
+			   //we always need a go pipe
+			   this.goPipe = newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
+			   /////////////////////////
+			   //build pipes for sending out the REST server responses
+			   ////////////////////////       
+			   Pipe<ServerResponseSchema>[] netResponse = null;
+			   if ((this.initFeatures & NET_RESPONDER) != 0) {
+				   //int parallelInstanceId = hardware.ac
+				   if (-1 == parallelInstanceId) {
+					   //we have only a single instance of this object so we must have 1 pipe for each parallel track
+					   int p = builder.parallelism();
+					   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[p];
+					   while (--p>=0) {
+						   netResponse[p] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), p);
+					   }
+				   } else {
+					   //we have multiple instances of this object so each only has 1 pipe
+					   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[1];
+					   netResponse[0] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), parallelInstanceId);
+				   }
+			   }
+			   this.netResponse = netResponse;
+			   ///////////////////////////
+			   
+			   
+			   if (null != this.netResponse) {
+				   
+				   int x = this.netResponse.length;
+	 
+				   while(--x>=0) {
+				   
+			    	   if (!Pipe.isInit(netResponse[x])) {
+			    		   //hack for now.
+			    		   netResponse[x].initBuffers();
+			    	   }
+				   }
+			   }
+	
+	
+			   
+			   ///////////////////
+	
+			   int e = this.exclusiveTopics.length;
+			   this.exclusivePubSub = (Pipe<MessagePubSub>[])new Pipe[e];
+			   while (--e>=0) {
+				   exclusivePubSub[e] = newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
+			   }
+			   ///////////////////       
+	
+			   ////////////////////////////////////////
+			   int temp = 0;
+			   if (null!=netResponse && netResponse.length>0) {
+				   int x = netResponse.length;
+				   int min = Integer.MAX_VALUE;
+				   while (--x>=0) {
+					   min = Math.min(min, netResponse[x].maxVarLen);
+				   }
+				   temp= min;
+			   }
+			   this.maxHTTPContentLength = temp;		
+			   ///////////////////////////////////////
+		   }
+	}
     
 	protected boolean goHasRoom() {
 		return PipeWriter.hasRoomForWrite(goPipe);
@@ -173,6 +179,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     public Pipe<?>[] getOutputPipes() {
     	
+    	//we wait till this last possible moment before building.
+    	buildAllPipes();
+    	 
+    	 
     	int length = 0;
     	
     	if (null != messagePubSub) { //Index needed plust i2c index needed.
