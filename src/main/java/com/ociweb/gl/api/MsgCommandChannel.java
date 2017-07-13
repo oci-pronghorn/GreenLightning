@@ -1,7 +1,6 @@
 package com.ociweb.gl.api;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.DoubleUnaryOperator;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,7 +18,6 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
-import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
@@ -59,9 +57,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
       
     protected final B builder;
 
-    private final int MAX_TEXT_LENGTH = 64;
-    private final Pipe<RawDataSchema> digitBuffer = new Pipe<RawDataSchema>(new PipeConfig<RawDataSchema>(RawDataSchema.instance,3,MAX_TEXT_LENGTH));
-    
 	public int maxHTTPContentLength;
 	
 	protected Pipe<?>[] optionalOutputPipes;
@@ -92,22 +87,82 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		             ) {
 
        this.initFeatures = features;//this is held so we can check at every method call that its configured right
-	   
-       this.builder = builder;                   
-       this.messagePubSub = ((features & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
-       this.httpRequest   = ((features & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
-
-       this.digitBuffer.initBuffers();
+       this.builder = builder;
        this.pcm = pcm;
        this.parallelInstanceId = parallelInstanceId;
-       
-      
-       
     }
 
+    public void ensureDynamicMessaging() {
+    	if (null!=this.goPipe) {
+    		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
+    	}
+    	this.initFeatures |= DYNAMIC_MESSAGING;
+    }
+    
+    public void ensureDynamicMessaging(int queueLength, int maxMessageSize) {
+    	if (null!=this.goPipe) {
+    		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
+    	}
+    	this.initFeatures |= DYNAMIC_MESSAGING;    
+    	PipeConfig<MessagePubSub> config = pcm.getConfig(MessagePubSub.class);
+		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
+    		this.pcm.addConfig(queueLength, maxMessageSize, MessagePubSub.class);   
+    	}
+    }
+    
+    public void ensureHTTPClientRequesting() {
+    	if (null!=this.goPipe) {
+    		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
+    	}
+    	this.initFeatures |= NET_REQUESTER;
+    }
+    
+    public void ensureHTTPClientRequesting(int queueLength, int maxMessageSize) {
+    	if (null!=this.goPipe) {
+    		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
+    	}
+    	this.initFeatures |= NET_REQUESTER;
+    	PipeConfig<ClientHTTPRequestSchema> config = pcm.getConfig(ClientHTTPRequestSchema.class);
+		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
+    		this.pcm.addConfig(queueLength, maxMessageSize, ClientHTTPRequestSchema.class); 
+    	}
+    }
+   
+    public void ensureHTTPServerResponse() {
+    	if (null!=this.goPipe) {
+    		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
+    	}
+    	this.initFeatures |= NET_RESPONDER;
+    }
+    
+    public void ensureHTTPServerResponse(int queueLength, int maxMessageSize) {
+    	if (null!=this.goPipe) {
+    		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
+    	}
+    	this.initFeatures |= NET_RESPONDER;    	
+    	PipeConfig<ServerResponseSchema> config = pcm.getConfig(ServerResponseSchema.class);
+		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
+    		this.pcm.addConfig(queueLength, maxMessageSize, ServerResponseSchema.class);  
+    	}
+    }
+    
+    
+    public void ensureCommandCountRoom(int queueLength) {
+    	if (null!=this.goPipe) {
+    		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
+    	}
+    	PipeConfig<TrafficOrderSchema> goConfig = this.pcm.getConfig(TrafficOrderSchema.class);
+    	if (queueLength>goConfig.minimumFragmentsOnPipe() ) {
+    		this.pcm.addConfig(queueLength, 0, TrafficOrderSchema.class);
+    	}
+    }
+    
+    
 	private void buildAllPipes() {
 		   
 		   if (null == this.goPipe) {
+			   this.messagePubSub = ((this.initFeatures & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
+			   this.httpRequest   = ((this.initFeatures & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
 			   //we always need a go pipe
 			   this.goPipe = newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
 			   /////////////////////////
@@ -547,6 +602,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
     }
     
+    //TODO: add privateTopic support
+    //TODO: add publish topic with out any body support.
     
     public boolean publishTopic(byte[] topic, PubSubWritable writable) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
