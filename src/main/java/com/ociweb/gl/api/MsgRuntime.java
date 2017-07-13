@@ -11,11 +11,9 @@ import java.util.concurrent.TimeUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.impl.BridgeConfigImpl;
 import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.HTTPPayloadReader;
-import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
-import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
@@ -32,7 +30,6 @@ import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
-import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
@@ -71,6 +68,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
     protected final IntHashTable netPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
     
+    private BridgeConfig[] bridges = new BridgeConfig[0];
+    
 	protected int parallelInstanceUnderActiveConstruction = -1;
 	protected Pipe<?>[] outputPipes = null;
 	protected Pipe<HTTPRequestSchema>[] httpRequestPipes = null;
@@ -89,6 +88,23 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 
     };
+
+    private void keepBridge(BridgeConfig bridge) {
+    	boolean isFound = false;
+    	int i = bridges.length;
+    	while (--i>=0) {
+    		isFound |= bridge == bridges[0];
+    	}
+    	if (!isFound) {
+    		
+    		i = bridges.length;
+    		BridgeConfig[] newArray = new BridgeConfig[i+1];
+    		System.arraycopy(bridges, 0, newArray, 0, i);
+    		newArray[i] = bridge;
+    		bridges = newArray;
+    		
+    	}
+    }
     
     
 	public MsgRuntime(String[] args) {
@@ -102,22 +118,28 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
 	public final void subscriptionBridge(CharSequence topic, BridgeConfig config) {		
 		config.addSubscription(topic);
+		keepBridge(config);
 	}
 	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
 		config.addSubscription(internalTopic,extrnalTopic);
+		keepBridge(config);
 	}
 	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, IngressConverter converter) {		
 		config.addSubscription(internalTopic,extrnalTopic,converter);
+		keepBridge(config);
 	}
 	
 	public final void transmissionBridge(CharSequence topic, BridgeConfig config) {		
 		config.addTransmission(this, topic);
+		keepBridge(config);
 	}
 	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
 		config.addTransmission(this, internalTopic,extrnalTopic);
+		keepBridge(config);
 	}	
 	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, EgressConverter converter) {		
 		config.addTransmission(this, internalTopic,extrnalTopic, converter);
+		keepBridge(config);
 	}	
 	
     public final L addRestListener(RestListener listener) {
@@ -463,11 +485,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//////////////////
 	public void declareBehavior(MsgApp app) {
 		
-		///TODO: if MQTT used setup the server
-		//Pipe<MQTTClientRequestSchema> clientRequest=null;
-		//Pipe<MQTTClientResponseSchema> result = MQTTClientGraphBuilder.buildMQTTClientGraph(gm, clientRequest);
-		//
-		
 		if (builder.isUseNetServer()) {
 		    buildGraphForServer(app);
 		} else {            	
@@ -484,6 +501,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			}
 		}
 		constructingParallelInstancesEnding();
+		
+		//Init bridges
+		
+		int b = bridges.length;
+		while (--b>=0) {
+			((BridgeConfigImpl)bridges[b]).finish(this);
+		}
 	}
 	
 	private void buildGraphForServer(MsgApp app) {

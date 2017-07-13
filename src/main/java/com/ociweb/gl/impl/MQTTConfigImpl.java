@@ -6,7 +6,6 @@ import com.ociweb.gl.api.MQTTWritable;
 import com.ociweb.gl.api.MQTTWriter;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.impl.schema.IngressMessages;
-import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.EgressMQTTStage;
 import com.ociweb.gl.impl.stage.IngressConverter;
@@ -19,8 +18,6 @@ import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeWriter;
-import com.ociweb.pronghorn.stage.route.ReplicatorStage;
-import com.ociweb.pronghorn.stage.test.JSONTap;
 
 public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 
@@ -31,7 +28,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	//
 	private CharSequence user = null;
 	private CharSequence pass = null;
-	//
 	private CharSequence willTopic = null;
 	private MQTTWritable willPayload = null;
 	//
@@ -44,8 +40,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	//
 	private boolean isImmutable;
 	
-	private final Pipe<MQTTClientRequestSchema> clientRequest;
-	private final Pipe<MQTTClientResponseSchema> clientResponse;
+	private Pipe<MQTTClientRequestSchema> clientRequest;
+	private Pipe<MQTTClientResponseSchema> clientResponse;
 	private final long rate;
 	
 	private int subscriptionQoS = 0;
@@ -59,18 +55,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 		this.clientId = clientId;
 		this.builder = builder;
 		this.rate = rate;
-		
-		clientRequest = newClientRequestPipe(MQTTClientRequestSchema.instance.newPipeConfig(maxInFlight, maximumLenghOfVariableLengthFields));
-		clientRequest.initBuffers();
-		
-		clientResponse = MQTTClientResponseSchema.instance.newPipe(maxInFlight, maximumLenghOfVariableLengthFields);
-
-		
-		MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, isTLS, 
-				                              maxInFlight, maximumLenghOfVariableLengthFields, 
-				                              clientRequest, clientResponse, rate);
-	
-		publishBrokerConfig(clientRequest);
 	}
 	
 	
@@ -209,6 +193,18 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 		if (isImmutable) {
 			return;
 		} else {
+			clientRequest = newClientRequestPipe(MQTTClientRequestSchema.instance.newPipeConfig(maxInFlight, maximumLenghOfVariableLengthFields));
+			clientRequest.initBuffers();
+			
+			clientResponse = MQTTClientResponseSchema.instance.newPipe(maxInFlight, maximumLenghOfVariableLengthFields);
+
+			
+			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, isTLS, 
+					                              maxInFlight, maximumLenghOfVariableLengthFields, 
+					                              clientRequest, clientResponse, rate);
+			
+			//send the broker details
+			publishBrokerConfig(clientRequest);
 			//send the connect msg
 			publishConnect(clientRequest);			
 			isImmutable = true;
@@ -240,17 +236,20 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 		return this;
 	}
 
-	private int transmissionTopicCounts;
-	
+	private final int code =  System.identityHashCode(this);
+	private CharSequence[] internalTopics = new CharSequence[0];
+	private CharSequence[] externalTopics = new CharSequence[0];
+	private EgressConverter[] converters = new EgressConverter[0];
+
 	@Override
 	public BridgeConfig addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
 
-		int code =  ++transmissionTopicCounts+System.identityHashCode(this);
 		builder.addStartupSubscription(internalTopic, code);
-		Pipe<MessageSubscription> pubSubPipe = msgRuntime.buildPublishPipe(code);
-	
-		new EgressMQTTStage(builder.gm, pubSubPipe, clientRequest, internalTopic, externalTopic, transmissionFieldQOS, transmissionFieldRetain);
+		
+		internalTopics = grow(internalTopics, internalTopic);
+		externalTopics = grow(externalTopics, externalTopic);
+		converters = grow(converters,EgressMQTTStage.copyConverter);
 			
 		return this;
 	}
@@ -259,14 +258,36 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	public BridgeConfig addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
 		ensureConnected();
 
-		int code =  ++transmissionTopicCounts+System.identityHashCode(this);
 		builder.addStartupSubscription(internalTopic, code);
-		Pipe<MessageSubscription> pubSubPipe = msgRuntime.buildPublishPipe(code);
-	
-		new EgressMQTTStage(builder.gm, pubSubPipe, clientRequest, internalTopic, externalTopic, converter, transmissionFieldQOS, transmissionFieldRetain);
+		
+		internalTopics = grow(internalTopics, internalTopic);
+		externalTopics = grow(externalTopics, externalTopic);
+		converters = grow(converters,converter);
 			
 		return this;
 	}
 
+	private EgressConverter[] grow(EgressConverter[] converters, EgressConverter converter) {
+		
+		int i = converters.length;
+		EgressConverter[] newArray = new EgressConverter[i+1];
+		System.arraycopy(converters, 0, newArray, 0, i);
+		newArray[i] = converter;
+		return newArray;
+	}
+
+
+	private CharSequence[] grow(CharSequence[] topics, CharSequence topic) {
+		
+		int i = topics.length;
+		CharSequence[] newArray = new CharSequence[i+1];
+		System.arraycopy(topics, 0, newArray, 0, i);
+		newArray[i] = topic;
+		return newArray;
+	}
+
+	public void finish(MsgRuntime<?,?> msgRuntime) {
+		new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopics, externalTopics, converters, transmissionFieldQOS, transmissionFieldRetain);
+	}
 
 }
