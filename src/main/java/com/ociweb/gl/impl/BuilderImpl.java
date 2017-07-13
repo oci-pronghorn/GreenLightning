@@ -421,6 +421,13 @@ public class BuilderImpl implements Builder {
 
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
+		int ideal = idealThreadCount();
+		if (threadLimit<=0 && GraphManager.countStages(gm) > 10*ideal) {
+			//do not allow the ThreadPerStageScheduler to be used, we must group
+			threadLimit = idealThreadCount()*4;//this must be large so give them a few more
+			threadLimitHard = true;//must make this a hard limit or we can saturate the system easily.
+		}
+		
 		final StageScheduler scheduler =  threadLimit <= 0 ? new ThreadPerStageScheduler(this.gm): 
 			                                                 new FixedThreadsScheduler(this.gm, this.threadLimit, this.threadLimitHard);
 		
@@ -525,8 +532,12 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public void limitThreads() {
-		this.threadLimit = Runtime.getRuntime().availableProcessors();
+		this.threadLimit = idealThreadCount();
 		this.threadLimitHard = false;
+	}
+
+	private int idealThreadCount() {
+		return Runtime.getRuntime().availableProcessors()*4;
 	}
 
 	public final int parallelism() {

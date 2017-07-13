@@ -111,7 +111,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
        this.subscriptionPipeLookup = subscriptionPipeLookup;
 
        this.currentState = null==hardware.beginningState ? -1 :hardware.beginningState.ordinal();
-       
+
     }
 
     private boolean isPreviousConsumed(int incomingPipeId) {
@@ -359,6 +359,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         //find the next "go" message to be done
         ///////////////////
         super.run();
+
     }
     
     @Override
