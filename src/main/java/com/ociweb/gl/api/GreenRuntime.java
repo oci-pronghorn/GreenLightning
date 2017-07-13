@@ -2,6 +2,7 @@ package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.MessagePubSub;
+import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
@@ -20,12 +21,14 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      
      public GreenCommandChannel newCommandChannel(int features) { 
          
-     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
+     			                                         defaultCommandChannelMaxPayload);
 
      	pcm.addConfig(requestNetConfig);
      	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
      	pcm.addConfig(serverResponseNetConfig);
-     	    	
+     	//pcm.addConfig(100,0,TrafficAckSchema.class);
+     	
      	return this.builder.newCommandChannel(
  				features,
  				parallelInstanceUnderActiveConstruction,
@@ -35,13 +38,15 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
      public GreenCommandChannel newCommandChannel(int features, int customChannelLength, CharSequence ... supportedTopics) { 
         
-     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
+     			                                         defaultCommandChannelMaxPayload);
      	
      	pcm.addConfig(customChannelLength,defaultCommandChannelMaxPayload,MessagePubSub.class);
      	pcm.addConfig(requestNetConfig);
      	pcm.addConfig(customChannelLength,0,TrafficOrderSchema.class);
      	pcm.addConfig(customChannelLength,defaultCommandChannelHTTPResponseMaxPayload,ServerResponseSchema.class);
-     	   	
+     	//pcm.addConfig(100,0,TrafficAckSchema.class);
+     	
          return this.builder.newCommandChannel(
  				features,
  				parallelInstanceUnderActiveConstruction,

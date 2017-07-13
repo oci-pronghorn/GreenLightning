@@ -28,8 +28,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private final Pipe<MessagePubSub>[] incomingSubsAndPubsPipe;
     private final Pipe<MessageSubscription>[] outgoingMessagePipes;
     
-    private static final int estimatedTopicLength = 100;
-    private static final int maxLists = 100; //TODO: make this grow as needed based on growing count of subscriptions.
+    private static final int estimatedTopicLength = 200;
+    private static final int maxLists = 200; //TODO: make this grow as needed based on growing count of subscriptions.
   
     private final int subscriberListSize;
     private short[] subscriberLists;
@@ -111,7 +111,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
        this.subscriptionPipeLookup = subscriptionPipeLookup;
 
        this.currentState = null==hardware.beginningState ? -1 :hardware.beginningState.ordinal();
-       
+
     }
 
     private boolean isPreviousConsumed(int incomingPipeId) {
@@ -134,16 +134,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     	
     	//if this is waiting for an ack send it and clear the value
     	if (pendingAck[incomingPipeId]) {   
-    		//logger.info("sending ack to  {} ",incomingPipeId);
-    		
-//    		if (pendingIngress) {
-//    			//still testing... this is not working...
-//    			PipeReader.releaseReadLock( ingressMessagePipes[pendingReleaseCountIdx]);    			
-//    		} else {
-    			PipeReader.releaseReadLock( incomingSubsAndPubsPipe[incomingPipeId]); 
- //   		}
-    		
-    		
+   			PipeReader.releaseReadLock( incomingSubsAndPubsPipe[incomingPipeId]); 
+   		    		
             decReleaseCount(incomingPipeId);    		
     		
             pendingAck[incomingPipeId] = false;
@@ -172,7 +164,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         
         this.subscriberLists = new short[maxLists*subscriberListSize];   
         
-        logger.info("maximum subscribers per topic {}  maximum topics {} ", subscriberListSize, maxLists);
+        logger.trace("maximum subscribers per topic {}  maximum topics {} ", subscriberListSize, maxLists);
         Arrays.fill(this.subscriberLists, (short)-1);
         this.localSubscriptionTrie = new TrieParser(maxLists * estimatedTopicLength,1,false,true);//must support extraction for wild cards.
 
@@ -367,6 +359,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         //find the next "go" message to be done
         ///////////////////
         super.run();
+
     }
     
     @Override
@@ -386,6 +379,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         
         
         while (isPreviousConsumed(a) && //warning this one has side effect and must come first.
+        	   PipeReader.hasContentToRead(pipe) && //added for performance reasons so we can quit early	
         	   hasReleaseCountRemaining(a) &&
         	   isChannelUnBlocked(a) &&        	   
         	   isNotBlockedByStateChange(pipe) &&        	   
@@ -399,7 +393,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             switch (msgIdx)  {
             	case MessagePubSub.MSG_CHANGESTATE_70:
             		
-            		assert(isA && !isB);
             		//error because we have not yet put the previous change on all the pipes
             		assert(newState==currentState) : "Attempting to process state change before all listeners have been sent the current state change ";
             		//error because the previous change has not been consumed from all the changes
@@ -438,8 +431,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             		break;
                 case MessagePubSub.MSG_PUBLISH_103:
                     {                        
-                    	assert(isB && !isA);
-                    	
+
                         //find which pipes have subscribed to this topic
                         final byte[] backing = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
                         final int pos = PipeReader.readBytesPosition(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
@@ -502,13 +494,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		return listIdx;
 	}
 
-    boolean isA;
-    boolean isB;
     
 	private boolean isNotBlockedByStateChange(Pipe<MessagePubSub> pipe) {
-		isA = PipeReader.peekMsg(pipe,  MessagePubSub.MSG_CHANGESTATE_70);
-		isB = PipeReader.peekMsg(pipe,   MessagePubSub.MSG_PUBLISH_103);
-		
 		return (stateChangeInFlight == -1) || ( !PipeReader.peekMsg(pipe, MessagePubSub.MSG_CHANGESTATE_70));
 	}
 
