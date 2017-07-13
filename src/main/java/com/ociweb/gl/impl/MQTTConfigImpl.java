@@ -219,9 +219,14 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 		Pipe<IngressMessages> ingressPipe = IngressMessages.instance.newPipe(10, 1024);
 
 		new IngressMQTTStage(builder.gm, clientResponse, ingressPipe, externalTopic, internalTopic);
+		
+		
+		PipeWriter.presumeWriteFragment(clientRequest, MQTTClientRequestSchema.MSG_SUBSCRIBE_8);
+		PipeWriter.writeInt(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_QOS_21, subscriptionQoS);
+		PipeWriter.writeUTF8(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_TOPIC_23, externalTopic);
+		PipeWriter.publishWrites(clientRequest);
 
-		MQTTClientRequestSchema.instance.publishSubscribe(clientRequest, subscriptionQoS, externalTopic);
-				
+
 		return this;
 	}
 	
@@ -232,6 +237,11 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 		Pipe<IngressMessages> ingressPipe = IngressMessages.instance.newPipe(10, 1024);
 		
 		new IngressMQTTStage(builder.gm, clientResponse, ingressPipe, externalTopic, internalTopic, converter);
+		
+		PipeWriter.presumeWriteFragment(clientRequest, MQTTClientRequestSchema.MSG_SUBSCRIBE_8);
+		PipeWriter.writeInt(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_QOS_21, subscriptionQoS);
+		PipeWriter.writeUTF8(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_TOPIC_23, externalTopic);
+		PipeWriter.publishWrites(clientRequest);
 		
 		return this;
 	}
