@@ -1,6 +1,8 @@
 package com.ociweb.gl.impl.stage;
 
 import com.ociweb.gl.impl.schema.IngressMessages;
+import com.ociweb.gl.impl.schema.MessageSubscription;
+import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -14,11 +16,12 @@ public class IngressMQTTStage extends PronghornStage {
 
 	private final Pipe<MQTTClientResponseSchema> input;
 	private final Pipe<IngressMessages> output;
-	private final CharSequence externalTopic; 
-	private final CharSequence internalTopic;
-	private final IngressConverter converter;
+	private final CharSequence[] externalTopic; 
+	private final CharSequence[] internalTopic;
+	private final IngressConverter[] converter;
+	private boolean allTopicsMatch;
 	
-	private static final IngressConverter directCopy = new IngressConverter() {		
+	public static final IngressConverter copyConverter = new IngressConverter() {		
 		@Override
 		public void convertData(DataInputBlobReader<?> inputStream,
 								DataOutputBlobWriter<IngressMessages> outputStream) {
@@ -30,22 +33,58 @@ public class IngressMQTTStage extends PronghornStage {
 	};
 		
 	public IngressMQTTStage(GraphManager graphManager, Pipe<MQTTClientResponseSchema> input, Pipe<IngressMessages> output, 
-            CharSequence externalTopic, CharSequence internalTopic) {
-		this(graphManager, input, output, externalTopic, internalTopic, directCopy);
+            CharSequence[] externalTopic, CharSequence[] internalTopic) {
+		this(graphManager, input, output, externalTopic, internalTopic, asArray(copyConverter, internalTopic.length ));
 	}
 	
 	public IngressMQTTStage(GraphManager graphManager, Pipe<MQTTClientResponseSchema> input, Pipe<IngressMessages> output, 
-			                CharSequence externalTopic, CharSequence internalTopic, IngressConverter converter) {
+			                CharSequence[] externalTopic, CharSequence[] internalTopic, IngressConverter[] converter) {
 		
 		super(graphManager, input, output);
 		this.input = input;
 		this.output = output;
 		this.externalTopic = externalTopic;
 		this.internalTopic = internalTopic;
+		this.allTopicsMatch = isMatching(internalTopic,externalTopic,converter);
 		this.converter = converter;
 		
 	}
+	
+	private static IngressConverter[] asArray(IngressConverter copyconverter, int length) {
+		IngressConverter[] array = new IngressConverter[length];
+		while (--length>=0) {
+			array[length] = copyconverter;
+		}
+		return array;
+	}
 
+	private boolean isMatching(CharSequence[] internalTopic, CharSequence[] externalTopic, IngressConverter[] converter) {
+		assert(internalTopic.length == externalTopic.length);
+		int i = internalTopic.length;
+		while (--i>=0) {
+			CharSequence a = internalTopic[i];
+			CharSequence b = externalTopic[i];
+			if (a.length()!=b.length()) {
+				return false;
+			}
+			int j = a.length();
+			while (--j>=0) {
+				if (a.charAt(j)!=b.charAt(j)) {
+					return false;
+				}	
+			}
+		}
+		IngressConverter prototype = converter[0];
+		int k = converter.length;
+		while(--k>=0) {
+			if (prototype!=converter[k]) {
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
 	@Override
 	public void run() {
 	
@@ -54,17 +93,38 @@ public class IngressMQTTStage extends PronghornStage {
 		    int msgIdx = PipeReader.getMsgIdx(input);
 		    switch(msgIdx) {
 		        case MQTTClientResponseSchema.MSG_MESSAGE_3:
-					//int fieldQOS = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_QOS_21);
-					//int fieldRetain = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_RETAIN_22);
-					//int fieldDup = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_DUP_36);
-					
-					boolean isTopic = PipeReader.isEqual(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, externalTopic);
-					assert(isTopic) : "Should only receive messages on this topic";
+			        	
+		        	int i = internalTopic.length;
+		        	if (allTopicsMatch) {
+		        		i = 0;//to select the common converter for all.
+		        		
+						PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
+			        	//direct copy of topic
+			        	DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
+			        	DataOutputBlobWriter.openField(stream);
+			        	PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, stream);
+			        	DataOutputBlobWriter.closeHighLevelField(stream, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+			        	
+			        	assert(isTopic(input, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1));
 
-					
-					PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
-					PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, internalTopic);
-					
+		        	} else {
+			        	boolean topicMatches = false;
+			        	while (--i >= 0) { //TODO: this is very bad, swap out with trie parser instead of linear search
+			        		if (PipeReader.isEqual(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, internalTopic[i])) {
+			        			break;
+			        		}
+			        	}
+			        	assert(topicMatches) : "ERROR, this topic was not known "+PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, new StringBuilder());
+		        		
+						PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
+			        	//direct copy of topic
+			        	DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
+			        	DataOutputBlobWriter.openField(stream);
+			        	PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, stream);
+			        	DataOutputBlobWriter.closeHighLevelField(stream, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+			        			        	
+		        	}		       	
+	
 					//////////////////
 					//copy and convert the data
 					//////////////////
@@ -77,7 +137,7 @@ public class IngressMQTTStage extends PronghornStage {
 					DataOutputBlobWriter<IngressMessages> outputStream = PipeWriter.outputStream(output);
 					DataOutputBlobWriter.openField(outputStream);
 					
-					converter.convertData(inputStream, outputStream);
+					converter[i].convertData(inputStream, outputStream);
 															
 					int length = DataOutputBlobWriter.closeHighLevelField(outputStream, IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 
@@ -108,4 +168,13 @@ public class IngressMQTTStage extends PronghornStage {
 	}
 
 
+	private boolean isTopic(Pipe<MQTTClientResponseSchema> input2, int msgPublish103FieldTopic1) {
+		int i = internalTopic.length;
+		boolean found = false;
+		while (--i>=0) {
+			found |= PipeReader.isEqual(input2, msgPublish103FieldTopic1, internalTopic[i]);
+		}
+		return found;
+	}
+	
 }
