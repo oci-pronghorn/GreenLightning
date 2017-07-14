@@ -24,7 +24,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	private final Pipe<TrafficReleaseSchema>[] goPipe;
 	private final Pipe<TrafficAckSchema>[] ackPipe;
 
-	protected final BuilderImpl hardware;
+	public final BuilderImpl hardware;
 	private Blocker connectionBlocker;
 		
 	protected int[] activeCounts;	
@@ -104,28 +104,6 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 		processReleasedCommands(null==rate ?  100_000 : rate.longValue() );		
 	}
 	
-	
-	protected void blockChannelDuration(int activePipe, long durationNanos) {
-		
-		final long durationMills = durationNanos/1_000_000;
-		final long remaningNanos = durationNanos%1_000_000;		
-			    
-	    if (remaningNanos>0) {
-	    	final long start = hardware.nanoTime();
-	    	final long limit = start+remaningNanos;
-	    	while (hardware.nanoTime()<limit) {
-	    		Thread.yield();
-	    		if (Thread.interrupted()) {
-	    			Thread.currentThread().interrupt();
-	    			return;
-	    		}
-	    	}
-	    }
-	    if (durationMills>0) {
-	    	//now pull the current time and wait until ms have passed
-	    	hardware.blockChannelUntil(( goPipe[activePipe].id ), hardware.currentTimeMillis() + durationMills );
-	    }
-	}
 	
 	protected void blockConnectionDuration(int connection, long durationNanos) {
 		
@@ -273,6 +251,10 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
         return !hardware.isChannelBlocked( goPipe[a].id );
     }
 
+    protected int goPipeId(int a) {
+    	return goPipe[a].id;
+    }
+    
 	protected abstract void processMessagesForPipe(int a);
 
 	private void readNextCount(final int a) {

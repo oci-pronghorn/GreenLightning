@@ -348,6 +348,43 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return aBool.compareAndSet(true, false);
     }
 
+
+    /**
+     * Causes this channel to delay processing any actions until the specified
+     * amount of time has elapsed.
+     *
+     * @param durationNanos Nanos to delay
+     *
+     * @return True if blocking was successful, and false otherwise.
+     */
+    public boolean block(long durationNanos) {
+        assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
+        try {
+            if (goHasRoom()) {
+            	MsgCommandChannel.publishBlockChannel(durationNanos, this);
+                return true;
+            } else {
+                return false;
+            }
+        } finally {
+            assert(exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
+        }
+    }
+
+    public boolean blockUntil(long msTime) {
+        assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
+        try {
+            if (goHasRoom()) {
+            	MsgCommandChannel.publishBlockChannelUntil(msTime, this);
+                return true;
+            } else {
+                return false;
+            }
+        } finally {
+            assert(exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
+        }
+    }
+    
     /**
      * Submits an HTTP GET request asynchronously.
      *
@@ -913,18 +950,19 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return true;
 	}
 
-	public static void publishGo(int count, int pipeIdx, MsgCommandChannel<?> gcc) {
+	public static void publishGo(int count, int pipeIdx, MsgCommandChannel<?> gcc) {				
 		assert(pipeIdx>=0);
-		if(PipeWriter.tryWriteFragment(gcc.goPipe, TrafficOrderSchema.MSG_GO_10)) {                 
-            PipeWriter.writeInt(gcc.goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11, pipeIdx);
-            PipeWriter.writeInt(gcc.goPipe, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12, count);
-            PipeWriter.publishWrites(gcc.goPipe);
-        } else {
-            throw new UnsupportedOperationException("Was already check and should not have run out of space.");
-        }
-		
+		TrafficOrderSchema.publishGo(gcc.goPipe, pipeIdx, count);    
+	}
+	
+	public static void publishBlockChannel(long durationNanos, MsgCommandChannel<?> gcc) {
+		TrafficOrderSchema.publishBlockChannel(gcc.goPipe, durationNanos);
 	}
 
+	public static void publishBlockChannelUntil(long timeMS, MsgCommandChannel<?> gcc) {
+		TrafficOrderSchema.publishBlockChannelUntil(gcc.goPipe, timeMS);
+	}
+	
 	public String[] privateTopics() {
 		return privateTopics;
 	}

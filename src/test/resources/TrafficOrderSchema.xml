@@ -5,5 +5,13 @@
      <uInt32 name="PipeIdx" id="11"/>
      <uInt32 name="Count" id="12"/>
   </template>
-    
+          
+  <template name="BlockChannel" id="22">
+     <uInt64 name="DurationNanos" id="13"/>     
+  </template>
+   
+  <template name="BlockChannelUntil" id="23">
+     <uInt64 name="TimeMS" id="14"/>     
+  </template>  
+  
 </templates>

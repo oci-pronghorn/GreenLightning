@@ -271,7 +271,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		int i = outputPipes.length;
 		
 		while (--i>=0) {
-			Pipe<?> output = outputPipes[i];
+			Pipe<?> output = outputPipes[i];			
 			Pipe.spinBlockForRoom(output, Pipe.EOF_SIZE);
 			Pipe.publishEOF(output);
 		}		

@@ -7,15 +7,16 @@ import com.ociweb.pronghorn.pipe.PipeReader;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
 
-    public final static FieldReferenceOffsetManager FROM = new FieldReferenceOffsetManager(
-            new int[]{0xc0400003,0x80000000,0x80000001,0xc0200003},
-            (short)0,
-            new String[]{"Go","PipeIdx","Count",null},
-            new long[]{10, 11, 12, 0},
-            new String[]{"global",null,null,null},
-            "TrafficOrderSchema.xml",
-            new long[]{2, 2, 0},
-            new int[]{2, 2, 0});
+	public final static FieldReferenceOffsetManager FROM = new FieldReferenceOffsetManager(
+		    new int[]{0xc0400003,0x80000000,0x80000001,0xc0200003,0xc0400002,0x90000000,0xc0200002,0xc0400002,0x90000001,0xc0200002},
+		    (short)0,
+		    new String[]{"Go","PipeIdx","Count",null,"BlockChannel","DurationNanos",null,"BlockChannelUntil",
+		    "TimeMS",null},
+		    new long[]{10, 11, 12, 0, 22, 13, 0, 23, 14, 0},
+		    new String[]{"global",null,null,null,"global",null,null,"global",null,null},
+		    "TrafficOrderSchema.xml",
+		    new long[]{2, 2, 0},
+		    new int[]{2, 2, 0});
     
     public static final TrafficOrderSchema instance = new TrafficOrderSchema();
     
@@ -23,9 +24,13 @@ public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
     	super(FROM);
     }
 
-    public static final int MSG_GO_10 = 0x00000000;
-    public static final int MSG_GO_10_FIELD_PIPEIDX_11 = 0x00000001;
-    public static final int MSG_GO_10_FIELD_COUNT_12 = 0x00000002;
+    public static final int MSG_GO_10 = 0x00000000; //Group/OpenTempl/3
+    public static final int MSG_GO_10_FIELD_PIPEIDX_11 = 0x00000001; //IntegerUnsigned/None/0
+    public static final int MSG_GO_10_FIELD_COUNT_12 = 0x00000002; //IntegerUnsigned/None/1
+    public static final int MSG_BLOCKCHANNEL_22 = 0x00000004; //Group/OpenTempl/2
+    public static final int MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13 = 0x00800001; //LongUnsigned/None/0
+    public static final int MSG_BLOCKCHANNELUNTIL_23 = 0x00000007; //Group/OpenTempl/2
+    public static final int MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14 = 0x00800001; //LongUnsigned/None/1
 
 
     public static void consume(Pipe<TrafficOrderSchema> input) {
@@ -34,6 +39,12 @@ public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
             switch(msgIdx) {
                 case MSG_GO_10:
                     consumeGo(input);
+                break;
+                case MSG_BLOCKCHANNEL_22:
+                    consumeBlockChannel(input);
+                break;
+                case MSG_BLOCKCHANNELUNTIL_23:
+                    consumeBlockChannelUntil(input);
                 break;
                 case -1:
                    //requestShutdown();
@@ -47,11 +58,27 @@ public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
         int fieldPipeIdx = PipeReader.readInt(input,MSG_GO_10_FIELD_PIPEIDX_11);
         int fieldCount = PipeReader.readInt(input,MSG_GO_10_FIELD_COUNT_12);
     }
+    public static void consumeBlockChannel(Pipe<TrafficOrderSchema> input) {
+        long fieldDurationNanos = PipeReader.readLong(input,MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13);
+    }
+    public static void consumeBlockChannelUntil(Pipe<TrafficOrderSchema> input) {
+        long fieldTimeMS = PipeReader.readLong(input,MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14);
+    }
 
     public static void publishGo(Pipe<TrafficOrderSchema> output, int fieldPipeIdx, int fieldCount) {
             PipeWriter.presumeWriteFragment(output, MSG_GO_10);
             PipeWriter.writeInt(output,MSG_GO_10_FIELD_PIPEIDX_11, fieldPipeIdx);
             PipeWriter.writeInt(output,MSG_GO_10_FIELD_COUNT_12, fieldCount);
+            PipeWriter.publishWrites(output);
+    }
+    public static void publishBlockChannel(Pipe<TrafficOrderSchema> output, long fieldDurationNanos) {
+            PipeWriter.presumeWriteFragment(output, MSG_BLOCKCHANNEL_22);
+            PipeWriter.writeLong(output,MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13, fieldDurationNanos);
+            PipeWriter.publishWrites(output);
+    }
+    public static void publishBlockChannelUntil(Pipe<TrafficOrderSchema> output, long fieldTimeMS) {
+            PipeWriter.presumeWriteFragment(output, MSG_BLOCKCHANNELUNTIL_23);
+            PipeWriter.writeLong(output,MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14, fieldTimeMS);
             PipeWriter.publishWrites(output);
     }
         

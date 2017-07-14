@@ -676,7 +676,7 @@ public class BuilderImpl implements Builder {
 			}
 
 			if (hasConnections) {
-				TrafficCopStage trafficCopStage = new TrafficCopStage(gm, timeout, orderPipes[t], ackIn, goOut);
+				TrafficCopStage trafficCopStage = new TrafficCopStage(gm, timeout, orderPipes[t], ackIn, goOut, this);
 			} else {
 				PipeCleanerStage.newInstance(gm, orderPipes[t]);
 			}
@@ -785,6 +785,27 @@ public class BuilderImpl implements Builder {
 	@Override
 	public String[] args() {
 		return args;
+	}
+
+	public void blockChannelDuration(long durationNanos, int pipeId) {
+		final long durationMills = durationNanos/1_000_000;
+		final long remaningNanos = durationNanos%1_000_000;		
+			    
+	    if (remaningNanos>0) {
+	    	final long start = nanoTime();
+	    	final long limit = start+remaningNanos;
+	    	while (nanoTime()<limit) {
+	    		Thread.yield();
+	    		if (Thread.interrupted()) {
+	    			Thread.currentThread().interrupt();
+	    			return;
+	    		}
+	    	}
+	    }
+	    if (durationMills>0) {
+	    	//now pull the current time and wait until ms have passed
+			blockChannelUntil(pipeId, currentTimeMillis() + durationMills );
+	    }
 	}
 
 

@@ -11,8 +11,8 @@ public class MassiveBehavior implements GreenApp {
 	
 	@Override
 	public void declareConfiguration(Builder builder) {
-		builder.setTimerPulseRate(1);//TimeTrigger.OnTheSecond);
-		builder.enableTelemetry();
+		builder.setTimerPulseRate(500);//1);//TimeTrigger.OnTheSecond);
+		//builder.enableTelemetry();
 
 	}
 
@@ -21,7 +21,7 @@ public class MassiveBehavior implements GreenApp {
 		
 		//runtime.addTimePulseListener(new stopperBehavior(runtime));
 		
-		int i = 100;
+		int i = 5;//100;
 		while (--i>=0) {
 			final GreenCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			final String topic = "topic"+i;
@@ -57,6 +57,8 @@ public class MassiveBehavior implements GreenApp {
 				}
 			};
 	
+			runtime.addPubSubListener(subs).addSubscription(topic);
+			
 			
 		}
 	

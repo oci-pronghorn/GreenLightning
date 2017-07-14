@@ -60,7 +60,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private int newState;
     private int stateChangeInFlight = -1;
 
-	private MessagePubSubTrace trace = new MessagePubSubTrace();
+    //TODO: if on watch for special $ topic to turn it on for specific topics..
+    private boolean enableTrace = false;
+	private MessagePubSubTrace pubSubTrace = new MessagePubSubTrace();
     
     /**
      * Provides an eventually consistent state model of events.  It works in the same way as the larger universe.  If a supernova is observed by two planets they may
@@ -114,8 +116,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
        this.currentState = null==hardware.beginningState ? -1 :hardware.beginningState.ordinal();
 
+       
     }
 
+    
+    
+    
     private boolean isPreviousConsumed(int incomingPipeId) {
     	
     	long[] marks = consumedMarks[incomingPipeId];
@@ -165,6 +171,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         pendingAck = new boolean[incomingPipeCount];
         
         this.subscriberLists = new short[maxLists*subscriberListSize];   
+        
         
         logger.trace("maximum subscribers per topic {}  maximum topics {} ", subscriberListSize, maxLists);
         Arrays.fill(this.subscriberLists, (short)-1);
@@ -326,8 +333,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         			
         			if (hasNextSubscriber(listIdx)) {
 		                
-	        	 		trace.init(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-	        					         IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+	        	 		if (enableTrace) {
+	        	 			pubSubTrace.init(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+	        	 										IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+	        	 			logger.info("new message to be routed, {}", pubSubTrace); 
+	        	 		}
 		        		
                     	final int limit = listIdx+subscriberListSize;
                     	for(int j = listIdx; j<limit && hasNextSubscriber(j); j++) {
@@ -340,7 +350,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                     				);
 							
                     	}
-		        		logger.info("new message to be routed, {}", trace);       
                 	}
         			
                     if (pendingPublishCount>0) {
@@ -454,8 +463,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         if (listIdx>=0) {
                         	if (hasNextSubscriber(listIdx)) {
                         		
-                        		trace.init(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+                        		if (enableTrace) {        
+                        			pubSubTrace.init(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
                         				         MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+                        			logger.info("new message to be routed, {}", pubSubTrace);
+                        		}
                         		
 	                        	pendingAck[a] = true; 
 	                        	//logger.info("need pending ack for message on {} ",a);
@@ -467,8 +479,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
 	                        				);                                
 	                        	}
-	                                       
-	                        	logger.info("new message to be routed, {}", trace); 
                         	}
                         	
                         	//Do nothing else until this is completed.
