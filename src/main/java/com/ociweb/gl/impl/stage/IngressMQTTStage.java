@@ -104,13 +104,12 @@ public class IngressMQTTStage extends PronghornStage {
 			        	DataOutputBlobWriter.openField(stream);
 			        	PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, stream);
 			        	DataOutputBlobWriter.closeHighLevelField(stream, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
-			        	
-			        	assert(isTopic(input, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1));
 
 		        	} else {
 			        	boolean topicMatches = false;
 			        	while (--i >= 0) { //TODO: this is very bad, swap out with trie parser instead of linear search
 			        		if (PipeReader.isEqual(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, internalTopic[i])) {
+			        			topicMatches = true;
 			        			break;
 			        		}
 			        	}
@@ -161,20 +160,9 @@ public class IngressMQTTStage extends PronghornStage {
 		        break;
 		    }
 		    PipeReader.releaseReadLock(input);
-		}
-		
-		
+		}			
 		
 	}
 
-
-	private boolean isTopic(Pipe<MQTTClientResponseSchema> input2, int msgPublish103FieldTopic1) {
-		int i = internalTopic.length;
-		boolean found = false;
-		while (--i>=0) {
-			found |= PipeReader.isEqual(input2, msgPublish103FieldTopic1, internalTopic[i]);
-		}
-		return found;
-	}
 	
 }
