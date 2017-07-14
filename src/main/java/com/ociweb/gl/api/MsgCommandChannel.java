@@ -413,12 +413,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the request was successfully submitted, and false otherwise.
      */
     public boolean httpGet(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
-
-    	return httpGet(host, port, route, builder.behaviorId(listener));
-    	
+    	return httpGet(host, port, route, builder.behaviorId(listener)); 	
     }
 
 	public boolean httpGet(CharSequence host, int port, CharSequence route, int behaviorId) {
+		
+		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
                 	    
@@ -464,6 +464,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the request was successfully submitted, and false otherwise.
      */
     public PayloadWriter<ClientHTTPRequestSchema> httpPost(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
+    	
+    	assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
+    	
     	if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
                 	    
     		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, port);
@@ -597,6 +600,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
     public void presumePublishTopic(CharSequence topic, PubSubWritable writable) {
+    	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+    	
     	if (publishTopic(topic, writable)) {
 			return;
 		} else { 
@@ -694,6 +699,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     
     public void presumePublishTopic(TopicWritable topic, PubSubWritable writable) {
+    	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+
     	if (publishTopic(topic, writable)) {
 			return;
 		} else { 
@@ -752,7 +759,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 	public void presumePublishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
-    	if (publishStructuredTopic(topic, writable)) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+
+		if (publishStructuredTopic(topic, writable)) {
 			return;
 		} else { 
 			logger.warn("unable to publish on topic {} must wait.",topic);
@@ -765,6 +774,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean copyStructuredTopic(CharSequence topic, 
     		                           MessageReader reader, 
     		                           MessageConsumer consumer) {
+    	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
     	
     	int pos = reader.absolutePosition();    	
     	if (consumer.process(reader) 
