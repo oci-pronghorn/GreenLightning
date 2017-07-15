@@ -13,6 +13,7 @@ import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.PubSubWritable;
 import com.ociweb.gl.api.PubSubWriter;
 import com.ociweb.gl.api.TimeListener;
+import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.pipe.BlobWriter;
 
 public class MQTTApp implements GreenApp {
@@ -72,7 +73,7 @@ public class MQTTApp implements GreenApp {
 			
 			
 			@Override
-			public boolean message(CharSequence topic, MessageReader payload) {
+			public boolean message(CharSequence topic, BlobReader payload) {
 				
 				System.out.print("\ningress body: ");
 				payload.readUTFOfLength(payload.available(), System.out);
@@ -96,7 +97,7 @@ public class MQTTApp implements GreenApp {
 			
 		PubSubListener localTest = new PubSubListener() {
 			@Override
-			public boolean message(CharSequence topic, MessageReader payload) {
+			public boolean message(CharSequence topic, BlobReader payload) {
 				
 				System.out.println("got topic "+topic+" payload "+payload.readUTF());
 				

@@ -1,5 +1,6 @@
 package com.ociweb.gl.example;
 
+import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.pipe.BlobWriter;
 import com.ociweb.gl.api.*;
 
@@ -50,7 +51,7 @@ public class MassiveBehavior implements GreenApp {
 			
 			PubSubListener subs = new PubSubListener() {
 				
-				public boolean message(CharSequence topic, MessageReader payload) {
+				public boolean message(CharSequence topic, BlobReader payload) {
 					
 					
 					return true;

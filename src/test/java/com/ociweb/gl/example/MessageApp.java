@@ -8,6 +8,7 @@ import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.PubSubStructuredWritable;
 import com.ociweb.gl.api.StartupListener;
+import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.field.BytesFieldProcessor;
 import com.ociweb.pronghorn.util.field.DecimalFieldProcessor;
@@ -149,7 +150,7 @@ public class MessageApp implements GreenApp {
 		PubSubListener listenerA = new PubSubListener() {
 
 			@Override
-			public boolean message(CharSequence topic, MessageReader payload) {
+			public boolean message(CharSequence topic, BlobReader payload) {
 				
 				//if (gccA.copyStructuredTopic(topic, payload, consumer)) {
 				//	//did copy
@@ -175,7 +176,7 @@ public class MessageApp implements GreenApp {
 		PubSubListener listenerB = new PubSubListener() {
 
 			@Override
-			public boolean message(CharSequence topic, MessageReader payload) {
+			public boolean message(CharSequence topic, BlobReader payload) {
 				 if (!shutdown && consumer.process(payload)) {
 				    	return gccB.publishStructuredTopic("A", writable);
 				    } else {

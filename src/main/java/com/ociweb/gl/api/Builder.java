@@ -76,4 +76,7 @@ public interface Builder {
 	void privateTopics(String ... topic);
 	
 	String[] args();
+	
+	Builder useNetClient();
+	
 }

@@ -346,7 +346,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 
 	protected final void consumeNetResponse(HTTPResponseListener listener, Pipe<NetResponseSchema> p) {
-				
+		 assert(null!=ccm) : "must define coordinator";
+		 
     	 while (Pipe.hasContentToRead(p)) {                
              
     		 logger.info("has response to send to HTTP");

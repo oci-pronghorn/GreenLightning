@@ -360,6 +360,9 @@ public class BuilderImpl implements Builder {
 		return this.useNetServer;
 	}
 
+	public final boolean isUseNetClient() {
+		return this.useNetClient;
+	}
 	
 	public final long getTriggerRate() {
 		return timeTriggerRate;

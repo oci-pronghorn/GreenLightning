@@ -419,7 +419,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
 	public boolean httpGet(CharSequence host, int port, CharSequence route, int behaviorId) {
-		
+		assert(builder.isUseNetClient());
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
