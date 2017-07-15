@@ -295,20 +295,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
               int msgIdx = Pipe.takeMsgIdx(p);
     	  
     	      if (HTTPRequestSchema.MSG_RESTREQUEST_300==msgIdx) {
-    	    	  
-    	    	  //logger.info("consumeRestRequest");
-    	    	  
-//    	    	    public static final int MSG_RESTREQUEST_300_FIELD_CHANNELID_21 = 0x00800001;
-//    	    	    public static final int MSG_RESTREQUEST_300_FIELD_SEQUENCE_26 = 0x00400003;
-//    	    	    public static final int MSG_RESTREQUEST_300_FIELD_VERB_23 = 0x00000004;
-//    	    	    public static final int MSG_RESTREQUEST_300_FIELD_PARAMS_32 = 0x01c00005;
-//    	    	    public static final int MSG_RESTREQUEST_300_FIELD_REVISION_24 = 0x00000007;
-//    	    	    public static final int MSG_RESTREQUEST_300_FIELD_REQUESTCONTEXT_25 = 0x00000008; 
-    	    	  
-    	    	  
+    	    	 
     	    	  long connectionId = Pipe.takeLong(p);
-    	    	  int sequenceNo = Pipe.takeInt(p);
-    	    	  
+    	    	  int sequenceNo = Pipe.takeInt(p);    	    	  
     	    	  
     	    	  //both these values are required in order to ensure the right sequence order once processed.
     	    	  long sequenceCode = (((long)parallelIdx)<<32) | ((long)sequenceNo);
@@ -318,9 +307,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  HTTPRequestReader request = (HTTPRequestReader)Pipe.inputStream(p);
     	    	  request.openLowLevelAPIField(); //NOTE: this will take meta then take len
     	        	
-    	    	  
-    	    	  
-    	    	  
     	    	  request.setFieldNameParser(builder.extractionParser(routeId));
     	    	  
  				  request.setHeaderTable(builder.headerToPositionTable(routeId), 
@@ -348,7 +334,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  logger.error("unrecognized message on {} ",p);
     	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);
     	      }
-              
+        
     	      Pipe.confirmLowLevelRead(p, Pipe.sizeOf(p,msgIdx));
               Pipe.releaseReadLock(p);
               
@@ -363,6 +349,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				
     	 while (Pipe.hasContentToRead(p)) {                
              
+    		 logger.info("has response to send to HTTP");
+    		 
     		 Pipe.markTail(p);
     		 
              int msgIdx = Pipe.takeMsgIdx(p);

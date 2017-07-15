@@ -19,6 +19,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.BlobWriter;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class MathUnitSimple implements RestListener {
@@ -39,7 +40,7 @@ public class MathUnitSimple implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeX = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(NetResponseWriter writer, HTTPFieldReader source) {
+			public void fetch(BlobWriter writer, HTTPFieldReader source) {
 				source.getText(fieldA, writer);
 			}
 			
@@ -48,7 +49,7 @@ public class MathUnitSimple implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeY = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(NetResponseWriter writer, HTTPFieldReader source) {
+			public void fetch(BlobWriter writer, HTTPFieldReader source) {
 				source.getText(fieldB, writer);
 			}
 			
@@ -57,7 +58,7 @@ public class MathUnitSimple implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeSum = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(NetResponseWriter writer, HTTPFieldReader source) {
+			public void fetch(BlobWriter writer, HTTPFieldReader source) {
 				Appendables.appendValue(writer, source.getInt(fieldA) +source.getInt(fieldB));	
 			}
 			
@@ -89,7 +90,7 @@ public class MathUnitSimple implements RestListener {
 		NetWritable consume = new NetWritable() {
 
 			@Override
-			public void write(NetResponseWriter writer) {
+			public void write(BlobWriter writer) {
 				template.render(writer, request);
 			}
 			

@@ -1,7 +1,9 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.pipe.BlobWriter;
+
 public interface NetResponseTemplateData<T> {
 
-	void fetch(NetResponseWriter writer, T source);
+	void fetch(BlobWriter writer, T source);
 
 }

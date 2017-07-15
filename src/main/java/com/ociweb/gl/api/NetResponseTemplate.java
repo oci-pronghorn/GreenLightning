@@ -1,5 +1,7 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.pipe.BlobWriter;
+
 public class NetResponseTemplate<T> {
 
 	NetResponseTemplateData[] script;
@@ -27,7 +29,7 @@ public class NetResponseTemplate<T> {
 		append(
 				new NetResponseTemplateData<T>() {
 					@Override
-					public void fetch(NetResponseWriter writer, T source) {
+					public void fetch(BlobWriter writer, T source) {
 						writer.write(byteData);				
 					}					
 				}
@@ -42,7 +44,7 @@ public class NetResponseTemplate<T> {
 		return this;
 	}
 	
-    public void render(NetResponseWriter writer, T source) {
+    public void render(BlobWriter writer, T source) {
     	
     	for(int i=0;i<count;i++) {
     		script[i].fetch(writer,source);
