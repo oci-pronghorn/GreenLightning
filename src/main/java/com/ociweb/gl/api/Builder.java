@@ -32,8 +32,6 @@ public interface Builder {
      * @return A reference to this hardware instance.
      */
     Builder setTimerPulseRate(long rateInMS);
-    @Deprecated
-    Builder setTriggerRate(long rateInMS);
 
     /**
      * Sets the trigger rate of events on this hardware.
@@ -43,9 +41,7 @@ public interface Builder {
      * @return A reference to this hardware instance.
      */
     Builder setTimerPulseRate(TimeTrigger trigger);
-    @Deprecated
-    Builder setTriggerRate(TimeTrigger trigger);
-    
+
 
     
     void limitThreads(int threadLimit);
@@ -63,9 +59,6 @@ public interface Builder {
 	void enableServer(int bindPort);
 	
 	void enableTelemetry();
-	
-	@Deprecated
-	void enableTelemetry(boolean value);
 	
 	void setDefaultRate(long ns);
 	

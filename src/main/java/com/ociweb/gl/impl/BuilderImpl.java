@@ -317,24 +317,14 @@ public class BuilderImpl implements Builder {
 	}
 
 	public final <E extends Enum<E>> Builder startStateMachineWith(E state) {   	
-		beginningState = state;	
+		beginningState = state;
 		return this;
-	}
-
-	@Deprecated
-	public final Builder setTriggerRate(long rateInMS) {
-		return setTimerPulseRate(rateInMS);
 	}
 	
 	public final Builder setTimerPulseRate(long rateInMS) {
 		timeTriggerRate = rateInMS;
 		timeTriggerStart = System.currentTimeMillis()+rateInMS;
 		return this;
-	}
-	
-	@Deprecated
-	public final Builder setTriggerRate(TimeTrigger trigger) {
-		return setTimerPulseRate(trigger);
 	}
 	
 	public final Builder setTimerPulseRate(TimeTrigger trigger) {	
@@ -600,12 +590,6 @@ public class BuilderImpl implements Builder {
 
 	public final boolean isTelemetryEnabled() {
 		return isTelemetryEnabled;
-	}
-
-	@Override
-	public void enableTelemetry(boolean enable) {
-		//TODO: this must be fixed because it eliminates the ability to remove this from the code...
-		isTelemetryEnabled = enable;
 	}
 
 	@Override

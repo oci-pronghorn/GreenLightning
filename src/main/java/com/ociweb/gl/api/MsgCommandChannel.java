@@ -38,6 +38,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     private Pipe<ClientHTTPRequestSchema> httpRequest;
     private Pipe<ServerResponseSchema>[] netResponse;
     private Pipe<MessagePubSub>[] exclusivePubSub;
+    
+    private static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
        
     private int lastResponseWriterFinished = 1;//starting in the "end" state
     
@@ -946,7 +948,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		
 		if (0 == lastResponseWriterFinished) {
 			// for chunking we must end this block			
-			outputStream.write(AbstractAppendablePayloadResponseStage.RETURN_NEWLINE);
+			outputStream.write(RETURN_NEWLINE);
 		}
 		
 		outputStream.publishWithHeader(block1HeaderBlobPosition, block1PositionOfLen); //closeLowLevelField and publish 
@@ -1027,7 +1029,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		
 		writable.write(outputStream); 
 		//this is not the end of the data so we must close this block
-		outputStream.write(AbstractAppendablePayloadResponseStage.RETURN_NEWLINE);
+		outputStream.write(RETURN_NEWLINE);
 		
 		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);		
 

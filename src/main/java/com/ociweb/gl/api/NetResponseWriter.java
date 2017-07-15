@@ -21,6 +21,8 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     public int statusCode;
     private HTTPContentTypeDefaults contentType;
     
+    private static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
+    
     public NetResponseWriter(Pipe<ServerResponseSchema> p) {    	
     	super(p);
     }
@@ -72,7 +74,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
         final int adj = 2+(5*(1&(context>>ServerCoordinator.END_RESPONSE_SHIFT))); 	
         
     	Appendables.appendHexDigitsRaw(outputStream, len-adj);
-    	outputStream.write(AbstractRestStage.RETURN_NEWLINE);
+    	outputStream.write(RETURN_NEWLINE);
     	
 		int propperLength = DataOutputBlobWriter.length(outputStream);
 		Pipe.validateVarLength(outputStream.getPipe(), propperLength);

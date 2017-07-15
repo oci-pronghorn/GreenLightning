@@ -36,8 +36,8 @@ public class MQTTApp implements GreenApp {
 							.subscriptionQoS(2) //TODO: do tests for will and retain 
 							.keepAliveSeconds(10); //TODO: test with 2 seconds or less to make pings go.
 		
-		builder.setTriggerRate(1000); //TODO: bump this up so we can test pings.
-		builder.enableTelemetry(true); //TODO: we see no MQTT in the graph..
+		builder.setTimerPulseRate(1000); //TODO: bump this up so we can test pings.
+		builder.enableTelemetry(); //TODO: we see no MQTT in the graph..
 				
 	}
 
