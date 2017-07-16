@@ -14,14 +14,14 @@ public interface HTTPResponseListener extends Behavior {
 
     /**
      * Invoked when an HTTP response is received by this listener.
-     *
-     * @param host Host the response was received from.
-     * @param port Port the response was received from.
+     * 
      * @param statusCode Status code of the response. -1 indicates
      *                   the network connection was lost.
-     * @param type {@link HTTPContentType} of the response.
+     *                   if the status code is 0 this is a continuation.
+     * @param type {@link HTTPContentType} of the response, will be null for continuation
      * @param reader {@link PayloadReader} for the response body.
      */
-	boolean responseHTTP(CharSequence host, int port, short statusCode, HTTPContentType type, HTTPResponseReader reader);
+	boolean responseHTTP(short statusCode, HTTPContentType type, HTTPResponseReader reader);
+	
 
 }

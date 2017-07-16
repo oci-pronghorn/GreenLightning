@@ -1,20 +1,13 @@
 package com.ociweb.gl.impl;
 
-import java.io.IOException;
-
-import com.ociweb.gl.api.FieldReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.util.Appendables;
-import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
-import com.ociweb.pronghorn.util.math.Decimal;
 
-public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobReader<S> implements FieldReader{
+public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobReader<S> {
 
-	private TrieParser extractionParser;
 	private TrieParserReader reader = new TrieParserReader(true);
 	private int limit = -1;
 	
@@ -23,7 +16,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
     }
 	
 
-    private static <S extends MessageSchema<S>> void checkLimit(PayloadReader<S> that, int min) {
+    protected static <S extends MessageSchema<S>> void checkLimit(PayloadReader<S> that, int min) {
     	if ( (that.position+min) > that.limit ) {
     		throw new RuntimeException("Read attempted beyond the end of the field data");
     	}
@@ -43,303 +36,27 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		limit = len + position;
 		return len;
 	}
-	
-	public void setFieldNameParser(TrieParser extractionParser) {
-		this.extractionParser = extractionParser;
-	}
 
 	private int fieldIdx(long fieldId) {
 		return (int)fieldId & 0xFFFF;
 	}
 
-	private int fieldType(long fieldId) {
+	protected int fieldType(long fieldId) {
 		return (((int)fieldId)>>16) & 0xFF;
 	}
 
-	private int computePosition(long fieldId) {
+	protected int computePosition(long fieldId) {
 		assert(fieldId>=0) : "check field name, it does not match any found field";
 		//jump to end and index backwards to find data position
 		return readFromEndLastInt(fieldIdx(fieldId));		
 	}
 	
-	private int computePositionSecond(long fieldId) {
+	protected int computePositionSecond(long fieldId) {
 		assert(fieldId>=0) : "check field name, it does not match any found field";
 		//jump to end and index backwards to find data position
 		return readFromEndLastInt(1+fieldIdx(fieldId));		
 	}
 
-	public long getFieldId(byte[] fieldName) {
-		long id = reader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
-		if (id<0) {
-			throw new UnsupportedOperationException("unknown field name '"+new String(fieldName)+"'");
-		}
-		return id;
-	}
-	
-	public long getLong(byte[] fieldName) {
-		return getLong(getFieldId(fieldName));		
-	}
-
-	public int getInt(byte[] fieldName) {
-		return (int)getLong(getFieldId(fieldName));		
-	}
-	
-	public int getInt(int fieldName) {
-		return (int)getLong(fieldName);		
-	}
-	
-	public short getShort(byte[] fieldName) {
-		return (short)getLong(getFieldId(fieldName));		
-	}
-	
-	public short getShort(int fieldName) {
-		return (short)getLong(fieldName);		
-	}
-	
-	public byte getByte(byte[] fieldName) {
-		return (byte)getLong(getFieldId(fieldName));		
-	}
-	
-	public byte getByte(int fieldName) {
-		return (byte)getLong(fieldName);		
-	}
-	
-	@SuppressWarnings("unchecked")
-	public long getLong(long fieldId) {
-		
-		setPositionBytesFromStart(computePosition(fieldId));
-		
-		checkLimit(this,1);
-		
-		int type = fieldType(fieldId);
-		if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
-			return DataInputBlobReader.readPackedLong(this);			
-		} else if (type == TrieParser.ESCAPE_CMD_BYTES) {
-			return DataInputBlobReader.readUTFAsLong(this);
-		} else if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			long numerator = DataInputBlobReader.readPackedLong(this);
-			long denominator = DataInputBlobReader.readPackedLong(this);
-			return numerator/denominator;
-		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
-			return readDecimalAsLong();
-		}
-		throw new UnsupportedOperationException("unknown type "+type);
-	}
-	
-	public long getLongDirect(long fieldId) {
-		assert(TrieParser.ESCAPE_CMD_SIGNED_INT == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,1);
-		return DataInputBlobReader.readPackedLong(this);
-	}
-	
-	public double getDoubleDirect(long fieldId) {
-		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,2);
-		return Decimal.asDouble(readPackedLong(this), readByte());
-	}
-	
-	public <A extends Appendable> A getTextDirect(long fieldId, A appendable) {
-		assert(TrieParser.ESCAPE_CMD_BYTES == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));	
-		checkLimit(this,2);
-		readUTF(appendable);
-		return appendable;
-	}
-		
-	public long getRationalNumeratorDirect(byte[] fieldName) {
-		return getRationalNumeratorDirect(getFieldId(fieldName));		
-	}
-	
-	public long getRationalNumeratorDirect(long fieldId) {
-		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,1);
-		return DataInputBlobReader.readPackedLong(this);
-	}
-	
-	public long getRationalDenominatorDirect(byte[] fieldName) {
-		return getRationalDenominatorDirect(getFieldId(fieldName));		
-	}
-	
-	public long getRationalDenominatorDirect(long fieldId) {		
-		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePositionSecond(fieldId));
-		checkLimit(this,1);
-		return DataInputBlobReader.readPackedLong(this);
-	}
-	
-	public long getDecimalMantissaDirect(byte[] fieldName) {
-		return getDecimalMantissaDirect(getFieldId(fieldName));		
-	}
-	
-	public long getDecimalMantissaDirect(long fieldId) {
-		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,1);
-		return DataInputBlobReader.readPackedLong(this);
-	}
-	
-	public byte getDecimalExponentDirect(byte[] fieldName) {
-		return (byte)getDecimalExponentDirect(getFieldId(fieldName));		
-	}
-	
-	public byte getDecimalExponentDirect(long fieldId) {
-		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePositionSecond(fieldId));
-		checkLimit(this,1);
-		return readByte();
-	}
-	
-	public double getDouble(byte[] fieldName) {
-		return getDouble(getFieldId(fieldName));		
-	}
-	
-	@SuppressWarnings("unchecked")
-	public double getDouble(long fieldId) {
-		
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,1);
-		
-		int type = fieldType(fieldId);
-		if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
-			return readDecimalAsDouble();
-		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
-			return (double)DataInputBlobReader.readPackedLong(this);			
-		} else if (type == TrieParser.ESCAPE_CMD_BYTES) {
-			return DataInputBlobReader.readUTFAsDecimal(this);
-		} else if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			double numerator = DataInputBlobReader.readPackedLong(this);
-			double denominator = DataInputBlobReader.readPackedLong(this);
-			return numerator/denominator;
-		} 
-		throw new UnsupportedOperationException("unknown type "+type+" field "+Long.toHexString(fieldId));
-	}
-	
-	public long getRationalNumerator(byte[] fieldName) {
-		return getRationalNumerator(getFieldId(fieldName));		
-	}
-		
-	@SuppressWarnings("unchecked")
-	public long getRationalNumerator(long fieldId) {
-		
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,1);
-		
-		int type = fieldType(fieldId);
-		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			return DataInputBlobReader.readPackedLong(this);
-		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
-			long m = readPackedLong(); 
-			byte e = readByte();
-			return e<0 ? m : Decimal.asLong(m, e);
-		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
-			return DataInputBlobReader.readPackedLong(this);			
-		} else if (type == TrieParser.ESCAPE_CMD_BYTES) {
-			return DataInputBlobReader.readUTFAsLong(this);
-		} 
-		throw new UnsupportedOperationException("unknown type "+type);
-	}
-	
-	public long getRationalDenominator(byte[] fieldName) {
-		return getRationalDenominator(getFieldId(fieldName));		
-	}
-
-	@SuppressWarnings("unchecked")
-	public long getRationalDenominator(long fieldId) {
-				
-		int type = fieldType(fieldId);
-		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			setPositionBytesFromStart(computePositionSecond(fieldId));
-			checkLimit(this,1);
-			return DataInputBlobReader.readPackedLong(this);
-		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
-			setPositionBytesFromStart(computePosition(fieldId));
-			checkLimit(this,1);
-			DataInputBlobReader.readPackedLong(this); 
-			byte e = readByte();
-			return e<0 ? (long)(1d/Decimal.powdi[64 - e]) : 1;
-		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
-			return 1;			
-		} else if (type == TrieParser.ESCAPE_CMD_BYTES) {
-			return 1;
-		} 
-		throw new UnsupportedOperationException("unknown type "+type);
-	}
-	
-	public <A extends Appendable> A getText(byte[] fieldName, A appendable) {
-		return getText(getFieldId(fieldName),appendable);		
-	}
-	
-	@SuppressWarnings("unchecked")
-	public <A extends Appendable> A getText(long fieldId, A appendable) {
-		
-		if (fieldId<0) {
-			throw new UnsupportedOperationException("unknown field name");
-		}
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,2);
-		
-		int type = fieldType(fieldId);
-		if (type == TrieParser.ESCAPE_CMD_BYTES) {
-			readUTF(appendable);
-			return appendable;
-		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
-			Appendables.appendValue(appendable, readPackedLong());
-			return appendable;			
-		} else if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			long numerator = DataInputBlobReader.readPackedLong(this);
-			long denominator = DataInputBlobReader.readPackedLong(this);
-			Appendables.appendValue(Appendables.appendValue(appendable, numerator),"/",denominator);	
-			return appendable;
-		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
-			long m = DataInputBlobReader.readPackedLong(this); 
-			byte e = readByte();
-			Appendables.appendDecimalValue(appendable, m, e);
-			return appendable;
-		}
-		throw new UnsupportedOperationException("unknown type "+type);
-	}
-
-	@Override
-	public boolean isEqual(byte[] fieldName, byte[] equalText) {
-		return isEqual(getFieldId(fieldName),equalText);
-	}
-
-	@Override
-	public boolean isEqual(long fieldId, byte[] equalText) {
-		
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,2);
-		
-		int type = fieldType(fieldId);
-		if (type == TrieParser.ESCAPE_CMD_BYTES) {
-			return equalUTF(equalText);
-		}
-		throw new UnsupportedOperationException("unsupported type "+type);
-	}
-
-
-
-	@Override
-	public long trieText(byte[] fieldName, TrieParserReader reader, TrieParser trie) {
-		return trieText(getFieldId(fieldName),reader,trie);
-	}
-
-	@Override
-	public long trieText(long fieldId, TrieParserReader reader, TrieParser trie) {
-
-		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,2);
-		
-		int type = fieldType(fieldId);
-		if (type == TrieParser.ESCAPE_CMD_BYTES) {			
-			int length = readShort();
-			return parse(reader, trie, length);
-		}
-		throw new UnsupportedOperationException("unsupported type "+type);
-	}
 
 	/////////////////////
 

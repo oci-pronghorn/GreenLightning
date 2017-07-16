@@ -112,7 +112,9 @@ public class BuilderImpl implements Builder {
 	private String bindHost = null;
 	private int bindPort = -1;
 	private boolean isLarge = false;
-	private boolean isTLS = true; 
+	private boolean isTLSServer = true; 
+	private boolean isTLSClient = true; 
+		
 	private boolean isTelemetryEnabled = false;
 	
 	//TODO: set these vales when we turn on the client usage??
@@ -166,9 +168,14 @@ public class BuilderImpl implements Builder {
 		return isLarge;
 	}
 	
-	public final boolean isTLS() {
-		return isTLS;
+	public final boolean isServerTLS() {
+		return isTLSServer;
 	}
+	
+	public final boolean isClientTLS() {
+		return isTLSClient;
+	}
+	
 	
 	public final String bindHost() {
 		return bindHost;
@@ -181,7 +188,7 @@ public class BuilderImpl implements Builder {
     public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
     	
     	this.useNetServer();
-    	this.isTLS = isTLS;
+    	this.isTLSServer = isTLS;
     	this.isLarge = isLarge;
     	this.bindHost = bindHost;
     	this.bindPort = bindPort;
@@ -338,6 +345,12 @@ public class BuilderImpl implements Builder {
 
 	public final Builder useNetClient() {
 		this.useNetClient = true;
+		return this;
+	}
+	
+	public final Builder useInsecureNetClient() {
+		this.useNetClient = true;
+		this.isTLSClient = false;
 		return this;
 	}
 
@@ -547,7 +560,7 @@ public class BuilderImpl implements Builder {
 	
 	@Override
 	public long fieldId(int routeId, byte[] fieldName) {	
-		return TrieParserReader.query(localReader, this.extractionParser(routeId), fieldName, 0, fieldName.length, Integer.MAX_VALUE);
+		return TrieParserReader.query(localReader, this.routeExtractionParser(routeId), fieldName, 0, fieldName.length, Integer.MAX_VALUE);
 	}
 		
 	@Override
@@ -555,19 +568,19 @@ public class BuilderImpl implements Builder {
 		return routerConfig.registerRoute(route, headers);
 	}
 
-	public final TrieParser extractionParser(int route) {
+	public final TrieParser routeExtractionParser(int route) {
 		return routerConfig.extractionParser(route).getRuntimeParser();
 	}
 	
-	public final int extractionParserIndexCount(int route) {
+	public final int routeExtractionParserIndexCount(int route) {
 		return routerConfig.extractionParser(route).getIndexCount();
 	}
 	
-	public IntHashTable headerToPositionTable(int routeId) {
+	public IntHashTable routeHeaderToPositionTable(int routeId) {
 		return routerConfig.headerToPositionTable(routeId);
 	}
 	
-	public TrieParser headerTrieParser(int routeId) {
+	public TrieParser routeHeaderTrieParser(int routeId) {
 		return routerConfig.headerTrieParser(routeId);
 	}
 
@@ -674,11 +687,37 @@ public class BuilderImpl implements Builder {
 		
 		initChannelBlocker(maxGoPipeId);
 		
+		buildHTTPClientGraph(netPipeLookup2, netResponsePipes, netRequestPipes, masterGoOut, masterAckIn);
 		
+		/////////
+		//always create the pub sub and state management stage?
+		/////////
+		//TODO: only create when subscriptionPipeLookup is not empty and subscriptionPipes has zero length.
+		if (IDX_MSG<0) {
+			logger.trace("saved some resources by not starting up the unused pub sub service.");
+		} else {
+			//logger.info("builder created pub sub");
+		 	createMessagePubSubStage(subscriptionPipeLookup2, ingressMessagePipes, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
+		}
+	}
+
+	protected void buildHTTPClientGraph(IntHashTable netPipeLookup2, Pipe<NetResponseSchema>[] netResponsePipes,
+			Pipe<ClientHTTPRequestSchema>[] netRequestPipes, Pipe<TrafficReleaseSchema>[][] masterGoOut,
+			Pipe<TrafficAckSchema>[][] masterAckIn) {
 		////////
 		//create the network client stages
 		////////
 		if (useNetClient(netPipeLookup2, netResponsePipes, netRequestPipes)) {
+			
+			int connectionsInBits=10;			
+			int maxPartialResponses=4;
+			boolean isTLS = isClientTLS();
+			int responseQueue = 10;
+			int responseSize = 1<<16;
+			int outputsCount = 1;
+			int requestQueue = 4;
+			int requestSize = 1<<15; //must be no smaller than 32K to ensure TLS works.
+			
 			
 			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
 				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+masterAckIn[IDX_NET].length);
@@ -690,19 +729,12 @@ public class BuilderImpl implements Builder {
 			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
 			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
 			
-				
-			PipeConfig<NetPayloadSchema> clientNetRequestConfig = new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,4,16000); 		
+			
+			PipeConfig<NetPayloadSchema> clientNetRequestConfig = new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,requestQueue,requestSize); 		
 		
 			//BUILD GRAPH
-			
-			int connectionsInBits=10;			
-			int maxPartialResponses=4;
-			boolean isTLS = true;
 			ClientCoordinator ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
 		
-			//TODO: tie this in tonight.
-			int inputsCount = 1;
-			int outputsCount = 1;
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;
 			while (--r>=0) {
@@ -710,19 +742,11 @@ public class BuilderImpl implements Builder {
 			}
 			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
 						
-			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, netPipeLookup2, 10, 1<<15, clientRequests, netResponsePipes);
+
+			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, 
+					netPipeLookup2, responseQueue, 
+					responseSize, clientRequests, netResponsePipes);
 						
-		}
-		
-		/////////
-		//always create the pub sub and state management stage?
-		/////////
-		//TODO: only create when subscriptionPipeLookup is not empty and subscriptionPipes has zero length.
-		if (IDX_MSG<0) {
-			logger.trace("saved some resources by not starting up the unused pub sub service.");
-		} else {
-			//logger.info("builder created pub sub");
-		 	createMessagePubSubStage(subscriptionPipeLookup2, ingressMessagePipes, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
 		}
 	}
 

@@ -1,5 +1,6 @@
 package com.ociweb.gl.impl.stage;
 
+import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -31,9 +32,12 @@ import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeReader;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
+import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import com.ociweb.pronghorn.util.TrieParser;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage implements ListenerFilter {
 
@@ -248,11 +252,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
             	consumePubSubMessage(listener, (Pipe<MessageSubscription>) localPipe);
             	
             } else if (Pipe.isForSchema((Pipe<NetResponseSchema>)localPipe, NetResponseSchema.class)) {
-     
+               //new HTTP responses from queries earlier	
                consumeNetResponse((HTTPResponseListener)listener, (Pipe<NetResponseSchema>) localPipe);
             
             } else if (Pipe.isForSchema((Pipe<HTTPRequestSchema>)localPipe, HTTPRequestSchema.class)) {
-            	
+            	//new HTTP requests for the server
             	consumeRestRequest((RestListener)listener, (Pipe<HTTPRequestSchema>) localPipe, routeIds[p], parallelIds[p]);
             
             } else {
@@ -290,8 +294,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
     	  while (Pipe.hasContentToRead(p)) {                
               
-    		  Pipe.markTail(p);
-             
+    		  Pipe.markTail(p);             
               int msgIdx = Pipe.takeMsgIdx(p);
     	  
     	      if (HTTPRequestSchema.MSG_RESTREQUEST_300==msgIdx) {
@@ -304,32 +307,30 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  
     	    	  int verbId = Pipe.takeInt(p);
     	    	      	    	  
-    	    	  HTTPRequestReader request = (HTTPRequestReader)Pipe.inputStream(p);
-    	    	  request.openLowLevelAPIField(); //NOTE: this will take meta then take len
-    	        	
-    	    	  request.setFieldNameParser(builder.extractionParser(routeId));
-    	    	  
- 				  request.setHeaderTable(builder.headerToPositionTable(routeId), 
- 						                 builder.extractionParserIndexCount(routeId),
- 						                 builder.headerTrieParser(routeId)
+    	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.inputStream(p);
+    	    	  reader.openLowLevelAPIField(); //NOTE: this will take meta then take len
+    	        	    	    	  
+ 				  reader.setParseDetails( builder.routeExtractionParser(routeId),
+ 						                  builder.routeHeaderToPositionTable(routeId), 
+ 						                  builder.routeExtractionParserIndexCount(routeId),
+ 						                  builder.routeHeaderTrieParser(routeId)
  						                 );
  				  
-    	    	  request.setRevisionId(Pipe.takeInt(p));
-    	    	  request.setRequestContext(Pipe.takeInt(p));
-    	    	  
-    	    	  request.setRouteId(routeId);
-    	    	  request.setConnectionId(connectionId, sequenceCode);
+    	    	  reader.setRevisionId(Pipe.takeInt(p));
+    	    	  reader.setRequestContext(Pipe.takeInt(p));    	    	  
+    	    	  reader.setRouteId(routeId);
+    	    	  reader.setConnectionId(connectionId, sequenceCode);
     	    	  
     	    	  //assign verbs as strings...
-    	    	  request.setVerb((HTTPVerbDefaults)httpSpec.verbs[verbId]);
+    	    	  reader.setVerb((HTTPVerbDefaults)httpSpec.verbs[verbId]);
  			
-    	    	  if (!listener.restRequest(request)) {
+    	    	  if (!listener.restRequest(reader)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	              }
-             	  
-             	 request.setFieldNameParser(null);//just for safety
-             	 
+             	      
+    	    	  reader.setParseDetails(null,null,0,null);//just to be safe.
+    	      
     	      } else {
     	    	  logger.error("unrecognized message on {} ",p);
     	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);
@@ -350,66 +351,80 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		 
     	 while (Pipe.hasContentToRead(p)) {                
              
-    		 logger.info("has response to send to HTTP");
-    		 
-    		 Pipe.markTail(p);
+       		 Pipe.markTail(p);
     		 
              int msgIdx = Pipe.takeMsgIdx(p);
+             
+             //logger.info("response from HTTP request. Type is {} ",msgIdx);
+             
              switch (msgIdx) {
 	             case NetResponseSchema.MSG_RESPONSE_101:
-	            	 
-	            	// logger.info("consumeNetResponse");
-	            	 
-	//            	    public static final int MSG_RESPONSE_101 = 0x00000000;
-	//            	    public static final int MSG_RESPONSE_101_FIELD_CONNECTIONID_1 = 0x00800001;
-	//            	    public static final int MSG_RESPONSE_101_FIELD_PAYLOAD_3 = 0x01c00003;
-	            	 
+
 	            	 long ccId1 = Pipe.takeLong(p);
-	            	 ClientConnection cc = (ClientConnection)ccm.get(ccId1);
+	            	 //ClientConnection cc = (ClientConnection)ccm.get(ccId1);
 	            	 
-	            	 if (null!=cc) {
-	            		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
-		            	 reader.openLowLevelAPIField();
-		            	 
-		            	 short statusId = reader.readShort();	
-		            	 short typeHeader = reader.readShort();
-		            	 short typeId = 0;
-		            	 if (6==typeHeader) {//may not have type
-		            		 assert(6==typeHeader) : "should be 6 was "+typeHeader;
-		            		 typeId = reader.readShort();	            	 
-		            		 short headerEnd = reader.readShort();
-		            		 assert(-1==headerEnd) : "header end should be -1 was "+headerEnd;
-		            	 } else {
-		            		 assert(-1==typeHeader) : "header end should be -1 was "+typeHeader;
-		            	 }
-		           
-		            	 
-		            	 //Keep   host, port,  statusId, typeId, reader
-		            	 
-		            	 
-		            	 boolean isDone = listener.responseHTTP(cc.getHost(), cc.getPort(), statusId, (HTTPContentType)httpSpec.contentTypes[typeId], reader);            	 
-		            	 if (!isDone) {
-		            		 Pipe.resetTail(p);
-		            		 return;//continue later and repeat this same value.
-		            	 }
-	            	             	 
-	            	 } //else do not send, wait for closed message
+            		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
+	            	 reader.openLowLevelAPIField();
+	            	 final short statusId = reader.readShort();	
+	            	 
+	            	 ////////////////
+	            	 //TODO: this parsing is a big mess
+	            	 //////////////
+	            	 
+	            	 //Must walk all headers and put indexes into hashtable
+	            	 //must also extract type	            	 	            	 
+	            	 short typeHeader = reader.readShort();
+	            	 short typeId = 0;
+	            	 if (6==typeHeader) {//may not have type
+	            		 assert(6==typeHeader) : "should be 6 was "+typeHeader;
+	            		 typeId = reader.readShort();	            	 
+	            		 short headerEnd = reader.readShort();
+	            		 assert(-1==headerEnd) : "header end should be -1 was "+headerEnd;
+	            	 } else {
+	            		 assert(-1==typeHeader) : "header end should be -1 was "+typeHeader;
+	            	 }
+	           	     //built here       	 
+//				     IntHashTable headerToPositionTable; //lookup position of header from index
+//				     
+//				     //build once
+//				     TrieParser headerTrieParser; //lookup index of header from string bytes
+//				
+//				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
+//		   
+//					  
+	            	 //////////////////
+	            	 //end of the big mess
+	            	 //////////////////
+	            	 
+	            	 
+	            	 if (!listener.responseHTTP( statusId, 
+		            			                 (HTTPContentType)httpSpec.contentTypes[typeId],
+		            			                 reader)) {
+	            		 Pipe.resetTail(p);
+	            		 return;//continue later and repeat this same value.
+	            	 }
+	            
+	            	 //TODO: application layer can not know that the response is complete or we will have a continuation...
+	            	 break;
+	             case NetResponseSchema.MSG_CONTINUATION_102:
+	            	 long fieldConnectionId = Pipe.takeLong(p);
+            		 HTTPResponseReader continuation = (HTTPResponseReader)Pipe.inputStream(p);
+            		 continuation.openLowLevelAPIField();
+	            	 
+	            	 if (!listener.responseHTTP((short)0,(HTTPContentType)null,continuation)) {
+						 Pipe.resetTail(p);
+						 return;//continue later and repeat this same value.
+					 }
+            		 
 	            	 break;
 	             case NetResponseSchema.MSG_CLOSED_10:
+
+	            	 HTTPResponseReader hostReader = (HTTPResponseReader)Pipe.inputStream(p);
+	            	 hostReader.openLowLevelAPIField();
 	            	 
-	//            	    public static final int MSG_CLOSED_10 = 0x00000004;
-	//            	    public static final int MSG_CLOSED_10_FIELD_HOST_4 = 0x01400001;
-	//            	    public static final int MSG_CLOSED_10_FIELD_PORT_5 = 0x00000003;
-	            	 
-	            	 workspaceHost.setLength(0);
-	            	 int meta = Pipe.takeRingByteMetaData(p);
-	            	 int len = Pipe.takeRingByteLen(p);
-	            	 Pipe.readUTF8(p, workspaceHost, meta, len);
-	            	 
-	            	 int port = Pipe.takeInt(p);
-					
-	            	 boolean isDone = listener.responseHTTP(workspaceHost,port,(short)-1,null,null);    
-	            	 if (!isDone) {
+	            	 int port = Pipe.takeInt(p);//the caller does not care which port we were on.
+					   
+	            	 if (!listener.responseHTTP((short)-1,null,hostReader)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	            	 }	            	 
@@ -428,13 +443,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	
 	}
 
-	
-//	public static final int MSG_PUBLISH_103 = 0x00000000;
-//	public static final int MSG_PUBLISH_103_FIELD_TOPIC_1 = 0x01400001;
-//	public static final int MSG_PUBLISH_103_FIELD_PAYLOAD_3 = 0x01C00003;
-//	public static final int MSG_STATECHANGED_71 = 0x00000004;
-//	public static final int MSG_STATECHANGED_71_FIELD_OLDORDINAL_8 = 0x00000001;
-//	public static final int MSG_STATECHANGED_71_FIELD_NEWORDINAL_9 = 0x00000002;
 	
 	protected final void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {
 				

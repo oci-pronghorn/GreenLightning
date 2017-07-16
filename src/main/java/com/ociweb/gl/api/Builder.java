@@ -71,5 +71,6 @@ public interface Builder {
 	String[] args();
 	
 	Builder useNetClient();
+	Builder useInsecureNetClient();
 	
 }

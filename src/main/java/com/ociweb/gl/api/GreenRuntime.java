@@ -44,7 +44,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      	pcm.addConfig(customChannelLength,defaultCommandChannelMaxPayload,MessagePubSub.class);
      	pcm.addConfig(requestNetConfig);
      	pcm.addConfig(customChannelLength,0,TrafficOrderSchema.class);
-     	pcm.addConfig(customChannelLength,defaultCommandChannelHTTPResponseMaxPayload,ServerResponseSchema.class);
+     	pcm.addConfig(customChannelLength,defaultCommandChannelHTTPMaxPayload,ServerResponseSchema.class);
      	//pcm.addConfig(100,0,TrafficAckSchema.class);
      	
          return this.builder.newCommandChannel(

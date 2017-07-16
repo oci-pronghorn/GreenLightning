@@ -54,14 +54,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     protected static final int defaultCommandChannelLength = 16;
     protected static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
-    protected static final int defaultCommandChannelHTTPResponseMaxPayload = 1<<12;
+    protected static final int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support
     
     
-    protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);   
+    protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload);   
     protected static final PipeConfig<ClientHTTPRequestSchema> requestNetConfig = new PipeConfig<ClientHTTPRequestSchema>(ClientHTTPRequestSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
-    protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPResponseMaxPayload);
+    protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
     protected static final PipeConfig<MessageSubscription> messageSubscriptionConfig = new PipeConfig<MessageSubscription>(MessageSubscription.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
-    protected static final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPResponseMaxPayload);
+    protected static final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
     
     protected int netResponsePipeIdx = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
     protected int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
@@ -513,9 +513,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	private void buildGraphForServer(MsgApp app) {
 		
 		
-		ServerPipesConfig serverConfig = new ServerPipesConfig(builder.isLarge(), builder.isTLS());
+		ServerPipesConfig serverConfig = new ServerPipesConfig(builder.isLarge(), builder.isServerTLS());
 
-		ServerCoordinator serverCoord = new ServerCoordinator( builder.isTLS(),
+		ServerCoordinator serverCoord = new ServerCoordinator( builder.isServerTLS(),
 															   (String) builder.bindHost(), builder.bindPort(), 
 				                                               serverConfig.maxConnectionBitsOnServer, 
 				                                               serverConfig.maxPartialResponsesServer, 
@@ -530,7 +530,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
 		
-		if (builder.isTLS()) {
+		if (builder.isServerTLS()) {
 			planIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);
 			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
 					                      encryptedIncomingGroup, planIncomingGroup, acks, -1);

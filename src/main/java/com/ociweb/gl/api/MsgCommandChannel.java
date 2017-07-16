@@ -419,7 +419,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean httpGet(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
     	return httpGet(host, port, route, builder.behaviorId(listener)); 	
     }
-
+    public boolean httpGet(CharSequence host, CharSequence route, HTTPResponseListener listener) {
+    	return httpGet(host, builder.isClientTLS()?443:80, route, listener);
+    }
+    public boolean httpGet(CharSequence host, CharSequence route, int behaviorId) {
+    	return httpGet(host, builder.isClientTLS()?443:80, route, behaviorId);
+    }
 	public boolean httpGet(CharSequence host, int port, CharSequence route, int behaviorId) {
 		assert(builder.isUseNetClient());
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";

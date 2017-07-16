@@ -59,7 +59,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 		this.input = input;
 		this.output = output;
 		this.ccm = ccm;
-		this.isTLS = hardware.isTLS();
+		this.isTLS = hardware.isServerTLS();
 		
 	}
 	
