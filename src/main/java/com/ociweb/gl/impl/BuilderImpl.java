@@ -123,6 +123,7 @@ public class BuilderImpl implements Builder {
 	
 	protected int IDX_MSG = -1;
 	protected int IDX_NET = -1;
+	//TODO: why is responder missing?
 	   
     ///////
 	//These topics are enforced so that they only go from one producer to a single consumer
