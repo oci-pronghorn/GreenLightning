@@ -416,11 +416,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    public boolean httpGet(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
-    	return httpGet(host, port, route, builder.behaviorId(listener)); 	
+    private boolean httpGet(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
+    	return httpGet(host, port, route, builder.behaviorId((HTTPResponseListener)listener)); 	
     }
-    public boolean httpGet(CharSequence host, CharSequence route, HTTPResponseListener listener) {
-    	return httpGet(host, builder.isClientTLS()?443:80, route, listener);
+    
+    public boolean httpGet(CharSequence host, CharSequence route) {    	
+    	return httpGet(host, builder.isClientTLS()?443:80, route, (HTTPResponseListener)listener);
     }
     public boolean httpGet(CharSequence host, CharSequence route, int behaviorId) {
     	return httpGet(host, builder.isClientTLS()?443:80, route, behaviorId);
