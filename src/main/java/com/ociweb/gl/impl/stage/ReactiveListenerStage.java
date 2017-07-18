@@ -1,6 +1,5 @@
 package com.ociweb.gl.impl.stage;
 
-import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -24,7 +23,6 @@ import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
-import com.ociweb.pronghorn.network.ClientConnection;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
@@ -32,12 +30,12 @@ import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeReader;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.TrieParser;
+import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage implements ListenerFilter {
 
@@ -91,8 +89,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
     private PipeUTF8MutableCharSquence workspace = new PipeUTF8MutableCharSquence();
     private PayloadReader payloadReader;
-    
-    private final StringBuilder workspaceHost = new StringBuilder();
     
     private HTTPSpecification httpSpec;
     
@@ -383,15 +379,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 } else {
 	            		 assert(-1==typeHeader) : "header end should be -1 was "+typeHeader;
 	            	 }
-	           	     //built here       	 
-//				     IntHashTable headerToPositionTable; //lookup position of header from index
-//				     
-//				     //build once
-//				     TrieParser headerTrieParser; //lookup index of header from string bytes
-//				
-//				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
-//		   
-//					  
+				//built here TODO: move to top      	 
+	            	 TrieParserReader parserReader = new TrieParserReader(2, true);
+				     IntHashTable headerToPositionTable = httpSpec.headerTable(parserReader);
+				     				     
+				     //build once TODO: move to top
+				     TrieParser headerTrieParser = httpSpec.headerParser();
+				
+				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
+		   
+					  
 	            	 //////////////////
 	            	 //end of the big mess
 	            	 //////////////////
@@ -610,6 +607,31 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
 	@Override
+	public final ListenerFilter includeAllRoutes() {
+		
+		if (listener instanceof RestListener) {
+			int count = 0;
+			int i =	inputPipes.length;
+			while (--i>=0) {
+				//we only expect to find a single request pipe
+				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
+				   
+					int routes = builder.routerConfig().routesCount();
+					int p = parallelInstance==-1?count:parallelInstance;
+					while (--routes>=0) {
+						restRoutesDefined = true;
+						builder.appendPipeMapping((Pipe<HTTPRequestSchema>) inputPipes[i], routes, p);
+					}
+					count++;
+				}
+			}
+			return this;
+		} else {
+			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
+		}
+	}
+	
+	@Override
 	public final ListenerFilter includeRoutes(int... routeIds) {
 
 		if (listener instanceof RestListener) {
@@ -618,7 +640,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			while (--i>=0) {
 				//we only expect to find a single request pipe
 				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
-				   //NOTE: count may be backwards !!if so reverse while on 595?
+				  
 					int x = routeIds.length;
 					int p = parallelInstance==-1?count:parallelInstance;
 					while (--x>=0) {

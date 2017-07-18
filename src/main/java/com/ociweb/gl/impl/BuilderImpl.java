@@ -406,9 +406,9 @@ public class BuilderImpl implements Builder {
 		channelBlocker = new Blocker(maxGoPipeId+1);
 	}
 
-	private final boolean useNetClient(IntHashTable netPipeLookup, Pipe<NetResponseSchema>[] netResponsePipes, Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
+	protected final boolean useNetClient(IntHashTable netPipeLookup, Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
 
-		return !IntHashTable.isEmpty(netPipeLookup) && (netResponsePipes.length!=0) && (netRequestPipes.length!=0);
+		return !IntHashTable.isEmpty(netPipeLookup) && (netRequestPipes.length!=0);
 	}
 
 	protected final void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
@@ -626,17 +626,17 @@ public class BuilderImpl implements Builder {
 
 	public void buildStages(IntHashTable subscriptionPipeLookup2, IntHashTable netPipeLookup2, GraphManager gm2) {
 		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfType(gm2, MessageSubscription.instance);
-		Pipe<NetResponseSchema>[] netResponsePipes = GraphManager.allPipesOfType(gm2, NetResponseSchema.instance);
+		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfType(gm2, NetResponseSchema.instance);
 		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfType(gm2, TrafficOrderSchema.instance);
 		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfType(gm2, MessagePubSub.instance);
-		Pipe<ClientHTTPRequestSchema>[] netRequestPipes = GraphManager.allPipesOfType(gm2, ClientHTTPRequestSchema.instance);
+		Pipe<ClientHTTPRequestSchema>[] httpClientRequestPipes = GraphManager.allPipesOfType(gm2, ClientHTTPRequestSchema.instance);
 		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfType(gm2, IngressMessages.instance);
 		
 		int commandChannelCount = orderPipes.length;
 		int eventSchemas = 0;
 		
 		IDX_MSG = (IntHashTable.isEmpty(subscriptionPipeLookup2) && subscriptionPipes.length==0 && messagePubSub.length==0) ? -1 : eventSchemas++;
-		IDX_NET = useNetClient(netPipeLookup2, netResponsePipes, netRequestPipes) ? eventSchemas++ : -1;
+		IDX_NET = useNetClient(netPipeLookup2, httpClientRequestPipes) ? eventSchemas++ : -1;
 						
         long timeout = 20_000; //20 seconds
 		
@@ -652,8 +652,8 @@ public class BuilderImpl implements Builder {
 			masterAckIn[IDX_MSG] = new Pipe[messagePubSub.length];
 		}		
 		if (IDX_NET >= 0) {
-			masterGoOut[IDX_NET] = new Pipe[netResponsePipes.length];
-			masterAckIn[IDX_NET] = new Pipe[netResponsePipes.length];
+			masterGoOut[IDX_NET] = new Pipe[httpClientResponsePipes.length];
+			masterAckIn[IDX_NET] = new Pipe[httpClientResponsePipes.length];
 		}		
 				
 		while (--t>=0) {
@@ -688,7 +688,7 @@ public class BuilderImpl implements Builder {
 		
 		initChannelBlocker(maxGoPipeId);
 		
-		buildHTTPClientGraph(netPipeLookup2, netResponsePipes, netRequestPipes, masterGoOut, masterAckIn);
+		buildHTTPClientGraph(netPipeLookup2, httpClientResponsePipes, httpClientRequestPipes, masterGoOut, masterAckIn);
 		
 		/////////
 		//always create the pub sub and state management stage?
@@ -708,7 +708,7 @@ public class BuilderImpl implements Builder {
 		////////
 		//create the network client stages
 		////////
-		if (useNetClient(netPipeLookup2, netResponsePipes, netRequestPipes)) {
+		if (useNetClient(netPipeLookup2, netRequestPipes)) {
 			
 			int connectionsInBits=10;			
 			int maxPartialResponses=4;

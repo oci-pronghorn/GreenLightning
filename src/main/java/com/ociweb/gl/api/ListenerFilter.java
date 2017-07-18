@@ -42,6 +42,8 @@ public interface ListenerFilter {
 	
 	ListenerFilter includeRoutes(int ... routeIds);
 	
+	ListenerFilter includeAllRoutes();
+	
 	int getId();	
 	
 	
