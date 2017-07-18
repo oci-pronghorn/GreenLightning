@@ -65,12 +65,6 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		    GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
 
 		    runtime.declareBehavior(app);
-
-		    //TODO: at this point realize the stages in declare behavior
-		    //      all updates are done so create the reactors with the right pipes and names
-		    //      this change will let us move routes to part of the fluent API plus other benifits..
-		    //      move all reactor fields into object created early, shell is created here.
-		    //      register must hold list of all temp objects (linked list to preserve order?)
 		    
 		    System.out.println("To exit app press Ctrl-C");
 

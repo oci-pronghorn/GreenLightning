@@ -408,11 +408,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
             
         }
         
-        if (this.builder.isListeningToSubscription(listener)) {
-   
-            Pipe<MessageSubscription> subscriptionPipe = buildPublishPipe(listener);
-            
-            inputPipes[--pipesCount]=(subscriptionPipe);
+        if (this.builder.isListeningToSubscription(listener)) {   
+            inputPipes[--pipesCount]=buildPublishPipe(listener);
         }
 
         
@@ -425,8 +422,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         
         if (this.builder.isListeningHTTPRequest(listener) ) {
         	
-        	int i = httpRequestPipes.length;
-        	while (--i >= 0) {        		
+        	int i = httpRequestPipes.length;        	
+        	assert(i>0) : "This listens to Rest requests but none have been routed here";        
+        	while (--i >= 0) {        
         		inputPipes[--pipesCount] = httpRequestPipes[i];                		
         	}
         }
@@ -532,7 +530,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		if (builder.isServerTLS()) {
 			planIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);
-			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
+			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, 
+					                      serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
 					                      encryptedIncomingGroup, planIncomingGroup, acks, -1);
 		} else {
 			planIncomingGroup = encryptedIncomingGroup;
@@ -546,7 +545,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 
 	private void buildLastHalfOfGraphForServer(MsgApp app, ServerPipesConfig serverConfig,
-			ServerCoordinator serverCoord, final int routerCount, Pipe[] acks, Pipe[] handshakeIncomingGroup,
+			ServerCoordinator serverCoord, final int routerCount, Pipe[] acks, 
+			Pipe[] handshakeIncomingGroup,
 			Pipe[] planIncomingGroup) {
 		////////////////////////
 		//create the working modules
@@ -569,20 +569,37 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		ArrayList<Pipe> forPipeCleaner = new ArrayList<Pipe>();
 		Pipe<HTTPRequestSchema>[][] fromRouterToModules = new Pipe[routerCount][];	
 		int t = routerCount;
+		int totalRequestPipes = 0;
 		while (--t>=0) {
 			//[router/parallel] then [parser/routes] 
 			int path = routerConfig.routesCount();
-			fromRouterToModules[t] = new Pipe[path]; 
+
+			/////////////////
+			///for catch all
+			///////////////
+			if (path==0) {
+				path=1;
+			}
+			/////////////
 			
+			fromRouterToModules[t] = new Pipe[path]; 
 		    while (--path >= 0) {
 		    	
 		    	ArrayList<Pipe<HTTPRequestSchema>> requestPipes = builder.buildFromRequestArray(t, path);
+		    	
 		    	//with a single pipe just pass it one, otherwise use the replicator to fan out from a new single pipe.
-		    	if (1==requestPipes.size()) {
+		    	int size = requestPipes.size();
+		    	totalRequestPipes += size;
+		    	
+		    	System.err.println("added total requests is "+totalRequestPipes);
+		    	
+				if (1==size) {
 		    		fromRouterToModules[t][path] = requestPipes.get(0);
-		    	} else {	
+		    	} else {
+		    		//we only create a pipe when we are about to use the replicator
 		    		fromRouterToModules[t][path] = builder.newHTTPRequestPipe(builder.restPipeConfig);		    		
-		    		if (0==requestPipes.size()) {
+		    		if (0==size) {
+		    			logger.info("warning there are routes without any consumers");
 		    			//we have no consumer so tie it to pipe cleaner		    		
 		    			forPipeCleaner.add(fromRouterToModules[t][path]);
 		    		} else {
@@ -591,7 +608,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    	}
 		    }
 		}
-		
 		
 		if (!forPipeCleaner.isEmpty()) {
 			PipeCleanerStage.newInstance(gm, forPipeCleaner.toArray(new Pipe[forPipeCleaner.size()]));
@@ -606,8 +622,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
 			fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);			
 		}
+				
 		
-		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, fromRouterToModules, errorResponsePipes, routerConfig, serverCoord, -1);
+		boolean catchAll = builder.routerConfig().routesCount()==0;
+		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, 
+				                     fromRouterToModules, errorResponsePipes, routerConfig,
+				                     serverCoord, -1, catchAll);
 
 		final GraphManager graphManager = gm; 
 		
@@ -802,7 +822,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         //////////////////////
         
         ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
-        		                                inputPipes, outputPipes, parallelInstanceUnderActiveConstruction);
+        		                                inputPipes, outputPipes, 
+        		                                parallelInstanceUnderActiveConstruction);
 
         
         if (listener instanceof RestListener) {

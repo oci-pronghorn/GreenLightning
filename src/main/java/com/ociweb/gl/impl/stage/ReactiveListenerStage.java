@@ -609,6 +609,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	@Override
 	public final ListenerFilter includeAllRoutes() {
 		
+		restRoutesDefined = true;
+		
 		if (listener instanceof RestListener) {
 			int count = 0;
 			int i =	inputPipes.length;
@@ -618,8 +620,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				   
 					int routes = builder.routerConfig().routesCount();
 					int p = parallelInstance==-1?count:parallelInstance;
+					
+					assert(routes>=0);
+					///////////
+					//for catch all
+					///////////
+					if (routes==0) {
+						routes=1;
+					}
+					
 					while (--routes>=0) {
-						restRoutesDefined = true;
 						builder.appendPipeMapping((Pipe<HTTPRequestSchema>) inputPipes[i], routes, p);
 					}
 					count++;

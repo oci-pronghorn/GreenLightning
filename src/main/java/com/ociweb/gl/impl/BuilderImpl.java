@@ -36,6 +36,7 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
@@ -62,6 +63,10 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class BuilderImpl implements Builder {
 
+	//NB: The Green Lightning maximum header size 64K is defined here HTTP1xRouterStage.MAX_HEADER
+	private static final int MAXIMUM_INCOMMING_REST_SIZE = HTTP1xRouterStage.MAX_HEADER;
+	private static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<9;
+	
 	protected boolean useNetClient;
 	protected boolean useNetServer;
 
@@ -87,7 +92,9 @@ public class BuilderImpl implements Builder {
 
 	private static final Logger logger = LoggerFactory.getLogger(BuilderImpl.class);
 
-	public final PipeConfig<HTTPRequestSchema> restPipeConfig = new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 1<<9, 256);
+	public final PipeConfig<HTTPRequestSchema> restPipeConfig = 
+			new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
+					MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT, MAXIMUM_INCOMMING_REST_SIZE);
 	
 	public Enum<?> beginningState;
     private int parallelism = 1;//default is one
@@ -230,6 +237,11 @@ public class BuilderImpl implements Builder {
 			assert(parallelism>=1);
 			assert(routesCount>-1);	
 			
+			//for catch all route since we have no specific routes.
+			if (routesCount==0) {
+				routesCount = 1;
+			}
+			
 			collectedHTTPRequstPipes = (ArrayList<Pipe<HTTPRequestSchema>>[][]) new ArrayList[parallelism][routesCount];
 			
 			int p = parallelism;
@@ -294,18 +306,24 @@ public class BuilderImpl implements Builder {
 	public final void lookupRouteAndPara(Pipe<?> localPipe, int idx, int[] routes, int[] para) {
 
 		int p = parallelism();
+		boolean hasRoutes = false;
 		while (--p >= 0) {
 
 			int r = routerConfig().routesCount();
+			hasRoutes |= (r>0);
 			while (--r >= 0) {
 				if (collectedHTTPRequstPipes[p][r].contains(localPipe)) {
 					routes[idx] = r;
-					para[idx] = p;	
+					para[idx] = p;
 					return;
 				}
 			}
 		}
-		throw new UnsupportedOperationException("can not find "+localPipe);
+		
+		if (hasRoutes) {
+			throw new UnsupportedOperationException("can not find "+localPipe);
+		}//else not an error because this is the catch all.
+		logger.info("warning we could not find pipe in lookup");
 	}
 	////////////////////////////////
 	

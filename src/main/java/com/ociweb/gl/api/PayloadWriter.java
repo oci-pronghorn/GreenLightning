@@ -58,7 +58,7 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
 
     private void checkLimit(PayloadWriter<T> that, int x) {
     	
-    	if ( (that.length+=x) > that.maxLength ) {
+    	if ( (that.length+=x)+countOfBytesUsedByIndex(this) > that.maxLength ) {
     		throw new RuntimeException("This field is limited to a maximum length of "+that.maxLength+". Write less data or declare a larger max payload size.");
     	}
     	

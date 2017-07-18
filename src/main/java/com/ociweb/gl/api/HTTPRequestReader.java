@@ -118,6 +118,11 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		if (id<0) {
 			throw new UnsupportedOperationException("unknown field name '"+new String(fieldName)+"'");
 		}
+		
+//		Appendables.appendHexDigits(
+//		Appendables.appendUTF8(System.out, fieldName,0,fieldName.length,Integer.MAX_VALUE)
+//		           .append(" -> ID: "),id).append('\n');
+
 		return id;
 	}
 	
@@ -323,7 +328,9 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		if (fieldId<0) {
 			throw new UnsupportedOperationException("unknown field name");
 		}
+		
 		setPositionBytesFromStart(computePosition(fieldId));
+		
 		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);

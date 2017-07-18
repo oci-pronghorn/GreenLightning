@@ -31,6 +31,7 @@ public class ListenerConfig {
 	public static Pipe<HTTPRequestSchema>[] newHTTPRequestPipes(BuilderImpl builder, final int parallelInstance) {
 		Pipe<HTTPRequestSchema>[] restRequests = new Pipe[parallelInstance];
 		
+		
 		PipeConfig<HTTPRequestSchema> pipeConfig = builder.restPipeConfig.grow2x();
 		int idx = restRequests.length;
 		while (--idx>=0) {

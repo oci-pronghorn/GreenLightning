@@ -48,7 +48,9 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	protected int computePosition(long fieldId) {
 		assert(fieldId>=0) : "check field name, it does not match any found field";
 		//jump to end and index backwards to find data position
-		return readFromEndLastInt(fieldIdx(fieldId));		
+		int result = readFromEndLastInt(fieldIdx(fieldId));	
+		assert(result<available()) : "index of "+result+" is out of limit "+available()+" for field id "+fieldId+" at index "+fieldIdx(fieldId);
+		return result;
 	}
 	
 	protected int computePositionSecond(long fieldId) {
