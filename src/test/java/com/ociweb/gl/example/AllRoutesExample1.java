@@ -22,10 +22,8 @@ public class AllRoutesExample1 implements GreenAppParallel {
 	}
 
 	@Override
-	public void declareParallelBehavior(GreenRuntime runtime) {
-		
-		final GreenCommandChannel cmd = runtime.newCommandChannel(NET_RESPONDER);
-		
+	public void declareParallelBehavior(GreenRuntime runtime) {		
+		final GreenCommandChannel cmd = runtime.newCommandChannel(NET_RESPONDER);		
 		RestListener listener = new RestListener() {
 			@Override
 			public boolean restRequest(HTTPRequestReader request) {				
@@ -33,14 +31,11 @@ public class AllRoutesExample1 implements GreenAppParallel {
 				
 				return cmd.publishHTTPResponse(request, 200);				
 			}			
-		};
-		
+		};		
 		runtime.addRestListener(listener).includeAllRoutes();
 	}
 
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
-		// TODO Auto-generated method stub
-		
 	}
 }
