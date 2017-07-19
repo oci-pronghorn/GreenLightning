@@ -7,18 +7,21 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.RestListener;
 
-public class AllRoutesExample implements GreenApp {
+public class AllRoutesExample2 implements GreenApp {
 
 	public static void main(String[] args) {
-		GreenRuntime.run(new AllRoutesExample(),args);
+		GreenRuntime.run(new AllRoutesExample2(),args);
 	}
-	
+
 	@Override
 	public void declareConfiguration(Builder builder) {
 		builder.enableServer(8082);
-//		builder.registerRoute("/xx${path}");
-//		builder.registerRoute("/tt${path}");
-		builder.enableTelemetry();
+		int a = builder.registerRoute("/routeOne");
+		int b = builder.registerRoute("/second?a=#{value}");
+		int c = builder.registerRoute("/woot");
+		
+		System.err.println(a+"  "+b+"  "+c);
+
 	}
 
 	@Override
@@ -28,15 +31,16 @@ public class AllRoutesExample implements GreenApp {
 		
 		RestListener listener = new RestListener() {
 			@Override
-			public boolean restRequest(HTTPRequestReader request) {				
-				request.getText("path".getBytes(), System.out);
+			public boolean restRequest(HTTPRequestReader request) {	
 				
-				//TODO: if we consume but do not return ack this should be an error
-				return cmd.publishHTTPResponse(request, 200);
+				//TODO: this route is the wrong value
+				int id = request.getRouteId();
+				System.out.println(id);
+			//	request.getText("value".getBytes(), System.out);
 				
+				return cmd.publishHTTPResponse(request, 200);				
 			}			
 		};
 		runtime.addRestListener(listener).includeAllRoutes();
 	}
-
 }

@@ -559,6 +559,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				constructingParallelInstance(i);
 				((MsgAppParallel)app).declareParallelBehavior(this);  //this creates all the modules for this parallel instance								
 			}	
+		} else {
+			if (builder.parallelism()>1) {
+				throw new UnsupportedOperationException(
+						"Remove call to parallelism("+builder.parallelism()+") OR make the application implement GreenAppParallel or something extending it.");
+			}
 		}
 
 		//////////////////
@@ -590,8 +595,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    	//with a single pipe just pass it one, otherwise use the replicator to fan out from a new single pipe.
 		    	int size = requestPipes.size();
 		    	totalRequestPipes += size;
-		    	
-		    	System.err.println("added total requests is "+totalRequestPipes);
 		    	
 				if (1==size) {
 		    		fromRouterToModules[t][path] = requestPipes.get(0);

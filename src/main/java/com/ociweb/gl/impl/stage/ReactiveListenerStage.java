@@ -25,7 +25,9 @@ import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
+import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
@@ -43,8 +45,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     protected final Pipe<?>[]           inputPipes;
     protected final Pipe<?>[]           outputPipes;
-    protected int[]                     routeIds;
-    protected int[]                     parallelIds;
         
     protected long                      timeTrigger;
     protected long                      timeRate;   
@@ -173,24 +173,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         stageRate = (Number)GraphManager.getNota(graphManager, this.stageId,  GraphManager.SCHEDULE_RATE, null);
         
         timeProcessWindow = (null==stageRate? 0 : (int)(stageRate.longValue()/MS_to_NS));
-        
-        
-        ///////////////////////
-        //build local lookup for the routeIds based on which pipe the data was read from.
-        ///////////////////////
-        int p = inputPipes.length;
-        routeIds = new int[p];
-        parallelIds = new int[p];
-        
-        while (--p >= 0) {
-        	 Pipe<?> localPipe = inputPipes[p];
-        	 if (Pipe.isForSchema((Pipe<HTTPRequestSchema>)localPipe, HTTPRequestSchema.class)) {
-        		 builder.lookupRouteAndPara(localPipe, p, routeIds, parallelIds);
-        	 } else {
-        		 routeIds[p]=Integer.MIN_VALUE;
-        		 parallelIds[p]=Integer.MIN_VALUE;
-        	 }
-        }     
+         
         
         //Do last so we complete all the initializations first
         if (listener instanceof StartupListener) {
@@ -253,7 +236,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
             
             } else if (Pipe.isForSchema((Pipe<HTTPRequestSchema>)localPipe, HTTPRequestSchema.class)) {
             	//new HTTP requests for the server
-            	consumeRestRequest((RestListener)listener, (Pipe<HTTPRequestSchema>) localPipe, routeIds[p], parallelIds[p]);
+            	consumeRestRequest((RestListener)listener, (Pipe<HTTPRequestSchema>) localPipe );
             
             } else {
                 logger.error("unrecognized pipe sent to listener of type {} ", Pipe.schemaName(localPipe));
@@ -286,7 +269,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     }
 
     
-    protected final void consumeRestRequest(RestListener listener, Pipe<HTTPRequestSchema> p, final int routeId, final int parallelIdx) {
+    protected final void consumeRestRequest(RestListener listener, Pipe<HTTPRequestSchema> p) {
 		
     	  while (Pipe.hasContentToRead(p)) {                
               
@@ -297,11 +280,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	 
     	    	  long connectionId = Pipe.takeLong(p);
     	    	  int sequenceNo = Pipe.takeInt(p);    	    	  
+
+    	    	  int routeVerb = Pipe.takeInt(p);
+    	    	  int routeId = routeVerb>>>HTTPVerb.BITS;
+    	    	  int verbId = HTTPVerb.MASK & routeVerb;
     	    	  
-    	    	  //both these values are required in order to ensure the right sequence order once processed.
-    	    	  long sequenceCode = (((long)parallelIdx)<<32) | ((long)sequenceNo);
-    	    	  
-    	    	  int verbId = Pipe.takeInt(p);
     	    	      	    	  
     	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.inputStream(p);
     	    	  reader.openLowLevelAPIField(); //NOTE: this will take meta then take len
@@ -312,9 +295,18 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
  						                  builder.routeHeaderTrieParser(routeId)
  						                 );
  				  
-    	    	  reader.setRevisionId(Pipe.takeInt(p));
-    	    	  reader.setRequestContext(Pipe.takeInt(p));    	    	  
+    	    	  int parallelRevision = Pipe.takeInt(p);
+    	    	  int parallelIdx = parallelRevision >>> HTTPRevision.BITS;
+    	    	  int revision = HTTPRevision.MASK & parallelRevision;
+    	    	  
+				  reader.setRevisionId(revision);
+    	    	  reader.setRequestContext(Pipe.takeInt(p));  
+    	    
     	    	  reader.setRouteId(routeId);
+    	    	  
+    	    	  //both these values are required in order to ensure the right sequence order once processed.
+    	    	  long sequenceCode = (((long)parallelIdx)<<32) | ((long)sequenceNo);
+    	    	  
     	    	  reader.setConnectionId(connectionId, sequenceCode);
     	    	  
     	    	  //assign verbs as strings...

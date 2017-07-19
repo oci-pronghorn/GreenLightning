@@ -19,9 +19,11 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	private int routeId;
 	private int requestContext;
 	private HTTPVerbDefaults verb;
+	private final boolean hasNoRoutes;
 	
-	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe) {
+	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe, boolean hasNoRoutes) {
 		super(pipe);
+		this.hasNoRoutes = hasNoRoutes;
 	}
 
 	
@@ -322,6 +324,22 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		return getText(getFieldId(fieldName),appendable);		
 	}
 	
+	/**
+	 * Only call this method when NO routes have been defined.
+	 * @param appendable
+	 * 
+	 */
+	public <A extends Appendable> A getRoutePath(A appendable) {
+		if (hasNoRoutes) {		
+			int assumedId = 0x620001;
+			assert(getFieldId("path".getBytes()) == assumedId) : "error: "+getFieldId("path".getBytes());	
+			return getText(assumedId,appendable);		
+		} else {
+			throw new UnsupportedOperationException("this method can only be used when no routes have been defined.");
+		}
+	}
+	
+	
 	@SuppressWarnings("unchecked")
 	public <A extends Appendable> A getText(long fieldId, A appendable) {
 		
@@ -351,7 +369,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 			Appendables.appendDecimalValue(appendable, m, e);
 			return appendable;
 		}
-		throw new UnsupportedOperationException("unknown type "+type);
+		throw new UnsupportedOperationException("unknown field type "+type);
 	}
 
 	@Override

@@ -64,7 +64,7 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 public class BuilderImpl implements Builder {
 
 	//NB: The Green Lightning maximum header size 64K is defined here HTTP1xRouterStage.MAX_HEADER
-	private static final int MAXIMUM_INCOMMING_REST_SIZE = HTTP1xRouterStage.MAX_HEADER;
+	private static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
 	private static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<9;
 	
 	protected boolean useNetClient;
@@ -301,30 +301,7 @@ public class BuilderImpl implements Builder {
  	   recordPipeMapping(pipe, parallelInstanceId);
  	   return pipe;
     }
-	
-    //Linear search only used once in startup method for the stage.
-	public final void lookupRouteAndPara(Pipe<?> localPipe, int idx, int[] routes, int[] para) {
 
-		int p = parallelism();
-		boolean hasRoutes = false;
-		while (--p >= 0) {
-
-			int r = routerConfig().routesCount();
-			hasRoutes |= (r>0);
-			while (--r >= 0) {
-				if (collectedHTTPRequstPipes[p][r].contains(localPipe)) {
-					routes[idx] = r;
-					para[idx] = p;
-					return;
-				}
-			}
-		}
-		
-		if (hasRoutes) {
-			throw new UnsupportedOperationException("can not find "+localPipe);
-		}//else not an error because this is the catch all.
-		logger.info("warning we could not find pipe in lookup");
-	}
 	////////////////////////////////
 	
 	public BuilderImpl(GraphManager gm, String[] args) {	
@@ -583,7 +560,13 @@ public class BuilderImpl implements Builder {
 	}
 		
 	@Override
-	public final int registerRoute(CharSequence route, byte[] ... headers) {		
+	public final int registerRoute(CharSequence route, byte[] ... headers) {
+		if (route.length()==0) {
+			throw new UnsupportedOperationException("path must be of length one or more and start with /");
+		}
+		if (route.charAt(0)!='/') {
+			throw new UnsupportedOperationException("path must start with /");
+		}
 		return routerConfig.registerRoute(route, headers);
 	}
 
@@ -610,11 +593,12 @@ public class BuilderImpl implements Builder {
 	}
 
 	public final Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {
+		final boolean hasNoRoutes = (0==routerConfig().routesCount());
 		Pipe<HTTPRequestSchema> pipe = new Pipe<HTTPRequestSchema>(restPipeConfig) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<HTTPRequestSchema> createNewBlobReader() {
-				return new HTTPRequestReader(this);
+				return new HTTPRequestReader(this, hasNoRoutes);
 			}
 		};
 		return pipe;
