@@ -663,43 +663,44 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	
 	
 	////////////////
-	//add file server
+	//add file server, Was broken in recent refactoring.
+	//NEW design make this a Behavior and use the normal register methods.
 	////////////////
 	
-	public void addFileServer(String path, int ... routes) {
-
-        File rootPath = buildFilePath(path);
-        
-        
-		//due to internal implementation we must keep the same number of outputs as inputs.
-		int r = routes.length;
-		int p = computeParaMulti();
-		
-		int count = r*p;
-		
-		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
-		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
-		populatePipeArrays(r, p, inputs, outputs, routes);		
-		
-		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
-				
-	}
-	
-	public void addFileServer(String resourceRoot, String resourceDefault, int ... routes) {
-		
-		//due to internal implementation we must keep the same number of outputs as inputs.
-		int r = routes.length;
-		int p = computeParaMulti();
-		
-		int count = r*p;
-		
-		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
-		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
-		populatePipeArrays(r, p, inputs, outputs, routes);		
-		
-		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
-				
-	}
+//	public void addFileServer(String path, int ... routes) {
+//
+//        File rootPath = buildFilePath(path);
+//        
+//        
+//		//due to internal implementation we must keep the same number of outputs as inputs.
+//		int r = routes.length;
+//		int p = computeParaMulti();
+//		
+//		int count = r*p;
+//		
+//		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
+//		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
+//		populatePipeArrays(r, p, inputs, outputs, routes);		
+//		
+//		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
+//				
+//	}
+//	
+//	public void addFileServer(String resourceRoot, String resourceDefault, int ... routes) {
+//		
+//		//due to internal implementation we must keep the same number of outputs as inputs.
+//		int r = routes.length;
+//		int p = computeParaMulti();
+//		
+//		int count = r*p;
+//		
+//		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
+//		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
+//		populatePipeArrays(r, p, inputs, outputs, routes);		
+//		
+//		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
+//				
+//	}
 
 
 	private int computeParaMulti() {
