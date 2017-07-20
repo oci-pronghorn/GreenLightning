@@ -39,7 +39,14 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 			int item = IntHashTable.getItem(headerHash, HTTPHeader.HEADER_BIT | headerId);
 			
 			if (item!=0) {				
-				setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + 1 + (0xFFFF & item)));
+								
+				int itemIndex = 0xFFFF & item;
+				
+				int posFromStart = readFromEndLastInt(paraIndexCount + 1 + itemIndex);
+				assert(posFromStart<available()) : "index position "+posFromStart+" is out of bounds "+available();
+				assert(posFromStart>=0) : "index position must be zero or positive";
+				
+				setPositionBytesFromStart(posFromStart);
 				
 				headReader.read(this);//HTTPRequestReader
 				
