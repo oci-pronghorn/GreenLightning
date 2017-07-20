@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-public interface ListenerFilter {
+public interface ListenerFilter extends RouteFilter {
 
 		
 	/**
@@ -39,10 +39,6 @@ public interface ListenerFilter {
 	 */
 	<E extends Enum<E>> ListenerFilter excludeStateChangeFrom(E ... states);
 
-	
-	ListenerFilter includeRoutes(int ... routeIds);
-	
-	ListenerFilter includeAllRoutes();
 	
 	int getId();	
 	
