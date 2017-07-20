@@ -370,8 +370,9 @@ public class BuilderImpl implements Builder {
 		return timeTriggerStart;
 	}
 
-    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, int parallelInstance) {
-        return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this, parallelInstance);
+    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Behavior listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, int parallelInstance) {
+    	assert(null!=listener);
+    	return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this, parallelInstance);
     }
 
 	public <G extends MsgCommandChannel> G newCommandChannel(
