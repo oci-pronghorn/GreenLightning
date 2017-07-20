@@ -10,6 +10,7 @@ import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
+import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MessageReader;
 import com.ociweb.gl.api.MsgRuntime;
@@ -25,12 +26,14 @@ import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
+import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
@@ -219,32 +222,37 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         if (timeEvents) {         	
 			processTimeEvents((TimeListener)listener, timeTrigger);            
 		}
-     
-        int p = inputPipes.length;
+     //processAllListeners
+        
+        processAllListeners(inputPipes, listener);
+        
+        
+    }
+
+	private void processAllListeners(Pipe<?>[] inputs, Object target) {
+		int p = inputs.length;
         
         while (--p >= 0) {
 
-        	Pipe<?> localPipe = inputPipes[p];
+        	Pipe<?> localPipe = inputs[p];
   
             if (Pipe.isForSchema((Pipe<MessageSubscription>)localPipe, MessageSubscription.class)) {                
             	
-            	consumePubSubMessage(listener, (Pipe<MessageSubscription>) localPipe);
+            	consumePubSubMessage(target, (Pipe<MessageSubscription>) localPipe);
             	
             } else if (Pipe.isForSchema((Pipe<NetResponseSchema>)localPipe, NetResponseSchema.class)) {
                //new HTTP responses from queries earlier	
-               consumeNetResponse((HTTPResponseListener)listener, (Pipe<NetResponseSchema>) localPipe);
+               consumeNetResponse((HTTPResponseListener)target, (Pipe<NetResponseSchema>) localPipe);
             
             } else if (Pipe.isForSchema((Pipe<HTTPRequestSchema>)localPipe, HTTPRequestSchema.class)) {
             	//new HTTP requests for the server
-            	consumeRestRequest((RestListener)listener, (Pipe<HTTPRequestSchema>) localPipe );
+            	consumeRestRequest((RestListener)target, (Pipe<HTTPRequestSchema>) localPipe );
             
             } else {
                 logger.error("unrecognized pipe sent to listener of type {} ", Pipe.schemaName(localPipe));
             }
         }
-        
-        
-    }
+	}
 
 
 	@Override    
@@ -353,25 +361,32 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 
             		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
 	            	 reader.openLowLevelAPIField();
+	            	 
 	            	 final short statusId = reader.readShort();	
 	            	 
 	            	 ////////////////
 	            	 //TODO: this parsing is a big mess
 	            	 //////////////
 	            	 
+	            	 
+	            	 
 	            	 //Must walk all headers and put indexes into hashtable
 	            	 //must also extract type	            	 	            	 
-	            	 short typeHeader = reader.readShort();
-	            	 short typeId = 0;
-	            	 if (6==typeHeader) {//may not have type
-	            		 assert(6==typeHeader) : "should be 6 was "+typeHeader;
-	            		 typeId = reader.readShort();	            	 
-	            		 short headerEnd = reader.readShort();
-	            		 assert(-1==headerEnd) : "header end should be -1 was "+headerEnd;
-	            	 } else {
-	            		 assert(-1==typeHeader) : "header end should be -1 was "+typeHeader;
-	            	 }
-				//built here TODO: move to top      	 
+	//	            	 short typeHeader = reader.readShort();
+	//	            	 short typeId = 0;
+	//	            	 if (6==typeHeader) {//may not have type
+	//	            		 assert(6==typeHeader) : "should be 6 was "+typeHeader;
+	//	            		 typeId = reader.readShort();	            	 
+	//	            		 short headerEnd = reader.readShort();
+	//	            		 assert(-1==headerEnd) : "header end should be -1 was "+headerEnd;
+	//	            	 } else {
+	//	            		 assert(-1==typeHeader) : "header end should be -1 was "+typeHeader;
+	//	            	 }
+				//built here TODO: move to top    
+	            	 
+
+	            	 
+	            	 
 	            	 TrieParserReader parserReader = new TrieParserReader(2, true);
 				     IntHashTable headerToPositionTable = httpSpec.headerTable(parserReader);
 				     				     
@@ -381,10 +396,28 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
 		   
 					  
+	            	 
+				Headable headReader = new Headable() {
+
+					@Override
+					public void read(BlobReader reader) {
+						System.err.println(reader.available());
+						
+						int type = reader.readShort();
+						System.err.println("type is "+	httpSpec.contentTypes[type]+" "+type);
+						
+					}
+					
+				};
+				
+				reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), headReader );
+	            	 
+				     
+				     
 	            	 //////////////////
 	            	 //end of the big mess
 	            	 //////////////////
-	            	 
+	            	 int typeId = 0;
 	            	 
 	            	 if (!listener.responseHTTP( statusId, 
 		            			                 (HTTPContentType)httpSpec.contentTypes[typeId],
