@@ -1,8 +1,8 @@
-package com.ociweb.gl.api;
+package com.ociweb.gl.impl;
 
-import com.ociweb.gl.impl.HTTPResponseListenerBase;
-import com.ociweb.gl.impl.PayloadReader;
+import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+
 
 /**
  * Functional interface for HTTP responses returned from outgoing
@@ -11,8 +11,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentType;
  * @author Nathan Tippy
  */
 @FunctionalInterface
-public interface HTTPResponseListener extends Behavior, HTTPResponseListenerBase {
-
+public interface HTTPResponseListenerBase {
     /**
      * Invoked when an HTTP response is received by this listener.
      * 
@@ -24,5 +23,4 @@ public interface HTTPResponseListener extends Behavior, HTTPResponseListenerBase
      */
 	boolean responseHTTP(short statusCode, HTTPContentType type, HTTPResponseReader reader);
 	
-
 }

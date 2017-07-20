@@ -1,7 +1,6 @@
 package com.ociweb.gl.api;
+import com.ociweb.gl.impl.ShutdownListenerBase;
 
-public interface ShutdownListener extends Behavior {
 
-	public boolean acceptShutdown();
-	
+public interface ShutdownListener extends Behavior, ShutdownListenerBase {
 }
