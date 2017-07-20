@@ -69,7 +69,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
      * not know about it at the same moment but the first who observes it can not send a message to the second that would arrive before the second observes the
      * even themselves.
      * 
-     * Ensures that every subsriber gets its correct published messsages.  The publisher CommandChannel does not receive an Ack( will not continue) until 
+     * Ensures that every subscriber gets its correct published messages.  The publisher CommandChannel does not receive an Ack( will not continue) until 
      * all subscribers have consumed the message from the pipe.  Other command channels are free to send other messages at the same time.  We only need to ensure 
      * the sequential behavior relative to a single command channel.
      * 
@@ -78,7 +78,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
      * moment of time no more than 2 states will ever be in play at once.  
      * 
      * If the pipes become full and an mesage/stateChange can not be added to all the required pipes then NOTHING else is done (no new message processing) until
-     * the partial delevery can become 100% complete.  This is critical to ensure the proper ordering of events.  
+     * the partial delivery can become 100% complete.  This is critical to ensure the proper ordering of events.  
      * 
      * 
      * 
