@@ -113,6 +113,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         
         super(graphManager, inputPipes, outputPipes);
         this.listener = listener;
+        assert(null!=listener) : "Behavior must be defined";
         this.parallelInstance = parallelInstance;
         this.inputPipes = inputPipes;
         this.outputPipes = outputPipes;       
@@ -150,7 +151,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	private String toStringDetails = "\n";
     public String toString() {
     
-    	return listener.getClass().getSimpleName()+"\n"+
+    	return (null==listener ? "Unknown Behavior" :
+    		    listener.getClass().getSimpleName())+"\n"+
     	       super.toString()+toStringDetails;    	
     }
     
@@ -336,8 +338,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
               Pipe.releaseReadLock(p);
               
     	  }
-    	
-    	
+    	   	
     	
 	}
 
