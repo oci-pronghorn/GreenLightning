@@ -62,7 +62,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
     protected static final PipeConfig<MessageSubscription> messageSubscriptionConfig = new PipeConfig<MessageSubscription>(MessageSubscription.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
     protected static final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
-    
+
+	private PipeConfig<HTTPRequestSchema> fileRequestConfig;// = builder.restPipeConfig.grow2x();
+
     protected int netResponsePipeIdx = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
     protected int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
     protected final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
@@ -660,72 +662,88 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	
 
 	
-	
-	
-	////////////////
-	//add file server, Was broken in recent refactoring.
-	//NEW design make this a Behavior and use the normal register methods.
-	////////////////
-	
-//	public void addFileServer(String path, int ... routes) {
-//
-//        File rootPath = buildFilePath(path);
-//        
-//        
-//		//due to internal implementation we must keep the same number of outputs as inputs.
-//		int r = routes.length;
-//		int p = computeParaMulti();
-//		
-//		int count = r*p;
-//		
-//		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
-//		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
-//		populatePipeArrays(r, p, inputs, outputs, routes);		
-//		
-//		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
-//				
-//	}
-//	
-//	public void addFileServer(String resourceRoot, String resourceDefault, int ... routes) {
-//		
-//		//due to internal implementation we must keep the same number of outputs as inputs.
-//		int r = routes.length;
-//		int p = computeParaMulti();
-//		
-//		int count = r*p;
-//		
-//		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
-//		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
-//		populatePipeArrays(r, p, inputs, outputs, routes);		
-//		
-//		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
-//				
-//	}
-
-
-	private int computeParaMulti() {
-		if (-1==parallelInstanceUnderActiveConstruction ) {
-			return builder.parallelism();
-		} else {
-			return 1;
+	public void addFileServer(String path) { //adds server to all routes
+		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
+		
+        File rootPath = buildFilePath(path);
+                
+		//due to internal implementation we must keep the same number of outputs as inputs.
+		final int count = Math.max(1, builder.routerConfig().routesCount());
+		
+		int i = count;
+		Pipe<HTTPRequestSchema>[] inputs = new Pipe[i];
+		Pipe<ServerResponseSchema>[] outputs = new Pipe[i];		
+		while (--i>=0) {
+				populateHTTPInOut(inputs, outputs, i, parallelIndex);
+		}	
+		
+		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
+			
+		//  RouteFilter
+		int j = count;
+		while(--j>=0) {
+			builder.appendPipeMapping(inputs[count], j, parallelIndex);			
 		}
+		
+	}
+	
+	public void addFileServer(String path, int ... routes) {
+		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
+		
+        File rootPath = buildFilePath(path);
+                
+		//due to internal implementation we must keep the same number of outputs as inputs.
+		final int count = routes.length;
+		
+		int i = count;
+		Pipe<HTTPRequestSchema>[] inputs = new Pipe[i];
+		Pipe<ServerResponseSchema>[] outputs = new Pipe[i];		
+		while (--i>=0) {
+				populateHTTPInOut(inputs, outputs, i, parallelIndex);
+		}	
+		
+		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
+				
+	    //  RouteFilter
+		int j = routes.length;
+		while(--j>=0) {
+			builder.appendPipeMapping(inputs[count], routes[j], parallelIndex);			
+		}
+	}
+	
+	public void addFileServer(String resourceRoot, String resourceDefault, int ... routes) {
+		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
+		
+		//due to internal implementation we must keep the same number of outputs as inputs.
+		final int count = routes.length;
+		
+		int i = count;
+		Pipe<HTTPRequestSchema>[] inputs = new Pipe[i];
+		Pipe<ServerResponseSchema>[] outputs = new Pipe[i];		
+		while (--i>=0) {
+				populateHTTPInOut(inputs, outputs, i, parallelIndex);
+		}		
+		
+		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
+			
+	    //  RouteFilter
+		int j = routes.length;
+		while(--j>=0) {
+			builder.appendPipeMapping(inputs[count], routes[j], parallelIndex);			
+		}				
 	}
 
 
-	private void populatePipeArrays(int r, int p, Pipe<HTTPRequestSchema>[] inputs,	Pipe<ServerResponseSchema>[] outputs, int[] routes) {
-		int idx = inputs.length;
-		assert(inputs.length==outputs.length);
+	private void populateHTTPInOut(Pipe<HTTPRequestSchema>[] inputs, 
+			                      Pipe<ServerResponseSchema>[] outputs, 
+			                      int idx, int parallelIndex) {
 		
-		while (--r>=0) {
-			int x = p;
-			while (--x >= 0) {
-				idx--;
-				int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? x : parallelInstanceUnderActiveConstruction;
-				inputs[idx] = builder.newHTTPRequestPipe(builder.restPipeConfig.grow2x());
-				builder.appendPipeMapping(inputs[idx], routes[r], parallelIndex);
-				outputs[idx] = builder.newNetResponsePipe(fileResponseConfig, parallelIndex);
-			}
+		if (null == fileRequestConfig) {
+			fileRequestConfig = builder.restPipeConfig.grow2x();
 		}
+		inputs[idx] = builder.newHTTPRequestPipe(fileRequestConfig);
+		outputs[idx] = builder.newNetResponsePipe(fileResponseConfig, parallelIndex);
+
 	}
 	
 
