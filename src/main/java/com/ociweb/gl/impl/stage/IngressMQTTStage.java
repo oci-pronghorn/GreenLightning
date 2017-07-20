@@ -1,5 +1,8 @@
 package com.ociweb.gl.impl.stage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
@@ -20,6 +23,7 @@ public class IngressMQTTStage extends PronghornStage {
 	private final CharSequence[] internalTopic;
 	private final IngressConverter[] converter;
 	private boolean allTopicsMatch;
+	private static final Logger logger = LoggerFactory.getLogger(IngressMQTTStage.class);
 	
 	public static final IngressConverter copyConverter = new IngressConverter() {		
 		@Override
@@ -114,7 +118,10 @@ public class IngressMQTTStage extends PronghornStage {
 			        		}
 			        	}
 			        	assert(topicMatches) : "ERROR, this topic was not known "+PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, new StringBuilder());
-		        		
+		        		if (!topicMatches) {
+		        			logger.warn("Unknown topic from external broker {}",PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, new StringBuilder()));
+		        			break;
+		        		}
 						PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
 			        	//direct copy of topic
 			        	DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
