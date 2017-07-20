@@ -175,13 +175,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return (L) registerListenerImpl(listener);
     }
       
-    public L registerListener(Object listener) {
+    public L registerListener(Behavior listener) {
     	return (L) registerListenerImpl(listener);
     }
-    public L registerBehavior(Behavior behavior) {
-    	return (L) registerListenerImpl(behavior);
-    }
-    
+  
+   
     public static void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor) {
 
     	visitCommandChannelsUsedByListener(listener, 0, visitor);
@@ -787,7 +785,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 
     
-    private ListenerFilter registerListenerImpl(Object listener) {
+    private ListenerFilter registerListenerImpl(Behavior listener) {
                 
     	outputPipes = new Pipe<?>[0];
 		
