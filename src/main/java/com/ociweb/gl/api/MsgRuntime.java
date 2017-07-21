@@ -186,14 +186,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
    
     public static void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor, IntHashTable cmdChannelUsageChecker) {
 
-    	visitCommandChannelsUsedByListener(listener, 0, visitor, cmdChannelUsageChecker);
+    	visitCommandChannelsUsedByListener(listener, 0, visitor, cmdChannelUsageChecker, listener);
     }
 	protected static void visitCommandChannelsUsedByListener(Object listener, int depth, 
-			     CommandChannelVisitor visitor, IntHashTable cmdChannelUsageChecker) {
+			     CommandChannelVisitor visitor, IntHashTable cmdChannelUsageChecker, Object topParent) {
 
         Class<? extends Object> c = listener.getClass();
         while (null != c) {
-        	visitCommandChannelsByClass(listener, depth, visitor, c, cmdChannelUsageChecker);
+        	visitCommandChannelsByClass(listener, depth, visitor, c, cmdChannelUsageChecker, topParent);
         	c = c.getSuperclass();
         }
     }
@@ -201,7 +201,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	private static void visitCommandChannelsByClass(Object listener, int depth, 
 											 CommandChannelVisitor visitor,
 											 Class<? extends Object> c,
-											 IntHashTable cmdChannelUsageChecker) {
+											 IntHashTable cmdChannelUsageChecker, Object topParent) {
 		
 		Field[] fields = c.getDeclaredFields();
                         
@@ -215,10 +215,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                 	logger.trace("found command channel in {} ",listener.getClass().getSimpleName());
                     MsgCommandChannel cmdChnl = (MsgCommandChannel)obj;                                        
                     
-                    if (cmdChannelUsageChecker!=null && !channelNotPreviouslyUsed(cmdChnl, cmdChannelUsageChecker)) {
+                    if (cmdChannelUsageChecker!=null && !channelNotPreviouslyUsed(cmdChnl, topParent, cmdChannelUsageChecker)) {
                     	logger.error("Command channel found in "+
                     	             listener.getClass().getSimpleName()+
                     	             " can not be used in more than one Behavior");
+                    	if (listener!=topParent) {
+                    		logger.error("Check the command channels nested under "+topParent.getClass().getSimpleName());
+                    	}                    	
                     	assert(false) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
                     }
                     
@@ -242,7 +245,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 //                			System.out.println(depth+" "+obj.getClass().getName());
 //                		}
                 		//recursive check for command channels
-                		visitCommandChannelsUsedByListener(obj, depth+1, visitor, cmdChannelUsageChecker);
+                		visitCommandChannelsUsedByListener(obj, depth+1, visitor, cmdChannelUsageChecker, topParent);
             		}
                 }
                 
@@ -366,18 +369,19 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         cmdChannelUsageChecker = new IntHashTable(9);
         return true;
     }
-    protected static boolean channelNotPreviouslyUsed(MsgCommandChannel cmdChnl, IntHashTable cmdChannelUsageChecker) {
+    protected static boolean channelNotPreviouslyUsed(MsgCommandChannel cmdChnl, Object topParent, IntHashTable cmdChannelUsageChecker) {
         int hash = System.identityHashCode(cmdChnl);
+        int parentHash = System.identityHashCode(topParent);
            
         if (IntHashTable.hasItem(cmdChannelUsageChecker, hash)) {
-                //this was already assigned somewhere so this is  an error
-                logger.error("A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.", new UnsupportedOperationException());
-                return false;
+        	
+        	if (parentHash!=IntHashTable.getItem(cmdChannelUsageChecker, hash)) {
+        		return false;
+        	}
+        	
         } 
-        //keep so this is detected later if use;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
-        
-        IntHashTable.setItem(cmdChannelUsageChecker, hash, 42);
+        //keep so this is detected later if use
+        IntHashTable.setItem(cmdChannelUsageChecker, hash, parentHash);
         return true;
     }
     ///////////
@@ -786,7 +790,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 		
 		//extract pipes used by listener and use cmdChannelUsageChecker to confirm its not re-used
-		visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor, cmdChannelUsageChecker);//populates  httpRequestPipes and outputPipes
+		visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor, cmdChannelUsageChecker, listener);//populates  httpRequestPipes and outputPipes
 		
 		
     	/////////
@@ -807,6 +811,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
         //////////////////////
         //////////////////////
+        
+        //* leave this code alone if there are no facades.
+        
+        //* review the Facades listed inside listener and put them into lists
+        //* build duplicate of inputs and add those to lists
+        //* insert replicator for each pipe to those lists
+        //* apply pipe consumers to each as data is available?
+        
+        
+        //////////////////////
+        //////////////////////
+
         
         ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
         		                                inputPipes, outputPipes, 
