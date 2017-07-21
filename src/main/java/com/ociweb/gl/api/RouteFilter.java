@@ -1,9 +1,9 @@
 package com.ociweb.gl.api;
 
-public interface RouteFilter {
+public interface RouteFilter<T extends RouteFilter<T>> {
 	
-	ListenerFilter includeRoutes(int ... routeIds);
+	T includeRoutes(int ... routeIds);
 	
-	ListenerFilter includeAllRoutes();
+	T includeAllRoutes();
 	
 }

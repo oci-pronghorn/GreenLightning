@@ -610,6 +610,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    		}
 		    	}
 		    }
+		    if (0==totalRequestPipes) {
+		    	logger.warn("ERROR: includeRoutes or includeAllRoutes must be called on REST listener.");
+		    }
 		}
 		
 		if (!forPipeCleaner.isEmpty()) {
@@ -658,77 +661,33 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return runtime.gm;
 	}
 	
-
 	
-	public void addFileServer(String path) { //adds server to all routes
+	public RouteFilter addFileServer(String path) { //adds server to all routes
 		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
-		
-        File rootPath = buildFilePath(path);
-                
-		//due to internal implementation we must keep the same number of outputs as inputs.
-		final int count = Math.max(1, builder.routerConfig().routesCount());
-		
-		int i = count;
-		Pipe<HTTPRequestSchema>[] inputs = new Pipe[i];
-		Pipe<ServerResponseSchema>[] outputs = new Pipe[i];		
-		while (--i>=0) {
-				populateHTTPInOut(inputs, outputs, i, parallelIndex);
-		}	
-		
-		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
+                		
+        //due to internal implementation we must keep the same number of outputs as inputs.
+		Pipe<HTTPRequestSchema>[] inputs = new Pipe[1];
+		Pipe<ServerResponseSchema>[] outputs = new Pipe[1];		
+		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
 			
-		//  RouteFilter
-		int j = count;
-		while(--j>=0) {
-			builder.appendPipeMapping(inputs[count], j, parallelIndex);			
-		}
-		
-	}
-	
-	public void addFileServer(String path, int ... routes) {
-		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
-		
-        File rootPath = buildFilePath(path);
-                
-		//due to internal implementation we must keep the same number of outputs as inputs.
-		final int count = routes.length;
-		
-		int i = count;
-		Pipe<HTTPRequestSchema>[] inputs = new Pipe[i];
-		Pipe<ServerResponseSchema>[] outputs = new Pipe[i];		
-		while (--i>=0) {
-				populateHTTPInOut(inputs, outputs, i, parallelIndex);
-		}	
-		
+		File rootPath = buildFilePath(path);
 		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
 				
-	    //  RouteFilter
-		int j = routes.length;
-		while(--j>=0) {
-			builder.appendPipeMapping(inputs[count], routes[j], parallelIndex);			
-		}
+		return new StageRouteFilter(inputs[0], builder, parallelIndex);
 	}
 	
-	public void addFileServer(String resourceRoot, String resourceDefault, int ... routes) {
+	public RouteFilter addFileServer(String resourceRoot, String resourceDefault) {
 		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
 		
 		//due to internal implementation we must keep the same number of outputs as inputs.
-		final int count = routes.length;
-		
-		int i = count;
-		Pipe<HTTPRequestSchema>[] inputs = new Pipe[i];
-		Pipe<ServerResponseSchema>[] outputs = new Pipe[i];		
-		while (--i>=0) {
-				populateHTTPInOut(inputs, outputs, i, parallelIndex);
-		}		
-		
+		Pipe<HTTPRequestSchema>[] inputs = new Pipe[1];
+		Pipe<ServerResponseSchema>[] outputs = new Pipe[1];		
+		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
+				
 		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
-			
-	    //  RouteFilter
-		int j = routes.length;
-		while(--j>=0) {
-			builder.appendPipeMapping(inputs[count], routes[j], parallelIndex);			
-		}				
+					
+		return new StageRouteFilter(inputs[0], builder, parallelIndex);
+				
 	}
 
 
