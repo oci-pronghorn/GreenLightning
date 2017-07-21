@@ -112,7 +112,7 @@ public class IngressMQTTStage extends PronghornStage {
 		        	} else {
 			        	boolean topicMatches = false;
 			        	while (--i >= 0) { //TODO: this is very bad, swap out with trie parser instead of linear search
-			        		if (PipeReader.isEqual(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, internalTopic[i])) {
+			        		if (PipeReader.isEqual(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, externalTopic[i])) {
 			        			topicMatches = true;
 			        			break;
 			        		}
