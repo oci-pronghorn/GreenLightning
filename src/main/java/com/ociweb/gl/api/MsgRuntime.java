@@ -219,8 +219,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                     	logger.error("Command channel found in "+
                     	             listener.getClass().getSimpleName()+
                     	             " can not be used in more than one Behavior");
+                    	assert(false) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
                     }
-                    assert(null==cmdChannelUsageChecker || channelNotPreviouslyUsed(cmdChnl, cmdChannelUsageChecker)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
                     
                     MsgCommandChannel.setListener(cmdChnl, listener);
                     
