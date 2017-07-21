@@ -409,7 +409,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		for(Method m : listener.getClass().getMethods()) {
 			
-			if (0 != (m.getModifiers()&Modifier.PUBLIC)) {
+			if ((0 != (m.getModifiers()&Modifier.PUBLIC)) &&
+				(0 == (m.getModifiers()&Modifier.INTERFACE))  ) {
 				return true;
 			}
 			
