@@ -386,11 +386,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 	protected int addGreenPipesCount(Behavior listener, int pipesCount) {
 		
-		///validate Behavior before continuing
-		assert(!hasPublicMethods(listener)) : "Behaviors can not have public methods";
-		///////////////////////
-		
-		
 		if (this.builder.isListeningToHTTPResponse(listener)) {
         	pipesCount++; //these are calls to URL responses        	
         }
@@ -403,19 +398,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         	pipesCount += httpRequestPipes.length; //NOTE: these are all accumulated from the command chanel as for routes we listen to (change in the future)
         }
 		return pipesCount;
-	}
-
-	private boolean hasPublicMethods(Behavior listener) {
-		
-		for(Method m : listener.getClass().getMethods()) {
-			
-			if ((0 != (m.getModifiers()&Modifier.PUBLIC)) &&
-				(0 == (m.getModifiers()&Modifier.INTERFACE))  ) {
-				return true;
-			}
-			
-		}
-		return false;
 	}
 
 
