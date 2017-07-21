@@ -123,12 +123,8 @@ public class IngressMQTTStage extends PronghornStage {
 		        			break;
 		        		}
 						PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
-			        	//direct copy of topic
-			        	DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
-			        	DataOutputBlobWriter.openField(stream);
-			        	PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, stream);
-			        	DataOutputBlobWriter.closeHighLevelField(stream, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
-			        			        	
+						PipeWriter.writeUTF8(output, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, internalTopic[i]);
+        	
 		        	}		       	
 	
 					//////////////////
