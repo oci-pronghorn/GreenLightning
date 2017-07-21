@@ -3,6 +3,8 @@ package com.ociweb.gl.api;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -182,23 +184,24 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
   
    
-    public static void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor) {
+    public static void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor, IntHashTable cmdChannelUsageChecker) {
 
-    	visitCommandChannelsUsedByListener(listener, 0, visitor);
+    	visitCommandChannelsUsedByListener(listener, 0, visitor, cmdChannelUsageChecker);
     }
-	protected static void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
+	protected static void visitCommandChannelsUsedByListener(Object listener, int depth, 
+			     CommandChannelVisitor visitor, IntHashTable cmdChannelUsageChecker) {
 
         Class<? extends Object> c = listener.getClass();
         while (null != c) {
-        	visitCommandChannelsByClass(listener, depth, visitor, c);
+        	visitCommandChannelsByClass(listener, depth, visitor, c, cmdChannelUsageChecker);
         	c = c.getSuperclass();
         }
-
     }
 
 	private static void visitCommandChannelsByClass(Object listener, int depth, 
 											 CommandChannelVisitor visitor,
-											 Class<? extends Object> c) {
+											 Class<? extends Object> c,
+											 IntHashTable cmdChannelUsageChecker) {
 		
 		Field[] fields = c.getDeclaredFields();
                         
@@ -210,8 +213,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                                 
                 if (obj instanceof MsgCommandChannel) {
                 	logger.trace("found command channel in {} ",listener.getClass().getSimpleName());
-                    MsgCommandChannel cmdChnl = (MsgCommandChannel)obj;                 
-                   // assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
+                    MsgCommandChannel cmdChnl = (MsgCommandChannel)obj;                                        
+                    
+                    if (cmdChannelUsageChecker!=null && !channelNotPreviouslyUsed(cmdChnl, cmdChannelUsageChecker)) {
+                    	logger.error("Command channel found in "+
+                    	             listener.getClass().getSimpleName()+
+                    	             " can not be used in more than one Behavior");
+                    }
+                    assert(null==cmdChannelUsageChecker || channelNotPreviouslyUsed(cmdChnl, cmdChannelUsageChecker)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
+                    
                     MsgCommandChannel.setListener(cmdChnl, listener);
                     
                     visitor.visit(cmdChnl);
@@ -232,7 +242,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 //                			System.out.println(depth+" "+obj.getClass().getName());
 //                		}
                 		//recursive check for command channels
-                		visitCommandChannelsUsedByListener(obj, depth+1, visitor);
+                		visitCommandChannelsUsedByListener(obj, depth+1, visitor, cmdChannelUsageChecker);
             		}
                 }
                 
@@ -348,7 +358,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//////////
     //only build this when assertions are on
     //////////
-    private static IntHashTable cmdChannelUsageChecker;
+    protected static IntHashTable cmdChannelUsageChecker;
     static {
         assert(setupForChannelAssertCheck());
     }    
@@ -356,7 +366,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         cmdChannelUsageChecker = new IntHashTable(9);
         return true;
     }
-    protected boolean channelNotPreviouslyUsed(MsgCommandChannel cmdChnl) {
+    protected static boolean channelNotPreviouslyUsed(MsgCommandChannel cmdChnl, IntHashTable cmdChannelUsageChecker) {
         int hash = System.identityHashCode(cmdChnl);
            
         if (IntHashTable.hasItem(cmdChannelUsageChecker, hash)) {
@@ -374,7 +384,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     ///////////
     
 
-	protected int addGreenPipesCount(Object listener, int pipesCount) {
+	protected int addGreenPipesCount(Behavior listener, int pipesCount) {
+		
+		///validate Behavior before continuing
+		assert(!hasPublicMethods(listener)) : "Behaviors can not have public methods";
+		///////////////////////
+		
+		
 		if (this.builder.isListeningToHTTPResponse(listener)) {
         	pipesCount++; //these are calls to URL responses        	
         }
@@ -389,7 +405,20 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return pipesCount;
 	}
 
-	protected void populateGreenPipes(Object listener, int pipesCount, Pipe<?>[] inputPipes) {
+	private boolean hasPublicMethods(Behavior listener) {
+		
+		for(Method m : listener.getClass().getMethods()) {
+			
+			if (0 != (m.getModifiers()&Modifier.PUBLIC)) {
+				return true;
+			}
+			
+		}
+		return false;
+	}
+
+
+	protected void populateGreenPipes(Behavior listener, int pipesCount, Pipe<?>[] inputPipes) {
 		if (this.builder.isListeningToHTTPResponse(listener)) {        	
         	Pipe<NetResponseSchema> netResponsePipe1 = new Pipe<NetResponseSchema>(responseNetConfig) {
 				@SuppressWarnings("unchecked")
@@ -757,11 +786,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	}
     	return this.builder;
     }
-    
-    
-
-
-    
+        
     private ListenerFilter registerListenerImpl(Behavior listener) {
                 
     	outputPipes = new Pipe<?>[0];
@@ -777,8 +802,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			
 		}
 		
-		//extract pipes used by listener
-		visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor);//populates  httpRequestPipes and outputPipes
+		//extract pipes used by listener and use cmdChannelUsageChecker to confirm its not re-used
+		visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor, cmdChannelUsageChecker);//populates  httpRequestPipes and outputPipes
 		
 		
     	/////////

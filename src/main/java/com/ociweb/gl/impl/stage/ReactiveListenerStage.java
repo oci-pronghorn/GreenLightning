@@ -802,7 +802,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	public int getFeatures(Pipe<TrafficOrderSchema> pipe) {
 		ccmwp.init(pipe);
-		MsgRuntime.visitCommandChannelsUsedByListener(listener, ccmwp);		
+		MsgRuntime.visitCommandChannelsUsedByListener(listener, ccmwp, null);		
 		return ccmwp.features();
 	}
     
