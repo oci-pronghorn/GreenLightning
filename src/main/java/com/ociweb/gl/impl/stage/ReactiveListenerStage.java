@@ -45,6 +45,7 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage implements ListenerFilter {
 
     protected final Object              listener;
+    protected final TimeListener[]      timeListeners;
     
     protected final Pipe<?>[]           inputPipes;
     protected final Pipe<?>[]           outputPipes;
@@ -94,9 +95,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private PayloadReader payloadReader;
     
     private HTTPSpecification httpSpec;
-    
+    private IntHashTable headerToPositionTable; //for HTTPClient
+    private TrieParser headerTrieParser; //for HTTPClient
+    protected final ReactiveOperators operators;
     
     private final ClientCoordinator ccm;
+    protected ReactiveManagerPipeConsumer consumer;
 
 	protected static final long MS_to_NS = 1_000_000;
     private int timeIteration = 0;
@@ -109,7 +113,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     /////////////////////////////////////////////////////
 
     ///TODO: try to create this actual listener lazy and late so we can filter graph more effectivly
-    public ReactiveListenerStage(GraphManager graphManager, Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, H builder, int parallelInstance) {
+    public ReactiveListenerStage(GraphManager graphManager, Object listener, 
+    		                     Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, 
+    		                     H builder, int parallelInstance) {
         
         super(graphManager, inputPipes, outputPipes);
         this.listener = listener;
@@ -118,6 +124,35 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         this.inputPipes = inputPipes;
         this.outputPipes = outputPipes;       
         this.builder = builder;
+        
+        //List of all supported operators 
+        this.operators = new ReactiveOperators()
+        		                 .addOperator(PubSubListener.class, 
+        		                		 MessageSubscription.instance,
+        		                		 new ReactiveOperator() {
+									@Override
+									public void apply(Object target, Pipe input) {
+										consumePubSubMessage(target, input);										
+									}        		                	 
+        		                 })
+        		                 .addOperator(HTTPResponseListener.class, 
+        		                		 NetResponseSchema.instance,
+        		                		 new ReactiveOperator() {
+ 									@Override
+ 									public void apply(Object target, Pipe input) {
+ 										consumeNetResponse((HTTPResponseListener)target, input);										
+ 									}        		                	 
+         		                 })
+        		                 .addOperator(RestListener.class, 
+        		                		 HTTPRequestSchema.instance,
+        		                		 new ReactiveOperator() {
+ 									@Override
+ 									public void apply(Object target, Pipe input) {
+ 										consumeRestRequest((RestListener)target, input);										
+ 									}        		                	 
+         		                 });
+                        
+        
         
         this.states = builder.getStates();
         this.graphManager = graphManager;
@@ -129,6 +164,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         if (listener instanceof ShutdownListener) {
         	int shudownListenrCount = liveShutdownListeners.incrementAndGet();
         	assert(shudownListenrCount>=0);
+        }
+        
+        //TODO: add child object here as well?
+        if (listener instanceof TimeListener) {
+        	timeListeners = new TimeListener[]{(TimeListener)listener};
+        } else {
+        	timeListeners = new TimeListener[0];
         }
                 
     }
@@ -167,18 +209,32 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     @Override
     public void startup() {              
  
+    	//////////////////////////////////////////////////////////////////
+    	//ALL operators have been added to operators so it can be used to create consumers as needed
+    	consumer = new ReactiveManagerPipeConsumer(operators, inputPipes);
+    	    	
     	if (listener instanceof RestListener) {
     		if (!restRoutesDefined) {
     			throw new UnsupportedOperationException("a RestListener requires a call to includeRoutes() first to define which routes it consumes.");
     		}
     	}
     	
-    	httpSpec = HTTPSpecification.defaultSpec();
-    	 
+    	httpSpec = HTTPSpecification.defaultSpec();   	 
+    	
+    	//////////////////
+    	///HTTPClient support
+    	TrieParserReader parserReader = new TrieParserReader(2, true);
+	    headerToPositionTable = httpSpec.headerTable(parserReader);
+	    headerTrieParser = httpSpec.headerParser();
+    	//////////////////
+	    //////////////////
+	    
+	    
         stageRate = (Number)GraphManager.getNota(graphManager, this.stageId,  GraphManager.SCHEDULE_RATE, null);
         
         timeProcessWindow = (null==stageRate? 0 : (int)(stageRate.longValue()/MS_to_NS));
          
+        //TODO: the transducers need to be listed here as startup listeners.
         
         //Do last so we complete all the initializations first
         if (listener instanceof StartupListener) {
@@ -219,42 +275,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     			return;
     		}
     	}
-    	
-    	
+    	    	
         if (timeEvents) {         	
-			processTimeEvents((TimeListener)listener, timeTrigger);            
+			processTimeEvents(timeListeners, timeTrigger);            
 		}
-     //processAllListeners
         
-        processAllListeners(inputPipes, listener);
-        
-        
-    }
-
-	private void processAllListeners(Pipe<?>[] inputs, Object target) {
-		int p = inputs.length;
-        
-        while (--p >= 0) {
-
-        	Pipe<?> localPipe = inputs[p];
+        consumer.process(listener);
   
-            if (Pipe.isForSchema((Pipe<MessageSubscription>)localPipe, MessageSubscription.class)) {                
-            	
-            	consumePubSubMessage(target, (Pipe<MessageSubscription>) localPipe);
-            	
-            } else if (Pipe.isForSchema((Pipe<NetResponseSchema>)localPipe, NetResponseSchema.class)) {
-               //new HTTP responses from queries earlier	
-               consumeNetResponse((HTTPResponseListener)target, (Pipe<NetResponseSchema>) localPipe);
-            
-            } else if (Pipe.isForSchema((Pipe<HTTPRequestSchema>)localPipe, HTTPRequestSchema.class)) {
-            	//new HTTP requests for the server
-            	consumeRestRequest((RestListener)target, (Pipe<HTTPRequestSchema>) localPipe );
-            
-            } else {
-                logger.error("unrecognized pipe sent to listener of type {} ", Pipe.schemaName(localPipe));
-            }
-        }
-	}
+    }
 
 
 	@Override    
@@ -362,59 +390,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 
             		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
 	            	 reader.openLowLevelAPIField();
-	            	 
+	
 	            	 final short statusId = reader.readShort();	
-	            	 
-	            	 ////////////////
-	            	 //TODO: this parsing is a big mess
-	            	 //////////////
-	            	 
-	            	 
-	            	 
-	            	 //Must walk all headers and put indexes into hashtable
-	            	 //must also extract type	            	 	            	 
-	//	            	 short typeHeader = reader.readShort();
-	//	            	 short typeId = 0;
-	//	            	 if (6==typeHeader) {//may not have type
-	//	            		 assert(6==typeHeader) : "should be 6 was "+typeHeader;
-	//	            		 typeId = reader.readShort();	            	 
-	//	            		 short headerEnd = reader.readShort();
-	//	            		 assert(-1==headerEnd) : "header end should be -1 was "+headerEnd;
-	//	            	 } else {
-	//	            		 assert(-1==typeHeader) : "header end should be -1 was "+typeHeader;
-	//	            	 }
-				//built here TODO: move to top    
-	            	 
-
-	            	 
-	            	 
-	            	 TrieParserReader parserReader = new TrieParserReader(2, true);
-				     IntHashTable headerToPositionTable = httpSpec.headerTable(parserReader);
-				     				     
-				     //build once TODO: move to top
-				     TrieParser headerTrieParser = httpSpec.headerParser();
-				
 				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
-		   
-					  
-	            	 
-				Headable headReader = new Headable() {
-
-					@Override
-					public void read(BlobReader reader) {
-						System.err.println(reader.available());
-						
-						int type = reader.readShort();
-						System.err.println("type is "+	httpSpec.contentTypes[type]+" "+type);
-						
-					}
-					
-				};
-				
-				reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), headReader );
-	            	 
-				     
-				     
+				     				     
 	            	 //////////////////
 	            	 //end of the big mess
 	            	 //////////////////
@@ -546,7 +525,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     }        
 
 	
-	protected final void processTimeEvents(TimeListener listener, long trigger) {
+	protected final void processTimeEvents(TimeListener[] listener, long trigger) {
 		
 		long msRemaining = (trigger-builder.currentTimeMillis()); 
 		if (msRemaining > timeProcessWindow) {
@@ -562,8 +541,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		while (builder.currentTimeMillis() < trigger) {
 			Thread.yield();                	
 		}
+		int iteration = timeIteration++;
 		
-		listener.timeEvent(trigger, timeIteration++);
+		//all Internal Objects will get these sequentially 
+		for(int i = 0; i<listener.length; i++) {
+			listener[i].timeEvent(trigger, iteration);
+		}		
+		
 		timeTrigger += timeRate;
 	}
    
