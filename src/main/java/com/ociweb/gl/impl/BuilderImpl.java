@@ -63,6 +63,8 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class BuilderImpl implements Builder {
 
+	private static final int DEFAULT_MAX_MQTT_IN_FLIGHT = 10;
+	private static final int DEFAULT_MAX__MQTT_MESSAGE = 1<<12;
 	//NB: The Green Lightning maximum header size 64K is defined here HTTP1xRouterStage.MAX_HEADER
 	private static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
 	private static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<9;
@@ -372,6 +374,7 @@ public class BuilderImpl implements Builder {
 
     public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Behavior listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, int parallelInstance) {
     	assert(null!=listener);
+    	
     	return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this, parallelInstance);
     }
 
@@ -789,7 +792,27 @@ public class BuilderImpl implements Builder {
 	
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS);
+		short maxInFlight = DEFAULT_MAX_MQTT_IN_FLIGHT;
+		int maxMessageLength = DEFAULT_MAX__MQTT_MESSAGE;//4K
+		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS, maxInFlight, maxMessageLength );
+	}
+	
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight) {		
+		if (maxInFlight>(1<<15)) {
+			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
+		}
+		int maxMessageLength = DEFAULT_MAX__MQTT_MESSAGE;//4K
+		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS, (short)maxInFlight, maxMessageLength );
+	}
+	
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {		
+		if (maxInFlight>(1<<15)) {
+			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
+		}
+		if (maxMessageLength>(256*(1<<20))) {
+			throw new UnsupportedOperationException("Specification does not support values larger than 256M");
+		}
+		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS, (short)maxInFlight, maxMessageLength );
 	}
 	
 	@Override

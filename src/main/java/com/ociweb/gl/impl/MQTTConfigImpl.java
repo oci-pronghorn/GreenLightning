@@ -35,8 +35,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	//
 	private int flags;
 	private boolean isTLS; //derive from host/port args
-	private short maxInFlight = 10; //add as args
-	private int maximumLenghOfVariableLengthFields = 1<<18; //add as args
+	private final short maxInFlight;
+	private final int maximumLenghOfVariableLengthFields;
 	//
 	private final BuilderImpl builder;
 	//
@@ -51,12 +51,18 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	private int transmissionFieldQOS = 0; 
 	private int transmissionFieldRetain = 0;
 	
-	MQTTConfigImpl(CharSequence host, int port, CharSequence clientId, BuilderImpl builder, long rate) {
+	MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
+			       BuilderImpl builder, long rate, 
+			       short maxInFlight, int maxMessageLength) {
+		
 		this.host = host;
 		this.port = port;
 		this.clientId = clientId;
 		this.builder = builder;
 		this.rate = rate;
+		this.maxInFlight = maxInFlight;
+		this.maximumLenghOfVariableLengthFields = maxMessageLength;
+		
 	}
 	
 	
@@ -200,10 +206,14 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 			
 			clientResponse = MQTTClientResponseSchema.instance.newPipe(maxInFlight, maximumLenghOfVariableLengthFields);
 
+			byte totalConnectionsInBits = 2; //only 4 brokers
+			short maxPartialResponses = 2;
 			
 			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, isTLS, 
 					                              maxInFlight, maximumLenghOfVariableLengthFields, 
-					                              clientRequest, clientResponse, rate);
+					                              clientRequest, clientResponse, rate, 
+					                              totalConnectionsInBits,
+					                              maxPartialResponses);
 			
 			//send the broker details
 			publishBrokerConfig(clientRequest);
