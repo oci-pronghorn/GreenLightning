@@ -68,7 +68,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
     protected static final int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support
 
-    private boolean transducerAutowiring = true;
+    protected boolean transducerAutowiring = true;
 	
 	private final PipeConfigManager listenerPipeConfigs = buildPipeManager();	
     
@@ -765,42 +765,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         
         //extract this into common method to be called in GL and FL
 		if (transducerAutowiring) {
-			
-			final Grouper g = new Grouper(inputPipes);
-			
-			//create pipe array for every transducer
-			//for each pipe Array create reactor to be called.
-			
-			//merge these pipes into replicators
-			//replace inputs with pipes.
-			
-			ChildClassScannerVisitor tVisitor = new ChildClassScannerVisitor() {
-
-				@Override
-				public boolean visit(Object child, Object topParent) {
-					
-					if (g.additions()==0) {
-						//add first value
-						g.add(ReactiveListenerStage.operators.createPipes(listener,listenerPipeConfigs));
-					}
-					
-					Pipe[] pipes = ReactiveListenerStage.operators.createPipes(child,listenerPipeConfigs);
-					consumers.add(new ReactiveManagerPipeConsumer(child, ReactiveListenerStage.operators, pipes));
-					
-					//roll these pipes with the others by type.
-					g.add(pipes);					
-					return true;
-				}
-				
-			};
-			ChildClassScanner.visitUsedByClass(listener, tVisitor, ListenerFacade.class);
-						
-			if (g.additions()>0) {
-				//only use replicators when some Transducer is found
-				
-				inputPipes = g.firstArray();
-				g.buildReplicators(gm);
-			}
+			inputPipes = autoWireTransducers(listener, inputPipes, consumers);
 		}       
         
         
@@ -840,6 +805,33 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return reactiveListener;
         
     }
+
+	protected Pipe<?>[] autoWireTransducers(final Behavior listener, Pipe<?>[] inputPipes,
+			final ArrayList<ReactiveManagerPipeConsumer> consumers) {
+		final Grouper g = new Grouper(inputPipes);
+		ChildClassScannerVisitor tVisitor = new ChildClassScannerVisitor() {
+			@Override
+			public boolean visit(Object child, Object topParent) {					
+				if (g.additions()==0) {
+					//add first value
+					g.add(ReactiveListenerStage.operators.createPipes(listener,listenerPipeConfigs));
+				}					
+				Pipe[] pipes = ReactiveListenerStage.operators.createPipes(child,listenerPipeConfigs);
+				consumers.add(new ReactiveManagerPipeConsumer(child, ReactiveListenerStage.operators, pipes));
+				
+				//roll these pipes with the others by type.
+				g.add(pipes);					
+				return true;
+			}				
+		};
+		ChildClassScanner.visitUsedByClass(listener, tVisitor, ListenerFacade.class);
+					
+		if (g.additions()>0) {
+			inputPipes = g.firstArray();
+			g.buildReplicators(gm);
+		}
+		return inputPipes;
+	}
 
 	protected PipeConfigManager buildPipeManager() {
 		PipeConfigManager pcm = new PipeConfigManager();
