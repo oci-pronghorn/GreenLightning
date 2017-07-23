@@ -1,11 +1,11 @@
 package com.ociweb.gl.impl.stage;
 
-import com.ociweb.gl.api.CommandChannelVisitor;
 import com.ociweb.gl.api.MsgCommandChannel;
+import com.ociweb.gl.impl.ChildClassScannerVisitor;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 
-class CommandChannelWithMatchingPipe implements CommandChannelVisitor {
+class CommandChannelWithMatchingPipe implements ChildClassScannerVisitor<MsgCommandChannel> {
 
 	   private Pipe<TrafficOrderSchema> target;
 	   private int features;
@@ -15,10 +15,11 @@ class CommandChannelWithMatchingPipe implements CommandChannelVisitor {
 		   this.features = 0;
 	   }
 	   
-	   public void visit(MsgCommandChannel cmdChnl) {
+	   public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
 			if (cmdChnl.isGoPipe(target)) {
 				features = cmdChnl.initFeatures;
 			}
+			return true;//keep going
 	   }
 	
 	   public int features() {

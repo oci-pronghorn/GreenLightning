@@ -6,6 +6,6 @@ import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 
 
-public interface RestListener extends Behavior,RestListenerBase {
+public interface RestListener extends Behavior, RestListenerBase {
 
 }

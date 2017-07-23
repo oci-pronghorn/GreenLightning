@@ -2,7 +2,6 @@ package com.ociweb.gl.api;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.net.URL;
@@ -10,15 +9,24 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
 
+import javax.sql.rowset.spi.TransactionalWriter;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BridgeConfigImpl;
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.ChildClassScanner;
+import com.ociweb.gl.impl.ChildClassScannerVisitor;
+import com.ociweb.gl.impl.RestListenerBase;
 import com.ociweb.gl.impl.schema.MessageSubscription;
+import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
+import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
+import com.ociweb.gl.impl.stage.ReactiveOperator;
+import com.ociweb.gl.impl.stage.ReactiveOperators;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
@@ -32,6 +40,7 @@ import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
@@ -43,12 +52,13 @@ import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
-    private static final Logger logger = LoggerFactory.getLogger(MsgRuntime.class);
+    public static final Logger logger = LoggerFactory.getLogger(MsgRuntime.class);
 
     
     protected static final int nsPerMS = 1_000_000;
 	public B builder;
-    protected final GraphManager gm;
+
+	protected final GraphManager gm;
 
     protected final String[] args;
     
@@ -57,7 +67,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected static final int defaultCommandChannelLength = 16;
     protected static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
     protected static final int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support
-    
+
+    private boolean transducerAutowiring = true;
+	
+	private final PipeConfigManager listenerPipeConfigs = buildPipeManager();	
     
     protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload);   
     protected static final PipeConfig<ClientHTTPRequestSchema> requestNetConfig = new PipeConfig<ClientHTTPRequestSchema>(ClientHTTPRequestSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
@@ -75,24 +88,62 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     private BridgeConfig[] bridges = new BridgeConfig[0];
     
 	protected int parallelInstanceUnderActiveConstruction = -1;
+	
 	protected Pipe<?>[] outputPipes = null;
-	protected Pipe<HTTPRequestSchema>[] httpRequestPipes = null;
-    protected CommandChannelVisitor gatherPipesVisitor = new CommandChannelVisitor() {
+    protected ChildClassScannerVisitor gatherPipesVisitor = new ChildClassScannerVisitor<MsgCommandChannel>() {
     	
 		@Override
-		public void visit(MsgCommandChannel cmdChnl) {
-			
+		public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
+			    
+            if (!ChildClassScanner.notPreviouslyHeld(cmdChnl, topParent, cmdChannelUsageChecker)) {
+            	logger.error("Command channel found in "+
+            			topParent.getClass().getSimpleName()+
+            	             " can not be used in more than one Behavior");                	
+            	assert(false) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
+            }
             
+            MsgCommandChannel.setListener(cmdChnl, (Behavior)topParent);
             //add this to the count of publishers
             //CharSequence[] supportedTopics = cmdChnl.supportedTopics();
             //get count of subscribers per topic as well.
 			//get the pipe ID of the singular PubSub...
 			
-			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());			
+			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());
+			return true;//keep looking
+					
 		}
 
     };
 
+
+	private ChildClassScannerVisitor transVisitor = new ChildClassScannerVisitor<ListenerFacade>() {
+
+		@Override
+		public boolean visit(ListenerFacade child, Object topParent) {
+			// TODO found this child inside this Behavior
+			
+			ReactiveOperators operators = ReactiveListenerStage.operators;
+			
+			int i = operators.interfaces.size();
+			while (--i>=0) {
+				if (operators.interfaces.get(i).isInstance(child)) {
+					//need this pipe
+					
+					
+				}
+			}
+			
+			//put all the children into lists by the listener type for notifications
+			return true;//keep going
+		
+		}
+		
+	};
+    
+    public void disableTransducerAutowiring() {
+    	transducerAutowiring = false;
+    }
+    
     private void keepBridge(BridgeConfig bridge) {
     	boolean isFound = false;
     	int i = bridges.length;
@@ -184,77 +235,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
   
    
-    public static void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor, IntHashTable cmdChannelUsageChecker) {
-
-    	visitCommandChannelsUsedByListener(listener, 0, visitor, cmdChannelUsageChecker, listener);
-    }
-	protected static void visitCommandChannelsUsedByListener(Object listener, int depth, 
-			     CommandChannelVisitor visitor, IntHashTable cmdChannelUsageChecker, Object topParent) {
-
-        Class<? extends Object> c = listener.getClass();
-        while (null != c) {
-        	visitCommandChannelsByClass(listener, depth, visitor, c, cmdChannelUsageChecker, topParent);
-        	c = c.getSuperclass();
-        }
-    }
-
-	private static void visitCommandChannelsByClass(Object listener, int depth, 
-											 CommandChannelVisitor visitor,
-											 Class<? extends Object> c,
-											 IntHashTable cmdChannelUsageChecker, Object topParent) {
-		
-		Field[] fields = c.getDeclaredFields();
-                        
-        int f = fields.length;
-        while (--f >= 0) {
-            try {
-                fields[f].setAccessible(true);   
-                Object obj = fields[f].get(listener);
-                                
-                if (obj instanceof MsgCommandChannel) {
-                	logger.trace("found command channel in {} ",listener.getClass().getSimpleName());
-                    MsgCommandChannel cmdChnl = (MsgCommandChannel)obj;                                        
-                    
-                    if (cmdChannelUsageChecker!=null && !channelNotPreviouslyUsed(cmdChnl, topParent, cmdChannelUsageChecker)) {
-                    	logger.error("Command channel found in "+
-                    	             listener.getClass().getSimpleName()+
-                    	             " can not be used in more than one Behavior");
-                    	if (listener!=topParent) {
-                    		logger.error("Check the command channels nested under "+topParent.getClass().getSimpleName());
-                    	}                    	
-                    	assert(false) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
-                    }
-                    
-                    MsgCommandChannel.setListener(cmdChnl, listener);
-                    
-                    visitor.visit(cmdChnl);
-                                        
-                } else {      
-          
-                	if ((!obj.getClass().isPrimitive()) 
-                		&& (obj != listener) 
-                		&& (!obj.getClass().getName().startsWith("java."))  
-                		&& (!obj.getClass().isEnum())
-                		&& (!(obj instanceof MsgRuntime))
-                		&& (!(obj instanceof MessageConsumer))                		
-                		&& !fields[f].isSynthetic()
-                		&& fields[f].isAccessible() 
-                		&& depth<=5) { //stop recursive depth
-          
-//                		if (depth == 2) {
-//                			System.out.println(depth+" "+obj.getClass().getName());
-//                		}
-                		//recursive check for command channels
-                		visitCommandChannelsUsedByListener(obj, depth+1, visitor, cmdChannelUsageChecker, topParent);
-            		}
-                }
-                
-            } catch (Throwable e) {
-                logger.debug("unable to find CommandChannel",e);
-            }
-        }
-	}
-    
     public long fieldId(int routeId, byte[] fieldName) {
     	return builder.fieldId(routeId, fieldName);
     }    
@@ -361,7 +341,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//////////
     //only build this when assertions are on
     //////////
-    protected static IntHashTable cmdChannelUsageChecker;
+    public static IntHashTable cmdChannelUsageChecker;
     static {
         assert(setupForChannelAssertCheck());
     }    
@@ -369,26 +349,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         cmdChannelUsageChecker = new IntHashTable(9);
         return true;
     }
-    protected static boolean channelNotPreviouslyUsed(MsgCommandChannel cmdChnl, Object topParent, IntHashTable cmdChannelUsageChecker) {
-        int hash = System.identityHashCode(cmdChnl);
-        int parentHash = System.identityHashCode(topParent);
-           
-        if (IntHashTable.hasItem(cmdChannelUsageChecker, hash)) {
-        	
-        	if (parentHash!=IntHashTable.getItem(cmdChannelUsageChecker, hash)) {
-        		return false;
-        	}
-        	
-        } 
-        //keep so this is detected later if use
-        IntHashTable.setItem(cmdChannelUsageChecker, hash, parentHash);
-        return true;
-    }
-    ///////////
-    ///////////
-    
-
-	protected int addGreenPipesCount(Behavior listener, int pipesCount) {
+    protected int addGreenPipesCount(Behavior listener, int pipesCount) {
 		
 		if (this.builder.isListeningToHTTPResponse(listener)) {
         	pipesCount++; //these are calls to URL responses        	
@@ -399,7 +360,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         }
         
         if (this.builder.isListeningHTTPRequest(listener)) {
-        	pipesCount += httpRequestPipes.length; //NOTE: these are all accumulated from the command chanel as for routes we listen to (change in the future)
+        	pipesCount += ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
         }
 		return pipesCount;
 	}
@@ -436,8 +397,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         //for mutiple we must send them all to the reactor.
         
         
-        if (this.builder.isListeningHTTPRequest(listener) ) {
+		if (this.builder.isListeningHTTPRequest(listener) ) {
         	
+			Pipe<HTTPRequestSchema>[] httpRequestPipes;
+        	httpRequestPipes = ListenerConfig.newHTTPRequestPipes(builder,  ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction));
+
         	int i = httpRequestPipes.length;        	
         	assert(i>0) : "This listens to Rest requests but none have been routed here";        
         	while (--i >= 0) {        
@@ -774,62 +738,83 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return this.builder;
     }
         
-    private ListenerFilter registerListenerImpl(Behavior listener) {
-                
-    	outputPipes = new Pipe<?>[0];
-		
-		if (listener instanceof RestListener) {
-			
-			final int p = ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
-						
-			httpRequestPipes = ListenerConfig.newHTTPRequestPipes(builder,  p);
-
-		} else {
-			httpRequestPipes = (Pipe<HTTPRequestSchema>[]) new Pipe<?>[0];     	
-			
-		}
-		
-		//extract pipes used by listener and use cmdChannelUsageChecker to confirm its not re-used
-		visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor, cmdChannelUsageChecker, listener);//populates  httpRequestPipes and outputPipes
-		
-		
-    	/////////
-    	//pre-count how many pipes will be needed so the array can be built to the right size
-    	/////////
-    	int pipesCount = 0;
-
-        pipesCount = addGreenPipesCount(listener, pipesCount);
-                
-        Pipe<?>[] inputPipes = new Pipe<?>[pipesCount];
-    	 	
+    private ListenerFilter registerListenerImpl(final Behavior listener) {
     	
-    	///////
-        //Populate the inputPipes array with the required pipes
-    	///////      
+    	////////////
+    	//OUTPUT
+    	///////////
+    	outputPipes = new Pipe<?>[0];
+    	//extract pipes used by listener and use cmdChannelUsageChecker to confirm its not re-used
+    	ChildClassScanner.visitUsedByClass(listener, gatherPipesVisitor, MsgCommandChannel.class);//populates outputPipes
 
+    	
+    	/////////////
+    	//INPUT
+    	//add green features, count first then create the pipes
+    	//NOTE: that each Behavior is inspected and will find Transducers which need inputs as well
+    	/////////
+    	int pipesCount = addGreenPipesCount(listener, 0);
+        Pipe<?>[] inputPipes = new Pipe<?>[pipesCount];
         populateGreenPipes(listener, pipesCount, inputPipes);                
 
         //////////////////////
         //////////////////////
         
-        //* leave this code alone if there are no facades.
+        //this is empty when transducerAutowiring is off
+        final ArrayList<ReactiveManagerPipeConsumer> consumers = new ArrayList<ReactiveManagerPipeConsumer>(); 
         
-        //* review the Facades listed inside listener and put them into lists
-        //* build duplicate of inputs and add those to lists
-        //* insert replicator for each pipe to those lists
-        //* apply pipe consumers to each as data is available?
+        //extract this into common method to be called in GL and FL
+		if (transducerAutowiring) {
+			
+			final Grouper g = new Grouper(inputPipes);
+			
+			//create pipe array for every transducer
+			//for each pipe Array create reactor to be called.
+			
+			//merge these pipes into replicators
+			//replace inputs with pipes.
+			
+			ChildClassScannerVisitor tVisitor = new ChildClassScannerVisitor() {
+
+				@Override
+				public boolean visit(Object child, Object topParent) {
+					
+					if (g.additions()==0) {
+						//add first value
+						g.add(ReactiveListenerStage.operators.createPipes(listener,listenerPipeConfigs));
+					}
+					
+					Pipe[] pipes = ReactiveListenerStage.operators.createPipes(child,listenerPipeConfigs);
+					consumers.add(new ReactiveManagerPipeConsumer(child, ReactiveListenerStage.operators, pipes));
+					
+					//roll these pipes with the others by type.
+					g.add(pipes);					
+					return true;
+				}
+				
+			};
+			ChildClassScanner.visitUsedByClass(listener, tVisitor, ListenerFacade.class);
+						
+			if (g.additions()>0) {
+				//only use replicators when some Transducer is found
+				
+				inputPipes = g.firstArray();
+				g.buildReplicators(gm);
+			}
+		}       
         
         
         //////////////////////
         //////////////////////
+		
 
         
         ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
-        		                                inputPipes, outputPipes, 
+        		                                inputPipes, outputPipes, consumers,
         		                                parallelInstanceUnderActiveConstruction);
 
         
-        if (listener instanceof RestListener) {
+        if (listener instanceof RestListenerBase) {
 			GraphManager.addNota(gm, GraphManager.DOT_RANK_NAME, "ModuleStage", reactiveListener);
 			
 		}
@@ -856,5 +841,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         
     }
 
+	protected PipeConfigManager buildPipeManager() {
+		PipeConfigManager pcm = new PipeConfigManager();
+		pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class );
+		return pcm;
+	}
     
 }

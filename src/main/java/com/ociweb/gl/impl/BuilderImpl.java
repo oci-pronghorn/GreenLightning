@@ -12,6 +12,7 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.ListenerFacade;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
@@ -28,6 +29,7 @@ import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
 import com.ociweb.gl.impl.stage.HTTPClientRequestStage;
 import com.ociweb.gl.impl.stage.MessagePubSubStage;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
+import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.gl.impl.stage.TrafficCopStage;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
@@ -372,10 +374,12 @@ public class BuilderImpl implements Builder {
 		return timeTriggerStart;
 	}
 
-    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Behavior listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, int parallelInstance) {
+    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Behavior listener, 
+    		                		Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, 
+    		                		ArrayList<ReactiveManagerPipeConsumer> consumers, int parallelInstance) {
     	assert(null!=listener);
     	
-    	return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this, parallelInstance);
+    	return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, consumers, this, parallelInstance);
     }
 
 	public <G extends MsgCommandChannel> G newCommandChannel(
@@ -452,16 +456,51 @@ public class BuilderImpl implements Builder {
 		return shutdownTimeoutInSeconds;
 	}
 
-	public final boolean isListeningToSubscription(Object listener) {
-		return listener instanceof PubSubListener || listener instanceof StateChangeListener<?>;
+	private final ChildClassScannerVisitor deepSubListener = new ChildClassScannerVisitor<ListenerFacade>() {
+		@Override
+		public boolean visit(ListenerFacade child, Object topParent) {
+			boolean found = child instanceof PubSubListenerBase || 
+					child instanceof StateChangeListenerBase<?>;
+			return !found;
+		}		
+	};
+	
+	private final ChildClassScannerVisitor deepRespListener = new ChildClassScannerVisitor<ListenerFacade>() {
+		@Override
+		public boolean visit(ListenerFacade child, Object topParent) {
+			boolean found = child instanceof HTTPResponseListenerBase;
+			return !found;
+		}		
+	};
+	
+	private final ChildClassScannerVisitor deepReqstListener = new ChildClassScannerVisitor<ListenerFacade>() {
+		@Override
+		public boolean visit(ListenerFacade child, Object topParent) {
+			boolean found = child instanceof RestListenerBase;
+			return !found;
+		}		
+	};
+	
+	
+	public final boolean isListeningToSubscription(Behavior listener) {
+			
+		//NOTE: we only call for scan if the listener is not already of this type
+		return listener instanceof PubSubListenerBase || 
+			   listener instanceof StateChangeListenerBase<?> ||
+			   //will return false if PubSub was encountered
+			   !ChildClassScanner.visitUsedByClass(listener, deepSubListener, ListenerFacade.class);
 	}
 
 	public final boolean isListeningToHTTPResponse(Object listener) {
-		return listener instanceof HTTPResponseListener;
+		return listener instanceof HTTPResponseListenerBase ||
+			   //will return false if HTTPResponseListenerBase was encountered
+			  !ChildClassScanner.visitUsedByClass(listener, deepRespListener, ListenerFacade.class);
 	}
 
 	public final boolean isListeningHTTPRequest(Object listener) {
-		return listener instanceof RestListener;
+		return listener instanceof RestListenerBase	||
+			    //will return false if RestListenerBase was encountered
+			   !ChildClassScanner.visitUsedByClass(listener, deepReqstListener, ListenerFacade.class);
 	}
 	
 	/**

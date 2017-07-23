@@ -1,5 +1,6 @@
 package com.ociweb.gl.impl.stage;
 
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,6 +14,7 @@ import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MessageReader;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
@@ -21,7 +23,11 @@ import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.ChildClassScanner;
+import com.ociweb.gl.impl.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.PayloadReader;
+import com.ociweb.gl.impl.PubSubListenerBase;
+import com.ociweb.gl.impl.RestListenerBase;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ClientCoordinator;
@@ -73,6 +79,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private static final int MAX_PORTS = 10;
  
     
+    public static final ReactiveOperators operators = reactiveOperators();
+	 
     protected final Enum[] states;
     
     protected boolean timeEvents = false;
@@ -97,7 +105,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private HTTPSpecification httpSpec;
     private IntHashTable headerToPositionTable; //for HTTPClient
     private TrieParser headerTrieParser; //for HTTPClient
-    protected final ReactiveOperators operators;
+   
     
     private final ClientCoordinator ccm;
     protected ReactiveManagerPipeConsumer consumer;
@@ -105,6 +113,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	protected static final long MS_to_NS = 1_000_000;
     private int timeIteration = 0;
     private int parallelInstance;
+    
+    private final ArrayList<ReactiveManagerPipeConsumer> consumers;
+    
     //////////////////////////////////////////////////
     ///NOTE: keep all the work here to a minimum, we should just
     //      take data off pipes and hand off to the application
@@ -112,48 +123,20 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     //      much work needs to be done is must be done elsewhere
     /////////////////////////////////////////////////////
 
-    ///TODO: try to create this actual listener lazy and late so we can filter graph more effectivly
-    public ReactiveListenerStage(GraphManager graphManager, Object listener, 
+    public ReactiveListenerStage(GraphManager graphManager, Behavior listener, 
     		                     Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, 
+    		                     ArrayList<ReactiveManagerPipeConsumer> consumers, 
     		                     H builder, int parallelInstance) {
         
         super(graphManager, inputPipes, outputPipes);
         this.listener = listener;
         assert(null!=listener) : "Behavior must be defined";
         this.parallelInstance = parallelInstance;
+        this.consumers = consumers;
         this.inputPipes = inputPipes;
         this.outputPipes = outputPipes;       
         this.builder = builder;
-        
-        //List of all supported operators 
-        this.operators = new ReactiveOperators()
-        		                 .addOperator(PubSubListener.class, 
-        		                		 MessageSubscription.instance,
-        		                		 new ReactiveOperator() {
-									@Override
-									public void apply(Object target, Pipe input) {
-										consumePubSubMessage(target, input);										
-									}        		                	 
-        		                 })
-        		                 .addOperator(HTTPResponseListener.class, 
-        		                		 NetResponseSchema.instance,
-        		                		 new ReactiveOperator() {
- 									@Override
- 									public void apply(Object target, Pipe input) {
- 										consumeNetResponse((HTTPResponseListener)target, input);										
- 									}        		                	 
-         		                 })
-        		                 .addOperator(RestListener.class, 
-        		                		 HTTPRequestSchema.instance,
-        		                		 new ReactiveOperator() {
- 									@Override
- 									public void apply(Object target, Pipe input) {
- 										consumeRestRequest((RestListener)target, input);										
- 									}        		                	 
-         		                 });
-                        
-        
-        
+                                       
         this.states = builder.getStates();
         this.graphManager = graphManager;
              
@@ -174,6 +157,38 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         }
                 
     }
+
+    //TODO: this common list of operators is getting creted for EVERY stages and its not needed.
+    
+    
+    
+    private static ReactiveOperators reactiveOperators() {
+		return new ReactiveOperators()
+        		                 .addOperator(PubSubListenerBase.class, 
+        		                		 MessageSubscription.instance,
+        		                		 new ReactiveOperator() {
+									@Override
+									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
+										r.consumePubSubMessage(target, input);										
+									}        		                	 
+        		                 })
+        		                 .addOperator(HTTPResponseListenerBase.class, 
+        		                		 NetResponseSchema.instance,
+        		                		 new ReactiveOperator() {
+ 									@Override
+ 									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
+ 										r.consumeNetResponse((HTTPResponseListener)target, input);										
+ 									}        		                	 
+         		                 })
+        		                 .addOperator(RestListenerBase.class, 
+        		                		 HTTPRequestSchema.instance,
+        		                		 new ReactiveOperator() {
+ 									@Override
+ 									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
+ 										r.consumeRestRequest((RestListener)target, input);										
+ 									}        		                	 
+         		                 });
+	}
     
     public int getId() {
     	return builder.behaviorId((Behavior)listener);
@@ -211,7 +226,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
  
     	//////////////////////////////////////////////////////////////////
     	//ALL operators have been added to operators so it can be used to create consumers as needed
-    	consumer = new ReactiveManagerPipeConsumer(operators, inputPipes);
+    	consumer = new ReactiveManagerPipeConsumer(listener, operators, inputPipes);
     	    	
     	if (listener instanceof RestListener) {
     		if (!restRoutesDefined) {
@@ -280,7 +295,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			processTimeEvents(timeListeners, timeTrigger);            
 		}
         
-        consumer.process(listener);
+        consumer.process(this);
+        
+        
+        int j = consumers.size();
+        while(--j>=0) {
+        	consumers.get(j).process(this);
+        }
   
     }
 
@@ -307,7 +328,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     }
 
     
-    protected final void consumeRestRequest(RestListener listener, Pipe<HTTPRequestSchema> p) {
+    final void consumeRestRequest(RestListener listener, Pipe<HTTPRequestSchema> p) {
 		
     	  while (Pipe.hasContentToRead(p)) {                
               
@@ -371,7 +392,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
 
-	protected final void consumeNetResponse(HTTPResponseListener listener, Pipe<NetResponseSchema> p) {
+	final void consumeNetResponse(HTTPResponseListener listener, Pipe<NetResponseSchema> p) {
 		 assert(null!=ccm) : "must define coordinator";
 		 
     	 while (Pipe.hasContentToRead(p)) {                
@@ -446,7 +467,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
 	
-	protected final void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {
+	final void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {
 				
 		//TODO: Pipe.markHead(p); change all calls to low level API then add support for mark.		
 		
@@ -786,7 +807,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	public int getFeatures(Pipe<TrafficOrderSchema> pipe) {
 		ccmwp.init(pipe);
-		MsgRuntime.visitCommandChannelsUsedByListener(listener, ccmwp, null);		
+		ChildClassScanner.visitUsedByClass(listener, ccmwp, MsgCommandChannel.class);		
 		return ccmwp.features();
 	}
     

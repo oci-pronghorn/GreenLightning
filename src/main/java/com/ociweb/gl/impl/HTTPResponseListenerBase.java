@@ -22,5 +22,5 @@ public interface HTTPResponseListenerBase {
      * @param reader {@link PayloadReader} for the response body.
      */
 	boolean responseHTTP(short statusCode, HTTPContentType type, HTTPResponseReader reader);
-	
+
 }

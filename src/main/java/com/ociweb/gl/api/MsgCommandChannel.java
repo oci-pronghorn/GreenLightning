@@ -50,7 +50,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
     protected static final long MS_TO_NS = 1_000_000;
          
-    private Object listener;
+    private Behavior listener;
     
     public static final int DYNAMIC_MESSAGING = 1<<0;
     public static final int STATE_MACHINE = DYNAMIC_MESSAGING;//state machine is based on DYNAMIC_MESSAGING;    
@@ -335,7 +335,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         
     
     
-    public static void setListener(MsgCommandChannel c, Object listener) {
+    public static void setListener(MsgCommandChannel c, Behavior listener) {
         if (null != c.listener && c.listener!=listener) {
             throw new UnsupportedOperationException("Bad Configuration, A CommandChannel can only be held and used by a single listener lambda/class");
         }
