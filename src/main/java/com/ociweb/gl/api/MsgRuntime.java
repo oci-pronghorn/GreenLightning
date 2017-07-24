@@ -119,10 +119,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     };
 
 
-	private ChildClassScannerVisitor transVisitor = new ChildClassScannerVisitor<ListenerFacade>() {
+	private ChildClassScannerVisitor transVisitor = new ChildClassScannerVisitor<ListenerTransducer>() {
 
 		@Override
-		public boolean visit(ListenerFacade child, Object topParent) {
+		public boolean visit(ListenerTransducer child, Object topParent) {
 			// TODO found this child inside this Behavior
 			
 			ReactiveOperators operators = ReactiveListenerStage.operators;
@@ -831,7 +831,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				return true;
 			}				
 		};
-		ChildClassScanner.visitUsedByClass(listener, tVisitor, ListenerFacade.class);
+		ChildClassScanner.visitUsedByClass(listener, tVisitor, ListenerTransducer.class);
 					
 		if (g.additions()>0) {
 			inputPipes = g.firstArray();

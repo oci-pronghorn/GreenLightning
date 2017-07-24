@@ -12,7 +12,7 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
-import com.ociweb.gl.api.ListenerFacade;
+import com.ociweb.gl.api.ListenerTransducer;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
@@ -456,26 +456,26 @@ public class BuilderImpl implements Builder {
 		return shutdownTimeoutInSeconds;
 	}
 
-	private final ChildClassScannerVisitor deepSubListener = new ChildClassScannerVisitor<ListenerFacade>() {
+	private final ChildClassScannerVisitor deepSubListener = new ChildClassScannerVisitor<ListenerTransducer>() {
 		@Override
-		public boolean visit(ListenerFacade child, Object topParent) {
+		public boolean visit(ListenerTransducer child, Object topParent) {
 			boolean found = child instanceof PubSubListenerBase || 
 					child instanceof StateChangeListenerBase<?>;
 			return !found;
 		}		
 	};
 	
-	private final ChildClassScannerVisitor deepRespListener = new ChildClassScannerVisitor<ListenerFacade>() {
+	private final ChildClassScannerVisitor deepRespListener = new ChildClassScannerVisitor<ListenerTransducer>() {
 		@Override
-		public boolean visit(ListenerFacade child, Object topParent) {
+		public boolean visit(ListenerTransducer child, Object topParent) {
 			boolean found = child instanceof HTTPResponseListenerBase;
 			return !found;
 		}		
 	};
 	
-	private final ChildClassScannerVisitor deepReqstListener = new ChildClassScannerVisitor<ListenerFacade>() {
+	private final ChildClassScannerVisitor deepReqstListener = new ChildClassScannerVisitor<ListenerTransducer>() {
 		@Override
-		public boolean visit(ListenerFacade child, Object topParent) {
+		public boolean visit(ListenerTransducer child, Object topParent) {
 			boolean found = child instanceof RestListenerBase;
 			return !found;
 		}		
@@ -488,19 +488,19 @@ public class BuilderImpl implements Builder {
 		return listener instanceof PubSubListenerBase || 
 			   listener instanceof StateChangeListenerBase<?> ||
 			   //will return false if PubSub was encountered
-			   !ChildClassScanner.visitUsedByClass(listener, deepSubListener, ListenerFacade.class);
+			   !ChildClassScanner.visitUsedByClass(listener, deepSubListener, ListenerTransducer.class);
 	}
 
 	public final boolean isListeningToHTTPResponse(Object listener) {
 		return listener instanceof HTTPResponseListenerBase ||
 			   //will return false if HTTPResponseListenerBase was encountered
-			  !ChildClassScanner.visitUsedByClass(listener, deepRespListener, ListenerFacade.class);
+			  !ChildClassScanner.visitUsedByClass(listener, deepRespListener, ListenerTransducer.class);
 	}
 
 	public final boolean isListeningHTTPRequest(Object listener) {
 		return listener instanceof RestListenerBase	||
 			    //will return false if RestListenerBase was encountered
-			   !ChildClassScanner.visitUsedByClass(listener, deepReqstListener, ListenerFacade.class);
+			   !ChildClassScanner.visitUsedByClass(listener, deepReqstListener, ListenerTransducer.class);
 	}
 	
 	/**

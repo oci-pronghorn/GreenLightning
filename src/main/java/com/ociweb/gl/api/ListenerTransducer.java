@@ -5,6 +5,6 @@ package com.ociweb.gl.api;
  * @author Ray Lo
  *
  */
-public interface ListenerFacade {
+public interface ListenerTransducer {
 
 }
