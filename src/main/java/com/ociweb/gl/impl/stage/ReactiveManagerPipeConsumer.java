@@ -1,6 +1,7 @@
 package com.ociweb.gl.impl.stage;
 
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.stage.PronghornStage;
 
 public class ReactiveManagerPipeConsumer {
 
@@ -12,6 +13,7 @@ public class ReactiveManagerPipeConsumer {
 		
 		this.obj = obj;
 		this.inputs = inputs;
+		assert(PronghornStage.noNulls(inputs));
 		this.operators = new ReactiveOperator[inputs.length];
 		
 		int i = inputs.length;

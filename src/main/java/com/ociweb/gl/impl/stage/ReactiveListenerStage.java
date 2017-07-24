@@ -2,7 +2,7 @@ package com.ociweb.gl.impl.stage;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -13,7 +13,6 @@ import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
@@ -141,7 +140,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     		                     ArrayList<ReactiveManagerPipeConsumer> consumers, 
     		                     H builder, int parallelInstance) {
         
-        super(graphManager, inputPipes, outputPipes);
+        super(graphManager, consumerJoin(inputPipes, consumers.iterator()), outputPipes);
         this.listener = listener;
         assert(null!=listener) : "Behavior must be defined";
         this.parallelInstance = parallelInstance;
@@ -171,9 +170,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                 
     }
 
-    //TODO: this common list of operators is getting creted for EVERY stages and its not needed.
-    
-    
+    private static Pipe[] consumerJoin(Pipe<?>[] inputPipes,
+    		                   Iterator<ReactiveManagerPipeConsumer> iterator) {
+    	if (iterator.hasNext()) {
+    		return consumerJoin(join(inputPipes,iterator.next().inputs),iterator);    		
+    	} else {
+    		return inputPipes;
+    	}
+    }
+
     
     private static ReactiveOperators reactiveOperators() {
 		return new ReactiveOperators()
@@ -308,9 +313,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			processTimeEvents(timeListeners, timeTrigger);            
 		}
         
+        //behaviors
         consumer.process(this);
         
-        
+        //all transducers
         int j = consumers.size();
         while(--j>=0) {
         	consumers.get(j).process(this);

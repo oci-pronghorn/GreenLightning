@@ -829,6 +829,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	protected Pipe<?>[] autoWireTransducers(final Behavior listener, Pipe<?>[] inputPipes,
 			final ArrayList<ReactiveManagerPipeConsumer> consumers) {
 		final Grouper g = new Grouper(inputPipes);
+		
 		ChildClassScannerVisitor tVisitor = new ChildClassScannerVisitor() {
 			@Override
 			public boolean visit(Object child, Object topParent) {					
@@ -844,6 +845,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				return true;
 			}				
 		};
+		
 		ChildClassScanner.visitUsedByClass(listener, tVisitor, ListenerTransducer.class);
 					
 		if (g.additions()>0) {
