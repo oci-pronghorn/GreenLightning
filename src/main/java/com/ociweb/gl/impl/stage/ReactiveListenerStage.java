@@ -11,11 +11,8 @@ import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.ListenerFilter;
-import com.ociweb.gl.api.MessageReader;
 import com.ociweb.gl.api.MsgCommandChannel;
-import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.ShutdownListener;
@@ -32,14 +29,13 @@ import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
-import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
@@ -50,7 +46,9 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage implements ListenerFilter {
 
-    protected final Object              listener;
+    private static final int SIZE_OF_MSG_STATECHANGE = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_STATECHANGED_71);
+	private static final int SIZE_OF_MSG_PUBLISH = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_PUBLISH_103);
+	protected final Object              listener;
     protected final TimeListener[]      timeListeners;
     
     protected final Pipe<?>[]           inputPipes;
@@ -72,7 +70,17 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     protected static AtomicBoolean shutdownRequsted = new AtomicBoolean(false);
     protected static Runnable lastCall;
     ///////////////////////////
-    	
+    
+
+	///////////////////
+	//only used for direct method dispatch upon subscription topic arrival
+	//////////////////
+	private TrieParser methodLookup;
+	private TrieParserReader methodReader;
+	private CallableMethod[] methods;
+	//////////////////
+	
+	    	
     private boolean restRoutesDefined = false;	
     protected int[] oversampledAnalogValues;
 
@@ -99,7 +107,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     protected final GraphManager graphManager;
     protected int timeProcessWindow;
 
-    private PipeUTF8MutableCharSquence workspace = new PipeUTF8MutableCharSquence();
+    private PipeUTF8MutableCharSquence mutableTopic = new PipeUTF8MutableCharSquence();
     private PayloadReader payloadReader;
     
     private HTTPSpecification httpSpec;
@@ -468,43 +476,43 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	
 	final void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {
-				
-		//TODO: Pipe.markHead(p); change all calls to low level API then add support for mark.		
-		
-		
+
 		while (Pipe.hasContentToRead(p)) {
 			
 			Pipe.markTail(p);
 			
-            int msgIdx = Pipe.takeMsgIdx(p);             		            
+            final int msgIdx = Pipe.takeMsgIdx(p);             		            
             
             switch (msgIdx) {
                 case MessageSubscription.MSG_PUBLISH_103:
-                    if (listener instanceof PubSubListener) {
-                    	                    	
-                    	int meta = Pipe.takeRingByteLen(p);
-                    	int len = Pipe.takeRingByteMetaData(p);
-                    	                   	
                     	
-                    	CharSequence topic = workspace.setToField(p, meta, len);
+                    	final int meta = Pipe.takeRingByteLen(p);
+                    	final int len = Pipe.takeRingByteMetaData(p);                    	
+                    	final int pos = Pipe.convertToPosition(meta, p);
+                    	                    	               	
+                    	mutableTopic.setToField(p, meta, len);
 	  
-	                    assert(null!=topic) : "Callers must be free to write topic.equals(x) with no fear that topic is null.";
-	                    
-	                    MessageReader reader = (MessageReader)Pipe.inputStream(p);
+	                    DataInputBlobReader<MessageSubscription> reader = Pipe.inputStream(p);
 	                    reader.openLowLevelAPIField();
+	                    	                           
+	                    int dispatch;
 	                    
-	                    
-	                    boolean isDone = ((PubSubListener)listener).message(topic,reader);
-		            	if (!isDone) {
-		            		 Pipe.resetTail(p);
-		            		 return;//continue later and repeat this same value.
-		            	}
-	                    
-                    }
+	                    if ((null==methodReader) || ((dispatch=methodLookup(p, len, pos))<0)) {
+	                    	if (! ((PubSubListener)listener).message(mutableTopic,reader)) {
+	                    		Pipe.resetTail(p);
+			            		return;//continue later and repeat this same value.
+	                    	}
+	                    } else {
+	                    	if (! methods[dispatch].method(this, mutableTopic, reader)) {
+	                    		Pipe.resetTail(p);
+	                    		return;//continue later and repeat this same value.	                    		
+	                    	}
+	                    }
+ 
+                        Pipe.confirmLowLevelRead(p, SIZE_OF_MSG_PUBLISH);
                     break;
                 case MessageSubscription.MSG_STATECHANGED_71:
-                	if (listener instanceof StateChangeListener) {
-                		
+
                 		int oldOrdinal = Pipe.takeInt(p);
                 		int newOrdinal = Pipe.takeInt(p); 
                 		
@@ -513,21 +521,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                 		if (isIncluded(newOrdinal, includedToStates) && isIncluded(oldOrdinal, includedFromStates) &&
                 			isNotExcluded(newOrdinal, excludedToStates) && isNotExcluded(oldOrdinal, excludedFromStates) ) {			                			
                 			
-                			boolean isDone = ((StateChangeListener)listener).stateChange(states[oldOrdinal], states[newOrdinal]);
-	   		            	if (!isDone) {
+                			if (!((StateChangeListener)listener).stateChange(states[oldOrdinal], states[newOrdinal])) {
 			            		 Pipe.resetTail(p);
 			            		 return;//continue later and repeat this same value.
 			            	}
                 			
                 		}
-						
-                	} else {
-                		//Reactive listener can store the state here
-                		
-                		//TODO: important feature, in the future we can keep the state and add new filters like
-                		//      only accept digital reads when we are in state X
-                		
-                	}
+			
+                        Pipe.confirmLowLevelRead(p, SIZE_OF_MSG_STATECHANGE);
                     break;
                 case -1:
                     
@@ -540,10 +541,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                     throw new UnsupportedOperationException("Unknown id: "+msgIdx);
                 
             }
-            Pipe.confirmLowLevelRead(p, Pipe.sizeOf(p,msgIdx));
             Pipe.releaseReadLock(p);
         }
-    }        
+    }
+
+	private final int methodLookup(Pipe<MessageSubscription> p, final int len, final int pos) {
+		return (int)TrieParserReader.query(methodReader, methodLookup,
+				Pipe.blob(p), pos, len, Pipe.blobMask(p));
+	}        
 
 	
 	protected final void processTimeEvents(TimeListener[] listener, long trigger) {
@@ -697,6 +702,30 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		}
 	}
 
+	
+	public final <T extends Behavior> ListenerFilter addSubscription(
+				CharSequence topic, 
+				CallableMethod<T> method) {
+		
+		if (null == methods) {
+			methodLookup = new TrieParser(16,1,false,false,false);
+			methodReader = new TrieParserReader(0, true);
+			methods = new CallableMethod[0];
+		}
+		
+		
+		addSubscription(topic);
+		
+		int id = methods.length;	
+		methodLookup.setUTF8Value(topic,id);
+		//grow the array of methods to be called
+		CallableMethod[] newArray = new CallableMethod[id+1];
+		System.arraycopy(methods, 0, newArray, 0, id);
+		newArray[0] = method;
+		methods = newArray;
+		//
+		return this;
+	}
 	
 	@Override
 	public final ListenerFilter addSubscription(CharSequence topic) {		

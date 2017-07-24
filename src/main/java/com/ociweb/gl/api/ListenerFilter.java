@@ -1,7 +1,11 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.gl.impl.stage.CallableMethod;
+
 public interface ListenerFilter extends RouteFilter {
 
+
+	public <T extends Behavior> ListenerFilter addSubscription(CharSequence topic, CallableMethod<T> method);
 		
 	/**
 	 * Add subscription to this topic to this listener at startup.
