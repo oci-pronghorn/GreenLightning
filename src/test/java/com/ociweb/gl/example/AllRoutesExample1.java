@@ -16,8 +16,8 @@ public class AllRoutesExample1 implements GreenAppParallel {
 	
 	@Override
 	public void declareConfiguration(Builder builder) {
-		builder.enableServer(8082);
-		builder.parallelism(4);
+		builder.enableServer(false,false,"localhost",8082); //127.0.0.1
+		builder.parallelism(2);
 		builder.enableTelemetry();
 	}
 
@@ -32,7 +32,9 @@ public class AllRoutesExample1 implements GreenAppParallel {
 				return cmd.publishHTTPResponse(request, 200);				
 			}			
 		};		
-		runtime.addRestListener(listener).includeAllRoutes();
+		runtime.addRestListener(listener)
+		       .includeAllRoutes();
+		       
 	}
 
 	@Override
