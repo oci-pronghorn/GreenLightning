@@ -2,14 +2,10 @@ package com.ociweb.gl.api;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.concurrent.TimeUnit;
-
-import javax.sql.rowset.spi.TransactionalWriter;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +21,6 @@ import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
-import com.ociweb.gl.impl.stage.ReactiveOperator;
 import com.ociweb.gl.impl.stage.ReactiveOperators;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
@@ -48,7 +43,6 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
-import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
@@ -257,6 +251,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
                }
                
            }
+    }
+    
+    public String getArgumentValue(String longName, String shortName, String defaultValue) {
+    	return getOptArg(longName,shortName, args, defaultValue);
     }
     
     public static String getOptArg(String longName, String shortName, String[] args, String defaultValue) {

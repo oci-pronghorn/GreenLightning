@@ -89,5 +89,7 @@ public interface Builder {
 	
 	Builder useNetClient();
 	Builder useInsecureNetClient();
+
+	String getArgumentValue(String longName, String shortName, String defaultValue);
 	
 }

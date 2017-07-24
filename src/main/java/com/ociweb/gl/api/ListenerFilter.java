@@ -1,11 +1,13 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.stage.CallableMethod;
+import com.ociweb.gl.impl.stage.CallableStaticMethod;
 
 public interface ListenerFilter extends RouteFilter {
 
 
-	public <T extends Behavior> ListenerFilter addSubscription(CharSequence topic, CallableMethod<T> method);
+	<T extends Behavior> ListenerFilter addSubscription(CharSequence topic, CallableStaticMethod<T> method);
+	ListenerFilter addSubscription(CharSequence topic, CallableMethod method);
 		
 	/**
 	 * Add subscription to this topic to this listener at startup.

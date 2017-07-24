@@ -2,8 +2,8 @@ package com.ociweb.gl.impl.stage;
 
 import com.ociweb.pronghorn.pipe.BlobReader;
 
-public interface CallableMethod<T> {
+public interface CallableMethod {
 	
-	boolean method(T that, CharSequence title, BlobReader reader);
+	boolean method(CharSequence title, BlobReader reader);
 	
 }

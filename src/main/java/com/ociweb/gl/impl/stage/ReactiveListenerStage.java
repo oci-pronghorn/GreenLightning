@@ -1,6 +1,8 @@
 package com.ociweb.gl.impl.stage;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -35,6 +37,7 @@ import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
+import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
@@ -77,7 +80,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	//////////////////
 	private TrieParser methodLookup;
 	private TrieParserReader methodReader;
-	private CallableMethod[] methods;
+	private CallableStaticMethod[] methods;
 	//////////////////
 	
 	    	
@@ -503,7 +506,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			            		return;//continue later and repeat this same value.
 	                    	}
 	                    } else {
-	                    	if (! methods[dispatch].method(this, mutableTopic, reader)) {
+	                    	if (! methods[dispatch].method(listener, mutableTopic, reader)) {
 	                    		Pipe.resetTail(p);
 	                    		return;//continue later and repeat this same value.	                    		
 	                    	}
@@ -702,15 +705,50 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		}
 	}
 
+	@SuppressWarnings("unchecked")
+	public final ListenerFilter addSubscription(
+			CharSequence topic, 
+			final CallableMethod callable) {
+		
+		return addSubscription(topic, new CallableStaticMethod() {
+			@Override
+			public boolean method(Object that, CharSequence title, BlobReader reader) {
+				//that must be found as the declared field of the lambda
+				assert(thatIsFoundInCallable(that,callable)) : "may only call methods on this same Behavior instance";
+				return callable.method(title, reader);
+			}
+		});
+		
+	}
+	
+	private boolean thatIsFoundInCallable(Object that, CallableMethod callable) {
+		
+		Field[] fields = callable.getClass().getDeclaredFields();
+		int f = fields.length;
+		while (--f>=0) {
+			
+			try {
+				fields[f].setAccessible(true);
+				if (fields[f].get(callable) == that) {
+					return true;
+				}
+			} catch (IllegalArgumentException e) {
+				throw new RuntimeException(e);
+			} catch (IllegalAccessException e) {
+				throw new RuntimeException(e);
+			}
+		}
+		return false;
+	}
 	
 	public final <T extends Behavior> ListenerFilter addSubscription(
 				CharSequence topic, 
-				CallableMethod<T> method) {
+				CallableStaticMethod<T> method) {
 		
 		if (null == methods) {
 			methodLookup = new TrieParser(16,1,false,false,false);
 			methodReader = new TrieParserReader(0, true);
-			methods = new CallableMethod[0];
+			methods = new CallableStaticMethod[0];
 		}
 		
 		if (!startupCompleted && listener instanceof PubSubListener) {
@@ -725,7 +763,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		int id = methods.length;	
 		methodLookup.setUTF8Value(topic,id);
 		//grow the array of methods to be called
-		CallableMethod[] newArray = new CallableMethod[id+1];
+		CallableStaticMethod[] newArray = new CallableStaticMethod[id+1];
 		System.arraycopy(methods, 0, newArray, 0, id);
 		newArray[0] = method;
 		methods = newArray;

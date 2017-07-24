@@ -215,6 +215,9 @@ public class BuilderImpl implements Builder {
     	enableServer(true,false,NetGraphBuilder.bindHost(),bindPort);
     }
     
+    public String getArgumentValue(String longName, String shortName, String defaultValue) {
+    	return MsgRuntime.getOptArg(longName, shortName, args, defaultValue);
+    }
     
     public int behaviorId(Behavior b) {
     	return System.identityHashCode(b); //TODO: we may want to find a beter way to compute this, not sure.
