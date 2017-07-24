@@ -224,6 +224,10 @@ public class BuilderImpl implements Builder {
     public String getArgumentValue(String longName, String shortName, String defaultValue) {
     	return MsgRuntime.getOptArg(longName, shortName, args, defaultValue);
     }
+
+	public boolean hasArgument(String longName, String shortName) {
+		return MsgRuntime.hasArg(longName, shortName, args);
+	}
     
     public int behaviorId(Behavior b) {
     	return System.identityHashCode(b); //TODO: we may want to find a beter way to compute this, not sure.

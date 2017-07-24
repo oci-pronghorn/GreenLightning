@@ -91,5 +91,6 @@ public interface Builder {
 	Builder useInsecureNetClient();
 
 	String getArgumentValue(String longName, String shortName, String defaultValue);
+	boolean hasArgument(String longName, String shortName);
 	
 }
