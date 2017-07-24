@@ -258,10 +258,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
     
     public static String getOptArg(String longName, String shortName, String[] args, String defaultValue) {
-
-		if (args == null) {
-			return defaultValue;
-		}
+        
         String prev = null;
         for (String token : args) {
             if (longName.equals(prev) || shortName.equals(prev)) {
@@ -274,22 +271,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         }
         return reportChoice(longName, shortName, defaultValue);
     }
-
-	public boolean hasArgument(String longName, String shortName) {
-		return hasArg(longName,shortName, args);
-	}
-
-	public static boolean hasArg(String longName, String shortName, String[] args) {
-		if (args == null) {
-			return false;
-		}
-		for (String token : args) {
-			if (longName.equals(token) || shortName.equals(token)) {
-				return true;
-			}
-		}
-		return  false;
-	}
     
     static String reportChoice(final String longName, final String shortName, final String value) {
         System.out.print(longName);
