@@ -6,7 +6,7 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.MQTTConfig;
+import com.ociweb.gl.api.MQTTBridge;
 import com.ociweb.gl.api.MessageReader;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.PubSubListener;
@@ -18,7 +18,7 @@ import com.ociweb.pronghorn.pipe.BlobWriter;
 
 public class MQTTApp implements GreenApp {
 
-	private MQTTConfig mqttConfig;
+	private MQTTBridge mqttConfig;
 	
 	//monitor    mosquitto_sub -v -t '#' -h 127.0.0.1
 	//test       mosquitto_pub -h 127.0.0.1 -t 'topic/ingress' -m 'hello'
@@ -44,8 +44,8 @@ public class MQTTApp implements GreenApp {
 	@Override
 	public void declareBehavior(final GreenRuntime runtime) {
 				
-		runtime.subscriptionBridge("topic/ingress", mqttConfig); //optional 2 topics, optional transform lambda
-		runtime.transmissionBridge("topic/egress", mqttConfig); //optional 2 topics, optional transform lambda
+		runtime.bridgeSubscription("topic/ingress", mqttConfig); //optional 2 topics, optional transform lambda
+		runtime.bridgeTransmission("topic/egress", mqttConfig); //optional 2 topics, optional transform lambda
 		
 		final MsgCommandChannel cmdChnl = runtime.newCommandChannel(DYNAMIC_MESSAGING);		
 		TimeListener timeListener = new TimeListener() {

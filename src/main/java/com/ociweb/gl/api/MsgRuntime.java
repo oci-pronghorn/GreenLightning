@@ -174,7 +174,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return args;
     }
     
-	public final void subscriptionBridge(CharSequence topic, BridgeConfig config) {		
+	public final void bridgeSubscription(CharSequence topic, BridgeConfig config) {		
 		config.addSubscription(topic);
 		keepBridge(config);
 	}
@@ -187,7 +187,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		keepBridge(config);
 	}
 	
-	public final void transmissionBridge(CharSequence topic, BridgeConfig config) {		
+	public final void bridgeTransmission(CharSequence topic, BridgeConfig config) {		
 		config.addTransmission(this, topic);
 		keepBridge(config);
 	}

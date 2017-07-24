@@ -68,19 +68,19 @@ public interface Builder {
 	 * The default in-flight messages is 10
 	 * The default maximum messageLength is 4K
 	 */
-	MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientId);
+	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientId);
 	
 	/*
 	 * The maximum in-flight messages must be <= 32K
 	 * The maximum messageLength must be <= 256M
 	 */
-	MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientIdint, int maxInFlight);
+	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientIdint, int maxInFlight);
 
 	/*
 	 * The maximum in-flight messages must be <= 32K
 	 * The maximum messageLength must be <= 256M
 	 */
-	MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength);
+	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength);
 		
 	
 	void privateTopics(String ... topic);

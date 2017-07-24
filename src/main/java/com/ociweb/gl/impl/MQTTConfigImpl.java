@@ -1,7 +1,7 @@
 package com.ociweb.gl.impl;
 
 import com.ociweb.gl.api.BridgeConfig;
-import com.ociweb.gl.api.MQTTConfig;
+import com.ociweb.gl.api.MQTTBridge;
 import com.ociweb.gl.api.MQTTWritable;
 import com.ociweb.gl.api.MQTTWriter;
 import com.ociweb.gl.api.MsgRuntime;
@@ -21,7 +21,7 @@ import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.stage.test.PipeNoOp;
 
-public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
+public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 
 	private final CharSequence host;
 	private final int port;
@@ -109,7 +109,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 			
 	}
 	
-	public MQTTConfig keepAliveSeconds(int seconds) {
+	public MQTTBridge keepAliveSeconds(int seconds) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
@@ -126,7 +126,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	 * 
 	 * @param clean
 	 */
-	public MQTTConfig cleanSession(boolean clean) {
+	public MQTTBridge cleanSession(boolean clean) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
@@ -143,7 +143,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 		return target;
 	}
 	
-	public MQTTConfig authentication(CharSequence user, CharSequence pass) {
+	public MQTTBridge authentication(CharSequence user, CharSequence pass) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
@@ -160,24 +160,24 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTConfig {
 	}
 	
 	@Override
-	public MQTTConfig subscriptionQoS(int value) {
+	public MQTTBridge subscriptionQoS(int value) {
 		subscriptionQoS = value;
 		return this;
 	}
 
 	@Override
-	public MQTTConfig transmissionOoS(int value) {
+	public MQTTBridge transmissionOoS(int value) {
 		transmissionFieldQOS = value;
 		return this;
 	}
 
 	@Override
-	public MQTTConfig transmissionRetain(boolean value) {		
+	public MQTTBridge transmissionRetain(boolean value) {		
 		transmissionFieldRetain = setBitByBoolean(transmissionFieldRetain, value, MQTTEncoder.CONNECT_FLAG_WILL_RETAIN_5 );
 		return this;
 	}
 
-	public MQTTConfig will(boolean retain, int qos, CharSequence topic, MQTTWritable write ) {
+	public MQTTBridge will(boolean retain, int qos, CharSequence topic, MQTTWritable write ) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
