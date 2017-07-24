@@ -203,7 +203,13 @@ public class BuilderImpl implements Builder {
     	this.isTLSServer = isTLS;
     	this.isLarge = isLarge;
     	this.bindHost = bindHost;
+    	if (null==bindHost) {
+    		throw new UnsupportedOperationException("invalid host name "+String.valueOf(bindHost));
+    	}
     	this.bindPort = bindPort;
+    	if (bindPort<=0 || (bindPort>(1<<15))) {
+    		throw new UnsupportedOperationException("invalid port "+bindPort);
+    	}
     	
     }
  
