@@ -172,11 +172,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		config.addSubscription(topic);
 		keepBridge(config);
 	}
-	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
+	public final void bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
 		config.addSubscription(internalTopic,extrnalTopic);
 		keepBridge(config);
 	}
-	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, IngressConverter converter) {		
+	public final void bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, IngressConverter converter) {		
 		config.addSubscription(internalTopic,extrnalTopic,converter);
 		keepBridge(config);
 	}
@@ -185,11 +185,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		config.addTransmission(this, topic);
 		keepBridge(config);
 	}
-	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
+	public final void bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
 		config.addTransmission(this, internalTopic,extrnalTopic);
 		keepBridge(config);
 	}	
-	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, EgressConverter converter) {		
+	public final void bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, EgressConverter converter) {		
 		config.addTransmission(this, internalTopic,extrnalTopic, converter);
 		keepBridge(config);
 	}	
@@ -787,12 +787,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		if (transducerAutowiring) {
 			inputPipes = autoWireTransducers(listener, inputPipes, consumers);
 		}       
-        
-        
-        //////////////////////
-        //////////////////////
-		
-
         
         ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
         		                                inputPipes, outputPipes, consumers,
