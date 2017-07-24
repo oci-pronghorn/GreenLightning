@@ -13,6 +13,7 @@ import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
+import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
@@ -31,6 +32,7 @@ import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
@@ -402,7 +404,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	
 	}
 
-
+    private final HeaderTypeCapture htc  = new HeaderTypeCapture();
+    
+    
 	final void consumeNetResponse(HTTPResponseListener listener, Pipe<NetResponseSchema> p) {
 		 assert(null!=ccm) : "must define coordinator";
 		 
@@ -425,20 +429,19 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	
 	            	 final short statusId = reader.readShort();	
 				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
-				     				     
-	            	 //////////////////
-	            	 //end of the big mess
-	            	 //////////////////
-	            	 int typeId = 0;
+				
+	            	 reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), htc);
 	            	 
 	            	 if (!listener.responseHTTP( statusId, 
-		            			                 (HTTPContentType)httpSpec.contentTypes[typeId],
+		            			                 (HTTPContentType)httpSpec.contentTypes[htc.type()],
 		            			                 reader)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	            	 }
-	            
+	                 
 	            	 //TODO: application layer can not know that the response is complete or we will have a continuation...
+	            	 //      they will have to read the headers to know?
+	            	 
 	            	 break;
 	             case NetResponseSchema.MSG_CONTINUATION_102:
 	            	 long fieldConnectionId = Pipe.takeLong(p);
