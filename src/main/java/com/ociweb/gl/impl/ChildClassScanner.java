@@ -83,13 +83,14 @@ public class ChildClassScanner {
 	static boolean visitUsedByClass(Object obj, int depth, 
 			     ChildClassScannerVisitor visitor, 
 			     Object topParent, Class targetType) {
-	    
-	    Class<? extends Object> c = obj.getClass();
-	    while (null != c) {
-	    	if (!visitByClass(obj, depth, visitor, c, targetType, topParent)) {
-	    		return false;
-	    	}
-	    	c = c.getSuperclass();
+	    if (null!=obj) {
+		    Class<? extends Object> c = obj.getClass();
+		    while (null != c) {
+		    	if (!visitByClass(obj, depth, visitor, c, targetType, topParent)) {
+		    		return false;
+		    	}
+		    	c = c.getSuperclass();
+		    }
 	    }
 	    return true;
 	}
