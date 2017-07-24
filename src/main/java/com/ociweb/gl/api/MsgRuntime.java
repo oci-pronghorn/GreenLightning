@@ -95,7 +95,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		@Override
 		public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
 			    
-            if (!ChildClassScanner.notPreviouslyHeld(cmdChnl, topParent, cmdChannelUsageChecker)) {
+            if (!ChildClassScanner.notPreviouslyHeld(cmdChnl, topParent, getUsageChecker())) {
             	logger.error("Command channel found in "+
             			topParent.getClass().getSimpleName()+
             	             " can not be used in more than one Behavior");                	
@@ -348,7 +348,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     private static boolean setupForChannelAssertCheck() {
         cmdChannelUsageChecker = new IntHashTable(9);
         return true;
+    }    
+    private static IntHashTable getUsageChecker() {
+    	return cmdChannelUsageChecker;
     }
+    
     protected int addGreenPipesCount(Behavior listener, int pipesCount) {
 		
 		if (this.builder.isListeningToHTTPResponse(listener)) {
