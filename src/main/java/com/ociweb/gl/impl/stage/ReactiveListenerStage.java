@@ -713,8 +713,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			methods = new CallableMethod[0];
 		}
 		
-		
-		addSubscription(topic);
+		if (!startupCompleted && listener instanceof PubSubListener) {
+			builder.addStartupSubscription(topic, System.identityHashCode(listener));
+			toStringDetails = toStringDetails+"sub:'"+topic+"'\n";
+		} else {
+			if (startupCompleted) {
+	    		throw new UnsupportedOperationException("Method dispatch subscritpions may not be modified at runtime.");
+	    	}
+		}
 		
 		int id = methods.length;	
 		methodLookup.setUTF8Value(topic,id);
