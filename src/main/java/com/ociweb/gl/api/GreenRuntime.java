@@ -55,7 +55,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      }
      
     public static GreenRuntime run(GreenApp app) {
-    	return run(app,null);
+    	return run(app,new String[0]);
     }
     
 	public static GreenRuntime run(GreenApp app, String[] args) {
