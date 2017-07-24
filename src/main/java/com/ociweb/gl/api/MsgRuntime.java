@@ -95,11 +95,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		@Override
 		public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
 			    
-            if (!ChildClassScanner.notPreviouslyHeld(cmdChnl, topParent, getUsageChecker())) {
-            	logger.error("Command channel found in "+
-            			topParent.getClass().getSimpleName()+
-            	             " can not be used in more than one Behavior");                	
-            	assert(false) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
+            IntHashTable usageChecker = getUsageChecker();
+            if (null!=usageChecker) {
+				if (!ChildClassScanner.notPreviouslyHeld(cmdChnl, topParent, usageChecker)) {
+	            	logger.error("Command channel found in "+
+	            			topParent.getClass().getSimpleName()+
+	            	             " can not be used in more than one Behavior");                	
+	            	assert(false) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
+	            }
             }
             
             MsgCommandChannel.setListener(cmdChnl, (Behavior)topParent);
