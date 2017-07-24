@@ -50,7 +50,7 @@ public class ReactiveOperators {
 					                     listener,
 					                     pcm);
 			 if (doesMatch) {
-				 result[matches] = pcm.newPipe(schemas.get(i).getClass());
+				 result[matches] = new Pipe(pcm.getConfig(schemas.get(i).getClass()).grow2x()); //hack test for now.
 			 }
 			 return result;
 		 } else {
