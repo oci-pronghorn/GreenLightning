@@ -7,7 +7,7 @@ public class ReactiveManagerPipeConsumer {
 
 	public final Pipe[] inputs;
 	private final ReactiveOperator[] operators;
-	private final Object obj;
+	public final Object obj;
 	
 	public ReactiveManagerPipeConsumer(Object obj, ReactiveOperators operators, Pipe[] inputs) {
 		
