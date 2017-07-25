@@ -820,6 +820,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 	protected Pipe<?>[] autoWireTransducers(final Behavior listener, Pipe<?>[] inputPipes,
 			final ArrayList<ReactiveManagerPipeConsumer> consumers) {
+		
+		if (inputPipes.length==0) {
+			return inputPipes;//no work since no inputs are used.
+		}
+		
 		final Grouper g = new Grouper(inputPipes);
 		
 		ChildClassScannerVisitor tVisitor = new ChildClassScannerVisitor() {

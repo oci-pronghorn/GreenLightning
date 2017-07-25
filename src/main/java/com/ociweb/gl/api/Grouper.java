@@ -2,6 +2,9 @@ package com.ociweb.gl.api;
 
 import java.util.ArrayList;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -14,6 +17,8 @@ public class Grouper {
 	private final Pipe[] inputPipes;
 	private final Pipe[][] groupedPipes;
 	private int count;
+	
+	private final static Logger logger = LoggerFactory.getLogger(Grouper.class);
 	
 	private Pipe[] first; //these will be the ones for the behavior.
 	
@@ -28,11 +33,19 @@ public class Grouper {
 	
 	public PipeConfig config(MessageSchema schema) {
 		int i = inputPipes.length;
-		while (--i>=0) {
+		while (--i >= 0) {
 			if (Pipe.isForSchema(inputPipes[i], schema)) {
 				return inputPipes[i].config();
 			}
 		}
+		
+		logger.info("all known schemas");
+		
+		i = inputPipes.length;
+		while (--i>=0) {
+			logger.info("known schema "+Pipe.schemaName(inputPipes[i]));
+		}		
+		
 		throw new UnsupportedOperationException("can not find "+schema);
 	}
 	

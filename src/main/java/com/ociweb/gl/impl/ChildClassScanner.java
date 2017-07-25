@@ -44,6 +44,7 @@ public class ChildClassScanner {
 	                Object obj = null;
 					try {
 						obj = fields[f].get(listener);
+			
 						if (targetType.isInstance(obj)) {
 							if (!visitor.visit(obj, topParent)) {
 								return false;
@@ -80,9 +81,9 @@ public class ChildClassScanner {
 	        return true;
 		}
 
-	static boolean visitUsedByClass(Object obj, int depth, 
-			     ChildClassScannerVisitor visitor, 
+	static boolean visitUsedByClass(Object obj, int depth, ChildClassScannerVisitor visitor, 
 			     Object topParent, Class targetType) {
+		
 	    if (null!=obj) {
 		    Class<? extends Object> c = obj.getClass();
 		    while (null != c) {
