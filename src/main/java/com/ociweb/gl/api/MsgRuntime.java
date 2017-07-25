@@ -63,9 +63,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected static final int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support
 
     protected boolean transducerAutowiring = true;
-	
-	private final PipeConfigManager listenerPipeConfigs = buildPipeManager();	
-    
+
     protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload);   
     protected static final PipeConfig<ClientHTTPRequestSchema> requestNetConfig = new PipeConfig<ClientHTTPRequestSchema>(ClientHTTPRequestSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
     protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
@@ -829,7 +827,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			public boolean visit(Object child, Object topParent) {					
 				if (g.additions()==0) {
 					//add first value
-					g.add(ReactiveListenerStage.operators.createPipes(listener,listenerPipeConfigs));
+					g.add(ReactiveListenerStage.operators.createPipes(listener, g));
 				}					
 				
 				int c = consumers.size();
@@ -838,10 +836,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 						//do not add this one it is already recorded
 						return true;
 					}
-					
 				}
 				
-				Pipe[] pipes = ReactiveListenerStage.operators.createPipes(child,listenerPipeConfigs);
+				Pipe[] pipes = ReactiveListenerStage.operators.createPipes(child, g);
 				consumers.add(new ReactiveManagerPipeConsumer(child, ReactiveListenerStage.operators, pipes));
 				g.add(pipes);		
 				

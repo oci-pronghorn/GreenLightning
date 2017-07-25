@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Behavior;
+import com.ociweb.gl.api.Grouper;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
@@ -38,19 +39,18 @@ public class ReactiveOperators {
 	}
 
 	//creates inputs for this Transducer or Behavior
-	public Pipe[] createPipes(Object listener, PipeConfigManager pcm) {
-		return createPipes(0, 0, listener, pcm);
+	public Pipe[] createPipes(Object listener, Grouper g) {
+		return createPipes(0, 0, listener, g);
 	}
 
-	private Pipe[] createPipes(int i, int matches, Object listener, PipeConfigManager pcm) {
+	private Pipe[] createPipes(int i, int matches, Object listener, Grouper g) {
 		 if (i<interfaces.size()) {
 			 boolean doesMatch = interfaces.get(i).isInstance(listener);
 			 Pipe[] result = createPipes(i+1,
 					                     doesMatch ? 1+matches : matches,
-					                     listener,
-					                     pcm);
+					                     listener, g);
 			 if (doesMatch) {
-				 result[matches] = new Pipe(pcm.getConfig(schemas.get(i).getClass()).grow2x()); //hack test for now.
+				 result[matches] = new Pipe(g.config(schemas.get(i)).grow2x());
 			 }
 			 return result;
 		 } else {
