@@ -19,5 +19,11 @@
         <include>**/*.java</include>
       </includes>
     </fileSet>
+    <fileSet filtered="true" packaged="false" encoding="UTF-8">
+      <directory/>
+      <includes>
+        <include>proguard.conf</include>
+      </includes>
+    </fileSet>
   </fileSets>
 </archetype-descriptor>
