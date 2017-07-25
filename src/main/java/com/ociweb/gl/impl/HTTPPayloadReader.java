@@ -19,7 +19,6 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	
 	public int headerId(byte[] header) {		
 		int result = (int)TrieParserReader.query(reader, headerTrieParser, header, 0, header.length, Integer.MAX_VALUE);
-		//System.out.println(result+"  "+new String(header));
 		return result;
 	}
 

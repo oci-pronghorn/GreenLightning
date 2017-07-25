@@ -231,8 +231,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	private void addSubscription(Pipe<MessagePubSub> pipe) {
 		int hash = PipeReader.readInt(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4); 
 		final short pipeIdx = (short)IntHashTable.getItem(subscriptionPipeLookup, hash);
-		//System.out.println("adding subscription hash was "+hash+" to send to pipe "+pipeIdx);
-		       
+  
 		assert(pipeIdx>=0) : "Must have valid pipe index";
 		
 		final byte[] backing = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);

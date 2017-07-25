@@ -286,11 +286,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
     
     static String reportChoice(final String longName, final String shortName, final String value) {
-        System.out.print(longName);
-        System.out.print(" ");
-        System.out.print(shortName);
-        System.out.print(" ");
-        System.out.println(value);
+        System.out.append(longName).append(" ").append(shortName).append(" ").append(value).append("\n");
         return value;
     }
     

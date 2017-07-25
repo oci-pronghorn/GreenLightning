@@ -63,7 +63,7 @@ public class ChildClassScanner {
 									&& depth<=7) { //stop recursive depth
 								
 //								                		if (depth >4) {
-//								                			System.out.println(depth+" "+obj.getClass().getName());
+//								                			logger.info(depth+" "+obj.getClass().getName());
 //								                		}
 								//recursive check for command channels
 								if (!visitUsedByClass(obj, depth+1, visitor, topParent, targetType)) {
