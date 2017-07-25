@@ -1,5 +1,8 @@
 package com.ociweb.gl.api;
 
+import java.util.ArrayList;
+
+import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
@@ -62,10 +65,24 @@ public class Grouper {
 		return first;
 	}
 
-	public void buildReplicators(GraphManager gm) {
+	public void buildReplicators(GraphManager gm, ArrayList<ReactiveManagerPipeConsumer> consumers) {
 		int i = inputPipes.length;
 		while (--i>=0) {
-			ReplicatorStage.newInstance(gm, inputPipes[i], groupedPipes[i]);
+			if (1 == groupedPipes[i].length) {
+				//swap back to using direct connection
+				int c = consumers.size();				
+				while (--c>=0) {
+					if (consumers.get(c).swapIfFound(groupedPipes[i][0], inputPipes[i])) {
+						break;
+					}
+				}
+				if (c<0) {
+					throw new RuntimeException("internal error unable to find this pipe");
+				}
+				
+			} else {
+				ReplicatorStage.newInstance(gm, inputPipes[i], groupedPipes[i]);
+			}
 		}
 	}
 	

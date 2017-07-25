@@ -28,5 +28,16 @@ public class ReactiveManagerPipeConsumer {
 			operators[i].apply(obj, inputs[i], r);
 		}
 	}
+
+	public boolean swapIfFound(Pipe oldPipe, Pipe newPipe) {		
+		int i = inputs.length;
+		while (--i>=0) {
+			if (inputs[i] == oldPipe) {
+				inputs[i] = newPipe;
+				return true;
+			}
+		}
+		return false;
+	}
 	
 }

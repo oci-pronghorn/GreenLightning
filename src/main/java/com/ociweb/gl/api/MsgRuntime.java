@@ -850,7 +850,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					
 		if (g.additions()>0) {
 			inputPipes = g.firstArray();
-			g.buildReplicators(gm);
+			g.buildReplicators(gm, consumers);
 		}
 		return inputPipes;
 	}

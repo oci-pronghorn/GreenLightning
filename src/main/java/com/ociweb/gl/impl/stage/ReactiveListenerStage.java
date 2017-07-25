@@ -173,7 +173,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private static Pipe[] consumerJoin(Pipe<?>[] inputPipes,
     		                   Iterator<ReactiveManagerPipeConsumer> iterator) {
     	if (iterator.hasNext()) {
-    		return consumerJoin(join(inputPipes,iterator.next().inputs),iterator);    		
+    		
+    		return consumerJoin(join(inputPipes, iterator.next().inputs),iterator);    		
     	} else {
     		return inputPipes;
     	}
