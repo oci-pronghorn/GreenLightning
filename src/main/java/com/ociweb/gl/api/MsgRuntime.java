@@ -831,11 +831,20 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					//add first value
 					g.add(ReactiveListenerStage.operators.createPipes(listener,listenerPipeConfigs));
 				}					
+				
+				int c = consumers.size();
+				while (--c>=0) {
+					if (consumers.get(c).obj == child) {
+						//do not add this one it is already recorded
+						return true;
+					}
+					
+				}
+				
 				Pipe[] pipes = ReactiveListenerStage.operators.createPipes(child,listenerPipeConfigs);
 				consumers.add(new ReactiveManagerPipeConsumer(child, ReactiveListenerStage.operators, pipes));
+				g.add(pipes);		
 				
-				//roll these pipes with the others by type.
-				g.add(pipes);					
 				return true;
 			}				
 		};
