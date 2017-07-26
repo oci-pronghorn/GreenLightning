@@ -1,5 +1,8 @@
 package com.ociweb.gl.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.BridgeConfig;
 import com.ociweb.gl.api.MQTTBridge;
 import com.ociweb.gl.api.MQTTWritable;
@@ -23,6 +26,8 @@ import com.ociweb.pronghorn.stage.test.PipeNoOp;
 
 public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 
+	private final static Logger logger = LoggerFactory.getLogger(MQTTConfigImpl.class);
+	
 	private final CharSequence host;
 	private final int port;
 	private final CharSequence clientId;
@@ -272,6 +277,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 	public BridgeConfig addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
 
+		logger.info("added subscription to {} in order to transmit out to  ",internalTopic, externalTopic);
 		builder.addStartupSubscription(internalTopic, code);
 		
 		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
