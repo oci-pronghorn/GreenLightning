@@ -775,7 +775,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		//grow the array of methods to be called
 		CallableStaticMethod[] newArray = new CallableStaticMethod[id+1];
 		System.arraycopy(methods, 0, newArray, 0, id);
-		newArray[0] = method;
+		newArray[id] = method;
 		methods = newArray;
 		//
 		return this;
