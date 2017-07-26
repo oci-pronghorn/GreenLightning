@@ -12,8 +12,6 @@ import com.ociweb.pronghorn.pipe.PipeWriter;
 public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWriter<T> {
 
     private final Pipe<T> p;
-    private final int maxLength;
-    private int length;
     private MsgCommandChannel commandChannel;
 
     private int loc=-1;
@@ -22,7 +20,6 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     	
     	super(p);
     	this.p = p;    
-    	this.maxLength = p.maxVarLen;
     }
         
     public void writeString(CharSequence value) {
@@ -52,19 +49,9 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     	//assert(this.loc == -1) : "Already open for writing, can not open again.";
     	this.commandChannel = commandChannel;
         this.loc = loc;
-        this.length = 0;
         DataOutputBlobWriter.openField(this);
     }
-
-    private void checkLimit(PayloadWriter<T> that, int x) {
-    	
-    	if ( (that.length+=x)+countOfBytesUsedByIndex(this) > that.maxLength ) {
-    		throw new RuntimeException("This field is limited to a maximum length of "+that.maxLength+". Write less data or declare a larger max payload size.");
-    	}
-    	
-    }
-    
-    
+   
 	@Override
 	public void write(int b) {
 		checkLimit(this,1);

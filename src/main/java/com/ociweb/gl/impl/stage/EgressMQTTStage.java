@@ -110,6 +110,7 @@ public class EgressMQTTStage extends PronghornStage {
 			        	
 			        	//direct copy of topic
 			        	DataOutputBlobWriter<MQTTClientRequestSchema> stream = PipeWriter.outputStream(output);
+			        	
 			        	DataOutputBlobWriter.openField(stream);
 			        	PipeReader.readUTF8(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, stream);
 			        	DataOutputBlobWriter.closeHighLevelField(stream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23);

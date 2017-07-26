@@ -1,5 +1,8 @@
 package com.ociweb.gl.impl.stage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -21,6 +24,7 @@ public class TrafficCopStage extends PronghornStage {
     private Pipe<TrafficOrderSchema> primaryIn; 
     private Pipe<TrafficAckSchema>[] ackIn;
     private Pipe<TrafficReleaseSchema>[] goOut;
+    private final static Logger logger = LoggerFactory.getLogger(TrafficCopStage.class);
     
     private int ackExpectedOn = -1;   
     private GraphManager graphManager;
@@ -72,7 +76,8 @@ public class TrafficCopStage extends PronghornStage {
                     
                     if (System.currentTimeMillis() > ackExpectedTime) {
                     	requestShutdown();
-                        throw new RuntimeException(" *** Expected to get ack back from "+GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id)+" within "+msAckTimeout+"ms \nExpected ack on pipe:"+ackIn[ackExpectedOn]);
+                    	logger.info(" *** Expected to get ack back from "+GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id)+" within "+msAckTimeout+"ms \nExpected ack on pipe:"+ackIn[ackExpectedOn]);
+                    
                     }
                     return;//we are still waiting for requested operation to complete
                 } else {

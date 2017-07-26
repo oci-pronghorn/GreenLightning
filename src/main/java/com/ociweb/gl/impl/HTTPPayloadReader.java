@@ -45,7 +45,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 				int itemIndex = 0xFFFF & item;
 				
 				int posFromStart = readFromEndLastInt(paraIndexCount + 1 + itemIndex);
-				assert(posFromStart<available()) : "index position "+posFromStart+" is out of bounds "+available();
+				assert(posFromStart<=getBackingPipe(this).maxVarLen) : "index position "+posFromStart+" is out of bounds "+getBackingPipe(this).maxVarLen;
 				assert(posFromStart>=0) : "index position must be zero or positive";
 				
 				setPositionBytesFromStart(posFromStart);
