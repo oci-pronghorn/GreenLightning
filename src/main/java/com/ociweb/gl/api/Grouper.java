@@ -51,6 +51,7 @@ public class Grouper {
 	
 	
 	public void add(Pipe[] pipes) {
+
 		if (0==count) {
 			first = pipes;
 		}

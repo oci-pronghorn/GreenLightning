@@ -5,7 +5,7 @@ import com.ociweb.gl.impl.ChildClassScannerVisitor;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 
-class CommandChannelWithMatchingPipe implements ChildClassScannerVisitor<MsgCommandChannel> {
+class GatherAllFeatures implements ChildClassScannerVisitor<MsgCommandChannel> {
 
 	   private Pipe<TrafficOrderSchema> target;
 	   private int features;
@@ -17,7 +17,7 @@ class CommandChannelWithMatchingPipe implements ChildClassScannerVisitor<MsgComm
 	   
 	   public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
 			if (cmdChnl.isGoPipe(target)) {
-				features = cmdChnl.initFeatures;
+				features |= cmdChnl.initFeatures;
 			}
 			return true;//keep going
 	   }

@@ -886,7 +886,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
 	//used for looking up the features used by this TrafficOrder goPipe
-	private CommandChannelWithMatchingPipe ccmwp = new CommandChannelWithMatchingPipe();
+	private GatherAllFeatures ccmwp = new GatherAllFeatures();
 
 	public int getFeatures(Pipe<TrafficOrderSchema> pipe) {
 		ccmwp.init(pipe);

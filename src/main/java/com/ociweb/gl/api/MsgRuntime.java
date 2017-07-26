@@ -21,7 +21,6 @@ import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
-import com.ociweb.gl.impl.stage.ReactiveOperators;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
@@ -109,31 +108,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 
     };
-
-
-	private ChildClassScannerVisitor transVisitor = new ChildClassScannerVisitor<ListenerTransducer>() {
-
-		@Override
-		public boolean visit(ListenerTransducer child, Object topParent) {
-			// TODO found this child inside this Behavior
-			
-			ReactiveOperators operators = ReactiveListenerStage.operators;
-			
-			int i = operators.interfaces.size();
-			while (--i>=0) {
-				if (operators.interfaces.get(i).isInstance(child)) {
-					//need this pipe
-					
-					
-				}
-			}
-			
-			//put all the children into lists by the listener type for notifications
-			return true;//keep going
-		
-		}
-		
-	};
     
     public void disableTransducerAutowiring() {
     	transducerAutowiring = false;
