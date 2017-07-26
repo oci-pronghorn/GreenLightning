@@ -394,7 +394,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
             inputPipes[--pipesCount] = netResponsePipe;            
             boolean addedItem = IntHashTable.setItem(netPipeLookup, builder.behaviorId((Behavior)listener), pipeIdx);
             if (!addedItem) {
-            	throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
+            	throw new RuntimeException("Behaviors must only be registered once.\n\nAn instance of "
+            			+listener.getClass().getCanonicalName()+" was discovered to be registered twice. "
+            			+"\n\nThis stack trace captures the second known registration occurance.");
             }
             
         }

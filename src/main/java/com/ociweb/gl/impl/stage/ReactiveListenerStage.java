@@ -438,7 +438,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
 				
 	            	 reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), htc);
-	            	 
+	            	 	            	 
 	            	 if (!listener.responseHTTP( statusId, 
 		            			                 (HTTPContentType)httpSpec.contentTypes[htc.type()],
 		            			                 reader)) {

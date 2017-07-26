@@ -60,29 +60,26 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
     
 	public static GreenRuntime run(GreenApp app, String[] args) {
 		GreenRuntime runtime = new GreenRuntime(args);
-        try {
-        	app.declareConfiguration(runtime.getBuilder());
-		    GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
+ 
+    	app.declareConfiguration(runtime.getBuilder());
+	    GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
 
-		    runtime.declareBehavior(app);
-		    
-		    System.out.println("To exit app press Ctrl-C");
+	    runtime.declareBehavior(app);
+	    
+	    System.out.println("To exit app press Ctrl-C");
 
-				runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.netPipeLookup, runtime.gm);
+			runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.netPipeLookup, runtime.gm);
 
-				   runtime.logStageScheduleRates();
+			   runtime.logStageScheduleRates();
 
-				   if ( runtime.builder.isTelemetryEnabled()) {
-					   runtime.gm.enableTelemetry(8098);
-				   }
-			   //exportGraphDotFile();
+			   if ( runtime.builder.isTelemetryEnabled()) {
+				   runtime.gm.enableTelemetry(8098);
+			   }
+		   //exportGraphDotFile();
 
-			runtime.scheduler = runtime.builder.createScheduler(runtime);
-		    runtime.scheduler.startup();
-		} catch (Throwable t) {
-		    t.printStackTrace();
-		    System.exit(-1);
-		}
+		runtime.scheduler = runtime.builder.createScheduler(runtime);
+	    runtime.scheduler.startup();
+
 		return runtime;
     }
 	
@@ -92,28 +89,24 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
         //this is done because this is the test() method and must behave the same everywhere.
         runtime.builder = new BuilderImpl(runtime.gm,runtime.args);
 
-        try {
-        	app.declareConfiguration(runtime.builder);
-            GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
+    	app.declareConfiguration(runtime.builder);
+        GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
 
-            runtime.declareBehavior(app);
+        runtime.declareBehavior(app);
 
-				runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.netPipeLookup, runtime.gm);
+			runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.netPipeLookup, runtime.gm);
 
-				   runtime.logStageScheduleRates();
+			   runtime.logStageScheduleRates();
 
-				   if ( runtime.builder.isTelemetryEnabled()) {
-					   runtime.gm.enableTelemetry(8098);
-				   }
-			   //exportGraphDotFile();
+			   if ( runtime.builder.isTelemetryEnabled()) {
+				   runtime.gm.enableTelemetry(8098);
+			   }
+		   //exportGraphDotFile();
 
-			   runtime.scheduler = new NonThreadScheduler(runtime.gm);
-					   //runtime.builder.createScheduler(runtime);
-            //for test we do not call startup and wait instead for this to be done by test.
-        } catch (Throwable t) {
-            t.printStackTrace();
-            System.exit(-1);
-        }
+		   runtime.scheduler = new NonThreadScheduler(runtime.gm);
+				   //runtime.builder.createScheduler(runtime);
+        //for test we do not call startup and wait instead for this to be done by test.
+
         return runtime;
     }
     

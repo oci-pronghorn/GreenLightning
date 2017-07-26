@@ -1,4 +1,7 @@
 package com.ociweb.gl.impl;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.HeaderReader;
 import com.ociweb.gl.api.Payloadable;
@@ -15,7 +18,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	protected int paraIndexCount; //how may fields to skip over before starting
 	protected TrieParser headerTrieParser; //look up header id from the header string bytes
 	protected TrieParserReader reader = new TrieParserReader(0, true);
-	
+	private static final Logger logger = LoggerFactory.getLogger(HTTPPayloadReader.class);
 	
 	public int headerId(byte[] header) {		
 		int result = (int)TrieParserReader.query(reader, headerTrieParser, header, 0, header.length, Integer.MAX_VALUE);
@@ -57,6 +60,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	}
 	
 	public boolean openPayloadData(Payloadable reader) {
+		logger.info("reading the position of the body {} from position {} ",readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)),paraIndexCount + IntHashTable.count(headerHash));
 		setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)));
 		reader.read(this);//even when we have zero length...
 		return true;
