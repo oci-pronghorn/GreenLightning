@@ -72,8 +72,9 @@ public class BuilderImpl implements Builder {
 	private static final int DEFAULT_MAX_MQTT_IN_FLIGHT = 10;
 	private static final int DEFAULT_MAX__MQTT_MESSAGE = 1<<12;
 	//NB: The Green Lightning maximum header size 64K is defined here HTTP1xRouterStage.MAX_HEADER
-	private static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
-	private static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<9;
+	protected static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
+	//  This has a large impact on memory usage but also on performance volume
+	protected static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<10;
 	
 	protected boolean useNetClient;
 	protected boolean useNetServer;
@@ -100,10 +101,8 @@ public class BuilderImpl implements Builder {
 
 	private static final Logger logger = LoggerFactory.getLogger(BuilderImpl.class);
 
-	public final PipeConfig<HTTPRequestSchema> restPipeConfig = 
-			new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
-					MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT, MAXIMUM_INCOMMING_REST_SIZE);
-	
+	public final PipeConfigManager pcm = new PipeConfigManager();
+
 	public Enum<?> beginningState;
     private int parallelism = 1;//default is one
 
@@ -330,6 +329,10 @@ public class BuilderImpl implements Builder {
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
 		this.args = args;
+		
+		this.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
+									                   MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT, 
+									                   MAXIMUM_INCOMMING_REST_SIZE));
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {

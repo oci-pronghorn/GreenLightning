@@ -570,7 +570,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    		fromRouterToModules[t][path] = requestPipes.get(0);
 		    	} else {
 		    		//we only create a pipe when we are about to use the replicator
-		    		fromRouterToModules[t][path] = builder.newHTTPRequestPipe(builder.restPipeConfig);		    		
+		    		fromRouterToModules[t][path] =  
+		    				builder.newHTTPRequestPipe(builder.pcm.getConfig(HTTPRequestSchema.class));		    		
 		    		if (0==size) {
 		    			logger.info("warning there are routes without any consumers");
 		    			//we have no consumer so tie it to pipe cleaner		    		
@@ -666,7 +667,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			                      int idx, int parallelIndex) {
 		
 		if (null == fileRequestConfig) {
-			fileRequestConfig = builder.restPipeConfig.grow2x();
+			fileRequestConfig = builder.pcm.getConfig(HTTPRequestSchema.class).grow2x();
 		}
 		inputs[idx] = builder.newHTTPRequestPipe(fileRequestConfig);
 		outputs[idx] = builder.newNetResponsePipe(fileResponseConfig, parallelIndex);
