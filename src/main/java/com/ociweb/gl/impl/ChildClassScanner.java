@@ -2,6 +2,9 @@ package com.ociweb.gl.impl;
 
 import java.lang.reflect.Field;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 
@@ -12,6 +15,8 @@ import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
  */
 public class ChildClassScanner {
 
+	private static final Logger logger = LoggerFactory.getLogger(ChildClassScanner.class);
+	
 	public static boolean notPreviouslyHeld(Object child, 
 			                                   Object topParent, 
 			                                   IntHashTable usageChecker) {
@@ -55,16 +60,34 @@ public class ChildClassScanner {
 									&& (obj.getClass()!=null)
 									&&  (!obj.getClass().isPrimitive()) 
 									&& (obj != listener) 
-									&& (!obj.getClass().getName().startsWith("java."))  
+									&& (!obj.getClass().getName().startsWith("java.")) 
+									&& (!obj.getClass().getName().startsWith("[Ljava."))
+									&& (!obj.getClass().getName().startsWith("[["))
+									&& (!obj.getClass().getName().startsWith("[I"))
+									&& (!obj.getClass().getName().startsWith("[B"))
+									&& (!obj.getClass().getName().startsWith("[J"))
+									&& (!obj.getClass().getName().startsWith("[S"))
+									
+									&& (!obj.getClass().getName().startsWith("com.ociweb.pronghorn.stage."))
+									&& (!obj.getClass().getName().startsWith("[Lcom.ociweb.pronghorn.stage."))
+									
+									&& (!obj.getClass().getName().startsWith("com.ociweb.iot.hardware."))
+									&& (!obj.getClass().getName().startsWith("[Lcom.ociweb.iot.hardware."))
+																	
+									&& (!obj.getClass().getName().startsWith("com.ociweb.pronghorn.pipe."))  
+									&& (!obj.getClass().getName().startsWith("[Lcom.ociweb.pronghorn.pipe.")) 
+									
+									&& (!obj.getClass().getName().startsWith("org.slf4j."))
 									&& (!obj.getClass().isEnum())
 									&& (!(obj instanceof MsgRuntime))               		
 									&& !fields[f].isSynthetic()
 									&& fields[f].isAccessible() 
-									&& depth<=7) { //stop recursive depth
+									&& depth<=13) { //stop recursive depth
 								
-//								                		if (depth >4) {
-//								                			logger.info(depth+" "+obj.getClass().getName());
-//								                		}
+								                		//if (depth <3 && obj.getClass().getName().startsWith("[")) {
+								                		//	logger.info(depth+" "+obj.getClass().getName());
+								                		//}
+								
 								//recursive check for command channels
 								if (!visitUsedByClass(obj, depth+1, visitor, topParent, targetType)) {
 									return false;

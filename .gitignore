@@ -12,3 +12,7 @@ buildNumber.properties
 /.settings/
 *.iml
 .idea
+/.attach_pid11854
+/.attach_pid4865
+/MonitorResults
+/MonitorResults.svg
