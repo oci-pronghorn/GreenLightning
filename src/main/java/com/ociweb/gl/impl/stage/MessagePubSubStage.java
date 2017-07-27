@@ -535,7 +535,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		
 		boolean debug = false;
 		if (debug) {
-			logger.info("adding new subscription {} found it {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
+			logger.info("adding new subscription {} found it in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
 		}
 		
 		if (listIdx<0) {
@@ -544,7 +544,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		    //System.err.println("Adding new subscription with value "+listIdx);
 		    localSubscriptionTrie.setValue(backing, pos, len, mask, listIdx);
 			
-		    //logger.info("set new subscription {} found it {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
+		    logger.info("set new subscription {} in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
 
 		}
 		
