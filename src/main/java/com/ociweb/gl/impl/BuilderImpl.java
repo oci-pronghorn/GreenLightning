@@ -75,6 +75,7 @@ public class BuilderImpl implements Builder {
 	protected static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
 	//  This has a large impact on memory usage but also on performance volume
 	protected static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<10;
+	protected static final int MINIMUM_TLS_BLOB_SIZE = 1<<15;
 	
 	protected boolean useNetClient;
 	protected boolean useNetServer;
@@ -333,6 +334,13 @@ public class BuilderImpl implements Builder {
 		this.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
 									                   MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT, 
 									                   MAXIMUM_INCOMMING_REST_SIZE));
+				
+		int requestQueue = 4;
+		this.pcm.addConfig(new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,
+				                                    requestQueue,
+				                                    MINIMUM_TLS_BLOB_SIZE)); 		
+			
+		
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {
@@ -765,8 +773,6 @@ public class BuilderImpl implements Builder {
 			int responseQueue = 10;
 			int responseSize = 1<<16;
 			int outputsCount = 1;
-			int requestQueue = 4;
-			int requestSize = 1<<15; //must be no smaller than 32K to ensure TLS works.
 			
 			
 			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
@@ -778,10 +784,10 @@ public class BuilderImpl implements Builder {
 			
 			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
 			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
-			
-			
-			PipeConfig<NetPayloadSchema> clientNetRequestConfig = new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,requestQueue,requestSize); 		
-		
+
+			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
+					
+					
 			//BUILD GRAPH
 			ClientCoordinator ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
 		
