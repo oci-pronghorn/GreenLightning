@@ -255,7 +255,9 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 		int port = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1);
 		int userId = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_LISTENER_10);		
 						
-		ClientConnection activeConnection = ClientCoordinator.openConnection(ccm, hostBack, hostPos, hostLen, hostMask, port, userId, output);
+		ClientConnection activeConnection = ClientCoordinator.openConnection(
+				ccm, hostBack, hostPos, hostLen, hostMask, port, userId, output,	
+		        ccm.lookup(hostBack,hostPos,hostLen,hostMask, port, userId));
 				
 		
 		if (null != activeConnection) {
