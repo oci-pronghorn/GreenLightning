@@ -151,7 +151,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 	@Override
 	public int read() {
-		checkLimit(this,1);
+		//returns -1 if we have no data so no need to check.
 		return super.read();
 	}
 
