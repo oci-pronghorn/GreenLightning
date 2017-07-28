@@ -349,21 +349,24 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		
 		setPositionBytesFromStart(computePosition(fieldId));
 		
-		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_BYTES) {
+			checkLimit(this,2);
 			readUTF(appendable);
 			return appendable;
 		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
+			checkLimit(this,1);
 			Appendables.appendValue(appendable, readPackedLong());
 			return appendable;			
 		} else if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
+			checkLimit(this,2);
 			long numerator = DataInputBlobReader.readPackedLong(this);
 			long denominator = DataInputBlobReader.readPackedLong(this);
 			Appendables.appendValue(Appendables.appendValue(appendable, numerator),"/",denominator);	
 			return appendable;
 		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
+			checkLimit(this,2);
 			long m = DataInputBlobReader.readPackedLong(this); 
 			byte e = readByte();
 			Appendables.appendDecimalValue(appendable, m, e);

@@ -544,7 +544,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		    //System.err.println("Adding new subscription with value "+listIdx);
 		    localSubscriptionTrie.setValue(backing, pos, len, mask, listIdx);
 			
-		    logger.info("set new subscription {} in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
+		   // logger.info("set new subscription {} in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
 
 		}
 		

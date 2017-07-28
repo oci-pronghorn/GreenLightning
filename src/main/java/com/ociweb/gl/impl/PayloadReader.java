@@ -14,8 +14,9 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	
     protected static <S extends MessageSchema<S>> void checkLimit(PayloadReader<S> that, int min) {
   
-    	if ( ((that.position-that.bytesLowBound) + min) > DataInputBlobReader.getBackingPipe(that).maxVarLen ) {
-    		throw new RuntimeException("Read attempted beyond the end of the field data");
+    	if ( (that.position + min) > that.length) { 
+    		throw new RuntimeException("Read attempted beyond the end of the field data. Pos:"+that.position+" adding:"+min+" must be < "+that.length);
+    	
     	}
     }
 
