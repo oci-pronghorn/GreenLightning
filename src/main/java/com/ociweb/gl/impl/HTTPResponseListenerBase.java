@@ -21,6 +21,6 @@ public interface HTTPResponseListenerBase {
      * @param type {@link HTTPContentType} of the response, will be null for continuation
      * @param reader {@link PayloadReader} for the response body.
      */
-	boolean responseHTTP(short statusCode, HTTPContentType type, HTTPResponseReader reader);
+	boolean responseHTTP(short statusCode, HTTPContentType type, HTTPResponseReader reader, boolean isComplete);
 
 }

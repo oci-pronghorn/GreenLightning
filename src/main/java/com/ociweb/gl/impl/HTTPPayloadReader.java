@@ -60,10 +60,15 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	}
 	
 	public boolean openPayloadData(Payloadable reader) {
-		logger.info("reading the position of the body {} from position {} ",readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)),paraIndexCount + IntHashTable.count(headerHash));
-		setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)));
-		reader.read(this);//even when we have zero length...
-		return true;
+		
+		if (hasRemainingBytes()) {		
+			//logger.trace("reading the position of the body {} from position {} ",readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)),paraIndexCount + IntHashTable.count(headerHash));
+			setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)));
+			reader.read(this);//even when we have zero length...
+			return true;
+		} else {
+			return false;
+		}
 	}
 
 

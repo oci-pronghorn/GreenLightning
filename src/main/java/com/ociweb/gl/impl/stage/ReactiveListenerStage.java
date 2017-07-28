@@ -429,6 +429,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	             case NetResponseSchema.MSG_RESPONSE_101:
 
 	            	 long ccId1 = Pipe.takeLong(p);
+	            	 int flags = Pipe.takeInt(p);
 	            	 //ClientConnection cc = (ClientConnection)ccm.get(ccId1);
 	            	 
             		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
@@ -438,10 +439,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
 				
 	            	 reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), htc);
-	            	 	            	 
+	            	 	      
+	            	 //TODO: set the reader with what??
+	            	 boolean isComplete = true;
+	            	 
 	            	 if (!listener.responseHTTP( statusId, 
 		            			                 (HTTPContentType)httpSpec.contentTypes[htc.type()],
-		            			                 reader)) {
+		            			                 reader, isComplete)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	            	 }
@@ -452,10 +456,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 break;
 	             case NetResponseSchema.MSG_CONTINUATION_102:
 	            	 long fieldConnectionId = Pipe.takeLong(p);
+	            	 int flags2 = Pipe.takeInt(p);
+	            	 
             		 HTTPResponseReader continuation = (HTTPResponseReader)Pipe.inputStream(p);
             		 continuation.openLowLevelAPIField();
-	            	 
-	            	 if (!listener.responseHTTP((short)0,(HTTPContentType)null,continuation)) {
+            		 
+            		 //TODO: set the reader with what??
+            		 boolean isComplete2 = true;
+            		 
+	            	 if (!listener.responseHTTP((short)0,(HTTPContentType)null,continuation, isComplete2)) {
 						 Pipe.resetTail(p);
 						 return;//continue later and repeat this same value.
 					 }
@@ -468,7 +477,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 
 	            	 int port = Pipe.takeInt(p);//the caller does not care which port we were on.
 					   
-	            	 if (!listener.responseHTTP((short)-1,null,hostReader)) {
+	            	 if (!listener.responseHTTP((short)-1,null,hostReader,true)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	            	 }	            	 
