@@ -8,37 +8,16 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobReader<S> {
 
-	private TrieParserReader reader = new TrieParserReader(true);
-	private int limit = -1;
-	
 	public PayloadReader(Pipe<S> pipe) {
         super(pipe);
     }
 	
-
     protected static <S extends MessageSchema<S>> void checkLimit(PayloadReader<S> that, int min) {
-    	
-    	//TODO: this bounds checker is broken, open does not set limit right since static is used
-    	
-    	//if ( (that.position+min) > that.limit ) {
-    	//	throw new RuntimeException("Read attempted beyond the end of the field data");
-    	//}
+  
+    	if ( ((that.position-that.bytesLowBound) + min) > DataInputBlobReader.getBackingPipe(that).maxVarLen ) {
+    		throw new RuntimeException("Read attempted beyond the end of the field data");
+    	}
     }
-   
-	
-	@Override
-	public int openHighLevelAPIField(int loc) {		
-		int len = super.openHighLevelAPIField(loc);
-		limit = len + position;
-		return len;
-	}
-	
-	@Override
-	public int openLowLevelAPIField() {		
-		int len = super.openLowLevelAPIField();
-		limit = len + position;
-		return len;
-	}
 
 	private int fieldIdx(long fieldId) {
 		return (int)fieldId & 0xFFFF;
