@@ -46,35 +46,35 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 	@Override
 	public int read(byte[] b) {
-		checkLimit(this,2);
+		//not checked because this read will only read available
 		return super.read(b);
 	}
 
 
 	@Override
 	public int read(byte[] b, int off, int len) {
-		checkLimit(this,2);//not len because read will read less
+		//not checked because this read will only read available
 		return super.read(b, off, len);
 	}
 
 
 	@Override
 	public void readFully(byte[] b) {
-		checkLimit(this,2);
+		//not checked because this read will only read available
 		super.readFully(b);
 	}
 
 
 	@Override
 	public void readFully(byte[] b, int off, int len) {
-		checkLimit(this,2);//not len because read will read less
+		//not checked because this read will only read available
 		super.readFully(b, off, len);
 	}
 
 
 	@Override
 	public int skipBytes(int n) {
-		checkLimit(this,n);
+		//not checked because this read will only read available
 		return super.skipBytes(n);
 	}
 
