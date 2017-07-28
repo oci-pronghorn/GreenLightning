@@ -179,7 +179,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 	@Override
 	public Object readObject() {
-		checkLimit(this,1);
+        //bounds are already checked here
 		return super.readObject();
 	}
 
