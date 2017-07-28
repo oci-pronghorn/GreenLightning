@@ -17,9 +17,12 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	
 
     protected static <S extends MessageSchema<S>> void checkLimit(PayloadReader<S> that, int min) {
-    	if ( (that.position+min) > that.limit ) {
-    		throw new RuntimeException("Read attempted beyond the end of the field data");
-    	}
+    	
+    	//TODO: this bounds checker is broken, open does not set limit right since static is used
+    	
+    	//if ( (that.position+min) > that.limit ) {
+    	//	throw new RuntimeException("Read attempted beyond the end of the field data");
+    	//}
     }
    
 	
@@ -48,9 +51,8 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	protected int computePosition(long fieldId) {
 		assert(fieldId>=0) : "check field name, it does not match any found field";
 		//jump to end and index backwards to find data position
-		int result = readFromEndLastInt(fieldIdx(fieldId));	
-		assert(result<available()) : "index of "+result+" is out of limit "+available()+" for field id "+fieldId+" at index "+fieldIdx(fieldId);
-		return result;
+		return readFromEndLastInt(fieldIdx(fieldId));	
+
 	}
 	
 	protected int computePositionSecond(long fieldId) {
