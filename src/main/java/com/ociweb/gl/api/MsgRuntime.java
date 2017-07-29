@@ -57,6 +57,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     protected StageScheduler scheduler;
     
+    //NOTE: keep short since the MessagePubSubStage will STOP consuming message until the one put on here
+    //      is actually taken off and consumed.  We have little benefit to making this longer.
+    protected static final int defaultCommandChannelSubscriberLength = 8;
+    
     protected static final int defaultCommandChannelLength = 16;
     protected static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
     protected static final int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support
@@ -66,7 +70,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload);   
     protected static final PipeConfig<ClientHTTPRequestSchema> requestNetConfig = new PipeConfig<ClientHTTPRequestSchema>(ClientHTTPRequestSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
     protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
-    protected static final PipeConfig<MessageSubscription> messageSubscriptionConfig = new PipeConfig<MessageSubscription>(MessageSubscription.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+    protected static final PipeConfig<MessageSubscription> messageSubscriptionConfig = new PipeConfig<MessageSubscription>(MessageSubscription.instance, defaultCommandChannelSubscriberLength, defaultCommandChannelMaxPayload);
     protected static final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
 
 	private PipeConfig<HTTPRequestSchema> fileRequestConfig;// = builder.restPipeConfig.grow2x();

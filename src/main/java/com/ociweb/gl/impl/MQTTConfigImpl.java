@@ -206,7 +206,9 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 		if (isImmutable) {
 			return;
 		} else {
-			clientRequest = newClientRequestPipe(MQTTClientRequestSchema.instance.newPipeConfig(maxInFlight, maximumLenghOfVariableLengthFields));
+			//No need for this pipe to be large since we can only get one at a time from the MessagePubSub feeding EngressMQTTStage
+			int egressPipeLength = 32;
+			clientRequest = newClientRequestPipe(MQTTClientRequestSchema.instance.newPipeConfig(egressPipeLength, maximumLenghOfVariableLengthFields));
 			clientRequest.initBuffers();
 			
 			clientResponse = MQTTClientResponseSchema.instance.newPipe(maxInFlight, maximumLenghOfVariableLengthFields);

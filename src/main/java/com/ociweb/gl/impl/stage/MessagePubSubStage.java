@@ -116,7 +116,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
        this.currentState = null==hardware.beginningState ? -1 :hardware.beginningState.ordinal();
 
-       
+       supportsBatchedPublish = false; //must have immediate publish
+   	   supportsBatchedRelease = false; //quick release is desirable to lower latency
+   	   GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, 4_800, this);
     }
 
     
@@ -130,8 +132,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     		long mark = marks[i];
     		//only check those that have been set.
     		if (mark>0) {
-    			if (Pipe.tailPosition(outgoingMessagePipes[i])<mark) {
+    			if (Pipe.tailPosition(outgoingMessagePipes[i])<mark) {    				
     				//logger.info("not consumed yet {}<{}",Pipe.tailPosition(outgoingMessagePipes[i]),mark);
+    				
     				return false;
     			} else {
     				//logger.info("is consumed {}>={}",Pipe.tailPosition(outgoingMessagePipes[i]),mark);
@@ -242,142 +245,142 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		addSubscription(pipeIdx, backing, pos, len, mask);
 	}
 
+	private boolean foundWork;
+	
     @Override
     public void run() {
 
-    	if (incomingSubsAndPubsPipe.length==0) {
-    		return;//hack for case when there are none, TODO: must stop this earlier so this check is not needed.
-    	}
-
-    	//////////////////////
-    	//process the pending publications, this must be completed before we continue
-    	//////////////////////
-        if (pendingPublishCount>0) { //must do these first.
-        	int limit = pendingPublishCount;
-        	pendingPublishCount = 0;//set to zero to collect the new failed values
-        	
-        	switch(pendingDeliveryType) {
-	        	case Message:
-		        	{
-		       
-		        		
-		        		if (pendingIngress) {
-		        			
-		        			
-		        			Pipe<IngressMessages> pipe = ingressMessagePipes[pendingReleaseCountIdx];
-
-			        		for(int i = 0; i<limit; i++) {
-			        			copyToSubscriber(pipe, pendingPublish[i],
-			        					IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-			        					IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
-			        		}
-		        			
-		        		} else {
-			            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];		           	 	
-			        		Pipe<MessagePubSub> pipe = incomingSubsAndPubsPipe[pendingReleaseCountIdx];
-
-			        		for(int i = 0; i<limit; i++) {			        			
-			        			copyToSubscriber(pipe, pendingPublish[i], targetMakrs, 
-			        					 MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-			        					 MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
-			        		}
-		        		}
-
-		        	}
-	        		break;
-	        	case State:
-		        	{
-		        		assert(!pendingIngress);
-		            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];
-		           	 
-		        		//finishing the remaining copies that could not be done before because the pipes were full
-		        		for(int i = 0; i<limit; i++) {
-		        			copyToSubscriberState(currentState, newState, pendingPublish[i], targetMakrs);                
-		        		}
+    	do {
+    		foundWork = false;
+	    	//////////////////////
+	    	//process the pending publications, this must be completed before we continue
+	    	//////////////////////
+	        if (pendingPublishCount>0) { //must do these first.
+	        	int limit = pendingPublishCount;
+	        	pendingPublishCount = 0;//set to zero to collect the new failed values
+	        	foundWork=true;
+	        	switch(pendingDeliveryType) {
+		        	case Message:
+			        	{
+			        		if (pendingIngress) {
+			        			
+			        			Pipe<IngressMessages> pipe = ingressMessagePipes[pendingReleaseCountIdx];
 	
-		        		if (0 == pendingPublishCount) {
-		        			currentState = newState;
-		        		}
-		        	}
-	        		break;
-        	}
-            if (pendingPublishCount>0) {
-            	//do not pick up new work until this is done or we may get out of order messages.
-                return;//try again later
-            } else {
-            	if (pendingIngress) { //and pendingPublishCount==0 since we are in the else
-            		//we just finished an ingress message so release it
-                  	PipeReader.releaseReadLock(ingressMessagePipes[pendingReleaseCountIdx]);                   
-            	}
-            }
-        }
-        /////////////////////
-        //we now have the pending work done
-        ////////////////////
-        
-        //ingressMessagePipes
-        int i = ingressMessagePipes.length;
-        while (--i >= 0) {
-        	Pipe<IngressMessages> ingessPipe = ingressMessagePipes[i];  
-
-        	while (PipeReader.tryReadFragment(ingessPipe)) {
-
-                final byte[] backing = PipeReader.readBytesBackingArray(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
-                final int pos = PipeReader.readBytesPosition(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
-                final int len = PipeReader.readBytesLength(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
-                final int mask = PipeReader.readBytesMask(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
-        		int listIdx = subscriptionListIdx(backing, pos, len, mask);
-        		
-        		if (listIdx>=0) {
-        			
-        			if (hasNextSubscriber(listIdx)) {
-		                
-	        	 		if (enableTrace) {
-	        	 			pubSubTrace.init(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-	        	 										IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-	        	 			logger.info("new message to be routed, {}", pubSubTrace); 
-	        	 		}
-		        		
-                    	final int limit = listIdx+subscriberListSize;
-                    	for(int j = listIdx; j<limit && hasNextSubscriber(j); j++) {
-                    	
-							int pipeIdx = subscriberLists[j];
-                    		
-							copyToSubscriber(ingessPipe, pipeIdx,
-										IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-										IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3
-                    				);
-							
-                    	}
-                	}
-        			
-                    if (pendingPublishCount>0) {
-                    	
-                    	logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing");
-                    	pendingDeliveryType = PubType.Message;                   	
-                        pendingReleaseCountIdx = i; 
-                        
-                        return;//must try again later
-                    } else {
-                    	
-                    	PipeReader.releaseReadLock(ingessPipe);
-                    }
-        			
-        			
-        			
-        		}
-        		
-        	}
-        }
+				        		for(int i = 0; i<limit; i++) {
+				        			copyToSubscriber(pipe, pendingPublish[i],
+				        					IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+				        					IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+				        		}
+			        			
+			        		} else {
+				            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];		           	 	
+				        		Pipe<MessagePubSub> pipe = incomingSubsAndPubsPipe[pendingReleaseCountIdx];
+	
+				        		for(int i = 0; i<limit; i++) {			        			
+				        			copyToSubscriber(pipe, pendingPublish[i], targetMakrs, 
+				        					 MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+				        					 MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+				        		}
+			        		}
+	
+			        	}
+		        		break;
+		        	case State:
+			        	{
+			        		assert(!pendingIngress);
+			            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];
+			           	 
+			        		//finishing the remaining copies that could not be done before because the pipes were full
+			        		for(int i = 0; i<limit; i++) {
+			        			copyToSubscriberState(currentState, newState, pendingPublish[i], targetMakrs);                
+			        		}
+		
+			        		if (0 == pendingPublishCount) {
+			        			currentState = newState;
+			        		}
+			        	}
+		        		break;
+	        	}
+	            if (pendingPublishCount>0) {
+	            	foundWork = false;
+	            	//do not pick up new work until this is done or we may get out of order messages.
+	                return;//try again later
+	            } else {
+	            	if (pendingIngress) { //and pendingPublishCount==0 since we are in the else
+	            		//we just finished an ingress message so release it
+	                  	PipeReader.releaseReadLock(ingressMessagePipes[pendingReleaseCountIdx]);                   
+	            	}
+	            }
+	        }
+	        /////////////////////
+	        //we now have the pending work done
+	        ////////////////////
+	        
+	        //ingressMessagePipes
+	        int i = ingressMessagePipes.length;
+	        while (--i >= 0) {
+	        	Pipe<IngressMessages> ingessPipe = ingressMessagePipes[i];  
+	
+	        	while (PipeReader.tryReadFragment(ingessPipe)) {
+	        		foundWork=true;
+	                final byte[] backing = PipeReader.readBytesBackingArray(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	                final int pos = PipeReader.readBytesPosition(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	                final int len = PipeReader.readBytesLength(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	                final int mask = PipeReader.readBytesMask(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	        		int listIdx = subscriptionListIdx(backing, pos, len, mask);
+	        		
+	        		if (listIdx>=0) {
+	        			
+	        			if (hasNextSubscriber(listIdx)) {
+			                
+		        	 		if (enableTrace) {
+		        	 			pubSubTrace.init(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+		        	 										IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+		        	 			logger.info("new message to be routed, {}", pubSubTrace); 
+		        	 		}
+			        		
+	                    	final int limit = listIdx+subscriberListSize;
+	                    	for(int j = listIdx; j<limit && hasNextSubscriber(j); j++) {
+	                    	
+								int pipeIdx = subscriberLists[j];
+	                    		
+								copyToSubscriber(ingessPipe, pipeIdx,
+											IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+											IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3
+	                    				);
+								
+	                    	}
+	                	}
+	        			
+	                    if (pendingPublishCount>0) {
+	                    	
+	                    	logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing");
+	                    	pendingDeliveryType = PubType.Message;                   	
+	                        pendingReleaseCountIdx = i; 
+	                        
+	                        return;//must try again later
+	                    } else {
+	                    	
+	                    	PipeReader.releaseReadLock(ingessPipe);
+	                    }
+	        			
+	        			
+	        			
+	        		}
+	        		
+	        	}
+	        }
+	    	   	
+	        
+	        
+	        ///////////////////
+	        //find the next "go" message to be done
+	        ///////////////////
+	        super.run();
+	        
+    	} while (foundWork);
     	
     	
-        
-        
-        ///////////////////
-        //find the next "go" message to be done
-        ///////////////////
-        super.run();
-
     }
     
     @Override
@@ -392,8 +395,21 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
              
         long[] targetMakrs = consumedMarks[a];
         
+        if (!isPreviousConsumed(a)) {
+        	//this is blocking all future messages from getting sent so we do have "work" 
+        	//and must try again very soon
+        	foundWork = true;
+        	//we should also be nice to the system since we know its under load
+        	Thread.yield();
+        	return;
+        }
         
-        //logger.info("enter while {}, {} ,{} ,{}",isPreviousConsumed(a),hasReleaseCountRemaining(a),isChannelUnBlocked(a),isNotBlockedByStateChange(pipe));
+//        logger.info("enter while {}, {}, {} ,{} ,{}",
+//        		isPreviousConsumed(a),
+//        		PipeReader.hasContentToRead(pipe),
+//        		hasReleaseCountRemaining(a),
+//        		isChannelUnBlocked(a),
+//        		isNotBlockedByStateChange(pipe));
         
         
         while (isPreviousConsumed(a) && //warning this one has side effect and must come first.
@@ -403,7 +419,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         	   isNotBlockedByStateChange(pipe) &&        	   
                PipeReader.tryReadFragment(pipe) 
               ) {
-            
+        	foundWork=true;
         	
             int msgIdx = PipeReader.getMsgIdx(pipe);
             //logger.info("consumed message {}",msgIdx);
