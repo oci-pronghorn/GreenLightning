@@ -279,7 +279,20 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         
         //Do last so we complete all the initializations first
         if (listener instanceof StartupListener) {
+        	long start = System.currentTimeMillis();
         	((StartupListener)listener).startup();
+        	long duration = System.currentTimeMillis()-start;
+        	if (duration>20) { //approaching human perception
+        		String name = listener.getClass().getSimpleName().trim();
+        		if (name.length() == 0) {
+        			name = "a startup listener lambda";
+        		}
+        		logger.warn(
+        				"WARNING: startup method for {} took over {} ms. "+
+        		        "Reconsider the design you may want to do this work in a message listener.\n"+
+        				"Note that no behaviors will execute untill all have completed their startups.",
+        				name, duration);        		      		
+        	}
         }        
         startupCompleted=true;
         
