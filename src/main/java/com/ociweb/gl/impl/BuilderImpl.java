@@ -460,14 +460,16 @@ public class BuilderImpl implements Builder {
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
 		int ideal = idealThreadCount();
-		if (threadLimit<=0 && GraphManager.countStages(gm) > 10*ideal) {
+		final int countStages = GraphManager.countStages(gm);
+		if (threadLimit<=0 && countStages > 10*ideal) {
 			//do not allow the ThreadPerStageScheduler to be used, we must group
 			threadLimit = idealThreadCount()*4;//this must be large so give them a few more
 			threadLimitHard = true;//must make this a hard limit or we can saturate the system easily.
 		}
 		
-		final StageScheduler scheduler =  threadLimit <= 0 ? new ThreadPerStageScheduler(this.gm): 
-			                                                 new FixedThreadsScheduler(this.gm, this.threadLimit, this.threadLimitHard);
+		final StageScheduler scheduler =  (threadLimit<0 || threadLimit>countStages) ?
+				                                             new ThreadPerStageScheduler(this.gm): 
+ 			                                                 new FixedThreadsScheduler(this.gm, this.threadLimit, this.threadLimitHard);
 		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
