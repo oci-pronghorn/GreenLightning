@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Behavior;
+import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
@@ -226,10 +227,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	private String toStringDetails = "\n";
     public String toString() {
-    
-    	return (null==listener ? "Unknown Behavior" :
-    		    listener.getClass().getSimpleName())+"\n"+
-    	       super.toString()+toStringDetails;    	
+    	String parent = super.toString();
+    	
+    	String behaviorName = null==listener ? "Unknown Behavior" :
+    		listener.getClass().getSimpleName().trim();
+    	
+    	if (behaviorName.length()>0) {
+    		parent = parent.substring(getClass().getSimpleName().length(), parent.length());    		
+    	}
+    	
+		return behaviorName+parent+toStringDetails;    	
     }
     
     public final void setTimeEventSchedule(long rate, long start) {
@@ -430,22 +437,22 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	            	 long ccId1 = Pipe.takeLong(p);
 	            	 int flags = Pipe.takeInt(p);
-	            	 //ClientConnection cc = (ClientConnection)ccm.get(ccId1);
 	            	 
+	            	 //NOTE: this HTTPResponseReader object will show up n times in a row until
+	            	 //      the full file is complete.  No files will be interleaved.
             		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
 	            	 reader.openLowLevelAPIField();
 	
 	            	 final short statusId = reader.readShort();	
 				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
-				
+
+				     reader.setStatus(statusId);
+				     
 	            	 reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), htc);
-	            	 	      
-	            	 //TODO: set the reader with what??
-	            	 boolean isComplete = true;
-	            	 
-	            	 if (!listener.responseHTTP( statusId, 
-		            			                 (HTTPContentType)httpSpec.contentTypes[htc.type()],
-		            			                 reader, isComplete)) {
+	            	 reader.setContentType((HTTPContentType)httpSpec.contentTypes[htc.type()]);
+	            	 reader.setFlags(flags);
+	        
+	            	 if (!listener.responseHTTP(reader)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	            	 }
@@ -460,11 +467,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 
             		 HTTPResponseReader continuation = (HTTPResponseReader)Pipe.inputStream(p);
             		 continuation.openLowLevelAPIField();
+            		 continuation.setFlags(flags2);
             		 
-            		 //TODO: set the reader with what??
-            		 boolean isComplete2 = true;
-            		 
-	            	 if (!listener.responseHTTP((short)0,(HTTPContentType)null,continuation, isComplete2)) {
+	            	 if (!listener.responseHTTP(continuation)) {
 						 Pipe.resetTail(p);
 						 return;//continue later and repeat this same value.
 					 }
@@ -475,9 +480,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 HTTPResponseReader hostReader = (HTTPResponseReader)Pipe.inputStream(p);
 	            	 hostReader.openLowLevelAPIField();
 	            	 
+	            	 hostReader.setFlags(HTTPFieldReader.END_OF_RESPONSE | 
+	            			             HTTPFieldReader.CLOSE_CONNECTION);
+	            	 
 	            	 int port = Pipe.takeInt(p);//the caller does not care which port we were on.
 					   
-	            	 if (!listener.responseHTTP((short)-1,null,hostReader,true)) {
+	            	 if (!listener.responseHTTP(hostReader)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	            	 }	            	 
