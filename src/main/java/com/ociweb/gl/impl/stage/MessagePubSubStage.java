@@ -11,14 +11,19 @@ import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
+import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeReader;
 import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
+import com.ociweb.pronghorn.util.EncodingConverter;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
+import com.ociweb.pronghorn.util.EncodingConverter.EncodingStorage;
+import com.ociweb.pronghorn.util.EncodingConverter.EncodingTransform;
 
 public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
@@ -546,10 +551,36 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
 	private void addSubscription(final short pipeIdx, final byte[] backing, final int pos, final int len, final int mask) {
 
-		
 		int listIdx = subscriptionListIdx(backing, pos, len, mask);
+
 		
-		boolean debug = false;
+		///TOOD: need to convert to %b notation?
+		
+//		final EncodingTransform et = new EncodingTransform() {
+//
+//			@Override
+//			public void transform(TrieParserReader templateParserReader,
+//					              DataOutputBlobWriter<RawDataSchema> outputStream) {
+//				
+//				///routeDef.setIndexCount(convertEncoding(routeDef.getRuntimeParser(), templateParserReader, templateParser, outputStream));
+//			
+//			}			
+//		};
+//		final EncodingStorage es = new EncodingStorage() {
+//			@Override
+//			public void store(Pipe<RawDataSchema> pipe) {
+//				localSubscriptionTrie.setValue(pipe, listIdx);
+//			}
+//		};
+//		
+//		EncodingConverter converter = new EncodingConverter();
+		
+		
+		//converter.convert(textBlock, transform, es);
+		
+		
+		
+		boolean debug = true;
 		if (debug) {
 			logger.info("adding new subscription {} found it in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
 		}
