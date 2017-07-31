@@ -375,6 +375,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
     }
 
+    /**
+     * Causes this channel to delay processing any actions
+     * until the specified UNIX time is reached.
+     *
+     * @return True if blocking was successful, and false otherwise.
+     */
     public boolean blockUntil(long msTime) {
         assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
         try {
