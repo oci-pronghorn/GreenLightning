@@ -479,7 +479,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    public PayloadWriter<ClientHTTPRequestSchema> httpPost(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
+    private PayloadWriter<ClientHTTPRequestSchema> httpPost(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
     	
     	assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
     	
