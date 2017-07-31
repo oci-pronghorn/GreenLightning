@@ -610,18 +610,26 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
     public void presumePublishTopic(CharSequence topic, PubSubWritable writable) {
+    	presumePublishTopic(topic, writable, WaitFor.All);
+    }
+    
+    public void presumePublishTopic(CharSequence topic, PubSubWritable writable, WaitFor ap) {
     	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
     	
-    	if (publishTopic(topic, writable)) {
+    	if (publishTopic(topic, writable, ap)) {
 			return;
 		} else { 
 			logger.warn("unable to publish on topic {} must wait.",topic);
-			while (!publishTopic(topic, writable)) {
+			while (!publishTopic(topic, writable, ap)) {
 				Thread.yield();
 			}
 		}
     }
     
+    
+    public boolean publishTopic(CharSequence topic, PubSubWritable writable) {
+    	return publishTopic(topic, writable, WaitFor.All);
+    }
     /**
      * Opens a topic on this channel for writing.
      *
@@ -629,7 +637,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return {@link PayloadWriter} attached to the given topic.
      */
-    public boolean publishTopic(CharSequence topic, PubSubWritable writable) {
+    public boolean publishTopic(CharSequence topic, PubSubWritable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
         assert(isNotPrivate(topic)) : "private topics may not be selected by CharSequence.";
@@ -637,7 +645,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
     		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
         	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
@@ -655,13 +663,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
     public boolean publishTopic(CharSequence topic) {
+    	return publishTopic(topic, WaitFor.All);
+    }
+    
+    public boolean publishTopic(CharSequence topic, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(isNotPrivate(topic)) : "private topics may not be selected by CharSequence.";
         
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
     		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
         	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
@@ -729,21 +741,27 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 //        }
 //    }
     
-    
     public void presumePublishTopic(TopicWritable topic, PubSubWritable writable) {
+    	presumePublishTopic(topic,writable,WaitFor.All);
+    }        
+    public void presumePublishTopic(TopicWritable topic, PubSubWritable writable, WaitFor ap) {
     	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
-    	if (publishTopic(topic, writable)) {
+    	if (publishTopic(topic, writable, ap)) {
 			return;
 		} else { 
 			logger.warn("unable to publish on topic {} must wait.",topic);
-			while (!publishTopic(topic, writable)) {
+			while (!publishTopic(topic, writable, ap)) {
 				Thread.yield();
 			}
 		}
     }
     
     public boolean publishTopic(TopicWritable topic, PubSubWritable writable) {
+    	return publishTopic(topic, writable, WaitFor.All);    	
+    }
+    
+    public boolean publishTopic(TopicWritable topic, PubSubWritable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
         assert(isNotPrivate(topic)) : "private topics may not be dynamicaly constructed.";
@@ -752,7 +770,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
         	
     		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
     		
         	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
         	
@@ -773,14 +791,18 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
     }
     
+    
     public boolean publishTopic(TopicWritable topic) {
+    	return publishTopic(topic, WaitFor.All);
+    }    
+    public boolean publishTopic(TopicWritable topic, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(isNotPrivate(topic)) : "private topics may not be dynamicaly constructed.";
                 
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
         	    		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
         	
         	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
         	
@@ -832,9 +854,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
         
+	public boolean copyStructuredTopic(CharSequence topic, 
+            MessageReader reader, 
+            MessageConsumer consumer) {
+		return copyStructuredTopic(topic, reader, consumer, WaitFor.All);
+	}
+	
     public boolean copyStructuredTopic(CharSequence topic, 
     		                           MessageReader reader, 
-    		                           MessageConsumer consumer) {
+    		                           MessageConsumer consumer,
+    		                           WaitFor ap) {
     	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
     	
     	int pos = reader.absolutePosition();    	
@@ -842,7 +871,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		&& PipeWriter.hasRoomForWrite(goPipe) 
         	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)  ) {
     		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
     		
     		PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
         	
@@ -864,6 +893,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
     
     public boolean publishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
+    	return publishStructuredTopic(topic, writable, WaitFor.All);
+    }
+    
+    public boolean publishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable, WaitFor ap) {
  	    assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
      	assert(writable != null);
         assert(null != goPipe);
@@ -871,7 +904,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         if (PipeWriter.hasRoomForWrite(goPipe) 
         	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
     		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
                     	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);

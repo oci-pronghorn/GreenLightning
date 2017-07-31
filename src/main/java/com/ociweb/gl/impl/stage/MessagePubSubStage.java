@@ -5,6 +5,7 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.WaitFor;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePubSub;
@@ -494,7 +495,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                 case MessagePubSub.MSG_PUBLISH_103:
                     {                        
 
-                		int flagsQOS = PipeReader.readInt(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5);
+                		int ackPolicy = PipeReader.readInt(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5);
                 		
                         //find which pipes have subscribed to this topic
                         final byte[] backing = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
@@ -514,12 +515,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         			logger.info("new message to be routed, {}", pubSubTrace);
                         		}
                         		
-	                        	pendingAck[a] = true; 
-	                        	
-	                        	//TODO: if MessagePubSub give us a smaler count or pct it will be computed here for faster xmit.
-	                        	requiredConsumes[a] = consumedMarks[a].length;
-	                        	
-	                        	
+	                        	pendingAck[a] = true;
+	                        	requiredConsumes[a] = WaitFor
+	                        			      .computeRequiredCount(ackPolicy, consumedMarks[a].length);
+	                        		                        	
 	                        	//logger.info("need pending ack for message on {} ",a);
 	                        	
 	                        	final int limit = listIdx+subscriberListSize;
