@@ -58,8 +58,11 @@ public class MassiveBehavior implements GreenApp {
 				}
 			};
 	
-			runtime.addPubSubListener(subs).addSubscription(topic);
-			
+			runtime
+			 .addPubSubListener(subs)
+			 .addSubscription(topic)
+			 .addSubscription("/testTopic/#");
+			 
 			
 		}
 	

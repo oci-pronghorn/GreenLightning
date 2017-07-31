@@ -845,7 +845,8 @@ public class BuilderImpl implements Builder {
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
 		short maxInFlight = DEFAULT_MAX_MQTT_IN_FLIGHT;
 		int maxMessageLength = DEFAULT_MAX__MQTT_MESSAGE;//4K
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS, maxInFlight, maxMessageLength );
+		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
+		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS/4, maxInFlight, maxMessageLength );
 	}
 	
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight) {		
@@ -853,7 +854,8 @@ public class BuilderImpl implements Builder {
 			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
 		}
 		int maxMessageLength = DEFAULT_MAX__MQTT_MESSAGE;//4K
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS, (short)maxInFlight, maxMessageLength );
+		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
+		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS/4, (short)maxInFlight, maxMessageLength );
 	}
 	
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {		
@@ -863,7 +865,8 @@ public class BuilderImpl implements Builder {
 		if (maxMessageLength>(256*(1<<20))) {
 			throw new UnsupportedOperationException("Specification does not support values larger than 256M");
 		}
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS, (short)maxInFlight, maxMessageLength );
+		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
+		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS/4, (short)maxInFlight, maxMessageLength );
 	}
 	
 	@Override

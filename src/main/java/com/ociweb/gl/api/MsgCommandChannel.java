@@ -636,7 +636,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-            
+    		
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
         	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
@@ -659,7 +660,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-            
+    		
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
         	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
@@ -748,6 +750,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
                 
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+        	
+    		
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+    		
         	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
         	
         	pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1,this);
@@ -773,6 +779,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
                 
         if (PipeWriter.hasRoomForWrite(goPipe) && 
         	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+        	    		
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+        	
         	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
         	
         	pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1,this);
@@ -833,6 +842,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		&& PipeWriter.hasRoomForWrite(goPipe) 
         	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)  ) {
     		
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
+    		
     		PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
         	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
@@ -859,7 +870,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         assert(null != messagePubSub);
         if (PipeWriter.hasRoomForWrite(goPipe) 
         	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-
+    		
+    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, 0);
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
                     	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);

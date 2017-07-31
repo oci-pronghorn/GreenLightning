@@ -50,6 +50,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private int[] pendingPublish; //remaining pipes that this pending message must be published to
     private long[][] consumedMarks; //ack only is sent after every subscribers tail has passed these marks
     private boolean[] pendingAck; //this input needs an ack and should be sent once all consumed marks are cleared.
+    private int[] requiredConsumes;
     
     enum PubType {
     	Message, State;
@@ -60,6 +61,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private int pendingPublishCount;
     private int pendingReleaseCountIdx;
 
+    private final TrieParser topicConversionTrie;
+    private final TrieParserReader topicConversionTrieReader;
+    
     //global state.
     private int currentState;
     private int newState;
@@ -124,31 +128,60 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
        supportsBatchedPublish = false; //must have immediate publish
    	   supportsBatchedRelease = false; //quick release is desirable to lower latency
    	   GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, 4_800, this);
+   	   		
+	   topicConversionTrie = new TrieParser(256,1,false,true,false);		
+	   topicConversionTrie.setUTF8Value("/#", 1);  //   /%b     //from this point all wild card to end
+	   topicConversionTrie.setUTF8Value("+/", 2);  //   %b/     //single level wild card up to next /
+   	      	   
+	   int maxCapturedFields = 16;
+	   topicConversionTrieReader = new TrieParserReader(maxCapturedFields,true);
+	   
     }
 
-    
-    
     
     private boolean isPreviousConsumed(int incomingPipeId) {
     	
     	long[] marks = consumedMarks[incomingPipeId];
-    	int i = marks.length;
+    	int totalUnconsumed = 0;
+    	
+    	totalUnconsumed = countUnconsumed(marks, totalUnconsumed);
+
+    	int totalConsumers = marks.length;
+    	if ( (totalConsumers-totalUnconsumed) < requiredConsumes[incomingPipeId]  ) {
+    		return false;
+    	}
+    	
+    	if (totalUnconsumed>0) {
+    		Arrays.fill(marks, 0);
+    	}
+    	sendAndClear(incomingPipeId);
+    	
+    	return true;//consumer has moved tail past all marks
+    	
+    }
+
+
+	private int countUnconsumed(long[] marks, int totalUnconsumed) {
+		int i = marks.length;
     	while (--i>=0) {    		
     		long mark = marks[i];
     		//only check those that have been set.
     		if (mark>0) {
     			if (Pipe.tailPosition(outgoingMessagePipes[i])<mark) {    				
     				//logger.info("not consumed yet {}<{}",Pipe.tailPosition(outgoingMessagePipes[i]),mark);
-    				
-    				return false;
+    				totalUnconsumed++;
     			} else {
     				//logger.info("is consumed {}>={}",Pipe.tailPosition(outgoingMessagePipes[i]),mark);
     				marks[i] = 0;//clear this, tail was moved past mark
     			}
     		}
     	}
-    	
-    	//if this is waiting for an ack send it and clear the value
+		return totalUnconsumed;
+	}
+
+
+	private void sendAndClear(int incomingPipeId) {
+		//if this is waiting for an ack send it and clear the value
     	if (pendingAck[incomingPipeId]) {   
    			PipeReader.releaseReadLock( incomingSubsAndPubsPipe[incomingPipeId]); 
    		    		
@@ -161,10 +194,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     			stateChangeInFlight = -1;
     		}
     	}
-    	
-    	return true;//consumer has moved tail past all marks
-    	
-    }
+	}
     
     
     @Override
@@ -174,9 +204,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         int incomingPipeCount = incomingSubsAndPubsPipe.length;
         //for each pipe we must keep track of the consumed marks before sending the ack back
         int outgoingPipeCount = outgoingMessagePipes.length;
-        consumedMarks = new long[incomingPipeCount][outgoingPipeCount];
-        
+        consumedMarks = new long[incomingPipeCount][outgoingPipeCount];        
         pendingAck = new boolean[incomingPipeCount];
+        requiredConsumes = new int[incomingPipeCount];
         
         this.subscriberLists = new short[maxLists*subscriberListSize];   
         
@@ -399,15 +429,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         
              
         long[] targetMakrs = consumedMarks[a];
-        
-        if (!isPreviousConsumed(a)) {
-        	//this is blocking all future messages from getting sent so we do have "work" 
-        	//and must try again very soon
-        	foundWork = true;
-        	//we should also be nice to the system since we know its under load
-        	Thread.yield();
-        	return;
-        }
+
         
 //        logger.info("enter while {}, {}, {} ,{} ,{}",
 //        		isPreviousConsumed(a),
@@ -443,7 +465,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             			stateChangeInFlight = a;
             			//NOTE: this must go out to all pipes regardless of having state listeners.
             			//      reactors will hold the state to do additional event filtering so all message pipes to require state change messages.
-            			pendingAck[a] = true; 
+            			pendingAck[a] = true;
+            			requiredConsumes[a] = consumedMarks[a].length; // state changes require all consumers
             			//logger.info("need pending ack for message on {} ",a);
   
 	                	for(int i = 0; i<outgoingMessagePipes.length; i++) {
@@ -471,6 +494,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                 case MessagePubSub.MSG_PUBLISH_103:
                     {                        
 
+                		int flagsQOS = PipeReader.readInt(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5);
+                		
                         //find which pipes have subscribed to this topic
                         final byte[] backing = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
                         final int pos = PipeReader.readBytesPosition(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
@@ -490,6 +515,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         		}
                         		
 	                        	pendingAck[a] = true; 
+	                        	
+	                        	//TODO: if MessagePubSub give us a smaler count or pct it will be computed here for faster xmit.
+	                        	requiredConsumes[a] = consumedMarks[a].length;
+	                        	
+	                        	
 	                        	//logger.info("need pending ack for message on {} ",a);
 	                        	
 	                        	final int limit = listIdx+subscriberListSize;
@@ -553,37 +583,20 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
 		int listIdx = subscriptionListIdx(backing, pos, len, mask);
 
+
+		TrieParserReader.parseSetup(topicConversionTrieReader, 
+				                    backing, pos, len, mask);
+
+		//TODO: build new array for assignemnt
+		//TrieParserReader.parseNext(topicConversionTrieReader, topicConversionTrie);
 		
-		///TOOD: need to convert to %b notation?
-		
-//		final EncodingTransform et = new EncodingTransform() {
-//
-//			@Override
-//			public void transform(TrieParserReader templateParserReader,
-//					              DataOutputBlobWriter<RawDataSchema> outputStream) {
-//				
-//				///routeDef.setIndexCount(convertEncoding(routeDef.getRuntimeParser(), templateParserReader, templateParser, outputStream));
-//			
-//			}			
-//		};
-//		final EncodingStorage es = new EncodingStorage() {
-//			@Override
-//			public void store(Pipe<RawDataSchema> pipe) {
-//				localSubscriptionTrie.setValue(pipe, listIdx);
-//			}
-//		};
-//		
-//		EncodingConverter converter = new EncodingConverter();
+		//localSubscriptionTrie.
 		
 		
-		//converter.convert(textBlock, transform, es);
-		
-		
-		
-		boolean debug = true;
-		if (debug) {
-			logger.info("adding new subscription {} found it in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
-		}
+//		boolean debug = false;
+//		if (debug) {
+//			logger.info("adding new subscription {} found it in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
+//		}
 		
 		if (listIdx<0) {
 		    //create new subscription

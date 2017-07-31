@@ -13,6 +13,7 @@
    </template>   
 
    <template name="Publish" id="103">
+     <uInt32 name="QOS"   id="5"/>
      <string name="Topic" id="1" charset="unicode"/>
      <byteVector name="Payload" id="3"/>
    </template>   
