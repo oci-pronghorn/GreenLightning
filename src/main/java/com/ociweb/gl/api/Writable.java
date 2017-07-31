@@ -2,9 +2,9 @@ package com.ociweb.gl.api;
 
 import com.ociweb.pronghorn.pipe.BlobWriter;
 
-public interface NetWritable {
+public interface Writable {
 
-	NetWritable NO_OP = new NetWritable() {
+	Writable NO_OP = new Writable() {
 		@Override
 		public void write(BlobWriter writer) {
 		}		

@@ -465,40 +465,33 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    public PayloadWriter httpPost(CharSequence domain, int port, CharSequence route) {
-    	return httpPost(domain,port,route,(HTTPResponseListener)listener);    	
-    }
+    public boolean httpPost(CharSequence domain, int port, CharSequence route, Writable payload) {
+    	int behaviorId = builder.behaviorId((HTTPResponseListener)(HTTPResponseListener)listener);
+		
+		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
+		
+		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
+		        	    
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, port);
+			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, domain);
+			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_LISTENER_10, behaviorId);
+    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7, "");
+    				    
+		    PayloadWriter<ClientHTTPRequestSchema> pw = (PayloadWriter<ClientHTTPRequestSchema>) Pipe.outputStream(httpRequest);
 
-    /**
-     * Submits an HTTP POST request asynchronously.
-     *
-     * @param host Root domain to submit the request to (e.g., google.com)
-     * @param port Port to submit the request to.
-     * @param route Route on the domain to submit the request to (e.g., /api/hello)
-     * @param listener {@link HTTPResponseListener} that will handle the response.
-     *
-     * @return True if the request was successfully submitted, and false otherwise.
-     */
-    private PayloadWriter<ClientHTTPRequestSchema> httpPost(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
-    	
-    	assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
-    	
-    	if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
-                	    
-    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, port);
-    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, host);
-    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
-    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_LISTENER_10, System.identityHashCode(listener));
-
-    		publishGo(1, builder.netIndex(), this);
-            
-            PayloadWriter<ClientHTTPRequestSchema> pw = (PayloadWriter<ClientHTTPRequestSchema>) Pipe.outputStream(httpRequest);
-           
-            pw.openField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5, this);  
-            return pw;
-        } else {
-        	return null;
-        }    	
+		    DataOutputBlobWriter.openField(pw);
+		    payload.write(pw);
+		    pw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5);
+		    
+		    PipeWriter.publishWrites(httpRequest);
+		    
+		    publishGo(1, builder.netIndex(), this);
+		    
+		    return true;
+		} 
+		return false;
+		   	
     }
 
     /**
@@ -653,14 +646,18 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		
     		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
-        	
+
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+           
+        	DataOutputBlobWriter.openField(pw);
+        	writable.write(pw);
+            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
             
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);
-            writable.write(pw);                   
-            pw.publish();
+            PipeWriter.publishWrites(messagePubSub);
+
             publishGo(1,builder.pubSubIndex(), this);
                         
+            
             return true;
             
         } else {
@@ -682,10 +679,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
         	
-            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+        	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+               
+        	DataOutputBlobWriter.openField(pw);            
+            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
             
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);            
-            pw.publish();
+            PipeWriter.publishWrites(messagePubSub);
+
             publishGo(1,builder.pubSubIndex(), this);
                         
             return true;
@@ -777,18 +777,21 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         	
     		
     		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-    		
-        	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-        	
-        	pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1,this);
+
+            
+            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+        	DataOutputBlobWriter.openField(pw);
         	topic.write(pw);
-        	pw.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+        	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
            
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);
-            writable.write(pw);
-                        
-            pw.publish();
+        	DataOutputBlobWriter.openField(pw);
+        	writable.write(pw);
+            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+            
+            PipeWriter.publishWrites(messagePubSub);
+
             publishGo(1,builder.pubSubIndex(), this);
+            
                         
             return true;
             
@@ -811,13 +814,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
         	
         	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-        	
-        	pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1,this);
+        	DataOutputBlobWriter.openField(pw);
         	topic.write(pw);
-        	pw.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+        	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
            
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);     
-            pw.publish();
+        	DataOutputBlobWriter.openField(pw);            
+            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+            
+            PipeWriter.publishWrites(messagePubSub);
+
             publishGo(1,builder.pubSubIndex(), this);
                         
             return true;
@@ -882,13 +887,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
         	
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this); 
-            
+            DataOutputBlobWriter.openField(pw);
             reader.absolutePosition(pos);//restore position as unread
             //direct copy from one to the next
             reader.readInto(pw, reader.available());
 
-            pw.publish();
+            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+            PipeWriter.publishWrites(messagePubSub);
+ 
            	publishGo(1,builder.pubSubIndex(), this);  		
     		
     		return true;
@@ -912,14 +918,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		
     		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
         	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
-                    	
+                    	           
             PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);            
-            writable.write(pw); //TODO: cool feature, writable to return false to abandon write.. 
-            
-            pw.publish();
-           	publishGo(1,builder.pubSubIndex(), this);
            
+        	DataOutputBlobWriter.openField(pw);
+        	writable.write(pw);
+            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+            
+            PipeWriter.publishWrites(messagePubSub);
+
+            publishGo(1,builder.pubSubIndex(), this);
+           	
     
             return true;
             
@@ -938,13 +947,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				statusCode,
 				HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION,
 				null,
-				NetWritable.NO_OP); //no type and no body so use null
+				Writable.NO_OP); //no type and no body so use null
 	}
 
 	public boolean publishHTTPResponse(HTTPFieldReader w, 
 										            int statusCode, final int context, 
 										            HTTPContentTypeDefaults contentType,
-										            NetWritable writable) {
+										            Writable writable) {
 		
 		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
@@ -964,7 +973,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
 			                                            int statusCode, final int context, 
 			                                            HTTPContentTypeDefaults contentType,
-			                                            NetWritable writable) {
+			                                            Writable writable) {
 		
 		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
@@ -1045,12 +1054,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 	
 	public boolean publishHTTPResponseContinuation(HTTPFieldReader w, 
-										int context, NetWritable writable) {
+										int context, Writable writable) {
 		return publishHTTPResponseContinuation(w.getConnectionId(),w.getSequenceCode(), context, writable);
 	}
 
 	public boolean publishHTTPResponseContinuation(long connectionId, long sequenceCode, 
-			                                       int context, NetWritable writable) {
+			                                       int context, Writable writable) {
 		
     	assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 

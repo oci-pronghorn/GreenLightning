@@ -1,5 +1,9 @@
 package com.ociweb.gl.impl.stage;
 
+import static com.ociweb.pronghorn.pipe.Pipe.blobMask;
+import static com.ociweb.pronghorn.pipe.Pipe.byteBackingArray;
+import static com.ociweb.pronghorn.pipe.Pipe.bytePosition;
+
 import java.util.Arrays;
 
 import org.slf4j.Logger;
@@ -28,6 +32,11 @@ import com.ociweb.pronghorn.util.EncodingConverter.EncodingTransform;
 
 public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
+	public final static boolean showNewSubscriptions = true;
+	
+	private static final byte[] WILD_PLUS_THE_SEGMENT = "%b/".getBytes();
+	private static final byte[] WILD_POUND_THE_END = "/%b".getBytes();
+
 	private final static Logger logger = LoggerFactory.getLogger(MessagePubSubStage.class);
 	
 	private final Pipe<IngressMessages>[] ingressMessagePipes;
@@ -41,7 +50,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private short[] subscriberLists;
     private int totalSubscriberLists;
     
-    
+	    
     private TrieParser localSubscriptionTrie;
     private TrieParserReader localSubscriptionTrieReader;
         
@@ -74,6 +83,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private boolean enableTrace = false;
 	private MessagePubSubTrace pubSubTrace = new MessagePubSubTrace();
     
+
+	private final Pipe<RawDataSchema> tempSubject;
+	
+	
     /**
      * Provides an eventually consistent state model of events.  It works in the same way as the larger universe.  If a supernova is observed by two planets they may
      * not know about it at the same moment but the first who observes it can not send a message to the second that would arrive before the second observes the
@@ -136,6 +149,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
    	      	   
 	   int maxCapturedFields = 16;
 	   topicConversionTrieReader = new TrieParserReader(maxCapturedFields,true);
+	   
+	   tempSubject = RawDataSchema.instance.newPipe(2, incomingSubsAndPubsPipe[0].maxVarLen);
 	   
     }
 
@@ -201,6 +216,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     @Override
     public void startup() {
         super.startup();
+        
+        tempSubject.initBuffers();
         
         int incomingPipeCount = incomingSubsAndPubsPipe.length;
         //for each pipe we must keep track of the consumed marks before sending the ack back
@@ -577,34 +594,71 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		return -1 != subscriberLists[listIdx];
 	}
 
+	private void addSubscription(final short pipeIdx, final byte[] backing1, final int pos1, final int len1, final int mask1) {
 
-	private void addSubscription(final short pipeIdx, final byte[] backing, final int pos, final int len, final int mask) {
+        //////////////////////
+		//convert # and + to support escape values
+		//////////////////////
 
+		int size = Pipe.addMsgIdx(tempSubject, RawDataSchema.MSG_CHUNKEDSTREAM_1);
+		DataOutputBlobWriter<RawDataSchema> stream = Pipe.outputStream(tempSubject);
+		DataOutputBlobWriter.openField(stream);		
+		
+		TrieParserReader.parseSetup(topicConversionTrieReader, 
+				                    backing1, pos1, len1, mask1);
+		
+		boolean foundEnd = false;
+		while (TrieParserReader.parseHasContent(topicConversionTrieReader)) {
+						
+			if (foundEnd) {
+				throw new UnsupportedOperationException("Invalid topic if /# is used it must only be at the end.");
+			}
+			
+			int token = (int)TrieParserReader.parseNext(topicConversionTrieReader, topicConversionTrie);
+			if (-1 == token) {				
+				stream.write(TrieParserReader.parseSkipOne(topicConversionTrieReader));
+			} if (1 == token) {
+				stream.write(WILD_POUND_THE_END); //  /#
+				foundEnd = true;
+			} if (2 == token) {
+				stream.write(WILD_PLUS_THE_SEGMENT); //  +/
+			}
+		}   	   
+		
+		DataOutputBlobWriter.closeLowLevelField(stream);
+		Pipe.confirmLowLevelWrite(tempSubject, size);
+		Pipe.publishWrites(tempSubject);
+						
+		
+		int msgIdx = Pipe.takeMsgIdx(tempSubject);
+		int mta = Pipe.takeRingByteMetaData(tempSubject);
+		int len = Pipe.takeRingByteLen(tempSubject);
+		int mask = blobMask(tempSubject);	
+    	int pos = bytePosition(mta, tempSubject, len)&mask;     		
+		byte[] backing = byteBackingArray(mta, tempSubject);
+		Pipe.confirmLowLevelRead(tempSubject, size);
+		Pipe.releaseReadLock(tempSubject);
+        //////////////////////////////
+		//finished conversion of # and +
+		//////////////////////////////
+		Appendables.appendUTF8(System.err, backing, pos, len, mask);
+		System.err.println("");
+		
 		int listIdx = subscriptionListIdx(backing, pos, len, mask);
 
-
-		TrieParserReader.parseSetup(topicConversionTrieReader, 
-				                    backing, pos, len, mask);
-
-		//TODO: build new array for assignemnt
-		//TrieParserReader.parseNext(topicConversionTrieReader, topicConversionTrie);
-		
-		//localSubscriptionTrie.
-		
-		
-//		boolean debug = false;
-//		if (debug) {
-//			logger.info("adding new subscription {} found it in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
-//		}
 		
 		if (listIdx<0) {
+			if (showNewSubscriptions) {
+				logger.info("adding new subscription {} as internal pattern {}",
+						Appendables.appendUTF8(new StringBuilder(), backing1, pos1, len1, mask1),
+						Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask));
+			}
+			
 		    //create new subscription
 		    listIdx = subscriberListSize*totalSubscriberLists++;
 		    //System.err.println("Adding new subscription with value "+listIdx);
 		    localSubscriptionTrie.setValue(backing, pos, len, mask, listIdx);
-			
-		   // logger.info("set new subscription {} in list {} ",Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask), listIdx);
-
+	
 		}
 		
 		//add index on first -1 or stop if value already found                    

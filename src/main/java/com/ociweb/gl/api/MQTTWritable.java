@@ -1,6 +1,5 @@
 package com.ociweb.gl.api;
 
-public interface MQTTWritable {
+public interface MQTTWritable extends Writable {
 
-	public void write(MQTTWriter writer);
 }

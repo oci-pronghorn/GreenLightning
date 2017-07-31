@@ -13,7 +13,7 @@ public class MassiveBehavior implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 		builder.setTimerPulseRate(500);//1);//TimeTrigger.OnTheSecond);
-		builder.enableTelemetry();
+	//	builder.enableTelemetry();
 
 	}
 

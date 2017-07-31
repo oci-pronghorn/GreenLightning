@@ -1,8 +1,5 @@
 package com.ociweb.gl.api;
 
-import java.io.IOException;
-
-import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.MessageSchema;

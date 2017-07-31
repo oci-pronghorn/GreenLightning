@@ -12,7 +12,7 @@ import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.NetResponseTemplate;
 import com.ociweb.gl.api.NetResponseTemplateData;
 import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.NetWritable;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.impl.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
@@ -87,7 +87,7 @@ public class MathUnitSimple implements RestListener {
 		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(), eat);
 				
 		
-		NetWritable consume = new NetWritable() {
+		Writable consume = new Writable() {
 
 			@Override
 			public void write(BlobWriter writer) {
