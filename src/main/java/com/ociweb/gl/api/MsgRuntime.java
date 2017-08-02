@@ -189,7 +189,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return (L) addTimePulseListener(listener);
     }
     
-    public final L addPubSubListener(PubSubMethodListener listener) {
+    public final L addPubSubListener(PubSubListener listener) {
         return (L) registerListenerImpl(listener);
     }
 
