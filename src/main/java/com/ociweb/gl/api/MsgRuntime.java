@@ -68,9 +68,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected boolean transducerAutowiring = true;
 
     protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload);   
-    protected static final PipeConfig<ClientHTTPRequestSchema> requestNetConfig = new PipeConfig<ClientHTTPRequestSchema>(ClientHTTPRequestSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+
     protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
-    protected static final PipeConfig<MessageSubscription> messageSubscriptionConfig = new PipeConfig<MessageSubscription>(MessageSubscription.instance, defaultCommandChannelSubscriberLength, defaultCommandChannelMaxPayload);
     protected static final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
 
 	private PipeConfig<HTTPRequestSchema> fileRequestConfig;// = builder.restPipeConfig.grow2x();
@@ -434,7 +433,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 
 	private Pipe<MessageSubscription> buildMessageSubscriptionPipe() {
-		Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(messageSubscriptionConfig) {
+		
+	    Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(builder.pcm.getConfig(MessageSubscription.class)) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<MessageSubscription> createNewBlobReader() {

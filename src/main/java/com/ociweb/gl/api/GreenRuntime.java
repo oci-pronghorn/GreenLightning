@@ -2,8 +2,8 @@ package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.MessagePubSub;
-import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
+import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -24,7 +24,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
      			                                         defaultCommandChannelMaxPayload);
 
-     	pcm.addConfig(requestNetConfig);
+     	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
      	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
      	pcm.addConfig(serverResponseNetConfig);
      	//pcm.addConfig(100,0,TrafficAckSchema.class);
@@ -42,7 +42,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      			                                         defaultCommandChannelMaxPayload);
      	
      	pcm.addConfig(customChannelLength,defaultCommandChannelMaxPayload,MessagePubSub.class);
-     	pcm.addConfig(requestNetConfig);
+     	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
      	pcm.addConfig(customChannelLength,0,TrafficOrderSchema.class);
      	pcm.addConfig(customChannelLength,defaultCommandChannelHTTPMaxPayload,ServerResponseSchema.class);
      	//pcm.addConfig(100,0,TrafficAckSchema.class);

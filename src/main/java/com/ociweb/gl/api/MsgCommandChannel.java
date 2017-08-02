@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
+import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
@@ -108,11 +109,18 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
     	}
     	this.initFeatures |= DYNAMIC_MESSAGING;    
-    	PipeConfig<MessagePubSub> config = pcm.getConfig(MessagePubSub.class);
-		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
-    		this.pcm.addConfig(queueLength, maxMessageSize, MessagePubSub.class);   
-    	}
+    	if (isTooSmall(queueLength, maxMessageSize, pcm.getConfig(MessagePubSub.class))) {
+    		this.pcm.addConfig(queueLength, maxMessageSize, MessagePubSub.class);  
+    		//also ensure consumers have pipes which can consume this.
+    		if (isTooSmall(queueLength, maxMessageSize, pcm.getConfig(MessageSubscription.class))) {
+    			builder.pcm.addConfig(queueLength, maxMessageSize, MessageSubscription.class); 
+    		}
+        }
     }
+
+	private boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
+		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
+	}
     
     public void ensureHTTPClientRequesting() {
     	if (null!=this.goPipe) {

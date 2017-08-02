@@ -43,11 +43,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private final Pipe<MessagePubSub>[] incomingSubsAndPubsPipe;
     private final Pipe<MessageSubscription>[] outgoingMessagePipes;
     
-    private static final int estimatedTopicLength = 200;
-    private static final int maxLists = 200; //TODO: make this grow as needed based on growing count of subscriptions.
-  
+    private static final int estimatedAvgTopicLength = 128; //will grow as needed    
+    private static final int initialSubscriptions = 64; //Will grow as needed.
+    
     private final int subscriberListSize;
-    private short[] subscriberLists;
+    private int[] subscriberLists; //single list for all subscriptions at different indexes.
     private int totalSubscriberLists;
     
 	    
@@ -133,7 +133,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         
        assert(goPipe.length == incomingSubsAndPubsPipe.length) : "Publish/Subscribe should be one pub sub pipe for every go "+goPipe.length+" vs "+incomingSubsAndPubsPipe.length;
        
-       this.subscriberListSize = outgoingMessagePipes.length;//can never have more subscribers than ALL
+       //can never have more subscribers than ALL, add 1 for the leading counter and 1 for the -1 stop
+       this.subscriberListSize = outgoingMessagePipes.length+2;
+       
        this.totalSubscriberLists = 0;
        this.subscriptionPipeLookup = subscriptionPipeLookup;
 
@@ -226,12 +228,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         pendingAck = new boolean[incomingPipeCount];
         requiredConsumes = new int[incomingPipeCount];
         
-        this.subscriberLists = new short[maxLists*subscriberListSize];   
+        this.subscriberLists = new int[initialSubscriptions*subscriberListSize];   
         
-        
-        logger.trace("maximum subscribers per topic {}  maximum topics {} ", subscriberListSize, maxLists);
         Arrays.fill(this.subscriberLists, (short)-1);
-        this.localSubscriptionTrie = new TrieParser(maxLists * estimatedTopicLength,1,false,true);//must support extraction for wild cards.
+        this.localSubscriptionTrie = new TrieParser(initialSubscriptions * estimatedAvgTopicLength,1,false,true);//must support extraction for wild cards.
 
         //this reader is set up for complete text only, all topics are sent in complete.
         this.localSubscriptionTrieReader = new TrieParserReader(2,true);
@@ -285,9 +285,13 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     }
 
 	private void addSubscription(Pipe<MessagePubSub> pipe) {
-		int hash = PipeReader.readInt(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4); 
+		
+		//hash of the subscribing object
+		int hash = PipeReader.readInt(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4);
+		//convert the hash into the specific outgoing pipe where this will go
 		final short pipeIdx = (short)IntHashTable.getItem(subscriptionPipeLookup, hash);
   
+		
 		assert(pipeIdx>=0) : "Must have valid pipe index";
 		
 		final byte[] backing = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);
@@ -295,8 +299,34 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		final int len = PipeReader.readBytesLength(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);
 		final int mask = PipeReader.readBytesMask(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);
 		
-		addSubscription(pipeIdx, backing, pos, len, mask);
+		if (addSubscription(pipeIdx, backing, pos, len, mask)) {
+			
+			//Need publishere ID??
+			
+			//TODO: increment the count??
+			//totalConsumersCount
+			
+			
+		}
 	}
+
+
+	private void unsubscribe(Pipe<MessagePubSub> pipe) {
+		int hash = PipeReader.readInt(pipe, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_SUBSCRIBERIDENTITYHASH_4); 
+		final short pipeIdx = (short)IntHashTable.getItem(subscriptionPipeLookup, hash);
+  
+		assert(pipeIdx>=0) : "Must have valid pipe index";
+		
+		final byte[] backing = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1);
+		final int pos = PipeReader.readBytesPosition(pipe, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1);
+		final int len = PipeReader.readBytesLength(pipe, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1);
+		final int mask = PipeReader.readBytesMask(pipe, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1);
+		
+		unsubscribe(pipeIdx, backing, pos, len, mask);
+
+	}
+	
+	
 
 	private boolean foundWork;
 	
@@ -533,6 +563,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         		}
                         		
 	                        	pendingAck[a] = true;
+	                        	
+	                        	//warning TODO: if this unsubscribe changes do the valeus match?
+	                        	
 	                        	requiredConsumes[a] = WaitFor
 	                        			      .computeRequiredCount(ackPolicy, consumedMarks[a].length);
 	                        		                        	
@@ -572,13 +605,17 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                     }              
                     break;
                 case MessagePubSub.MSG_UNSUBSCRIBE_101:                    
-                    
-                    throw new UnsupportedOperationException("This feature will be added after full wildcard support is added. dependent feature.");
-                    //break;      
-                
+	                {
+	                    unsubscribe(pipe);
+	                    PipeReader.releaseReadLock( incomingSubsAndPubsPipe[a]);                
+	                    decReleaseCount(a); 
+	                } 
+	                break;
             }   
         }
     }
+
+
 
 	private int subscriptionListIdx(final byte[] backing, final int pos, final int len, final int mask) {
 		int listIdx = (int) TrieParserReader.query(localSubscriptionTrieReader, localSubscriptionTrie, backing, pos, len, mask);
@@ -594,19 +631,127 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		return -1 != subscriberLists[listIdx];
 	}
 
-	private void addSubscription(final short pipeIdx, final byte[] backing1, final int pos1, final int len1, final int mask1) {
+	
+    private void unsubscribe(short pipeIdx, byte[] backing1, int pos1, int len1, int mask1) {
+	
+        //////////////////////
+		//convert # and + to support escape values
+		//////////////////////
+		convertMQTTTopicsToLocal(backing1, pos1, len1, mask1);
+		
+		int msgIdx = Pipe.takeMsgIdx(tempSubject);
+		int mta = Pipe.takeRingByteMetaData(tempSubject);
+		int len = Pipe.takeRingByteLen(tempSubject);
+		int mask = blobMask(tempSubject);	
+    	int pos = bytePosition(mta, tempSubject, len)&mask;     		
+		byte[] backing = byteBackingArray(mta, tempSubject);
+		
+		Pipe.confirmLowLevelRead(tempSubject, Pipe.sizeOf(RawDataSchema.instance, RawDataSchema.MSG_CHUNKEDSTREAM_1));
+		Pipe.releaseReadLock(tempSubject);
+        //////////////////////////////
+		//finished conversion of # and +
+		//////////////////////////////
+				
+		int listIdx = subscriptionListIdx(backing, pos, len, mask);
+		
+		if (listIdx >= 0) {
+			
+			//add index on first -1 or stop if value already found                    
+			for(int i = listIdx; i<(listIdx+subscriberListSize); i++) {
+				
+			    if (-1 == subscriberLists[i]) {
+			        //end of list //subscriberLists[i]=pipeIdx;
+			        break;
+			    } else if (pipeIdx == subscriberLists[i]){
+			    	//stops after the -1 is moved up.
+			    	while ((i<(listIdx+subscriberListSize)) && (-1!=subscriberLists[i])) {
+			    		subscriberLists[i] = subscriberLists[++i];
+			    	}
+			        break;
+			    }
+			}
+		}
+		
+	
+	}
+
+	private boolean addSubscription(final short pipeIdx, final byte[] backing1, final int pos1, final int len1, final int mask1) {
 
         //////////////////////
 		//convert # and + to support escape values
 		//////////////////////
+		convertMQTTTopicsToLocal(backing1, pos1, len1, mask1);
+		
+		int msgIdx = Pipe.takeMsgIdx(tempSubject);
+		int mta = Pipe.takeRingByteMetaData(tempSubject);
+		int len = Pipe.takeRingByteLen(tempSubject);
+		int mask = blobMask(tempSubject);	
+    	int pos = bytePosition(mta, tempSubject, len)&mask;     		
+		byte[] backing = byteBackingArray(mta, tempSubject);
+		
+		Pipe.confirmLowLevelRead(tempSubject, Pipe.sizeOf(RawDataSchema.instance, RawDataSchema.MSG_CHUNKEDSTREAM_1));
+		Pipe.releaseReadLock(tempSubject);
+        //////////////////////////////
+		//finished conversion of # and +
+		//////////////////////////////
+		
+//		Appendables.appendUTF8(System.err, backing, pos, len, mask);
+//		System.err.println("");
+		
+		int listIdx = subscriptionListIdx(backing, pos, len, mask);
+		
+		if (listIdx<0) {
+			listIdx = beginNewSubscriptionList(backing1, pos1, len1, mask1, len, mask, pos, backing);	
+		}
+		
+		boolean addedNewSubscription = false;
+		//add index on first -1 or stop if value already found                    
+		for(int i = listIdx; i<(listIdx+subscriberListSize); i++) {
+		    if (-1 == subscriberLists[i]) {
+		        subscriberLists[i]=pipeIdx; //outgoing pipe which will be sent this data.
+		        addedNewSubscription = true;
+		        break;
+		    } else if (pipeIdx == subscriberLists[i]){
+		        break;//already in list.
+		    }
+		}
+		return addedNewSubscription;
+	}
 
+
+	private int beginNewSubscriptionList(final byte[] backing1, final int pos1, final int len1, final int mask1,
+			int len, int mask, int pos, byte[] backing) {
+		int listIdx;
+		if (showNewSubscriptions) {
+			logger.info("adding new subscription {} as internal pattern {}",
+					Appendables.appendUTF8(new StringBuilder(), backing1, pos1, len1, mask1),
+					Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask));
+		}
+		
+		//create new subscription
+		listIdx = subscriberListSize*totalSubscriberLists++;
+		
+		if (listIdx+subscriberListSize >= subscriberLists.length) {
+			//grow the list			
+			int i = subscriberLists.length;
+			int[] temp = new int[i*2];
+			Arrays.fill(temp, -1);
+			System.arraycopy(subscriberLists, 0, temp, 0, i);
+			subscriberLists = temp;
+		}
+		
+		
+		//System.err.println("Adding new subscription with value "+listIdx);
+		localSubscriptionTrie.setValue(backing, pos, len, mask, listIdx);
+		return listIdx;
+	}
+
+
+	private void convertMQTTTopicsToLocal(final byte[] backing1, final int pos1, final int len1, final int mask1) {
 		int size = Pipe.addMsgIdx(tempSubject, RawDataSchema.MSG_CHUNKEDSTREAM_1);
 		DataOutputBlobWriter<RawDataSchema> stream = Pipe.outputStream(tempSubject);
-		DataOutputBlobWriter.openField(stream);		
-		
-		TrieParserReader.parseSetup(topicConversionTrieReader, 
-				                    backing1, pos1, len1, mask1);
-		
+		DataOutputBlobWriter.openField(stream);
+		TrieParserReader.parseSetup(topicConversionTrieReader, backing1, pos1, len1, mask1);
 		boolean foundEnd = false;
 		while (TrieParserReader.parseHasContent(topicConversionTrieReader)) {
 						
@@ -623,53 +768,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 			} if (2 == token) {
 				stream.write(WILD_PLUS_THE_SEGMENT); //  +/
 			}
-		}   	   
-		
+		}
 		DataOutputBlobWriter.closeLowLevelField(stream);
 		Pipe.confirmLowLevelWrite(tempSubject, size);
 		Pipe.publishWrites(tempSubject);
-						
-		
-		int msgIdx = Pipe.takeMsgIdx(tempSubject);
-		int mta = Pipe.takeRingByteMetaData(tempSubject);
-		int len = Pipe.takeRingByteLen(tempSubject);
-		int mask = blobMask(tempSubject);	
-    	int pos = bytePosition(mta, tempSubject, len)&mask;     		
-		byte[] backing = byteBackingArray(mta, tempSubject);
-		Pipe.confirmLowLevelRead(tempSubject, size);
-		Pipe.releaseReadLock(tempSubject);
-        //////////////////////////////
-		//finished conversion of # and +
-		//////////////////////////////
-		Appendables.appendUTF8(System.err, backing, pos, len, mask);
-		System.err.println("");
-		
-		int listIdx = subscriptionListIdx(backing, pos, len, mask);
-
-		
-		if (listIdx<0) {
-			if (showNewSubscriptions) {
-				logger.info("adding new subscription {} as internal pattern {}",
-						Appendables.appendUTF8(new StringBuilder(), backing1, pos1, len1, mask1),
-						Appendables.appendUTF8(new StringBuilder(), backing, pos, len, mask));
-			}
-			
-		    //create new subscription
-		    listIdx = subscriberListSize*totalSubscriberLists++;
-		    //System.err.println("Adding new subscription with value "+listIdx);
-		    localSubscriptionTrie.setValue(backing, pos, len, mask, listIdx);
-	
-		}
-		
-		//add index on first -1 or stop if value already found                    
-		for(int i = listIdx; i<(listIdx+subscriberListSize); i++) {
-		    if (-1 == subscriberLists[i]) {
-		        subscriberLists[i]=pipeIdx;
-		        break;
-		    } else if (pipeIdx == subscriberLists[i]){
-		        break;//already in list.
-		    }
-		}
 	}
 //   
     private void copyToSubscriber(Pipe<?> pipe, int pipeIdx, long[] targetMarks, int topicLOC, int payloadLOC) {

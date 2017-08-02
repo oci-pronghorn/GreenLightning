@@ -11,14 +11,11 @@ import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.ListenerTransducer;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.RestListener;
-import com.ociweb.gl.api.StateChangeListener;
+import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.TimeTrigger;
 import com.ociweb.gl.api.facade.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.facade.PubSubListenerTransducer;
@@ -167,7 +164,7 @@ public class BuilderImpl implements Builder {
 	                               = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(httpSpec); 
 	//////////////////////////////
 	//////////////////////////////
-
+	
 	public int pubSubIndex() {
 		return IDX_MSG;
 	}
@@ -340,6 +337,12 @@ public class BuilderImpl implements Builder {
 				                                    requestQueue,
 				                                    MINIMUM_TLS_BLOB_SIZE)); 		
 			
+		int maxMessagesQueue = 8;
+		int maxMessageSize = 256;
+		this.pcm.addConfig(new PipeConfig<MessageSubscription>(MessageSubscription.instance,
+				maxMessagesQueue,
+				maxMessageSize)); 		
+		
 		
 	}
 
@@ -498,6 +501,7 @@ public class BuilderImpl implements Builder {
 			
 		//NOTE: we only call for scan if the listener is not already of this type
 		return listener instanceof PubSubListenerBase || 
+			   listener instanceof PubSubMethodListener ||
 			   listener instanceof StateChangeListenerBase<?> 
 		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, PubSubListenerTransducer.class)
 		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, StateChangeListenerTransducer.class);
