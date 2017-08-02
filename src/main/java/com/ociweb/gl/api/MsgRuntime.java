@@ -67,11 +67,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     protected boolean transducerAutowiring = true;
 
-    protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload);   
-
-    protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
-    protected static final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
-
 	private PipeConfig<HTTPRequestSchema> fileRequestConfig;// = builder.restPipeConfig.grow2x();
 
     protected int netResponsePipeIdx = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
@@ -359,7 +354,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 	protected void populateGreenPipes(Behavior listener, int pipesCount, Pipe<?>[] inputPipes) {
 		if (this.builder.isListeningToHTTPResponse(listener)) {        	
-        	Pipe<NetResponseSchema> netResponsePipe1 = new Pipe<NetResponseSchema>(responseNetConfig) {
+        	Pipe<NetResponseSchema> netResponsePipe1 = new Pipe<NetResponseSchema>(builder.pcm.getConfig(NetResponseSchema.class)) {
 				@SuppressWarnings("unchecked")
 				@Override
 				protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
@@ -674,7 +669,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			fileRequestConfig = builder.pcm.getConfig(HTTPRequestSchema.class).grow2x();
 		}
 		inputs[idx] = builder.newHTTPRequestPipe(fileRequestConfig);
-		outputs[idx] = builder.newNetResponsePipe(fileResponseConfig, parallelIndex);
+		outputs[idx] = builder.newNetResponsePipe(builder.pcm.getConfig(ServerResponseSchema.class), parallelIndex);
 
 	}
 	

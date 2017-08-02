@@ -109,16 +109,20 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
     	}
     	this.initFeatures |= DYNAMIC_MESSAGING;    
-    	if (isTooSmall(queueLength, maxMessageSize, pcm.getConfig(MessagePubSub.class))) {
-    		this.pcm.addConfig(queueLength, maxMessageSize, MessagePubSub.class);  
+    	PipeConfig<MessagePubSub> config1 = pcm.getConfig(MessagePubSub.class);
+		if (isTooSmall(queueLength, maxMessageSize, config1)) {
+    		this.pcm.addConfig(Math.max(config1.minimumFragmentsOnPipe(), queueLength),
+			           Math.max(config1.maxVarLenSize(), maxMessageSize), MessagePubSub.class);  
     		//also ensure consumers have pipes which can consume this.
-    		if (isTooSmall(queueLength, maxMessageSize, pcm.getConfig(MessageSubscription.class))) {
-    			builder.pcm.addConfig(queueLength, maxMessageSize, MessageSubscription.class); 
+    		PipeConfig<MessageSubscription> config2 = pcm.getConfig(MessageSubscription.class);
+			if (isTooSmall(queueLength, maxMessageSize, config2)) {
+    			builder.pcm.addConfig(Math.max(config2.minimumFragmentsOnPipe(), queueLength),
+				           Math.max(config2.maxVarLenSize(), maxMessageSize), MessageSubscription.class); 
     		}
         }
     }
 
-	private boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
+	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
 		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
 	}
     
@@ -136,7 +140,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	this.initFeatures |= NET_REQUESTER;
     	PipeConfig<ClientHTTPRequestSchema> config = pcm.getConfig(ClientHTTPRequestSchema.class);
 		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
-    		this.pcm.addConfig(queueLength, maxMessageSize, ClientHTTPRequestSchema.class); 
+    		this.pcm.addConfig(Math.max(config.minimumFragmentsOnPipe(), queueLength),
+			           Math.max(config.maxVarLenSize(), maxMessageSize), ClientHTTPRequestSchema.class); 
     	}
     }
    
@@ -154,7 +159,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	this.initFeatures |= NET_RESPONDER;    	
     	PipeConfig<ServerResponseSchema> config = pcm.getConfig(ServerResponseSchema.class);
 		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
-    		this.pcm.addConfig(queueLength, maxMessageSize, ServerResponseSchema.class);  
+    		this.pcm.addConfig(Math.max(config.minimumFragmentsOnPipe(), queueLength),
+			           Math.max(config.maxVarLenSize(), maxMessageSize), ServerResponseSchema.class);  
     	}
     }
     

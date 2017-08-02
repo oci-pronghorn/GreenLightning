@@ -91,10 +91,6 @@ public class BuilderImpl implements Builder {
 	private static final int DEFAULT_LENGTH = 16;
 	private static final int DEFAULT_PAYLOAD_SIZE = 128;
 
-	protected final PipeConfig<TrafficReleaseSchema> releasePipesConfig   = new PipeConfig<TrafficReleaseSchema>(TrafficReleaseSchema.instance, DEFAULT_LENGTH);
-	protected final PipeConfig<TrafficOrderSchema> orderPipesConfig       = new PipeConfig<TrafficOrderSchema>(TrafficOrderSchema.instance, DEFAULT_LENGTH);
-	protected final PipeConfig<TrafficAckSchema> ackPipesConfig           = new PipeConfig<TrafficAckSchema>(TrafficAckSchema.instance, DEFAULT_LENGTH);
-
 	protected static final long MS_TO_NS = 1_000_000;
 
 	private static final Logger logger = LoggerFactory.getLogger(BuilderImpl.class);
@@ -342,7 +338,16 @@ public class BuilderImpl implements Builder {
 		this.pcm.addConfig(new PipeConfig<MessageSubscription>(MessageSubscription.instance,
 				maxMessagesQueue,
 				maxMessageSize)); 		
-		
+
+
+		this.pcm.addConfig(new PipeConfig<TrafficReleaseSchema>(TrafficReleaseSchema.instance, DEFAULT_LENGTH));
+		this.pcm.addConfig(new PipeConfig<TrafficAckSchema>(TrafficAckSchema.instance, DEFAULT_LENGTH));
+
+	    int defaultCommandChannelLength = 16;
+	    int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support	    
+		this.pcm.addConfig(new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload));   
+		this.pcm.addConfig(new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload));
+
 		
 	}
 
@@ -816,11 +821,11 @@ public class BuilderImpl implements Builder {
 	protected int populateGoAckPipes(int maxGoPipeId, Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn, Pipe<TrafficReleaseSchema>[] goOut, Pipe<TrafficAckSchema>[] ackIn,
 			int p) {
-		addToLastNonNull(masterGoOut[p], goOut[p] = new Pipe<TrafficReleaseSchema>(releasePipesConfig));
+		addToLastNonNull(masterGoOut[p], goOut[p] = new Pipe<TrafficReleaseSchema>(this.pcm.getConfig(TrafficReleaseSchema.class)));
 		
 		maxGoPipeId = Math.max(maxGoPipeId, goOut[p].id);				
 		
-		addToLastNonNull(masterAckIn[p], ackIn[p] = new Pipe<TrafficAckSchema>(ackPipesConfig));
+		addToLastNonNull(masterAckIn[p], ackIn[p] = new Pipe<TrafficAckSchema>(this.pcm.getConfig(TrafficAckSchema.class)));
 		return maxGoPipeId;
 	}
 	
@@ -847,19 +852,11 @@ public class BuilderImpl implements Builder {
 	
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
-		short maxInFlight = DEFAULT_MAX_MQTT_IN_FLIGHT;
-		int maxMessageLength = DEFAULT_MAX__MQTT_MESSAGE;//4K
-		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS/4, maxInFlight, maxMessageLength );
+		return useMQTT(host, port, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
 	}
 	
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight) {		
-		if (maxInFlight>(1<<15)) {
-			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
-		}
-		int maxMessageLength = DEFAULT_MAX__MQTT_MESSAGE;//4K
-		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS/4, (short)maxInFlight, maxMessageLength );
+		return useMQTT(host, port, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);	
 	}
 	
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {		
@@ -869,6 +866,12 @@ public class BuilderImpl implements Builder {
 		if (maxMessageLength>(256*(1<<20))) {
 			throw new UnsupportedOperationException("Specification does not support values larger than 256M");
 		}
+		 
+    		//also ensure consumers have pipes which can consume this.
+    	if (MsgCommandChannel.isTooSmall(maxInFlight, maxMessageLength, pcm.getConfig(MessageSubscription.class))) {
+    		pcm.addConfig(maxInFlight, maxMessageLength, MessageSubscription.class); 
+    	}
+		
 		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
 		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS/4, (short)maxInFlight, maxMessageLength );
 	}

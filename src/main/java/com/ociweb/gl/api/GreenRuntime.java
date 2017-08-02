@@ -5,6 +5,7 @@ import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
+import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
@@ -26,7 +27,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
      	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
      	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
-     	pcm.addConfig(serverResponseNetConfig);
+     	pcm.addConfig(new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, MsgRuntime.defaultCommandChannelHTTPMaxPayload));
      	//pcm.addConfig(100,0,TrafficAckSchema.class);
      	
      	return this.builder.newCommandChannel(
