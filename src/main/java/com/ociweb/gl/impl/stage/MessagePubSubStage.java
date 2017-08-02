@@ -24,11 +24,8 @@ import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
-import com.ociweb.pronghorn.util.EncodingConverter;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
-import com.ociweb.pronghorn.util.EncodingConverter.EncodingStorage;
-import com.ociweb.pronghorn.util.EncodingConverter.EncodingTransform;
 
 public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
@@ -290,8 +287,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		int hash = PipeReader.readInt(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4);
 		//convert the hash into the specific outgoing pipe where this will go
 		final short pipeIdx = (short)IntHashTable.getItem(subscriptionPipeLookup, hash);
-  
-		
+  		
 		assert(pipeIdx>=0) : "Must have valid pipe index";
 		
 		final byte[] backing = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);
@@ -299,15 +295,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		final int len = PipeReader.readBytesLength(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);
 		final int mask = PipeReader.readBytesMask(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);
 		
-		if (addSubscription(pipeIdx, backing, pos, len, mask)) {
-			
-			//Need publishere ID??
-			
-			//TODO: increment the count??
-			//totalConsumersCount
-			
-			
-		}
+		addSubscription(pipeIdx, backing, pos, len, mask);
+
 	}
 
 
@@ -621,6 +610,27 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
 
 	private int subscriptionListIdx(final byte[] backing, final int pos, final int len, final int mask) {
+		
+		
+//		ByteSquenceVisitor visitor = new ByteSquenceVisitor() {
+//
+//			@Override
+//			public void addToResult(long l) {
+//				// TODO Auto-generated method stub
+//				
+//			}
+//
+//			@Override
+//			public void clearResult() {
+//				// TODO Auto-generated method stub - remove this??				
+//			}
+//			
+//		};
+//		localSubscriptionTrieReader.visit(localSubscriptionTrie, 
+//				visitor, 
+//				backing, pos, len, mask);
+		
+		
 		int listIdx = (int) TrieParserReader.query(localSubscriptionTrieReader, localSubscriptionTrie, backing, pos, len, mask);
 		return listIdx;
 	}
@@ -811,10 +821,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
         if (PipeWriter.tryWriteFragment(outPipe, MessageSubscription.MSG_PUBLISH_103)) {
         	
-        	//debug -- this string is the old value not the new one...
-        	StringBuilder b = new StringBuilder("MessagePubSub:");
-        	PipeReader.readUTF8(pipe, payloadLOC, b);
-        	System.err.println(b);
+//        	//debug -- this string is the old value not the new one...
+//        	StringBuilder b = new StringBuilder("MessagePubSub:");
+//        	PipeReader.readUTF8(pipe, payloadLOC, b);
+//        	System.err.println(b);
         	
             PipeReader.copyBytes(pipe, outPipe, topicLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1);
             PipeReader.copyBytes(pipe, outPipe, payloadLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
