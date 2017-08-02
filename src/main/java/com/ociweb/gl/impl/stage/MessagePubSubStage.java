@@ -421,8 +421,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		        	 										IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 		        	 			logger.info("new message to be routed, {}", pubSubTrace); 
 		        	 		}
-			        		
-	                    	final int limit = listIdx+subscriberListSize;
+			        				        	 		
+		        	 		int length = subscriberLists[listIdx];
+		        	 		final int limit = listIdx+length;
+		        	 		listIdx++;
+	                    	
 	                    	for(int j = listIdx; j<limit && hasNextSubscriber(j); j++) {
 	                    	
 								int pipeIdx = subscriberLists[j];
@@ -514,9 +517,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             			//NOTE: this must go out to all pipes regardless of having state listeners.
             			//      reactors will hold the state to do additional event filtering so all message pipes to require state change messages.
             			pendingAck[a] = true;
-            			requiredConsumes[a] = consumedMarks[a].length; // state changes require all consumers
+            			requiredConsumes[a] = targetMakrs.length; // state changes require all consumers
             			//logger.info("need pending ack for message on {} ",a);
   
+            			//SENT TO ALL outgoing pipes regardless...
 	                	for(int i = 0; i<outgoingMessagePipes.length; i++) {
 	                		copyToSubscriberState(currentState, newState, i, targetMakrs);
 	                	}
@@ -561,17 +565,16 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         				         MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
                         			logger.info("new message to be routed, {}", pubSubTrace);
                         		}
-                        		
-	                        	pendingAck[a] = true;
-	                        	
-	                        	//warning TODO: if this unsubscribe changes do the valeus match?
-	                        	
-	                        	requiredConsumes[a] = WaitFor
-	                        			      .computeRequiredCount(ackPolicy, consumedMarks[a].length);
 	                        		                        	
 	                        	//logger.info("need pending ack for message on {} ",a);
+	                        	int length = subscriberLists[listIdx];
+	                        	final int limit = listIdx+length;
+	                        	listIdx++;
 	                        	
-	                        	final int limit = listIdx+subscriberListSize;
+	                        	pendingAck[a] = true;
+	                        	requiredConsumes[a] = WaitFor.computeRequiredCount(ackPolicy, length);
+	                        	
+	                        	//only sent to the known subscribers.
 	                        	for(int i = listIdx; i<limit && hasNextSubscriber(i); i++) {
 	                        		copyToSubscriber(pipe, subscriberLists[i], targetMakrs,
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
@@ -656,8 +659,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		
 		if (listIdx >= 0) {
 			
+			int length = subscriberLists[listIdx];
+			final int limit = listIdx+length;
+			listIdx++;
+			
 			//add index on first -1 or stop if value already found                    
-			for(int i = listIdx; i<(listIdx+subscriberListSize); i++) {
+			for(int i = listIdx; i<limit; i++) {
 				
 			    if (-1 == subscriberLists[i]) {
 			        //end of list //subscriberLists[i]=pipeIdx;
@@ -667,6 +674,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 			    	while ((i<(listIdx+subscriberListSize)) && (-1!=subscriberLists[i])) {
 			    		subscriberLists[i] = subscriberLists[++i];
 			    	}
+			    	subscriberLists[listIdx]--;//remove 1 from count of subscribers;
 			        break;
 			    }
 			}
@@ -705,11 +713,17 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		}
 		
 		boolean addedNewSubscription = false;
-		//add index on first -1 or stop if value already found                    
-		for(int i = listIdx; i<(listIdx+subscriberListSize); i++) {
+		//add index on first -1 or stop if value already found  
+		
+		int length = subscriberLists[listIdx];
+		int limit = listIdx+length;
+		listIdx++;
+		
+		for(int i = listIdx; i<limit; i++) {
 		    if (-1 == subscriberLists[i]) {
 		        subscriberLists[i]=pipeIdx; //outgoing pipe which will be sent this data.
 		        addedNewSubscription = true;
+		        subscriberLists[listIdx]++;//incrment the count;
 		        break;
 		    } else if (pipeIdx == subscriberLists[i]){
 		        break;//already in list.
