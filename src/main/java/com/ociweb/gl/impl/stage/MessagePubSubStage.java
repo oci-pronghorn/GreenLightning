@@ -155,7 +155,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
     
     private boolean isPreviousConsumed(int incomingPipeId) {
-    	
+        	
     	long[] marks = consumedMarks[incomingPipeId];
     	int totalUnconsumed = 0;
     	
@@ -412,10 +412,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		        	 		}
 			        				        	 		
 		        	 		int length = subscriberLists[listIdx];
-		        	 		final int limit = listIdx+length;
-		        	 		listIdx++;
+		        	 		final int limit = 1+listIdx+length;
+		        	 		
 	                    	
-	                    	for(int j = listIdx; j<limit && hasNextSubscriber(j); j++) {
+	                    	for(int j = listIdx+1; j<limit && hasNextSubscriber(j); j++) {
 	                    	
 								int pipeIdx = subscriberLists[j];
 	                    		
@@ -544,27 +544,28 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         final int mask = PipeReader.readBytesMask(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);                  
                         
                         //selects the topics pipe
-                        
                         int listIdx = subscriptionListIdx(backing, pos, len, mask);
+                 
                         if (listIdx>=0) {
                         	if (hasNextSubscriber(listIdx)) {
                         		
                         		if (enableTrace) {        
                         			pubSubTrace.init(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
                         				         MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-                        			logger.info("new message to be routed, {}", pubSubTrace);
+                        			//logger.info("new message to be routed, {}", pubSubTrace);
                         		}
 	                        		                        	
 	                        	//logger.info("need pending ack for message on {} ",a);
 	                        	int length = subscriberLists[listIdx];
-	                        	final int limit = listIdx+length;
-	                        	listIdx++;
-	                        	
+	                        	final int limit = 1+listIdx+length;
+	                        
 	                        	pendingAck[a] = true;
 	                        	requiredConsumes[a] = WaitFor.computeRequiredCount(ackPolicy, length);
 	                        	
+	                        	//System.err.println("new publish length "+length+"  "+requiredConsumes[a]);
+	                        	
 	                        	//only sent to the known subscribers.
-	                        	for(int i = listIdx; i<limit && hasNextSubscriber(i); i++) {
+	                        	for(int i = listIdx+1; i<=limit && hasNextSubscriber(i); i++) {
 	                        		copyToSubscriber(pipe, subscriberLists[i], targetMakrs,
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
@@ -670,11 +671,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		if (listIdx >= 0) {
 			
 			int length = subscriberLists[listIdx];
-			final int limit = listIdx+length;
-			listIdx++;
+			final int limit = 1+listIdx+length;
 			
 			//add index on first -1 or stop if value already found                    
-			for(int i = listIdx; i<limit; i++) {
+			for(int i = listIdx+1; i<=limit; i++) {
 				
 			    if (-1 == subscriberLists[i]) {
 			        //end of list //subscriberLists[i]=pipeIdx;
@@ -693,7 +693,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	
 	}
 
-	private boolean addSubscription(final short pipeIdx, final byte[] backing1, final int pos1, final int len1, final int mask1) {
+	private void addSubscription(final short pipeIdx, final byte[] backing1, final int pos1, final int len1, final int mask1) {
 
         //////////////////////
 		//convert # and + to support escape values
@@ -713,8 +713,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		//finished conversion of # and +
 		//////////////////////////////
 		
-//		Appendables.appendUTF8(System.err, backing, pos, len, mask);
-//		System.err.println("");
+		//Appendables.appendUTF8(System.err.append("add subscription:"), backing, pos, len, mask);
+		//System.err.println("");
 		
 		int listIdx = subscriptionListIdx(backing, pos, len, mask);
 		
@@ -722,24 +722,20 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 			listIdx = beginNewSubscriptionList(backing1, pos1, len1, mask1, len, mask, pos, backing);	
 		}
 		
-		boolean addedNewSubscription = false;
 		//add index on first -1 or stop if value already found  
 		
-		int length = subscriberLists[listIdx];
-		int limit = listIdx+length;
-		listIdx++;
+		int length = subscriberLists[listIdx];		
+		int limit = 1+listIdx+length;
 		
-		for(int i = listIdx; i<limit; i++) {
+		for(int i = 1+listIdx; i<=limit; i++) {
 		    if (-1 == subscriberLists[i]) {
 		        subscriberLists[i]=pipeIdx; //outgoing pipe which will be sent this data.
-		        addedNewSubscription = true;
 		        subscriberLists[listIdx]++;//incrment the count;
 		        break;
 		    } else if (pipeIdx == subscriberLists[i]){
 		        break;//already in list.
 		    }
 		}
-		return addedNewSubscription;
 	}
 
 
@@ -764,7 +760,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 			subscriberLists = temp;
 		}
 		
-		
+		subscriberLists[listIdx] = 0;
 		//System.err.println("Adding new subscription with value "+listIdx);
 		localSubscriptionTrie.setValue(backing, pos, len, mask, listIdx);
 		return listIdx;

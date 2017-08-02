@@ -283,7 +283,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         	long start = System.currentTimeMillis();
         	((StartupListener)listener).startup();
         	long duration = System.currentTimeMillis()-start;
-        	if (duration>20) { //approaching human perception
+        	if (duration>40) { //human perception
         		String name = listener.getClass().getSimpleName().trim();
         		if (name.length() == 0) {
         			name = "a startup listener lambda";
