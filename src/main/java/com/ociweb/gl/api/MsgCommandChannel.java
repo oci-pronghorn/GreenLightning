@@ -525,7 +525,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		throw new UnsupportedOperationException("Can not subscribe before startup. Call addSubscription when registering listener."); 
     	}
     	
-        return subscribe(topic, (PubSubListener)listener);
+        return subscribe(topic, (PubSubMethodListener)listener);
     }
 
     /**
@@ -537,7 +537,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the topic was successfully subscribed to, and false
      *         otherwise.
      */
-    public boolean subscribe(CharSequence topic, PubSubListener listener) {
+    public boolean subscribe(CharSequence topic, PubSubMethodListener listener) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
     	assert(null!=goPipe) : "must turn on Dynamic Messaging for this channel";
@@ -566,7 +566,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean unsubscribe(CharSequence topic) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
-        return unsubscribe(topic, (PubSubListener)listener);
+        return unsubscribe(topic, (PubSubMethodListener)listener);
     }
 
     /**
@@ -577,7 +577,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the topic was successfully unsubscribed from, and false otherwise.
      */
-    public boolean unsubscribe(CharSequence topic, PubSubListener listener) {
+    public boolean unsubscribe(CharSequence topic, PubSubMethodListener listener) {
 		 assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
         if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101)) {

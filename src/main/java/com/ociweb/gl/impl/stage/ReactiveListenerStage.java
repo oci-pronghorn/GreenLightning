@@ -17,6 +17,7 @@ import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
+import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.ShutdownListener;
 import com.ociweb.gl.api.StartupListener;
@@ -541,7 +542,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	                    int dispatch;
 	                    
 	                    if ((null==methodReader) || ((dispatch=methodLookup(p, len, pos))<0)) {
-	                    	if (! ((PubSubListener)listener).message(mutableTopic,reader)) {
+	                    	if ((listener instanceof PubSubListenerBase) && (! ((PubSubListenerBase)listener).message(mutableTopic,reader))) {
 	                    		Pipe.resetTail(p);
 			            		return;//continue later and repeat this same value.
 	                    	}
@@ -791,7 +792,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			methods = new CallableStaticMethod[0];
 		}
 		
-		if (!startupCompleted && listener instanceof PubSubListener) {
+		if (!startupCompleted && listener instanceof PubSubMethodListener) {
 			builder.addStartupSubscription(topic, System.identityHashCode(listener));
 			toStringDetails = toStringDetails+"sub:'"+topic+"'\n";
 		} else {
@@ -813,7 +814,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	
 	@Override
 	public final ListenerFilter addSubscription(CharSequence topic) {		
-		if (!startupCompleted && listener instanceof PubSubListener) {
+		if (!startupCompleted && listener instanceof PubSubMethodListener) {
 			builder.addStartupSubscription(topic, System.identityHashCode(listener));		
 			
 			toStringDetails = toStringDetails+"sub:'"+topic+"'\n";
