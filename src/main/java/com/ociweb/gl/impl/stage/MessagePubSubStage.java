@@ -150,7 +150,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   int maxCapturedFields = 16;
 	   topicConversionTrieReader = new TrieParserReader(maxCapturedFields,true);
 	   
-	   tempSubject = RawDataSchema.instance.newPipe(2, incomingSubsAndPubsPipe[0].maxVarLen);
+	   //TODO: need a better way to set when no subs are used except for startup only.
+	   tempSubject = RawDataSchema.instance.newPipe(2, 0==incomingSubsAndPubsPipe.length ? estimatedAvgTopicLength : incomingSubsAndPubsPipe[0].maxVarLen);
 	   
     }
 
