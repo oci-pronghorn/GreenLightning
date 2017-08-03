@@ -52,6 +52,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private TrieParserReader localSubscriptionTrieReader;
         
     private IntHashTable subscriptionPipeLookup;
+    private IntHashTable deDupeTable;
     
     private boolean pendingIngress = false;
     private int[] pendingPublish; //remaining pipes that this pending message must be published to
@@ -225,6 +226,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         pendingAck = new boolean[incomingPipeCount];
         requiredConsumes = new int[incomingPipeCount];
         
+        //maximum count of outgoing pipes * 2 for extra hash room
+        deDupeTable = new IntHashTable(IntHashTable.computeBits(outgoingPipeCount*2));
+        
         this.subscriberLists = new int[initialSubscriptions*subscriberListSize];   
         
         Arrays.fill(this.subscriberLists, (short)-1);
@@ -338,6 +342,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 			        			
 			        			Pipe<IngressMessages> pipe = ingressMessagePipes[pendingReleaseCountIdx];
 	
+			        			
 				        		for(int i = 0; i<limit; i++) {
 				        			copyToSubscriber(pipe, pendingPublish[i],
 				        					IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
@@ -401,6 +406,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	                final int mask = PipeReader.readBytesMask(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
 	        		int listIdx = subscriptionListIdx(backing, pos, len, mask);
 	        		
+            		collectAllSubscriptionLists(backing, pos, len, mask);
+            		            		
 	        		if (listIdx>=0) {
 	        			
 	        			if (hasNextSubscriber(listIdx)) {
@@ -545,7 +552,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         
                         //selects the topics pipe
                         int listIdx = subscriptionListIdx(backing, pos, len, mask);
-                 
+                        				
+
+                		collectAllSubscriptionLists(backing, pos, len, mask);
+                		IntHashTable.clear(deDupeTable); //clear so we can find duplicates
+                		
+                        
                         if (listIdx>=0) {
                         	if (hasNextSubscriber(listIdx)) {
                         		
@@ -558,19 +570,52 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	                        	//logger.info("need pending ack for message on {} ",a);
 	                        	int length = subscriberLists[listIdx];
 	                        	final int limit = 1+listIdx+length;
-	                        
-	                        	pendingAck[a] = true;
-	                        	requiredConsumes[a] = WaitFor.computeRequiredCount(ackPolicy, length);
+	                
+//	                        	//////////
+//	                        	//new code
+//	                        	///////////
+//	                        	int sumLen = 0;
+//	                    		int x = subscriberListSize*totalSubscriberLists;
+//	                    		while (subscriberLists[x]!=-1) {
+//	                    			//	logger.info("caputured list {} ", subscriberLists[x]);
+//	                    			
+//	                    			final int idx = subscriberLists[x];
+//	                    			final int listLen = subscriberLists[idx];
+//	                    			final int listLim = 1+idx+listLen;
+//	                    			sumLen += listLen;
+//	                    			
+//		                        	for(int i = idx+1; (i<=listLim) && (-1!=subscriberLists[i]); i++) {
+//		                        		copyToSubscriber(pipe, subscriberLists[i], targetMakrs,
+//			                        				MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+//			                        				MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
+//		                        				);                                
+//		                        	}
+//	                    			x++;
+//	                    		}	
+//	                        	
+//	                        	
+//	                        	////////////
+//	                        	////////////
+//	                        	///////////
 	                        	
-	                        	//System.err.println("new publish length "+length+"  "+requiredConsumes[a]);
 	                        	
-	                        	//only sent to the known subscribers.
-	                        	for(int i = listIdx+1; i<=limit && hasNextSubscriber(i); i++) {
+	                        	
+	                        	
+//original code	                        		                        	
+//	                        	//only sent to the known subscribers.
+	                        	for(int i = listIdx+1; (i<=limit) && (-1!=subscriberLists[i]); i++) {
 	                        		copyToSubscriber(pipe, subscriberLists[i], targetMakrs,
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
 	                        				);                                
 	                        	}
+	                        	int sumLen = length;
+	                        	
+	                        	
+	                        	pendingAck[a] = true;
+	                        	requiredConsumes[a] = WaitFor.computeRequiredCount(ackPolicy, sumLen);
+	                        	
+	                        	
                         	}
                         	
                         	//Do nothing else until this is completed.
@@ -609,31 +654,27 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     }
 
 
+	private void collectAllSubscriptionLists(final byte[] backing, final int pos, final int len, final int mask) {
+		//right after all the subscribers use the rest of the data
+		CollectTargetLists visitor = new CollectTargetLists(subscriberLists, subscriberListSize*totalSubscriberLists);
+		localSubscriptionTrieReader.visit(localSubscriptionTrie, visitor, backing, pos, len, mask);
+		this.subscriberLists = visitor.targetArray(); //must assign back in case we made it grow.
+		
+		
+//		int x = subscriberListSize*totalSubscriberLists;
+//		while (subscriberLists[x]!=-1) {
+//			System.err.println("caputured list " + subscriberLists[x]);
+//			x++;
+//		}	
+		
+	}
+
+
 
 	private int subscriptionListIdx(final byte[] backing, final int pos, final int len, final int mask) {
-		
-		
-//		ByteSquenceVisitor visitor = new ByteSquenceVisitor() {
-//
-//			@Override
-//			public void addToResult(long l) {
-//				// TODO Auto-generated method stub
-//				
-//			}
-//
-//			@Override
-//			public void clearResult() {
-//				// TODO Auto-generated method stub - remove this??				
-//			}
-//			
-//		};
-//		localSubscriptionTrieReader.visit(localSubscriptionTrie, 
-//				visitor, 
-//				backing, pos, len, mask);
-		
-		
-		int listIdx = (int) TrieParserReader.query(localSubscriptionTrieReader, localSubscriptionTrie, backing, pos, len, mask);
-		return listIdx;
+				
+		return (int) TrieParserReader.query(localSubscriptionTrieReader, localSubscriptionTrie, backing, pos, len, mask);
+
 	}
 
     
@@ -816,12 +857,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private void copyToSubscriber(Pipe<?> pipe, int pipeIdx, int topicLOC, int payloadLOC) {
         Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
         if (PipeWriter.tryWriteFragment(outPipe, MessageSubscription.MSG_PUBLISH_103)) {
-        	
-//        	//debug -- this string is the old value not the new one...
-//        	StringBuilder b = new StringBuilder("MessagePubSub:");
-//        	PipeReader.readUTF8(pipe, payloadLOC, b);
-//        	System.err.println(b);
-        	
+
             PipeReader.copyBytes(pipe, outPipe, topicLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1);
             PipeReader.copyBytes(pipe, outPipe, payloadLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
      
