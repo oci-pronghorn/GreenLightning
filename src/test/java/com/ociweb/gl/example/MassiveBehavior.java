@@ -28,7 +28,7 @@ public class MassiveBehavior implements GreenApp {
 			final String topic = "topic"+i;
 			final int value = i;
 			
-			final PubSubWritable writable = new PubSubWritable() {
+			final Writable writable = new Writable() {
 
 				@Override
 				public void write(BlobWriter writer) {

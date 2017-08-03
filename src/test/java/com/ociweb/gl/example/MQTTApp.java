@@ -4,15 +4,12 @@ import java.util.Date;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MQTTBridge;
-import com.ociweb.gl.api.MessageReader;
-import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.PubSubWritable;
-import com.ociweb.gl.api.PubSubWriter;
 import com.ociweb.gl.api.TimeListener;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.pipe.BlobWriter;
 
@@ -51,7 +48,7 @@ public class MQTTApp implements GreenApp {
 		TimeListener timeListener = new TimeListener() {
 			@Override
 			public void timeEvent(long time, int iteration) {
-				PubSubWritable writable = new PubSubWritable() {
+				Writable writable = new Writable() {
 					@Override
 					public void write(BlobWriter writer) {	
 						Date d =new Date(System.currentTimeMillis());
@@ -79,7 +76,7 @@ public class MQTTApp implements GreenApp {
 				payload.readUTFOfLength(payload.available(), System.out);
 				System.out.println();
 				
-				PubSubWritable writable = new PubSubWritable() {
+				Writable writable = new Writable() {
 
 					@Override
 					public void write(BlobWriter writer) {

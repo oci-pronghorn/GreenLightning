@@ -622,11 +622,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	
     }
 
-    public void presumePublishTopic(CharSequence topic, PubSubWritable writable) {
+    public void presumePublishTopic(CharSequence topic, Writable writable) {
     	presumePublishTopic(topic, writable, WaitFor.All);
     }
     
-    public void presumePublishTopic(CharSequence topic, PubSubWritable writable, WaitFor ap) {
+    public void presumePublishTopic(CharSequence topic, Writable writable, WaitFor ap) {
     	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
     	
     	if (publishTopic(topic, writable, ap)) {
@@ -640,7 +640,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
     
     
-    public boolean publishTopic(CharSequence topic, PubSubWritable writable) {
+    public boolean publishTopic(CharSequence topic, Writable writable) {
     	return publishTopic(topic, writable, WaitFor.All);
     }
     /**
@@ -650,7 +650,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return {@link PayloadWriter} attached to the given topic.
      */
-    public boolean publishTopic(CharSequence topic, PubSubWritable writable, WaitFor ap) {
+    public boolean publishTopic(CharSequence topic, Writable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
         assert(isNotPrivate(topic)) : "private topics may not be selected by CharSequence.";
@@ -761,10 +761,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 //        }
 //    }
     
-    public void presumePublishTopic(TopicWritable topic, PubSubWritable writable) {
+    public void presumePublishTopic(TopicWritable topic, Writable writable) {
     	presumePublishTopic(topic,writable,WaitFor.All);
     }        
-    public void presumePublishTopic(TopicWritable topic, PubSubWritable writable, WaitFor ap) {
+    public void presumePublishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
     	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
     	if (publishTopic(topic, writable, ap)) {
@@ -777,11 +777,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
     
-    public boolean publishTopic(TopicWritable topic, PubSubWritable writable) {
+    public boolean publishTopic(TopicWritable topic, Writable writable) {
     	return publishTopic(topic, writable, WaitFor.All);    	
     }
     
-    public boolean publishTopic(TopicWritable topic, PubSubWritable writable, WaitFor ap) {
+    public boolean publishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
         assert(isNotPrivate(topic)) : "private topics may not be dynamicaly constructed.";
