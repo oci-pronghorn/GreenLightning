@@ -2,17 +2,17 @@ package com.ociweb.gl.api;
 
 import com.ociweb.pronghorn.util.TrieParser;
 
-public class GreenParser {
+public class GreenTokenMap {
 
 	
 	private final TrieParser tp;
 	private int extractions = 0;
 	
-	public GreenParser() {
+	public GreenTokenMap() {
 		this(false);
 	}
 	
-	public GreenParser(boolean ignoreCase) {
+	public GreenTokenMap(boolean ignoreCase) {
 		
 		boolean skipDeepChecks = false;
 		boolean supportsExtraction = true;
@@ -28,37 +28,37 @@ public class GreenParser {
 		return new GreenReader(tp, extractions);
 	}
 		
-	public GreenParser addTemplate(long id, CharSequence template) {
+	public GreenTokenMap add(long id, CharSequence template) {
 		tp.setUTF8Value(template, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());		
 		return this;
 	}
 	
-	public GreenParser addTemplate(long id, CharSequence templatePart1, CharSequence templatePart2) {
+	public GreenTokenMap addTemplate(long id, CharSequence templatePart1, CharSequence templatePart2) {
 		tp.setUTF8Value(templatePart1, templatePart2, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
 	
-	public GreenParser addTemplate(long id, CharSequence templatePart1, CharSequence templatePart2, CharSequence templatePart3) {
+	public GreenTokenMap addTemplate(long id, CharSequence templatePart1, CharSequence templatePart2, CharSequence templatePart3) {
 		tp.setUTF8Value(templatePart1, templatePart2, templatePart3, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
 	
-	public GreenParser addTemplate(long id, byte[] template) {
+	public GreenTokenMap addTemplate(long id, byte[] template) {
 		tp.setValue(template, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
 	
-	public GreenParser addTemplate(long id, byte[] template, int offset, int length) {
+	public GreenTokenMap addTemplate(long id, byte[] template, int offset, int length) {
 		tp.setValue(template, offset, length, Integer.MAX_VALUE, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
 	
-	public GreenParser addTemplate(long id, byte[] template, int offset, int length, int mask) {
+	public GreenTokenMap addTemplate(long id, byte[] template, int offset, int length, int mask) {
 		tp.setValue(template, offset, length, mask, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;

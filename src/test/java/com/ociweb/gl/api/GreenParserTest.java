@@ -17,23 +17,23 @@ public class GreenParserTest {
 	private final static Logger logger = LoggerFactory.getLogger(GreenParserTest.class);
 	
 	@Test
-	public void simple() {
+	public void simpleTest() {
 				
-		GreenTokenizer gt = new GreenParser()
-				              .addTemplate(1, "moe")
-				              .addTemplate(2, "larry")
-				              .addTemplate(3, "curly")
-				              .addTemplate(0, "shemp")
+		GreenTokenizer gt = new GreenTokenMap()
+				              .add(1, "moe")
+				              .add(2, "larry")
+				              .add(3, "curly")
+				              .add(0, "shemp")
 				              .newTokenizer();
 		
-		assertEquals(2, gt.tokenize("larry"));
+		assertEquals("larry not found",2, gt.tokenize("larry"));
 		assertEquals(1, gt.tokenize("moe"));
 		assertEquals(0, gt.tokenize("shemp"));
 		assertEquals(3, gt.tokenize("curly"));                                              		              
 		assertEquals(-1, gt.tokenize("bob"));
 	    				              		
 		////////////////
-		//This is an exmple of how to use tokens in a switch
+		//This is an example of how to use tokens in a switch
 		/////////////////
 		String value = "larry";
 		switch ((int)gt.tokenize(value)) {	 //NOTE: cast to int is required	
@@ -41,7 +41,7 @@ public class GreenParserTest {
 				//this is larry
 				break;
 			default:
-				fail(); //not larry		
+				fail("larry was not found"); //not larry		
 		}
 		
 	}
@@ -50,11 +50,11 @@ public class GreenParserTest {
 	@Test
 	public void extractions() {
 				
-		GreenTokenizer gt = new GreenParser()
-				              .addTemplate(1, "age: %i\n")
-				              .addTemplate(2, "name: %b\n") //note %b MUST be followed by stop char
-				              .addTemplate(3, "speed: %i%.\n") //note this counts as 2 fields
-				              .addTemplate(0, "\n")
+		GreenTokenizer gt = new GreenTokenMap()
+				              .add(1, "age: %i\n")
+				              .add(2, "name: %b\n") //note %b MUST be followed by stop char
+				              .add(3, "speed: %i%.\n") //note this counts as 2 fields
+				              .add(0, "\n")
 				              .newTokenizer();
 				
 		
@@ -103,11 +103,11 @@ public class GreenParserTest {
 	@Test
 	public void simpleReader() {
 				
-		GreenReader gr = new GreenParser()
-				              .addTemplate(1, "moe")
-				              .addTemplate(2, "larry")
-				              .addTemplate(3, "curly")
-				              .addTemplate(0, "shemp")
+		GreenReader gr = new GreenTokenMap()
+				              .add(1, "moe")
+				              .add(2, "larry")
+				              .add(3, "curly")
+				              .add(0, "shemp")
 				              .newReader();
 		
 		
@@ -128,13 +128,18 @@ public class GreenParserTest {
 			switch ((int)token) {
 				case 0: //this is a token id
 					foundShemp = true;			    
-				break;
+					break;
 				case 2: //this is a token id
 					foundLarry = true;
 					break;
-				default:
+				case -1:
 					//unknown
 					gr.skipByte();
+				    break;
+				case 1:
+				case 3:
+					//ignore
+					break;
 			}
 		}
 		
@@ -172,11 +177,11 @@ public class GreenParserTest {
 	@Test
 	public void extractionsReader() {
 				
-		GreenReader gr = new GreenParser()
-				              .addTemplate(1, "age: %i\n")
-				              .addTemplate(2, "name: %b, %b\n") //note %b MUST be followed by stop char
-				              .addTemplate(3, "speed: %i%.\n") //note this counts as 2 fields
-				              .addTemplate(0, "\n")
+		GreenReader gr = new GreenTokenMap()
+				              .add(1, "age: %i\n")
+				              .add(2, "name: %b, %b\n") //note %b MUST be followed by stop char
+				              .add(3, "speed: %i%.\n") //note this counts as 2 fields
+				              .add(0, "\n")
 				              .newReader();
 				
 		BlobReader testToRead = generateExtractionDataToTest();

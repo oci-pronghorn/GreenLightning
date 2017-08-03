@@ -40,10 +40,10 @@ public class GreenReader extends GreenExtractor {
 	
 	public static GreenReader examplePrepare() {
 		
-		return new GreenParser()
-				    .addTemplate(1234, "type: %b\n")
-				    .addTemplate(3322, "age: %i\n")
-	                .addTemplate(1,    " ") //white space
+		return new GreenTokenMap()
+				    .add(1234, "type: %b\n")
+				    .add(3322, "age: %i\n")
+	                .add(1,    " ") //white space
 				    .newReader();
 		
 	}
