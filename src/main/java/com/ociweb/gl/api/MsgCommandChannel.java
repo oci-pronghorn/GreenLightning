@@ -711,7 +711,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     //TODO: add privateTopic support
     
-//    public boolean publishTopic(byte[] topic, PubSubWritable writable) {
+//    public boolean publishTopic(byte[] topic, Writable writable) {
 //		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 //        assert(writable != null);
 //        
