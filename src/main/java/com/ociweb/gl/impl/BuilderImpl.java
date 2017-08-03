@@ -156,9 +156,7 @@ public class BuilderImpl implements Builder {
 	//support for REST modules and routing
 	//////////////////////////////
 	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> httpSpec = HTTPSpecification.defaultSpec();
-	private final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig
-	                               = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(httpSpec); 
-	//////////////////////////////
+	private HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig;	//////////////////////////////
 	//////////////////////////////
 	
 	public int pubSubIndex() {
@@ -231,6 +229,9 @@ public class BuilderImpl implements Builder {
     }
     
     public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {
+    	if (null==routerConfig) {
+    		routerConfig = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(httpSpec); 
+    	}    	
     	return routerConfig;
     }
  
@@ -631,23 +632,23 @@ public class BuilderImpl implements Builder {
 		if (route.charAt(0)!='/') {
 			throw new UnsupportedOperationException("path must start with /");
 		}
-		return routerConfig.registerRoute(route, headers);
+		return routerConfig().registerRoute(route, headers);
 	}
 
 	public final TrieParser routeExtractionParser(int route) {
-		return routerConfig.extractionParser(route).getRuntimeParser();
+		return routerConfig().extractionParser(route).getRuntimeParser();
 	}
 	
 	public final int routeExtractionParserIndexCount(int route) {
-		return routerConfig.extractionParser(route).getIndexCount();
+		return routerConfig().extractionParser(route).getIndexCount();
 	}
 	
 	public IntHashTable routeHeaderToPositionTable(int routeId) {
-		return routerConfig.headerToPositionTable(routeId);
+		return routerConfig().headerToPositionTable(routeId);
 	}
 	
 	public TrieParser routeHeaderTrieParser(int routeId) {
-		return routerConfig.headerTrieParser(routeId);
+		return routerConfig().headerTrieParser(routeId);
 	}
 
 	public final ClientCoordinator getClientCoordinator() {
