@@ -48,7 +48,7 @@ public class GreenParserTest {
 	
 	
 	@Test
-	public void extractions() {
+	public void extractionsTest() {
 				
 		GreenTokenizer gt = new GreenTokenMap()
 				              .add(1, "age: %i\n")
@@ -101,7 +101,7 @@ public class GreenParserTest {
 		
 	
 	@Test
-	public void simpleReader() {
+	public void simpleReaderTest() {
 				
 		GreenReader gr = new GreenTokenMap()
 				              .add(1, "moe")
@@ -175,7 +175,7 @@ public class GreenParserTest {
 	}
 	
 	@Test
-	public void extractionsReader() {
+	public void extractionsReaderTest() {
 				
 		GreenReader gr = new GreenTokenMap()
 				              .add(1, "age: %i\n")
