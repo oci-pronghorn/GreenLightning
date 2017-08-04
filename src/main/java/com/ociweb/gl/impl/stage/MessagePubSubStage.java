@@ -29,7 +29,7 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
-	public final static boolean showNewSubscriptions = true;
+	public final static boolean showNewSubscriptions = false;
 	
 	private static final byte[] WILD_PLUS_THE_SEGMENT = "%b/".getBytes();
 	private static final byte[] WILD_POUND_THE_END = "/%b".getBytes();
@@ -468,11 +468,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     
     @Override
     protected void processMessagesForPipe(int a) {
-        
-        //TODO: still need to add support for +
-        //TODO: still need to add support for #
-    	
-        
+
         Pipe<MessagePubSub> pipe = incomingSubsAndPubsPipe[a];
         
              
@@ -568,41 +564,40 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         				         MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
                         			//logger.info("new message to be routed, {}", pubSubTrace);
                         		}
-	                        		                        	
-	                        	//logger.info("need pending ack for message on {} ",a);
-	                        	final int limit = 1+listIdx+length;
-	                
-//	                        	//////////
-//	                        	//new code
-//	                        	///////////
+	                        		                
+	                        	//////////
+	                        	//publish to all subscribers using wild card support
+	                        	///////////
 //	                        	int sumLen = 0;
 //	                    		int x = subscriberListSize*totalSubscriberLists;
 //	                    		while (subscriberLists[x]!=-1) {
-//	                    			//	logger.info("caputured list {} ", subscriberLists[x]);
-//	                    			
 //	                    			final int idx = subscriberLists[x];
 //	                    			final int listLen = subscriberLists[idx];
 //	                    			final int listLim = 1+idx+listLen;
 //	                    			sumLen += listLen;
 //	                    			
-//		                        	for(int i = idx+1; (i<=listLim) && (-1!=subscriberLists[i]); i++) {
+//		                        	for(int i = idx+1; i<listLim; i++) {
 //		                        		copyToSubscriber(pipe, subscriberLists[i], targetMakrs,
 //			                        				MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
 //			                        				MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
 //		                        				);                                
 //		                        	}
 //	                    			x++;
-//	                    		}	
-//	                        	
-//	                        	
-//	                        	////////////
-//	                        	////////////
-//	                        	///////////
-	                                              	
+//	                    		}
 	                        	
-	                        	
-//original code	                        		                        	
-//	                        	//only sent to the known subscribers.
+//                        		logger.info("single use this list "+listIdx);
+//                        		int x = subscriberListSize*totalSubscriberLists;
+//                        		while (subscriberLists[x]!=-1) {
+//                        			final int idx = subscriberLists[x];
+//                        			logger.info("wild card lists "+idx);
+//                        			x++;
+//                        		}
+                        		
+                        		
+	                        	////////////
+	                        	////////////
+	                        	///////////
+	                        	final int limit = 1+listIdx+length;                                	
 	                        	for(int i = listIdx+1; i<limit; i++) {
 	                        		copyToSubscriber(pipe, subscriberLists[i], targetMakrs,
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
@@ -610,11 +605,11 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	                        				);                                
 	                        	}
 	                        	int sumLen = length;
-	                        	
-	                        	
+	                    		
+	                    		
 	                        	pendingAck[a] = true;
 	                        	requiredConsumes[a] = WaitFor.computeRequiredCount(ackPolicy, sumLen);
-	                        	
+	                     	
 	                        	
                         	}
                         	
@@ -656,6 +651,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
 	private void collectAllSubscriptionLists(final byte[] backing, final int pos, final int len, final int mask) {
 		//right after all the subscribers use the rest of the data
+		//Appendables.appendUTF8(System.out.append('\n'), backing, pos, len, mask).append('\n');
 		CollectTargetLists visitor = new CollectTargetLists(subscriberLists, subscriberListSize*totalSubscriberLists);
 		localSubscriptionTrieReader.visit(localSubscriptionTrie, visitor, backing, pos, len, mask);
 		this.subscriberLists = visitor.targetArray(); //must assign back in case we made it grow.
