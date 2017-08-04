@@ -232,7 +232,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         
         this.subscriberLists = new int[initialSubscriptions*subscriberListSize];   
         
-        Arrays.fill(this.subscriberLists, (short)-1);
         this.localSubscriptionTrie = new TrieParser(initialSubscriptions * estimatedAvgTopicLength,1,false,true);//must support extraction for wild cards.
 
         //this reader is set up for complete text only, all topics are sent in complete.
@@ -411,7 +410,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             		            		
 	        		if (listIdx>=0) {
 	        			
-	        			if (hasNextSubscriber(listIdx)) {
+	        			int length = subscriberLists[listIdx];
+	        			if (length>0) {
 			                
 		        	 		if (enableTrace) {
 		        	 			pubSubTrace.init(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
@@ -419,11 +419,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		        	 			logger.info("new message to be routed, {}", pubSubTrace); 
 		        	 		}
 			        				        	 		
-		        	 		int length = subscriberLists[listIdx];
 		        	 		final int limit = 1+listIdx+length;
 		        	 		
 	                    	
-	                    	for(int j = listIdx+1; j<limit && hasNextSubscriber(j); j++) {
+	                    	for(int j = listIdx+1; j<limit; j++) {
 	                    	
 								int pipeIdx = subscriberLists[j];
 	                    		
@@ -560,7 +559,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                 		
                         
                         if (listIdx>=0) {
-                        	if (hasNextSubscriber(listIdx)) {
+                        	int length = subscriberLists[listIdx];
+                        	if (length>0) {
                         		
                         		if (enableTrace) {        
                         			pubSubTrace.init(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
@@ -569,7 +569,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         		}
 	                        		                        	
 	                        	//logger.info("need pending ack for message on {} ",a);
-	                        	int length = subscriberLists[listIdx];
 	                        	final int limit = 1+listIdx+length;
 	                
 //	                        	//////////
@@ -683,10 +682,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		return (stateChangeInFlight == -1) || ( !PipeReader.peekMsg(pipe, MessagePubSub.MSG_CHANGESTATE_70));
 	}
 
-	private boolean hasNextSubscriber(int listIdx) {
-		return -1 != subscriberLists[listIdx];
-	}
-
 	
     private void unsubscribe(short pipeIdx, byte[] backing1, int pos1, int len1, int mask1) {
 	
@@ -797,7 +792,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 			//grow the list			
 			int i = subscriberLists.length;
 			int[] temp = new int[i*2];
-			Arrays.fill(temp, -1);
 			System.arraycopy(subscriberLists, 0, temp, 0, i);
 			subscriberLists = temp;
 		}
