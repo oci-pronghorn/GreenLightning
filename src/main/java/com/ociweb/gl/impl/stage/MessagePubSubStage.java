@@ -411,7 +411,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             		            		
 	        		if (listIdx>=0) {
 	        			
-	        			if (hasNextSubscriber(listIdx)) {
+	        			int length = subscriberLists[listIdx];
+	        			if (length>0) {
 			                
 		        	 		if (enableTrace) {
 		        	 			pubSubTrace.init(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
@@ -419,11 +420,10 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		        	 			logger.info("new message to be routed, {}", pubSubTrace); 
 		        	 		}
 			        				        	 		
-		        	 		int length = subscriberLists[listIdx];
 		        	 		final int limit = 1+listIdx+length;
 		        	 		
 	                    	
-	                    	for(int j = listIdx+1; j<limit && hasNextSubscriber(j); j++) {
+	                    	for(int j = listIdx+1; j<limit ; j++) {
 	                    	
 								int pipeIdx = subscriberLists[j];
 	                    		
@@ -560,7 +560,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                 		
                         
                         if (listIdx>=0) {
-                        	if (hasNextSubscriber(listIdx)) {
+                        	int length = subscriberLists[listIdx];
+                        	if (length>0) {
                         		
                         		if (enableTrace) {        
                         			pubSubTrace.init(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
@@ -569,7 +570,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         		}
 	                        		                        	
 	                        	//logger.info("need pending ack for message on {} ",a);
-	                        	int length = subscriberLists[listIdx];
 	                        	final int limit = 1+listIdx+length;
 	                
 //	                        	//////////
@@ -598,13 +598,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 //	                        	////////////
 //	                        	////////////
 //	                        	///////////
-	                        	
-	                        	
+	                                              	
 	                        	
 	                        	
 //original code	                        		                        	
 //	                        	//only sent to the known subscribers.
-	                        	for(int i = listIdx+1; (i<=limit) && (-1!=subscriberLists[i]); i++) {
+	                        	for(int i = listIdx+1; i<limit; i++) {
 	                        		copyToSubscriber(pipe, subscriberLists[i], targetMakrs,
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
 	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
@@ -660,14 +659,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		CollectTargetLists visitor = new CollectTargetLists(subscriberLists, subscriberListSize*totalSubscriberLists);
 		localSubscriptionTrieReader.visit(localSubscriptionTrie, visitor, backing, pos, len, mask);
 		this.subscriberLists = visitor.targetArray(); //must assign back in case we made it grow.
-		
-		
-//		int x = subscriberListSize*totalSubscriberLists;
-//		while (subscriberLists[x]!=-1) {
-//			System.err.println("caputured list " + subscriberLists[x]);
-//			x++;
-//		}	
-		
+
 	}
 
 
@@ -683,9 +675,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		return (stateChangeInFlight == -1) || ( !PipeReader.peekMsg(pipe, MessagePubSub.MSG_CHANGESTATE_70));
 	}
 
-	private boolean hasNextSubscriber(int listIdx) {
-		return -1 != subscriberLists[listIdx];
-	}
 
 	
     private void unsubscribe(short pipeIdx, byte[] backing1, int pos1, int len1, int mask1) {
@@ -716,12 +705,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 			final int limit = 1+listIdx+length;
 			
 			//add index on first -1 or stop if value already found                    
-			for(int i = listIdx+1; i<=limit; i++) {
+			for(int i = listIdx+1; i<limit; i++) {
 				
-			    if (-1 == subscriberLists[i]) {
-			        //end of list //subscriberLists[i]=pipeIdx;
-			        break;
-			    } else if (pipeIdx == subscriberLists[i]){
+			    if (pipeIdx == subscriberLists[i]){
 			    	//stops after the -1 is moved up.
 			    	while ((i<(listIdx+subscriberListSize)) && (-1!=subscriberLists[i])) {
 			    		subscriberLists[i] = subscriberLists[++i];
@@ -769,15 +755,14 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		int length = subscriberLists[listIdx];		
 		int limit = 1+listIdx+length;
 		
-		for(int i = 1+listIdx; i<=limit; i++) {
-		    if (-1 == subscriberLists[i]) {
-		        subscriberLists[i]=pipeIdx; //outgoing pipe which will be sent this data.
-		        subscriberLists[listIdx]++;//incrment the count;
-		        break;
-		    } else if (pipeIdx == subscriberLists[i]){
-		        break;//already in list.
+		for(int i = 1+listIdx; i<limit; i++) {
+		    if (pipeIdx == subscriberLists[i]){
+		        return;//already in list.
 		    }
 		}
+		subscriberLists[limit]=pipeIdx; //outgoing pipe which will be sent this data.
+		subscriberLists[listIdx]++;//incrment the count;
+		
 	}
 
 
