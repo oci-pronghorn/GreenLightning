@@ -240,6 +240,9 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private CharSequence[] externalTopicsXmit = new CharSequence[0];
 	private EgressConverter[] convertersXmit = new EgressConverter[0];
 	private int[] qosXmit = new int[0];
+	private int[] retainXmit = new int[0];
+	
+	
 	
 	private CharSequence[] internalTopicsSub = new CharSequence[0];
 	private CharSequence[] externalTopicsSub = new CharSequence[0];
@@ -290,7 +293,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);
 		convertersXmit = grow(convertersXmit,EgressMQTTStage.copyConverter);
 		qosXmit = grow(qosXmit, transmissionFieldQOS);
-			
+		retainXmit = grow(retainXmit, transmissionFieldRetain);		
+		
 		assert(internalTopicsXmit.length == externalTopicsXmit.length);
 		assert(internalTopicsXmit.length == convertersXmit.length);
 		assert(internalTopicsXmit.length == qosXmit.length);
@@ -378,7 +382,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		}
 		
 		if (internalTopicsXmit.length>0) {
-			new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, qosXmit, transmissionFieldRetain);
+			new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, qosXmit, retainXmit);
 		} else {
 			PipeNoOp.newInstance(builder.gm, clientRequest);			
 		}
@@ -387,8 +391,15 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private int activeRow = -1;	
 	private final MQTTConfigTransmission transConf = new MQTTConfigTransmission() {
 		@Override
-		public void setQoS(int qos) {
+		public MQTTConfigTransmission setQoS(int qos) {
 			qosXmit[activeRow] = qos;
+			return transConf;
+		}
+
+		@Override
+		public MQTTConfigTransmission setRetain(boolean retain) {
+			retainXmit[activeRow] = retain?1:0;
+			return transConf;
 		}
 	};
 	private final MQTTConfigSubscription subsConf = new MQTTConfigSubscription() {

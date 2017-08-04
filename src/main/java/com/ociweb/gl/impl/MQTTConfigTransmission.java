@@ -2,6 +2,6 @@ package com.ociweb.gl.impl;
 
 public interface MQTTConfigTransmission {
 
-	public void setQoS(int qos);
-	
+	public MQTTConfigTransmission setQoS(int qos);
+	public MQTTConfigTransmission setRetain(boolean retain);
 }

@@ -20,7 +20,7 @@ public class EgressMQTTStage extends PronghornStage {
 	private final EgressConverter[] converter;
 	
 	private final int[] fieldQOS;
-	private final int fieldRetain;
+	private final int[] fieldRetain;
 	
 	public static final EgressConverter copyConverter = new EgressConverter() {
 
@@ -38,7 +38,7 @@ public class EgressMQTTStage extends PronghornStage {
 			               Pipe<MessageSubscription> input, Pipe<MQTTClientRequestSchema> output,
 						   CharSequence[] internalTopic, 
 						   CharSequence[] externalTopic, 
-						   int[] fieldQOS, int fieldRetain) {
+						   int[] fieldQOS, int[] fieldRetain) {
 		this(graphManager,input,output,internalTopic, externalTopic, asArray(copyConverter,internalTopic.length), fieldQOS, fieldRetain);
 	}
 	
@@ -52,7 +52,7 @@ public class EgressMQTTStage extends PronghornStage {
 
 	public EgressMQTTStage(GraphManager graphManager, Pipe<MessageSubscription> input, Pipe<MQTTClientRequestSchema> output,
 							CharSequence[] internalTopic,	CharSequence[] externalTopic, EgressConverter[] converter,
-							int[] fieldQOS, int fieldRetain) {
+							int[] fieldQOS, int[] fieldRetain) {
 		super(graphManager, input, output);
 		this.input = input;
 		this.output = output;
@@ -62,7 +62,7 @@ public class EgressMQTTStage extends PronghornStage {
 		this.fieldQOS = fieldQOS;
 		this.fieldRetain = fieldRetain;
 		
-		this.allTopicsMatch = isMatching(internalTopic,externalTopic,converter,fieldQOS);
+		this.allTopicsMatch = isMatching(internalTopic,externalTopic,converter,fieldQOS,fieldRetain);
 		
 		supportsBatchedRelease = false; //must have immediate release
 		supportsBatchedPublish = false; //also we want to minimize outgoing latency.
@@ -73,7 +73,7 @@ public class EgressMQTTStage extends PronghornStage {
 	}
 
 	private boolean isMatching(CharSequence[] internalTopic, CharSequence[] externalTopic,
-			                   EgressConverter[] converter, int[] qos) {
+			                   EgressConverter[] converter, int[] qos, int[] fieldRetain) {
 		assert(internalTopic.length == externalTopic.length);
 		int i = internalTopic.length;
 		while (--i>=0) {
@@ -105,6 +105,13 @@ public class EgressMQTTStage extends PronghornStage {
 			}
 		}		
 		
+		int aRet = fieldRetain[0];
+		k = fieldRetain.length;
+		while(--k>=0) {
+			if (aRet!=fieldRetain[k]) {
+				return false;
+			}
+		}	
 		
 		return true;
 	}
@@ -133,7 +140,7 @@ public class EgressMQTTStage extends PronghornStage {
 			        		i = 0;//to select the common converter for all.
 				        	PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
 				        	PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, fieldQOS[i]);
-				        	PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, fieldRetain);
+				        	PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, fieldRetain[i]);
 				        	
 				        	//direct copy of topic
 				        	DataOutputBlobWriter<MQTTClientRequestSchema> stream = PipeWriter.outputStream(output);
@@ -154,7 +161,7 @@ public class EgressMQTTStage extends PronghornStage {
 				        	
 				        	PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
 				        	PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, fieldQOS[i]);
-				        	PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, fieldRetain);
+				        	PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, fieldRetain[i]);
 				        	PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23, externalTopic[i]);
 			        	}
 			        	
