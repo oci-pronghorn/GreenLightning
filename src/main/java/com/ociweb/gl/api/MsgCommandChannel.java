@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -118,7 +119,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			if (isTooSmall(queueLength, maxMessageSize, config2)) {
     			builder.pcm.addConfig(Math.max(config2.minimumFragmentsOnPipe(), queueLength),
 				           Math.max(config2.maxVarLenSize(), maxMessageSize), MessageSubscription.class); 
-    		}
+    		}			
+			
+			//IngressMessages Confirm that MQTT ingress is big enough as well
+			PipeConfig<IngressMessages> config3 = pcm.getConfig(IngressMessages.class);
+			if (isTooSmall(queueLength, maxMessageSize, config3)) {
+    			builder.pcm.addConfig(Math.max(config3.minimumFragmentsOnPipe(), queueLength),
+				                      Math.max(config3.maxVarLenSize(), maxMessageSize), IngressMessages.class); 
+    		}	
         }
     }
 

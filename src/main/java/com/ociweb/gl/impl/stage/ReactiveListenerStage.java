@@ -23,12 +23,15 @@ import com.ociweb.gl.api.ShutdownListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
 import com.ociweb.gl.api.TimeListener;
+import com.ociweb.gl.api.facade.StartupListenerTransducer;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.ChildClassScanner;
+import com.ociweb.gl.impl.ChildClassScannerVisitor;
 import com.ociweb.gl.impl.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.PubSubListenerBase;
 import com.ociweb.gl.impl.RestListenerBase;
+import com.ociweb.gl.impl.StartupListenerBase;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ClientCoordinator;
@@ -248,6 +251,18 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         timeEvents = (0 != timeRate) && (listener instanceof TimeListener);
     }
     
+    
+    protected ChildClassScannerVisitor visitAllStartups = new ChildClassScannerVisitor<StartupListenerTransducer>() {
+
+		@Override
+		public boolean visit(StartupListenerTransducer child, Object topParent) {
+			runStartupListener(child);
+			return true;
+		}
+
+    	
+    };
+    
     @Override
     public void startup() {              
  
@@ -276,28 +291,36 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         
         timeProcessWindow = (null==stageRate? 0 : (int)(stageRate.longValue()/MS_to_NS));
          
-        //TODO: the transducers need to be listed here as startup listeners.
+        //does all the transducer startup listeners first
+    	ChildClassScanner.visitUsedByClass( listener, 
+    										visitAllStartups, 
+    										StartupListenerTransducer.class);//populates outputPipes
+
         
         //Do last so we complete all the initializations first
         if (listener instanceof StartupListener) {
-        	long start = System.currentTimeMillis();
-        	((StartupListener)listener).startup();
-        	long duration = System.currentTimeMillis()-start;
-        	if (duration>40) { //human perception
-        		String name = listener.getClass().getSimpleName().trim();
-        		if (name.length() == 0) {
-        			name = "a startup listener lambda";
-        		}
-        		logger.warn(
-        				"WARNING: startup method for {} took over {} ms. "+
-        		        "Reconsider the design you may want to do this work in a message listener.\n"+
-        				"Note that no behaviors will execute untill all have completed their startups.",
-        				name, duration);        		      		
-        	}
+        	runStartupListener((StartupListenerBase)listener);
         }        
         startupCompleted=true;
         
     }
+
+	private void runStartupListener(StartupListenerBase startupListener) {
+		long start = System.currentTimeMillis();
+		startupListener.startup();
+		long duration = System.currentTimeMillis()-start;
+		if (duration>40) { //human perception
+			String name = listener.getClass().getSimpleName().trim();
+			if (name.length() == 0) {
+				name = "a startup listener lambda";
+			}
+			logger.warn(
+					"WARNING: startup method for {} took over {} ms. "+
+			        "Reconsider the design you may want to do this work in a message listener.\n"+
+					"Note that no behaviors will execute untill all have completed their startups.",
+					name, duration);        		      		
+		}
+	}
 
     @Override
     public void run() {

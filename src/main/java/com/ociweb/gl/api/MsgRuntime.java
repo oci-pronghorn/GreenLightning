@@ -138,30 +138,36 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return args;
     }
     
-	public final void bridgeSubscription(CharSequence topic, BridgeConfig config) {		
-		config.addSubscription(topic);
+	public final <T,S> S bridgeSubscription(CharSequence topic, BridgeConfig<T,S> config) {		
+		long id = config.addSubscription(topic);
 		keepBridge(config);
+		return config.subscriptionConfigurator(id);
 	}
-	public final void bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
-		config.addSubscription(internalTopic,extrnalTopic);
+	public final <T,S> S bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config) {		
+		long id = config.addSubscription(internalTopic,extrnalTopic);
 		keepBridge(config);
+		return config.subscriptionConfigurator(id);
 	}
-	public final void bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, IngressConverter converter) {		
-		config.addSubscription(internalTopic,extrnalTopic,converter);
+	public final <T,S> S bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config, IngressConverter converter) {		
+		long id = config.addSubscription(internalTopic,extrnalTopic,converter);
 		keepBridge(config);
+		return config.subscriptionConfigurator(id);
 	}
 	
-	public final void bridgeTransmission(CharSequence topic, BridgeConfig config) {		
-		config.addTransmission(this, topic);
+	public final <T,S> T bridgeTransmission(CharSequence topic, BridgeConfig<T,S> config) {		
+		long id = config.addTransmission(this, topic);
 		keepBridge(config);
+		return config.transmissionConfigurator(id);
 	}
-	public final void bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
-		config.addTransmission(this, internalTopic,extrnalTopic);
+	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config) {		
+		long id = config.addTransmission(this, internalTopic,extrnalTopic);
 		keepBridge(config);
+		return config.transmissionConfigurator(id);
 	}	
-	public final void bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, EgressConverter converter) {		
-		config.addTransmission(this, internalTopic,extrnalTopic, converter);
+	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config, EgressConverter converter) {		
+		long id = config.addTransmission(this, internalTopic,extrnalTopic, converter);
 		keepBridge(config);
+		return config.transmissionConfigurator(id);
 	}	
 	
     public final L addRestListener(RestListener listener) {

@@ -3,7 +3,6 @@ package com.ociweb.gl.impl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.BridgeConfig;
 import com.ociweb.gl.api.MQTTBridge;
 import com.ociweb.gl.api.MQTTWritable;
 import com.ociweb.gl.api.MQTTWriter;
@@ -24,7 +23,7 @@ import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.stage.test.PipeNoOp;
 
-public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
+public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTTConfigSubscription> implements MQTTBridge {
 
 	private final static Logger logger = LoggerFactory.getLogger(MQTTConfigImpl.class);
 	
@@ -208,10 +207,15 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 		} else {
 			//No need for this pipe to be large since we can only get one at a time from the MessagePubSub feeding EngressMQTTStage
 			int egressPipeLength = 32;
-			clientRequest = newClientRequestPipe(MQTTClientRequestSchema.instance.newPipeConfig(egressPipeLength, maximumLenghOfVariableLengthFields));
+			
+			PipeConfig<MQTTClientRequestSchema> newPipeConfig = MQTTClientRequestSchema.instance.newPipeConfig(egressPipeLength, maximumLenghOfVariableLengthFields);
+			
+			clientRequest = newClientRequestPipe(newPipeConfig);
 			clientRequest.initBuffers();
 			
-			clientResponse = MQTTClientResponseSchema.instance.newPipe(maxInFlight, maximumLenghOfVariableLengthFields);
+			PipeConfig<MQTTClientResponseSchema> newPipeConfig2 = MQTTClientResponseSchema.instance.newPipeConfig((int) maxInFlight, maximumLenghOfVariableLengthFields);
+			
+			clientResponse = new Pipe<MQTTClientResponseSchema>(newPipeConfig2);
 
 			byte totalConnectionsInBits = 2; //only 4 brokers
 			short maxPartialResponses = 2;
@@ -235,62 +239,68 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 	private CharSequence[] internalTopicsXmit = new CharSequence[0];
 	private CharSequence[] externalTopicsXmit = new CharSequence[0];
 	private EgressConverter[] convertersXmit = new EgressConverter[0];
+	private int[] qosXmit = new int[0];
 	
 	private CharSequence[] internalTopicsSub = new CharSequence[0];
 	private CharSequence[] externalTopicsSub = new CharSequence[0];
 	private IngressConverter[] convertersSub = new IngressConverter[0];
-	
+    private int[] qosSub = new int[0];		
 	
 	@Override
-	public BridgeConfig addSubscription(CharSequence internalTopic, CharSequence externalTopic) {
+	public long addSubscription(CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
 		
 		internalTopicsSub = grow(internalTopicsSub, internalTopic);
 		externalTopicsSub = grow(externalTopicsSub, externalTopic);
 		convertersSub = grow(convertersSub,IngressMQTTStage.copyConverter);
+		qosSub = grow(qosSub, subscriptionQoS);
 		
-		PipeWriter.presumeWriteFragment(clientRequest, MQTTClientRequestSchema.MSG_SUBSCRIBE_8);
-		PipeWriter.writeInt(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_QOS_21, subscriptionQoS);
-		PipeWriter.writeUTF8(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_TOPIC_23, externalTopic);
-		PipeWriter.publishWrites(clientRequest);
-
-
-		return this;
+		assert(internalTopicsSub.length == externalTopicsSub.length);
+		assert(internalTopicsSub.length == convertersSub.length);
+		assert(internalTopicsSub.length == qosSub.length);
+		
+		return internalTopicsSub.length-1;
 	}
 	
 	@Override
-	public BridgeConfig addSubscription(CharSequence internalTopic, CharSequence externalTopic, IngressConverter converter) {
+	public long addSubscription(CharSequence internalTopic, CharSequence externalTopic, IngressConverter converter) {
 		ensureConnected();
 		
 		internalTopicsSub = grow(internalTopicsSub, internalTopic);
 		externalTopicsSub = grow(externalTopicsSub, externalTopic);
 		convertersSub = grow(convertersSub,converter);
+		qosSub = grow(qosSub, subscriptionQoS);
 		
-		PipeWriter.presumeWriteFragment(clientRequest, MQTTClientRequestSchema.MSG_SUBSCRIBE_8);
-		PipeWriter.writeInt(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_QOS_21, subscriptionQoS);
-		PipeWriter.writeUTF8(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_TOPIC_23, externalTopic);
-		PipeWriter.publishWrites(clientRequest);
+		assert(internalTopicsSub.length == externalTopicsSub.length);
+		assert(internalTopicsSub.length == convertersSub.length);
+		assert(internalTopicsSub.length == qosSub.length);
 		
-		return this;
+		return internalTopicsSub.length-1;
 	}
 
 
 	@Override
-	public BridgeConfig addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic) {
+	public long addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
 
-		logger.info("added subscription to {} in order to transmit out to  ",internalTopic, externalTopic);
+		//logger.trace("added subscription to {} in order to transmit out to  ",internalTopic, externalTopic);
 		builder.addStartupSubscription(internalTopic, code);
 		
 		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
 		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);
 		convertersXmit = grow(convertersXmit,EgressMQTTStage.copyConverter);
+		qosXmit = grow(qosXmit, transmissionFieldQOS);
 			
-		return this;
+		assert(internalTopicsXmit.length == externalTopicsXmit.length);
+		assert(internalTopicsXmit.length == convertersXmit.length);
+		assert(internalTopicsXmit.length == qosXmit.length);
+		
+		return internalTopicsXmit.length-1;
+		
 	}
 
 	@Override
-	public BridgeConfig addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
+	public long addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
 		ensureConnected();
 
 		builder.addStartupSubscription(internalTopic, code);
@@ -298,8 +308,13 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
 		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);
 		convertersXmit = grow(convertersXmit,converter);
-			
-		return this;
+		qosXmit = grow(qosXmit, transmissionFieldQOS);
+				
+		assert(internalTopicsXmit.length == externalTopicsXmit.length);
+		assert(internalTopicsXmit.length == convertersXmit.length);
+		assert(internalTopicsXmit.length == qosXmit.length);
+		
+		return internalTopicsXmit.length-1;
 	}
 
 	private EgressConverter[] grow(EgressConverter[] converters, EgressConverter converter) {
@@ -311,6 +326,15 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 		return newArray;
 	}
 
+	private int[] grow(int[] array, int newItem) {
+		
+		int i = array.length;
+		int[] newArray = new int[i+1];
+		System.arraycopy(array, 0, newArray, 0, i);
+		newArray[i] = newItem;
+		return newArray;
+	}
+	
 	private IngressConverter[] grow(IngressConverter[] converters, IngressConverter converter) {
 		
 		int i = converters.length;
@@ -338,16 +362,54 @@ public class MQTTConfigImpl extends BridgeConfigImpl implements MQTTBridge {
 		assert(internalTopicsSub.length == convertersSub.length);		
 		
 		if (internalTopicsSub.length>0) {
-			new IngressMQTTStage(builder.gm, clientResponse, IngressMessages.instance.newPipe(10, 1024), externalTopicsSub, internalTopicsSub, convertersSub);
+			
+			//now publish all our subscription requests
+			int i = externalTopicsSub.length;
+			while (--i>=0) {			
+				PipeWriter.presumeWriteFragment(clientRequest, MQTTClientRequestSchema.MSG_SUBSCRIBE_8);
+				PipeWriter.writeInt(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_QOS_21, qosSub[i]);
+				PipeWriter.writeUTF8(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_TOPIC_23, externalTopicsSub[i]);
+				PipeWriter.publishWrites(clientRequest);
+			}
+			
+			new IngressMQTTStage(builder.gm, clientResponse, new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), externalTopicsSub, internalTopicsSub, convertersSub);
 		} else {
 			PipeCleanerStage.newInstance(builder.gm, clientResponse);
 		}
 		
 		if (internalTopicsXmit.length>0) {
-			new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, transmissionFieldQOS, transmissionFieldRetain);
+			new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, qosXmit, transmissionFieldRetain);
 		} else {
 			PipeNoOp.newInstance(builder.gm, clientRequest);			
 		}
 	}
+
+	private int activeRow = -1;	
+	private final MQTTConfigTransmission transConf = new MQTTConfigTransmission() {
+		@Override
+		public void setQoS(int qos) {
+			qosXmit[activeRow] = qos;
+		}
+	};
+	private final MQTTConfigSubscription subsConf = new MQTTConfigSubscription() {
+		@Override
+		public void setQoS(int qos) {
+			qosSub[activeRow] = qos;
+		}
+	};
+
+	@Override
+	public MQTTConfigTransmission transmissionConfigurator(long id) {
+		activeRow = (int)id;
+		return transConf;
+	}
+
+	@Override
+	public MQTTConfigSubscription subscriptionConfigurator(long id) {
+		activeRow = (int)id;
+		return subsConf;
+	}
+
+
 
 }

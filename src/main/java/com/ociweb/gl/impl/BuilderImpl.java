@@ -349,6 +349,11 @@ public class BuilderImpl implements Builder {
 		this.pcm.addConfig(new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload));   
 		this.pcm.addConfig(new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload));
 
+		//for MQTT ingress
+		int maxMQTTMessagesQueue = 8;
+		int maxMQTTMessageSize = 1024;
+		this.pcm.addConfig(new PipeConfig(IngressMessages.instance, maxMQTTMessagesQueue, maxMQTTMessageSize));
+		
 		
 	}
 

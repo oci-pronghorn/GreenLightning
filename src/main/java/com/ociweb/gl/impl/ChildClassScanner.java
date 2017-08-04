@@ -55,29 +55,30 @@ public class ChildClassScanner {
 								return false;
 							}                              
 						} else {      
-							
+							//NOTE: using the TrieParser would be better here.... (faster startup)
+							String name;
 							if (    (obj!=null)
 									&& (obj.getClass()!=null)
 									&&  (!obj.getClass().isPrimitive()) 
 									&& (obj != listener) 
-									&& (!obj.getClass().getName().startsWith("java.")) 
-									&& (!obj.getClass().getName().startsWith("[Ljava."))
-									&& (!obj.getClass().getName().startsWith("[["))
-									&& (!obj.getClass().getName().startsWith("[I"))
-									&& (!obj.getClass().getName().startsWith("[B"))
-									&& (!obj.getClass().getName().startsWith("[J"))
-									&& (!obj.getClass().getName().startsWith("[S"))
+									&& (!(name=obj.getClass().getName()).startsWith("java.")) 
+									&& (!name.startsWith("[Ljava."))
+									&& (!name.startsWith("[["))
+									&& (!name.startsWith("[I"))
+									&& (!name.startsWith("[B"))
+									&& (!name.startsWith("[J"))
+									&& (!name.startsWith("[S"))
 									
-									&& (!obj.getClass().getName().startsWith("com.ociweb.pronghorn.stage."))
-									&& (!obj.getClass().getName().startsWith("[Lcom.ociweb.pronghorn.stage."))
+									&& (!name.startsWith("com.ociweb.pronghorn.stage."))
+									&& (!name.startsWith("[Lcom.ociweb.pronghorn.stage."))
 									
-									&& (!obj.getClass().getName().startsWith("com.ociweb.iot.hardware."))
-									&& (!obj.getClass().getName().startsWith("[Lcom.ociweb.iot.hardware."))
+									&& (!name.startsWith("com.ociweb.iot.hardware."))
+									&& (!name.startsWith("[Lcom.ociweb.iot.hardware."))
 																	
-									&& (!obj.getClass().getName().startsWith("com.ociweb.pronghorn.pipe."))  
-									&& (!obj.getClass().getName().startsWith("[Lcom.ociweb.pronghorn.pipe.")) 
+									&& (!name.startsWith("com.ociweb.pronghorn.pipe."))  
+									&& (!name.startsWith("[Lcom.ociweb.pronghorn.pipe.")) 
 									
-									&& (!obj.getClass().getName().startsWith("org.slf4j."))
+									&& (!name.startsWith("org.slf4j."))
 									&& (!obj.getClass().isEnum())
 									&& (!(obj instanceof MsgRuntime))               		
 									&& !fields[f].isSynthetic()

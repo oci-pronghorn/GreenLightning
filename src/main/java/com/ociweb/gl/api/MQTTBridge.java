@@ -1,6 +1,9 @@
 package com.ociweb.gl.api;
 
-public interface MQTTBridge extends BridgeConfig {
+import com.ociweb.gl.impl.MQTTConfigSubscription;
+import com.ociweb.gl.impl.MQTTConfigTransmission;
+
+public interface MQTTBridge extends BridgeConfig<MQTTConfigTransmission, MQTTConfigSubscription> {
 
 	public MQTTBridge keepAliveSeconds(int seconds);
 	public MQTTBridge cleanSession(boolean clean);
