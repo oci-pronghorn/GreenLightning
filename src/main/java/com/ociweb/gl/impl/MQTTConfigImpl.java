@@ -391,8 +391,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private int activeRow = -1;	
 	private final MQTTConfigTransmission transConf = new MQTTConfigTransmission() {
 		@Override
-		public MQTTConfigTransmission setQoS(int qos) {
-			qosXmit[activeRow] = qos;
+		public MQTTConfigTransmission setQoS(MQTTQOS qos) {
+			qosXmit[activeRow] = qos.ordinal();
 			return transConf;
 		}
 
@@ -404,8 +404,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	};
 	private final MQTTConfigSubscription subsConf = new MQTTConfigSubscription() {
 		@Override
-		public void setQoS(int qos) {
-			qosSub[activeRow] = qos;
+		public void setQoS(MQTTQOS qos) {
+			qosSub[activeRow] = qos.ordinal();
 		}
 	};
 
