@@ -56,9 +56,10 @@ public class TrafficCopStage extends PronghornStage {
     public String toString() {
         String result = super.toString();
         
-        return result+ ( ((ackExpectedOn>=0)&&(ackExpectedOn<ackIn.length)&&(null!=ackIn[ackExpectedOn])) ? 
-        		" AckExpectedOn:"+ackExpectedOn+" "
-        		   +GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id)
+        final int localActEO = ackExpectedOn;//must hold since it can change while using
+        boolean needsAck = (localActEO>=0)&&(localActEO<ackIn.length)&&(null!=ackIn[localActEO]);
+		return result+ ( needsAck ? 
+        		" AckExpectedOn:"+localActEO+" "+GraphManager.getRingProducer(graphManager, ackIn[localActEO].id)
         		: "" );
     }
     

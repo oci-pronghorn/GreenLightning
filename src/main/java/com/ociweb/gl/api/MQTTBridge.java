@@ -1,7 +1,7 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.MQTTConfigSubscription;
-import com.ociweb.gl.impl.MQTTConfigTransmission;
+import com.ociweb.gl.impl.mqtt.MQTTConfigSubscription;
+import com.ociweb.gl.impl.mqtt.MQTTConfigTransmission;
 
 public interface MQTTBridge extends BridgeConfig<MQTTConfigTransmission, MQTTConfigSubscription> {
 

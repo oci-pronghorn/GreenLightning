@@ -74,7 +74,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 			   runtime.logStageScheduleRates();
 
 			   if ( runtime.builder.isTelemetryEnabled()) {
-				   runtime.gm.enableTelemetry(8098);
+				   runtime.telemetryHost = runtime.gm.enableTelemetry(runtime.builder.telemetryHost(),8098);
 			   }
 		   //exportGraphDotFile();
 
@@ -100,7 +100,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 			   runtime.logStageScheduleRates();
 
 			   if ( runtime.builder.isTelemetryEnabled()) {
-				   runtime.gm.enableTelemetry(8098);
+				   runtime.gm.enableTelemetry(runtime.builder.telemetryHost(),8098);
 			   }
 		   //exportGraphDotFile();
 

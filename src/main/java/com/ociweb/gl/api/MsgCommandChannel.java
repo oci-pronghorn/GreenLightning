@@ -16,6 +16,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
+import com.ociweb.pronghorn.pipe.BlobWriter;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
@@ -474,6 +475,35 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }        
         return false;
 	}
+	
+    public boolean httpClose(CharSequence host) {    	
+    	return httpClose(host, builder.isClientTLS()?443:80, (HTTPResponseListener)listener);
+    }
+    private boolean httpClose(CharSequence host, int port, HTTPResponseListener listener) {
+    	return httpClose(host, port, builder.behaviorId((HTTPResponseListener)listener)); 	
+    }
+    public boolean httpClose(CharSequence host, int behaviorId) {
+    	return httpClose(host, builder.isClientTLS()?443:80, behaviorId);
+    }
+	public boolean httpClose(CharSequence host, int port, int behaviorId) {
+		assert(builder.isUseNetClient());
+		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
+		
+		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104)) {
+                	    
+			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_HOST_2, host);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_LISTENER_10, behaviorId);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_PORT_1, port);
+		
+    		PipeWriter.publishWrites(httpRequest);
+                		
+    		publishGo(1, builder.netIndex(), this);
+    		    	            
+            return true;
+        }        
+        return false;
+	}
+	
 
     /**
      * Submits an HTTP POST request asynchronously.
@@ -959,6 +989,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
     }
 
+
+    
 	public boolean publishHTTPResponse(HTTPFieldReader w, int statusCode) {
 		
 		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
@@ -1057,7 +1089,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			DataOutputBlobWriter.openFieldAtPosition(outputStream, block1HeaderBlobPosition); 	//no context, that will come in the second message 
 	        
 			//for the var field we store this as meta then length
-			block1PositionOfLen = 1+Pipe.workingHeadPosition(pipe);
+			block1PositionOfLen = (1+Pipe.workingHeadPosition(pipe));
 			
 			DataOutputBlobWriter.closeLowLevelMaxVarLenField(outputStream);
 			assert(pipe.maxVarLen == Pipe.slab(pipe)[((int)block1PositionOfLen) & Pipe.slabMask(pipe)]) : "expected max var field length";

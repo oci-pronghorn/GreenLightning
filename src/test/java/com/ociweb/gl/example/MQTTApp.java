@@ -61,7 +61,7 @@ public class MQTTApp implements GreenApp {
 				cmdChnl.publishTopic("topic/egress", writable);
 			}
 		};
-		runtime.addTimeListener(timeListener);
+		runtime.addTimePulseListener(timeListener);
 		
 		
 		final MsgCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);

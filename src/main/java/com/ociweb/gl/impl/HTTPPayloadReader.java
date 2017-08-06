@@ -37,14 +37,12 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 
 	public boolean openHeaderData(int headerId, Headable headReader) {
 	
-		if (headerId>=0) {
+		if (headerId>=0) {//is this a known header
 			int item = IntHashTable.getItem(headerHash, HTTPHeader.HEADER_BIT | headerId);
 			
-			if (item!=0) {				
+			if (item!=0) { //index location for the header				
 								
-				int itemIndex = 0xFFFF & item;
-				
-				int posFromStart = readFromEndLastInt(paraIndexCount + 1 + itemIndex);
+				int posFromStart = readFromEndLastInt(paraIndexCount + 1 + (0xFFFF & item));
 				assert(posFromStart<=getBackingPipe(this).maxVarLen) : "index position "+posFromStart+" is out of bounds "+getBackingPipe(this).maxVarLen;
 				assert(posFromStart>=0) : "index position must be zero or positive";
 				

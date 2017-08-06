@@ -277,7 +277,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	}
     	
     	httpSpec = HTTPSpecification.defaultSpec();   	 
-    	
+		htc  = new HeaderTypeCapture(httpSpec);
+	
     	//////////////////
     	///HTTPClient support
     	TrieParserReader parserReader = new TrieParserReader(2, true);
@@ -455,11 +456,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	
 	}
 
-    private final HeaderTypeCapture htc  = new HeaderTypeCapture();
+    private HeaderTypeCapture htc;
     
     
 	final void consumeNetResponse(HTTPResponseListener listener, Pipe<NetResponseSchema> p) {
 		 assert(null!=ccm) : "must define coordinator";
+
 		 
     	 while (Pipe.hasContentToRead(p)) {                
              
@@ -479,23 +481,31 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 //      the full file is complete.  No files will be interleaved.
             		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
 	            	 reader.openLowLevelAPIField();
+	            	 
+	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	
 	            	 final short statusId = reader.readShort();	
 				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
 
-				     reader.setStatus(statusId);
+				     reader.setStatusCode(statusId);
+				     reader.setConnectionId(ccId1);
 				     
-	            	 reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), htc);
-	            	 reader.setContentType((HTTPContentType)httpSpec.contentTypes[htc.type()]);
+				     //logger.trace("data avail {} status {} ",reader.available(),statusId);
+				     
+	            	 if (reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), htc)) {
+	            		 reader.setContentType(htc.type());
+	            	 } else {
+	            		 logger.info("no content type was found...");
+	            	 }
+	            	 	            	 
 	            	 reader.setFlags(flags);
 	        
 	            	 if (!listener.responseHTTP(reader)) {
 	            		 Pipe.resetTail(p);
+	            		 logger.info("xxxxxxxxxxxxxxxx  CONTINUE LATER");
 	            		 return;//continue later and repeat this same value.
 	            	 }
 	                 
-	            	 //TODO: application layer can not know that the response is complete or we will have a continuation...
-	            	 //      they will have to read the headers to know?
 	            	 
 	            	 break;
 	             case NetResponseSchema.MSG_CONTINUATION_102:
@@ -505,6 +515,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
             		 HTTPResponseReader continuation = (HTTPResponseReader)Pipe.inputStream(p);
             		 continuation.openLowLevelAPIField();
             		 continuation.setFlags(flags2);
+            		 
+            		 //logger.trace("continuation with "+Integer.toHexString(flags2)+" avail "+continuation.available());
             		 
 	            	 if (!listener.responseHTTP(continuation)) {
 						 Pipe.resetTail(p);

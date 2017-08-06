@@ -1,4 +1,4 @@
-package com.ociweb.gl.impl;
+package com.ociweb.gl.impl.mqtt;
 
 public interface MQTTConfigSubscription {
 

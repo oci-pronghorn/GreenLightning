@@ -12,7 +12,7 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	private short status;
 	private HTTPContentType httpContentType;
 	private int flags;
-	
+	private long connectionId;
 	
 	public HTTPResponseReader(Pipe<NetResponseSchema> pipe) {
 		super(pipe);
@@ -24,7 +24,7 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 		this.headerTrieParser = headerTrieParser;
 	}
 
-	public void setStatus(short statusId) {
+	public void setStatusCode(short statusId) { //TODO: hide these so maker does not see them.
 		this.status = statusId;
 	}
 	
@@ -32,7 +32,7 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
     * statusCode Status code of the response. -1 indicates
     *                   the network connection was lost.
     */                   
-	public short getStatus() {
+	public short statusCode() {
 		return this.status;
 	}
 
@@ -40,12 +40,16 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 		this.httpContentType = httpContentType;
 	}
 	
-	public HTTPContentType getContentType() {
+	public HTTPContentType contentType() {
 		return this.httpContentType;
 	}
 
 	public void setFlags(int flags) {
 		this.flags = flags;
+	}
+	
+	public final boolean isBeginningOfResponse() {
+		return 0 != (this.flags&HTTPFieldReader.BEGINNING_OF_RESPONSE);
 	}
 	
 	public final boolean isEndOfResponse() {
@@ -54,6 +58,14 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	
 	public final boolean isConnectionClosed() {
 		return 0 != (this.flags&HTTPFieldReader.CLOSE_CONNECTION);
+	}
+
+	public void setConnectionId(long ccId1) {
+		connectionId = ccId1;
+	}
+	
+	public long connectionId() {
+		return connectionId;
 	}
 	
 	

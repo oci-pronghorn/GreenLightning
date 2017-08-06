@@ -12,7 +12,7 @@ import com.ociweb.gl.impl.MQTTConfigImpl;
  *
  * @author Nathan Tippy
  */
-public interface Builder {
+public interface Builder extends ArgumentProvider {
 
 
     /**
@@ -58,7 +58,7 @@ public interface Builder {
 	
 	void enableServer(int bindPort);
 	
-	void enableTelemetry();
+	String enableTelemetry();
 	
 	void setDefaultRate(long ns);
 	
@@ -84,13 +84,9 @@ public interface Builder {
 		
 	
 	void privateTopics(String ... topic);
-	
-	String[] args();
+
 	
 	Builder useNetClient();
 	Builder useInsecureNetClient();
 
-	String getArgumentValue(String longName, String shortName, String defaultValue);
-	boolean hasArgument(String longName, String shortName);
-	
 }

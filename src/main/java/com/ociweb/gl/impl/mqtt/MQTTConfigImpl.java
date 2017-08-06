@@ -1,4 +1,4 @@
-package com.ociweb.gl.impl;
+package com.ociweb.gl.impl.mqtt;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -7,6 +7,8 @@ import com.ociweb.gl.api.MQTTBridge;
 import com.ociweb.gl.api.MQTTWritable;
 import com.ociweb.gl.api.MQTTWriter;
 import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.impl.BridgeConfigImpl;
+import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.EgressMQTTStage;
@@ -55,7 +57,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private int transmissionFieldQOS = 0; 
 	private int transmissionFieldRetain = 0;
 	
-	MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
+	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
 			       BuilderImpl builder, long rate, 
 			       short maxInFlight, int maxMessageLength) {
 		

@@ -57,6 +57,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     protected StageScheduler scheduler;
     
+    protected String telemetryHost;
+    
     //NOTE: keep short since the MessagePubSubStage will STOP consuming message until the one put on here
     //      is actually taken off and consumed.  We have little benefit to making this longer.
     protected static final int defaultCommandChannelSubscriberLength = 8;
@@ -188,11 +190,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     public final L addTimePulseListener(TimeListener listener) {
         return (L) registerListenerImpl(listener);
-    }
-    
-    @Deprecated
-    public final L addTimeListener(TimeListener listener) {
-        return (L) addTimePulseListener(listener);
     }
     
     public final L addPubSubListener(PubSubListener listener) {

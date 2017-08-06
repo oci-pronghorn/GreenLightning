@@ -21,6 +21,7 @@ import com.ociweb.gl.api.facade.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.facade.PubSubListenerTransducer;
 import com.ociweb.gl.api.facade.RestListenerTransducer;
 import com.ociweb.gl.api.facade.StateChangeListenerTransducer;
+import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -124,6 +125,7 @@ public class BuilderImpl implements Builder {
 	private boolean isTLSClient = true; 
 		
 	private boolean isTelemetryEnabled = false;
+	private String telemetryHost = null;
 	
 	//TODO: set these vales when we turn on the client usage??
 	private int connectionsInBit = 3; 
@@ -678,11 +680,14 @@ public class BuilderImpl implements Builder {
 		return isTelemetryEnabled;
 	}
 
+	public String telemetryHost() {
+		return telemetryHost;
+	}
+	
 	@Override
-	public void enableTelemetry() {
+	public String enableTelemetry() {
 		isTelemetryEnabled = true;
-		
-		//TODO: build more of the object here if possible
+		return telemetryHost = NetGraphBuilder.bindHost();
 	}
 	
 	public final long getDefaultSleepRateNS() {
