@@ -1,7 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.MQTTConfigImpl;
-
 /**
  * Base interface for an IoT device's hardware.
  * <p>
