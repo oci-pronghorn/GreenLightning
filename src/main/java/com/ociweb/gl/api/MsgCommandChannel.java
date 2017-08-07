@@ -18,6 +18,7 @@ import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.BlobWriter;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
@@ -37,12 +38,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	private final Logger logger = LoggerFactory.getLogger(MsgCommandChannel.class);
 	
     private Pipe<TrafficOrderSchema> goPipe;
+    
     private Pipe<MessagePubSub> messagePubSub;
     private Pipe<ClientHTTPRequestSchema> httpRequest;
     private Pipe<ServerResponseSchema>[] netResponse;
     private Pipe<MessagePubSub>[] exclusivePubSub;
     
-    private static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
+
+	private static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
        
     private int lastResponseWriterFinished = 1;//starting in the "end" state
     
@@ -99,6 +102,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.parallelInstanceId = parallelInstanceId;
     }
 
+    public boolean hasRoomFor(int messageCount) {
+		return Pipe.hasRoomForWrite(goPipe, 
+    			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(goPipe))*messageCount);
+    }
+    
     public void ensureDynamicMessaging() {
     	if (null!=this.goPipe) {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");

@@ -58,7 +58,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private static final int SIZE_OF_MSG_STATECHANGE = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_STATECHANGED_71);
 	private static final int SIZE_OF_MSG_PUBLISH = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_PUBLISH_103);
 	protected final Object              listener;
-    protected final TimeListener[]      timeListeners;
+    protected final TimeListener        timeListener;
     
     protected final Pipe<?>[]           inputPipes;
     protected final Pipe<?>[]           outputPipes;
@@ -166,13 +166,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         	assert(shudownListenrCount>=0);
         }
         
-        //TODO: add child object here as well?
         if (listener instanceof TimeListener) {
-        	timeListeners = new TimeListener[]{(TimeListener)listener};
+        	timeListener = (TimeListener)listener;
         } else {
-        	timeListeners = new TimeListener[0];
+        	timeListener = null;
         }
-                
+       
     }
 
     private static Pipe[] consumerJoin(Pipe<?>[] inputPipes,
@@ -356,7 +355,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	}
     	    	
         if (timeEvents) {         	
-			processTimeEvents(timeListeners, timeTrigger);            
+			processTimeEvents(timeListener, timeTrigger);            
 		}
         
         //behaviors
@@ -630,7 +629,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}        
 
 	
-	protected final void processTimeEvents(TimeListener[] listener, long trigger) {
+	protected final void processTimeEvents(TimeListener listener, long trigger) {
 		
 		long msRemaining = (trigger-builder.currentTimeMillis()); 
 		if (msRemaining > timeProcessWindow) {
@@ -643,15 +642,21 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			} catch (InterruptedException e) {
 			}
 		}		
-		while (builder.currentTimeMillis() < trigger) {
+		long now;
+		while ((now = builder.currentTimeMillis()) < trigger) {
 			Thread.yield();                	
 		}
-		int iteration = timeIteration++;
+		int iteration = timeIteration++;		
+		listener.timeEvent(trigger, iteration);
 		
-		//all Internal Objects will get these sequentially 
-		for(int i = 0; i<listener.length; i++) {
-			listener[i].timeEvent(trigger, iteration);
-		}		
+		long duration = builder.currentTimeMillis()-now;
+		
+		if (duration>timeRate) {
+			logger.warn("time pulse is scheduled at a rate of {}ms "
+				 	  + "however the last time event call took {}ms which is too long."
+				 	  + " \nConsider doing less work in the timeEvent() method, use publishTopic() "
+				 	  + "to push this work off till later.", timeRate, duration);
+		}
 		
 		timeTrigger += timeRate;
 	}
