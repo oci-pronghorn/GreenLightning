@@ -3,9 +3,11 @@
 ## What you will need before you start:
 #### [Java 8](https://docs.oracle.com/javase/8/docs/technotes/guides/install/install_overview.html) 
 #### [Maven](https://maven.apache.org/install.html)
-,which downloads and manages the libraries and APIs needed to get the Grove device working.
+- which downloads and manages the libraries and APIs needed to get the Grove device working.
 #### [Git](https://git-scm.com/)
-, which clones a template Maven project with the necessary dependencies already set up.
+- which clones a template Maven project with the necessary dependencies already set up.
+#### [PuTTY](http://www.putty.org/)
+- which allows you to interact and control your device
 
 ## Starting Your Own Project
 
@@ -78,3 +80,25 @@ Click "OK".
 
 The import will be performed automatically.
 
+### Building the project
+Open your project folder in the terminal of your choosing and type
+```
+mvn install
+```
+.. to build the project. This will create a .jar file named ProjectXYZ.jar in the **/target** folder (note that there are other .jar files  in **/target**, but we don’t have to worry about those). This jar is executable and contains all its needed dependencies. 
+
+### Importing and running the project to your device
+After succesfully building the project, ```cd``` into the **/target** folder. Now, use 
+```
+scp ProjectXYZ.jar username@servername:
+``` 
+This will send the jar file to your RaspberryPi. You can also send the jar file to a specifc location by adding the file path after the colon. For example, if your username was "pi", the server name was "raspberry" and you wanted to add the .jar file to your Projects folder, the command would look like this ..
+```
+scp ProjectXYZ.jar pi@raspberry:/Projects/
+```
+
+Once the project is your device, use PuTTY to connect to your device. In PuTTY, if needed, ```cd``` into the folder containging your .jar file and then use the following command on your device..
+```
+java -jar ProjectXYZ.jar
+```
+.. to execute it. To exit the app at any time, press Ctrl+c.
