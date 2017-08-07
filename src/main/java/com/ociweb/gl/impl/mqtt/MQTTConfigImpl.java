@@ -4,9 +4,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.MQTTBridge;
-import com.ociweb.gl.api.MQTTWritable;
 import com.ociweb.gl.api.MQTTWriter;
 import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.impl.BridgeConfigImpl;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
@@ -37,7 +37,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private CharSequence user = null;
 	private CharSequence pass = null;
 	private CharSequence willTopic = null;
-	private MQTTWritable willPayload = null;
+	private Writable willPayload = null;
 	//
 	private int flags;
 	private boolean isTLS; //derive from host/port args
@@ -183,7 +183,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		return this;
 	}
 
-	public MQTTBridge will(boolean retain, int qos, CharSequence topic, MQTTWritable write ) {
+	public MQTTBridge will(boolean retain, int qos, CharSequence topic, Writable write ) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
