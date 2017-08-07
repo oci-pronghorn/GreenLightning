@@ -118,6 +118,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	if (null!=this.goPipe) {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
     	}
+    	growCommandCountRoom(queueLength);
     	this.initFeatures |= DYNAMIC_MESSAGING;    
     	PipeConfig<MessagePubSub> config1 = pcm.getConfig(MessagePubSub.class);
 		if (isTooSmall(queueLength, maxMessageSize, config1)) {
@@ -154,6 +155,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	if (null!=this.goPipe) {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
     	}
+    	growCommandCountRoom(queueLength);
     	this.initFeatures |= NET_REQUESTER;
     	PipeConfig<ClientHTTPRequestSchema> config = pcm.getConfig(ClientHTTPRequestSchema.class);
 		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
@@ -173,6 +175,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	if (null!=this.goPipe) {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
     	}
+    	growCommandCountRoom(queueLength);
     	this.initFeatures |= NET_RESPONDER;    	
     	PipeConfig<ServerResponseSchema> config = pcm.getConfig(ServerResponseSchema.class);
 		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
@@ -182,14 +185,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
     
     
-    public void ensureCommandCountRoom(int queueLength) {
+    protected void growCommandCountRoom(int count) {
     	if (null!=this.goPipe) {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
     	}
     	PipeConfig<TrafficOrderSchema> goConfig = this.pcm.getConfig(TrafficOrderSchema.class);
-    	if (queueLength>goConfig.minimumFragmentsOnPipe() ) {
-    		this.pcm.addConfig(queueLength, 0, TrafficOrderSchema.class);
-    	}
+    	this.pcm.addConfig(count + goConfig.minimumFragmentsOnPipe(), 0, TrafficOrderSchema.class);
+
     }
     
     
