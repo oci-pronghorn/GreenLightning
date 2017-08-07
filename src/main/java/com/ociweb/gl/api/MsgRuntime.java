@@ -481,15 +481,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 	
 	private void buildGraphForServer(MsgApp app) {
-		
-		
+
 		ServerPipesConfig serverConfig = new ServerPipesConfig(builder.isLarge(), builder.isServerTLS());
 
 		ServerCoordinator serverCoord = new ServerCoordinator( builder.isServerTLS(),
 															   (String) builder.bindHost(), builder.bindPort(), 
 				                                               serverConfig.maxConnectionBitsOnServer, 
 				                                               serverConfig.maxPartialResponsesServer, 
-				                                               builder.parallelism());
+				                                               builder.parallelism(),
+				                                               "Server",builder.defaultHostPath());
 		
 		final int routerCount = builder.parallelism();
 		

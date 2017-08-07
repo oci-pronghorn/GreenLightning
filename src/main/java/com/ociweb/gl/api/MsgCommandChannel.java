@@ -1001,27 +1001,38 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 
     
-	public boolean publishHTTPResponse(HTTPFieldReader w, int statusCode) {
+	public boolean publishHTTPResponse(HTTPFieldReader reqeustReader, int statusCode) {
 		
 		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
 		//logger.info("Building response for connection {} sequence {} ",w.getConnectionId(),w.getSequenceCode());
 		
-		return publishHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
+		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
 				statusCode,
 				HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION,
 				null,
 				Writable.NO_OP); //no type and no body so use null
 	}
 
-	public boolean publishHTTPResponse(HTTPFieldReader w, 
+	public boolean publishHTTPResponse(HTTPFieldReader reqeustReader, 
+            int statusCode,
+            HTTPContentTypeDefaults contentType,
+            Writable writable) {
+	
+		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
+		
+		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
+		statusCode, HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION, contentType, writable);
+	}	
+	
+	public boolean publishHTTPResponse(HTTPFieldReader reqeustReader, 
 										            int statusCode, final int context, 
 										            HTTPContentTypeDefaults contentType,
 										            Writable writable) {
 		
 		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
-		return publishHTTPResponse(w.getConnectionId(), w.getSequenceCode(),
+		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
 				                statusCode, context, contentType, writable);
 	}	
 

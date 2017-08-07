@@ -118,6 +118,7 @@ public class BuilderImpl implements Builder {
 
 	protected MQTTConfigImpl mqtt = null;
 		
+	private String defaultHostPath = "";
 	private String bindHost = null;
 	private int bindPort = -1;
 	private boolean isLarge = false;
@@ -194,9 +195,19 @@ public class BuilderImpl implements Builder {
 		return bindPort;
 	}
 	
-    public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
+	public final String defaultHostPath() {
+		return defaultHostPath;
+	}
+	
+	public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
+		enableServer(isTLS, isLarge, bindHost, bindPort, "");
+	}
+	
+    public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath) {
     	
     	this.useNetServer();
+
+    	this.defaultHostPath = defaultPath;
     	this.isTLSServer = isTLS;
     	this.isLarge = isLarge;
     	this.bindHost = bindHost;
@@ -207,14 +218,21 @@ public class BuilderImpl implements Builder {
     	if (bindPort<=0 || (bindPort>(1<<15))) {
     		throw new UnsupportedOperationException("invalid port "+bindPort);
     	}
-    	
     }
  
-    public final void enableServer(boolean isTLS, int bindPort) {
-    	enableServer(isTLS,false,NetGraphBuilder.bindHost(),bindPort);
+	public final void enableServer(boolean isTLS, int bindPort) {
+		enableServer(isTLS, bindPort, "");
+	}
+	
+    public final void enableServer(boolean isTLS, int bindPort, String defaultPath) {
+    	enableServer(isTLS,false,NetGraphBuilder.bindHost(),bindPort,defaultPath);
     }
     
-    public final void enableServer(int bindPort) {
+	public final void enableServer(int bindPort) {
+		enableServer(bindPort, "");
+	}
+    
+    public final void enableServer(int bindPort, String defaultPath) {
     	enableServer(true,false,NetGraphBuilder.bindHost(),bindPort);
     }
     
@@ -633,6 +651,17 @@ public class BuilderImpl implements Builder {
 		
 	@Override
 	public final int registerRoute(CharSequence route, byte[] ... headers) {
+		if (route.length()==0) {
+			throw new UnsupportedOperationException("path must be of length one or more and start with /");
+		}
+		if (route.charAt(0)!='/') {
+			throw new UnsupportedOperationException("path must start with /");
+		}
+		return routerConfig().registerRoute(route, headers);
+	}
+	
+	@Override
+	public final int defineRoute(CharSequence route, byte[] ... headers) {
 		if (route.length()==0) {
 			throw new UnsupportedOperationException("path must be of length one or more and start with /");
 		}

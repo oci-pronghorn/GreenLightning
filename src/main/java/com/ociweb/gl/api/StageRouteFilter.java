@@ -28,6 +28,28 @@ public class StageRouteFilter implements RouteFilter {
 	}
 
 	@Override
+	public RouteFilter excludeRoutes(int... routeIds) {
+		int allRoutes = builder.routerConfig().routesCount();	
+		while(--allRoutes>=0) {		
+			if (!contains(routeIds,allRoutes)) {			
+				builder.appendPipeMapping(input, allRoutes, parallelIndex);			
+			}
+		}
+		
+		return this;
+	}
+	
+	private boolean contains(int[] array, int item) {
+		int i = array.length;
+		while (--i>=0) {
+			if (array[i] == item) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	@Override
 	public RouteFilter includeAllRoutes() {
 		
 		//  RouteFilter

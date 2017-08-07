@@ -35,7 +35,6 @@ import com.ociweb.gl.impl.StartupListenerBase;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ClientCoordinator;
-import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
@@ -88,6 +87,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	private TrieParserReader methodReader;
 	private CallableStaticMethod[] methods;
 	//////////////////
+	
+	//////////////////
+	//only used for direct rest response dispatch upon route arrival
+	//////////////////
+	private CallableStaticRestRequestReader[] restRequestReader;
+	////////////////
 	
 	    	
     private boolean restRoutesDefined = false;	
@@ -435,10 +440,21 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  //assign verbs as strings...
     	    	  reader.setVerb((HTTPVerbDefaults)httpSpec.verbs[verbId]);
  			
-    	    	  if (!listener.restRequest(reader)) {
-	            		 Pipe.resetTail(p);
-	            		 return;//continue later and repeat this same value.
-	              }
+    	    	  if (null!=restRequestReader && 
+    	    	      routeId<restRequestReader.length &&
+    	    	      null!=restRequestReader[routeId]) {
+    	    		  
+    	    		  if (!restRequestReader[routeId].restRequest(this, reader)) {
+    	    			  Pipe.resetTail(p);
+		            	  return;//continue later and repeat this same value.
+    	    		  }
+    	    		  
+    	    	  } else {
+	    	    	  if (!listener.restRequest(reader)) {
+		            		 Pipe.resetTail(p);
+		            		 return;//continue later and repeat this same value.
+		              }
+    	    	  }
              	      
     	    	  reader.setParseDetails(null,null,0,null);//just to be safe.
     	      
@@ -575,7 +591,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	                    	                           
 	                    int dispatch;
 	                    
-	                    if ((null==methodReader) || ((dispatch=methodLookup(p, len, pos))<0)) {
+	                    if ((null==methodReader) 
+	                    	|| ((dispatch=methodLookup(p, len, pos))<0)) {
 	                    	if ((listener instanceof PubSubListenerBase) && (! ((PubSubListenerBase)listener).message(mutableTopic,reader))) {
 	                    		Pipe.resetTail(p);
 			            		return;//continue later and repeat this same value.
@@ -785,6 +802,44 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
 		}
 	}
+	
+	@Override
+	public final ListenerFilter excludeRoutes(int... routeIds) {
+
+		if (listener instanceof RestListener) {
+			int count = 0;
+			int i =	inputPipes.length;
+			while (--i>=0) {
+				//we only expect to find a single request pipe
+				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
+				  
+					int allRoutes = builder.routerConfig().routesCount();	
+					int p = parallelInstance==-1?count:parallelInstance;
+					while (--allRoutes>=0) {
+						if (!contains(routeIds,allRoutes)) {
+							restRoutesDefined = true;
+							builder.appendPipeMapping((Pipe<HTTPRequestSchema>) inputPipes[i], allRoutes, p);
+						}
+					}
+					count++;
+				}
+			}
+			return this;
+		} else {
+			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
+		}
+	}
+	
+	private boolean contains(int[] array, int item) {
+		int i = array.length;
+		while (--i>=0) {
+			if (array[i] == item) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 
 	@SuppressWarnings("unchecked")
 	public final ListenerFilter addSubscription(
@@ -795,22 +850,60 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			@Override
 			public boolean method(Object that, CharSequence title, BlobReader reader) {
 				//that must be found as the declared field of the lambda
-				assert(thatIsFoundInCallable(that,callable)) : "may only call methods on this same Behavior instance";
+				assert(childIsFoundIn(that,callable)) : "may only call methods on this same Behavior instance";
 				return callable.method(title, reader);
 			}
 		});
-		
 	}
 	
-	private boolean thatIsFoundInCallable(Object that, CallableMethod callable) {
+	public final ListenerFilter includeRoute(int routeId, final CallableRestRequestReader callable) {
 		
-		Field[] fields = callable.getClass().getDeclaredFields();
+		if (null==restRequestReader) {
+			restRequestReader = new CallableStaticRestRequestReader[routeId+1];		
+		} else {
+			if (routeId>= restRequestReader.length) {
+				CallableStaticRestRequestReader[] temp = new CallableStaticRestRequestReader[routeId+1];	
+				System.arraycopy(restRequestReader, 0, temp, 0, restRequestReader.length);
+				restRequestReader = temp;			
+			}
+		}
+		
+		restRequestReader[routeId] = new CallableStaticRestRequestReader() {			
+			@Override
+			public boolean restRequest(Object that, HTTPRequestReader request) {
+				//that must be found as the declared field of the lambda
+				assert(childIsFoundIn(that,callable)) : "may only call methods on this same Behavior instance";
+				return callable.restRequest(request);
+			}			
+		};
+		return this;
+	}
+	
+	public final <T extends Behavior> ListenerFilter includeRoute(int routeId, final CallableStaticRestRequestReader<T> callable) {
+		
+		if (null==restRequestReader) {
+			restRequestReader = new CallableStaticRestRequestReader[routeId+1];		
+		} else {
+			if (routeId>= restRequestReader.length) {
+				CallableStaticRestRequestReader<T>[] temp = new CallableStaticRestRequestReader[routeId+1];	
+				System.arraycopy(restRequestReader, 0, temp, 0, restRequestReader.length);
+				restRequestReader = temp;			
+			}
+		}		
+		restRequestReader[routeId] = callable;
+		
+		return this;
+	}
+	
+	private boolean childIsFoundIn(Object child, Object parent) {
+		
+		Field[] fields = parent.getClass().getDeclaredFields();
 		int f = fields.length;
 		while (--f>=0) {
 			
 			try {
 				fields[f].setAccessible(true);
-				if (fields[f].get(callable) == that) {
+				if (fields[f].get(parent) == child) {
 					return true;
 				}
 			} catch (IllegalArgumentException e) {

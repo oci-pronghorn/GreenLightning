@@ -48,13 +48,16 @@ public interface Builder extends ArgumentProvider {
 
 	void parallelism(int parallel);
 	
+	int defineRoute(CharSequence route, byte[] ... headers);
 	int registerRoute(CharSequence route, byte[] ... headers);
       
-	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
-	
+	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);	
 	void enableServer(boolean isTLS, int bindPort);
-	
 	void enableServer(int bindPort);
+	void enableServer(int bindPort, String defaultPath);
+	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath);	
+	void enableServer(boolean isTLS, int bindPort, String defaultPath);
+	
 	
 	String enableTelemetry();
 	
