@@ -6,16 +6,12 @@ import com.ociweb.gl.api.GreenRuntime;
 
 public class ${artifactId} implements GreenApp
 {
-    ///////////////////////
-    //Connection constants 
-    ///////////////////////
 
+	
 
     @Override
-    public void declareConfiguration(Builder c) {
-        ////////////////////////////
-        //Connection specifications
-        ///////////////////////////
+    public void declareConfiguration(Builder builder) {
+
 
         
     }
@@ -23,9 +19,8 @@ public class ${artifactId} implements GreenApp
 
     @Override
     public void declareBehavior(GreenRuntime runtime) {
-        //////////////////////////////
-        //Specify the desired behavior
-        //////////////////////////////
+       
+    	
 
     }
           
