@@ -24,7 +24,7 @@ import com.ociweb.gl.api.ShutdownListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
 import com.ociweb.gl.api.TimeListener;
-import com.ociweb.gl.api.facade.StartupListenerTransducer;
+import com.ociweb.gl.api.transducer.StartupListenerTransducer;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.ChildClassScanner;
 import com.ociweb.gl.impl.ChildClassScannerVisitor;
