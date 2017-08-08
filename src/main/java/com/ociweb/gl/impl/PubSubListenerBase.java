@@ -1,17 +1,11 @@
 package com.ociweb.gl.impl;
 
 import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.pronghorn.pipe.BlobReader;
 
 
-/**
- * Functional interface for a publish-subscribe subscriber registered
- * with the {@link MsgRuntime}.
- *
- * @author Nathan Tippy
- */
-@FunctionalInterface
-public interface PubSubListenerBase {
+public interface PubSubListenerBase extends PubSubMethodListener {
 
     /**
      * Invoked when a new publication is received from the {@link MsgRuntime}.

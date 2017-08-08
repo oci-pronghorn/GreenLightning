@@ -71,6 +71,8 @@ public interface Builder extends ArgumentProvider {
 	 */
 	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientId);
 	
+	MQTTBridge useMQTT(CharSequence host, CharSequence clientId);
+	
 	/*
 	 * The maximum in-flight messages must be <= 32K
 	 * The maximum messageLength must be <= 256M

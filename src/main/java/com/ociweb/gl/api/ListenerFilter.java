@@ -12,10 +12,11 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 	
 	ListenerFilter addSubscription(CharSequence topic, CallableMethod method);
 		
-	ListenerFilter includeRoute(int routeId, CallableRestRequestReader callable);
 	
 	<T extends Behavior> ListenerFilter includeRoute(int routeId, CallableStaticRestRequestReader<T> callable);
 		
+	ListenerFilter includeRoute(int routeId, CallableRestRequestReader callable);
+
 	/**
 	 * Add subscription to this topic to this listener at startup.
 	 * @param topic

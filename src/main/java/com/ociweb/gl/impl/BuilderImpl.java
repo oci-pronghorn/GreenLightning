@@ -16,6 +16,7 @@ import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PubSubMethodListener;
+import com.ociweb.gl.api.RestMethodListener;
 import com.ociweb.gl.api.TimeTrigger;
 import com.ociweb.gl.api.facade.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.facade.PubSubListenerTransducer;
@@ -531,8 +532,7 @@ public class BuilderImpl implements Builder {
 	public final boolean isListeningToSubscription(Behavior listener) {
 			
 		//NOTE: we only call for scan if the listener is not already of this type
-		return listener instanceof PubSubListenerBase || 
-			   listener instanceof PubSubMethodListener ||
+		return listener instanceof PubSubMethodListener ||
 			   listener instanceof StateChangeListenerBase<?> 
 		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, PubSubListenerTransducer.class)
 		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, StateChangeListenerTransducer.class);
@@ -545,7 +545,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	public final boolean isListeningHTTPRequest(Object listener) {
-		return listener instanceof RestListenerBase	||
+		return listener instanceof RestMethodListener ||
 			    //will return false if RestListenerBase was encountered
 			   !ChildClassScanner.visitUsedByClass(listener, deepListener, RestListenerTransducer.class);
 	}
@@ -894,7 +894,12 @@ public class BuilderImpl implements Builder {
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
 		return useMQTT(host, port, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
 	}
-	
+
+	@Override
+	public MQTTConfigImpl useMQTT(CharSequence host, CharSequence clientId) {
+		return useMQTT(host, isTLSClient ? 8883 : 1883, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+	}
+		
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight) {		
 		return useMQTT(host, port, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);	
 	}

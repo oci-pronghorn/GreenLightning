@@ -19,6 +19,7 @@ import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.api.RestMethodListener;
 import com.ociweb.gl.api.ShutdownListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
@@ -192,7 +193,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     private static ReactiveOperators reactiveOperators() {
 		return new ReactiveOperators()
-        		                 .addOperator(PubSubListenerBase.class, 
+        		                 .addOperator(PubSubMethodListener.class, 
         		                		 MessageSubscription.instance,
         		                		 new ReactiveOperator() {
 									@Override
@@ -205,15 +206,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         		                		 new ReactiveOperator() {
  									@Override
  									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
- 										r.consumeNetResponse((HTTPResponseListener)target, input);										
+ 										r.consumeNetResponse(target, input);										
  									}        		                	 
          		                 })
-        		                 .addOperator(RestListenerBase.class, 
+        		                 .addOperator(RestMethodListener.class, 
         		                		 HTTPRequestSchema.instance,
         		                		 new ReactiveOperator() {
  									@Override
  									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
- 										r.consumeRestRequest((RestListener)target, input);										
+ 										r.consumeRestRequest(target, input);										
  									}        		                	 
          		                 });
 	}
@@ -397,7 +398,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     }
 
     
-    final void consumeRestRequest(RestListener listener, Pipe<HTTPRequestSchema> p) {
+    final void consumeRestRequest(Object listener, Pipe<HTTPRequestSchema> p) {
 		
     	  while (Pipe.hasContentToRead(p)) {                
               
@@ -444,16 +445,18 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	      routeId<restRequestReader.length &&
     	    	      null!=restRequestReader[routeId]) {
     	    		  
-    	    		  if (!restRequestReader[routeId].restRequest(this, reader)) {
+    	    		  if (!restRequestReader[routeId].restRequest(listener, reader)) {
     	    			  Pipe.resetTail(p);
 		            	  return;//continue later and repeat this same value.
     	    		  }
     	    		  
     	    	  } else {
-	    	    	  if (!listener.restRequest(reader)) {
-		            		 Pipe.resetTail(p);
-		            		 return;//continue later and repeat this same value.
-		              }
+    	    		  if (listener instanceof RestListener) {
+		    	    	  if (!((RestListener)listener).restRequest(reader)) {
+			            		 Pipe.resetTail(p);
+			            		 return;//continue later and repeat this same value.
+			              }
+    	    		  }
     	    	  }
              	      
     	    	  reader.setParseDetails(null,null,0,null);//just to be safe.
@@ -474,7 +477,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private HeaderTypeCapture htc;
     
     
-	final void consumeNetResponse(HTTPResponseListener listener, Pipe<NetResponseSchema> p) {
+	final void consumeNetResponse(Object listener, Pipe<NetResponseSchema> p) {
 		 assert(null!=ccm) : "must define coordinator";
 
 		 
@@ -515,7 +518,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 	            	 
 	            	 reader.setFlags(flags);
 	        
-	            	 if (!listener.responseHTTP(reader)) {
+	            	 if (!((HTTPResponseListener)listener).responseHTTP(reader)) {
 	            		 Pipe.resetTail(p);
 	            		 logger.info("xxxxxxxxxxxxxxxx  CONTINUE LATER");
 	            		 return;//continue later and repeat this same value.
@@ -533,7 +536,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
             		 
             		 //logger.trace("continuation with "+Integer.toHexString(flags2)+" avail "+continuation.available());
             		 
-	            	 if (!listener.responseHTTP(continuation)) {
+	            	 if (!((HTTPResponseListener)listener).responseHTTP(continuation)) {
 						 Pipe.resetTail(p);
 						 return;//continue later and repeat this same value.
 					 }
@@ -549,7 +552,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 
 	            	 int port = Pipe.takeInt(p);//the caller does not care which port we were on.
 					   
-	            	 if (!listener.responseHTTP(hostReader)) {
+	            	 if (!((HTTPResponseListener)listener).responseHTTP(hostReader)) {
 	            		 Pipe.resetTail(p);
 	            		 return;//continue later and repeat this same value.
 	            	 }	            	 
@@ -589,14 +592,17 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	                    DataInputBlobReader<MessageSubscription> reader = Pipe.inputStream(p);
 	                    reader.openLowLevelAPIField();
 	                    	                           
-	                    int dispatch;
+	                    int dispatch = -1;
 	                    
-	                    if ((null==methodReader) 
-	                    	|| ((dispatch=methodLookup(p, len, pos))<0)) {
-	                    	if ((listener instanceof PubSubListenerBase) && (! ((PubSubListenerBase)listener).message(mutableTopic,reader))) {
+	                    if (((null==methodReader) 
+	                    	|| ((dispatch=methodLookup(p, len, pos))<0))
+	                    	&& ((listener instanceof PubSubListenerBase))) {
+	                    	
+	                    	if (! ((PubSubListenerBase)listener).message(mutableTopic,reader)) {
 	                    		Pipe.resetTail(p);
 			            		return;//continue later and repeat this same value.
 	                    	}
+	                    	
 	                    } else {
 	                    	if (! methods[dispatch].method(listener, mutableTopic, reader)) {
 	                    		Pipe.resetTail(p);
@@ -748,7 +754,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		restRoutesDefined = true;
 		
-		if (listener instanceof RestListener) {
+		if (listener instanceof RestMethodListener) {
 			int count = 0;
 			int i =	inputPipes.length;
 			while (--i>=0) {
