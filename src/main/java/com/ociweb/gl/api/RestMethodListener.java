@@ -1,5 +1,7 @@
 package com.ociweb.gl.api;
 
-public interface RestMethodListener {
+import com.ociweb.gl.impl.RestMethodListenerBase;
+
+public interface RestMethodListener extends Behavior, RestMethodListenerBase{
 
 }

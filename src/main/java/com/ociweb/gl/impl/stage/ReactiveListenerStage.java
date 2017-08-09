@@ -17,9 +17,7 @@ import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.RestListener;
-import com.ociweb.gl.api.RestMethodListener;
 import com.ociweb.gl.api.ShutdownListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
@@ -32,7 +30,7 @@ import com.ociweb.gl.impl.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.PubSubListenerBase;
 import com.ociweb.gl.impl.PubSubMethodListenerBase;
-import com.ociweb.gl.impl.RestListenerBase;
+import com.ociweb.gl.impl.RestMethodListenerBase;
 import com.ociweb.gl.impl.StartupListenerBase;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -216,7 +214,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
  										r.consumeNetResponse(target, input);										
  									}        		                	 
          		                 })
-        		                 .addOperator(RestMethodListener.class, 
+        		                 .addOperator(RestMethodListenerBase.class, 
         		                		 HTTPRequestSchema.instance,
         		                		 new ReactiveOperator() {
  									@Override
@@ -762,7 +760,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		restRoutesDefined = true;
 		
-		if (listener instanceof RestMethodListener) {
+		if (listener instanceof RestMethodListenerBase) {
 			int count = 0;
 			int i =	inputPipes.length;
 			while (--i>=0) {

@@ -545,7 +545,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	public final boolean isListeningHTTPRequest(Object listener) {
-		return listener instanceof RestMethodListener ||
+		return listener instanceof RestMethodListenerBase ||
 			    //will return false if RestListenerBase was encountered
 			   !ChildClassScanner.visitUsedByClass(listener, deepListener, RestListenerTransducer.class);
 	}
