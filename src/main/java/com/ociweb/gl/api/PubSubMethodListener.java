@@ -1,5 +1,7 @@
 package com.ociweb.gl.api;
 
-public interface PubSubMethodListener {
+import com.ociweb.gl.impl.PubSubMethodListenerBase;
+
+public interface PubSubMethodListener extends Behavior, PubSubMethodListenerBase {
 
 }

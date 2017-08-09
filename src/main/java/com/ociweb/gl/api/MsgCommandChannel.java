@@ -6,6 +6,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
@@ -573,7 +574,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		throw new UnsupportedOperationException("Can not subscribe before startup. Call addSubscription when registering listener."); 
     	}
     	
-        return subscribe(topic, (PubSubMethodListener)listener);
+        return subscribe(topic, (PubSubMethodListenerBase)listener);
     }
 
     /**
@@ -585,7 +586,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the topic was successfully subscribed to, and false
      *         otherwise.
      */
-    public boolean subscribe(CharSequence topic, PubSubMethodListener listener) {
+    public boolean subscribe(CharSequence topic, PubSubMethodListenerBase listener) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
     	assert(null!=goPipe) : "must turn on Dynamic Messaging for this channel";
@@ -614,7 +615,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean unsubscribe(CharSequence topic) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
-        return unsubscribe(topic, (PubSubMethodListener)listener);
+        return unsubscribe(topic, (PubSubMethodListenerBase)listener);
     }
 
     /**
@@ -625,7 +626,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the topic was successfully unsubscribed from, and false otherwise.
      */
-    public boolean unsubscribe(CharSequence topic, PubSubMethodListener listener) {
+    public boolean unsubscribe(CharSequence topic, PubSubMethodListenerBase listener) {
 		 assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
         if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101)) {

@@ -18,10 +18,10 @@ import com.ociweb.gl.api.NetResponseWriter;
 import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.RestMethodListener;
 import com.ociweb.gl.api.TimeTrigger;
-import com.ociweb.gl.api.facade.HTTPResponseListenerTransducer;
-import com.ociweb.gl.api.facade.PubSubListenerTransducer;
-import com.ociweb.gl.api.facade.RestListenerTransducer;
-import com.ociweb.gl.api.facade.StateChangeListenerTransducer;
+import com.ociweb.gl.api.transducer.HTTPResponseListenerTransducer;
+import com.ociweb.gl.api.transducer.PubSubListenerTransducer;
+import com.ociweb.gl.api.transducer.RestListenerTransducer;
+import com.ociweb.gl.api.transducer.StateChangeListenerTransducer;
 import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePubSub;
@@ -532,7 +532,7 @@ public class BuilderImpl implements Builder {
 	public final boolean isListeningToSubscription(Behavior listener) {
 			
 		//NOTE: we only call for scan if the listener is not already of this type
-		return listener instanceof PubSubMethodListener ||
+		return listener instanceof PubSubMethodListenerBase ||
 			   listener instanceof StateChangeListenerBase<?> 
 		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, PubSubListenerTransducer.class)
 		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, StateChangeListenerTransducer.class);

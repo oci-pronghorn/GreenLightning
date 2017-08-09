@@ -24,13 +24,14 @@ import com.ociweb.gl.api.ShutdownListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
 import com.ociweb.gl.api.TimeListener;
-import com.ociweb.gl.api.facade.StartupListenerTransducer;
+import com.ociweb.gl.api.transducer.StartupListenerTransducer;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.ChildClassScanner;
 import com.ociweb.gl.impl.ChildClassScannerVisitor;
 import com.ociweb.gl.impl.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.PubSubListenerBase;
+import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.RestListenerBase;
 import com.ociweb.gl.impl.StartupListenerBase;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -94,6 +95,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	//////////////////
 	private CallableStaticRestRequestReader[] restRequestReader;
 	////////////////
+	
+	////////////////
+	//only use for direct http query response dispatch upon arrival
+	////////////////
+	private CallableStaticHTTPResponse[] httpResponseReader;
+	////////////////	
 	
 	    	
     private boolean restRoutesDefined = false;	
@@ -193,7 +200,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     private static ReactiveOperators reactiveOperators() {
 		return new ReactiveOperators()
-        		                 .addOperator(PubSubMethodListener.class, 
+        		                 .addOperator(PubSubMethodListenerBase.class, 
         		                		 MessageSubscription.instance,
         		                		 new ReactiveOperator() {
 									@Override
@@ -218,10 +225,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
  									}        		                	 
          		                 });
 	}
-    
-    public int getId() {
-    	return builder.behaviorId((Behavior)listener);
-    }
+
     
     public static boolean isShutdownRequested() {
     	return shutdownRequsted.get();
@@ -514,13 +518,17 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            		 reader.setContentType(htc.type());
 	            	 } else {
 	            		 logger.info("no content type was found...");
-	            	 }
-	            	 	            	 
+	            	 }	            	 	            	 
 	            	 reader.setFlags(flags);
 	        
+	            	 
+	            	 //TODO: map calls to diferent methods?
+	            	 //      done by status code?
+	            	 //TODO: can we get the call latency??
+	            	 
 	            	 if (!((HTTPResponseListener)listener).responseHTTP(reader)) {
 	            		 Pipe.resetTail(p);
-	            		 logger.info("xxxxxxxxxxxxxxxx  CONTINUE LATER");
+	            		 //logger.info("CONTINUE LATER");
 	            		 return;//continue later and repeat this same value.
 	            	 }
 	                 
@@ -901,6 +909,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		return this;
 	}
 	
+	//httpResponseReader
+	
+    
+    public int getId() {
+    	return builder.behaviorId((Behavior)listener);
+    }
+	
 	private boolean childIsFoundIn(Object child, Object parent) {
 		
 		Field[] fields = parent.getClass().getDeclaredFields();
@@ -931,7 +946,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			methods = new CallableStaticMethod[0];
 		}
 		
-		if (!startupCompleted && listener instanceof PubSubMethodListener) {
+		if (!startupCompleted && listener instanceof PubSubMethodListenerBase) {
 			builder.addStartupSubscription(topic, System.identityHashCode(listener));
 			toStringDetails = toStringDetails+"sub:'"+topic+"'\n";
 		} else {
@@ -953,7 +968,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	
 	@Override
 	public final ListenerFilter addSubscription(CharSequence topic) {		
-		if (!startupCompleted && listener instanceof PubSubMethodListener) {
+		if (!startupCompleted && listener instanceof PubSubMethodListenerBase) {
 			builder.addStartupSubscription(topic, System.identityHashCode(listener));		
 			
 			toStringDetails = toStringDetails+"sub:'"+topic+"'\n";
