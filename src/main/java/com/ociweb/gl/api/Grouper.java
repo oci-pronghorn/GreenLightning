@@ -80,7 +80,6 @@ public class Grouper {
 	public Pipe[] firstArray() {
 		return first;
 	}
-
 	public void buildReplicators(GraphManager gm, ArrayList<ReactiveManagerPipeConsumer> consumers) {
 		int i = inputPipes.length;
 		while (--i>=0) {
