@@ -1,4 +1,4 @@
-package com.ociweb.gl.api.facade;
+package com.ociweb.gl.api.transducer;
 
 import com.ociweb.gl.api.ListenerTransducer;
 import com.ociweb.gl.impl.StartupListenerBase;

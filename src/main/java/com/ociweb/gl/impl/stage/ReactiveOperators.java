@@ -46,10 +46,12 @@ public class ReactiveOperators {
 	private Pipe[] createPipes(int i, int matches, Object listener, Grouper g) {
 		 if (i<interfaces.size()) {
 			 boolean doesMatch = interfaces.get(i).isInstance(listener);
+
 			 Pipe[] result = createPipes(i+1,
 					                     doesMatch ? 1+matches : matches,
 					                     listener, g);
 			 if (doesMatch) {
+				 logger.info("Does Match! {}", listener);
 				 result[matches] = new Pipe(g.config(schemas.get(i)).grow2x());
 			 }
 			 return result;

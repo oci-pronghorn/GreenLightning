@@ -33,6 +33,7 @@ public class Grouper {
 	
 	public PipeConfig config(MessageSchema schema) {
 		int i = inputPipes.length;
+		
 		while (--i >= 0) {
 			if (Pipe.isForSchema(inputPipes[i], schema)) {
 				return inputPipes[i].config();
@@ -42,6 +43,7 @@ public class Grouper {
 		logger.info("all known schemas");
 		
 		i = inputPipes.length;
+		logger.info("InputPipe length is {}", i);
 		while (--i>=0) {
 			logger.info("known schema "+Pipe.schemaName(inputPipes[i]));
 		}		

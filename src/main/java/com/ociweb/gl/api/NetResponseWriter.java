@@ -30,15 +30,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     public void writeString(CharSequence value) {
         writeUTF(value);
     }
-    
-   
-    public void close() {
-    	  	
-    	  	new UnsupportedOperationException("this is not the method you are looking for.").printStackTrace();
-    	  	System.exit(-1);
-    	  	
-    }
-
+  
 	private static void writeHeader(NetResponseWriter outputStream, final int headerBlobPosition, 
 			                        final long positionOfLen,
 									int statusCode, final int context, 
