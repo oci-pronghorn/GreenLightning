@@ -808,7 +808,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				if (g.additions()==0) {
 					//add first value
 					Pipe[] pipes = ReactiveListenerStage.operators.createPipes(listener, g);
-					consumers.add(new ReactiveManagerPipeConsumer(child, ReactiveListenerStage.operators, pipes));
+					consumers.add(new ReactiveManagerPipeConsumer(listener, ReactiveListenerStage.operators, pipes));
 					g.add(pipes);
 				}					
 				
