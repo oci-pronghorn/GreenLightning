@@ -532,7 +532,7 @@ public class BuilderImpl implements Builder {
 	public final boolean isListeningToSubscription(Behavior listener) {
 			
 		//NOTE: we only call for scan if the listener is not already of this type
-		return listener instanceof PubSubMethodListener ||
+		return listener instanceof PubSubMethodListenerBase ||
 			   listener instanceof StateChangeListenerBase<?> 
 		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, PubSubListenerTransducer.class)
 		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, StateChangeListenerTransducer.class);
@@ -545,7 +545,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	public final boolean isListeningHTTPRequest(Object listener) {
-		return listener instanceof RestMethodListener ||
+		return listener instanceof RestMethodListenerBase ||
 			    //will return false if RestListenerBase was encountered
 			   !ChildClassScanner.visitUsedByClass(listener, deepListener, RestListenerTransducer.class);
 	}

@@ -5,7 +5,7 @@ import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.pronghorn.pipe.BlobReader;
 
 
-public interface PubSubListenerBase extends PubSubMethodListener {
+public interface PubSubListenerBase extends PubSubMethodListenerBase {
 
     /**
      * Invoked when a new publication is received from the {@link MsgRuntime}.

@@ -92,7 +92,9 @@ public class Grouper {
 					}
 				}
 				if (c<0) {
-					throw new RuntimeException("internal error unable to find this pipe");
+					//can not optimize this case so just add the extra hop.
+					logger.trace("internal error unable to find this pipe");
+					ReplicatorStage.newInstance(gm, inputPipes[i], groupedPipes[i]);
 				}
 				
 			} else {
