@@ -105,10 +105,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     protected int[] oversampledAnalogValues;
 
     private static final int MAX_PORTS = 10;
- 
-    
-    public static final ReactiveOperators operators = reactiveOperators();
-	 
+
     protected final Enum[] states;
     
     protected boolean timeEvents = false;
@@ -196,7 +193,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     }
 
     
-    private static ReactiveOperators reactiveOperators() {
+    public static ReactiveOperators reactiveOperators() {
 		return new ReactiveOperators()
         		                 .addOperator(PubSubMethodListenerBase.class, 
         		                		 MessageSubscription.instance,
@@ -275,7 +272,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
  
     	//////////////////////////////////////////////////////////////////
     	//ALL operators have been added to operators so it can be used to create consumers as needed
-    	consumer = new ReactiveManagerPipeConsumer(listener, operators, inputPipes);
+    	consumer = new ReactiveManagerPipeConsumer(listener, builder.operators, inputPipes);
     	    	
     	if (listener instanceof RestListener) {
     		if (!restRoutesDefined) {

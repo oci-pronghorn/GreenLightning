@@ -807,8 +807,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			public boolean visit(Object child, Object topParent) {					
 				if (g.additions()==0) {
 					//add first value
-					Pipe[] pipes = ReactiveListenerStage.operators.createPipes(listener, g);
-					consumers.add(new ReactiveManagerPipeConsumer(listener, ReactiveListenerStage.operators, pipes));
+					Pipe[] pipes = builder.operators.createPipes(builder, listener, g);
+					consumers.add(new ReactiveManagerPipeConsumer(listener, builder.operators, pipes));
 					g.add(pipes);
 				}					
 				
@@ -820,8 +820,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					}
 				}
 				
-				Pipe[] pipes = ReactiveListenerStage.operators.createPipes(child, g);
-				consumers.add(new ReactiveManagerPipeConsumer(child, ReactiveListenerStage.operators, pipes));
+				Pipe[] pipes = builder.operators.createPipes(builder, child, g);
+				consumers.add(new ReactiveManagerPipeConsumer(child, builder.operators, pipes));
 				g.add(pipes);		
 				
 				return true;

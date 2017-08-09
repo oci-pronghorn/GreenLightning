@@ -33,6 +33,7 @@ import com.ociweb.gl.impl.stage.HTTPClientRequestStage;
 import com.ociweb.gl.impl.stage.MessagePubSubStage;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
+import com.ociweb.gl.impl.stage.ReactiveOperators;
 import com.ociweb.gl.impl.stage.TrafficCopStage;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
@@ -162,6 +163,10 @@ public class BuilderImpl implements Builder {
 	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> httpSpec = HTTPSpecification.defaultSpec();
 	private HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig;	//////////////////////////////
 	//////////////////////////////
+	
+	    
+    public final ReactiveOperators operators;
+	
 	
 	public int pubSubIndex() {
 		return IDX_MSG;
@@ -341,7 +346,9 @@ public class BuilderImpl implements Builder {
 	////////////////////////////////
 	
 	public BuilderImpl(GraphManager gm, String[] args) {	
-
+		
+		this.operators = ReactiveListenerStage.reactiveOperators();
+		
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
 		this.args = args;
@@ -375,7 +382,7 @@ public class BuilderImpl implements Builder {
 		int maxMQTTMessageSize = 1024;
 		this.pcm.addConfig(new PipeConfig(IngressMessages.instance, maxMQTTMessagesQueue, maxMQTTMessageSize));
 		
-		
+
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {
@@ -950,6 +957,16 @@ public class BuilderImpl implements Builder {
 	    	//now pull the current time and wait until ms have passed
 			blockChannelUntil(pipeId, currentTimeMillis() + durationMills );
 	    }
+	}
+
+	/**
+	 * Enables the child classes to modify which schemas are used.
+	 * For the pi this allows for using i2c instead of digital or analog in transducers.
+	 * 
+	 * @param schema
+	 */
+	public MessageSchema schemaMapper(MessageSchema schema) {
+		return schema;
 	}
 
 
