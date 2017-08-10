@@ -318,7 +318,7 @@ public class GreenParserTest {
 		return map;
 	}
 
-	final static String complexData = "st2sn1020pn\"NX-DCV-SM-BLU-2-V0-L0-S0-00\"cl637512101cc1pp36.3833pf\"N\"ld\"N\"in\"A\"";
+	final static String complexData = "st2sn1020pn\"NX-DCV-SM-BLU-2-V0-L0-S0-00\"cl637512101cc1pp36.3833pf\"N\"ld\"N\"in\"A\"fd61423765200000sd61426357200000";
 
 	private static void complexStreamAppend(DataOutputBlobWriter<?> stream) {
 		stream.append(complexData);
