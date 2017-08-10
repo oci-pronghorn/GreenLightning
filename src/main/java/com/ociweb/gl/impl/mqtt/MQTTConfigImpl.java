@@ -167,14 +167,14 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 	
 	@Override
-	public MQTTBridge subscriptionQoS(int value) {
-		subscriptionQoS = value;
+	public MQTTBridge subscriptionQoS(MQTTQOS qos) {
+		subscriptionQoS = qos.ordinal();
 		return this;
 	}
 
 	@Override
-	public MQTTBridge transmissionOoS(int value) {
-		transmissionFieldQOS = value;
+	public MQTTBridge transmissionOoS(MQTTQOS qos) {
+		transmissionFieldQOS = qos.ordinal();
 		return this;
 	}
 
