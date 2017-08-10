@@ -1,7 +1,9 @@
 package com.ociweb.gl.api;
 
+import static com.ociweb.gl.api.GreenParserTest.FieldType.*;
 import static org.junit.Assert.*;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,10 +14,17 @@ import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.RawDataSchema;
 
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+
+interface MyConsumer<T> {
+	void accept(T t);
+}
+
 public class GreenParserTest {
 
 	private final static Logger logger = LoggerFactory.getLogger(GreenParserTest.class);
-	
+
 	@Test
 	public void simpleTest() {
 				
@@ -184,7 +193,12 @@ public class GreenParserTest {
 				              .add(0, "\n")
 				              .newReader();
 				
-		BlobReader testToRead = generateExtractionDataToTest();
+		BlobReader testToRead = generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
+			@Override
+			public void accept(DataOutputBlobWriter<?> dataOutputBlobWriter) {
+				defaultStreamAppend(dataOutputBlobWriter);
+			}
+		});
 
 		long age = Integer.MIN_VALUE;
 		StringBuilder name = new StringBuilder();
@@ -225,8 +239,16 @@ public class GreenParserTest {
 		assertEquals(7.2d, speed, .00001);
 						
 	}
+
+	private static void defaultStreamAppend(DataOutputBlobWriter<?> stream) {
+		stream.append("name: bob, billy\n");
+		stream.append("\n");//white space
+		stream.append("bad-data");//to be ignored
+		stream.append("age: 42\n");
+		stream.append("speed: 7.2\n");
+	}
 	
-	private BlobReader generateExtractionDataToTest() {
+	private BlobReader generateExtractionDataToTest(MyConsumer<DataOutputBlobWriter<?>> appender) {
 		
 		Pipe<RawDataSchema> p = RawDataSchema.instance.newPipe(10, 300);
 		p.initBuffers();		
@@ -235,12 +257,7 @@ public class GreenParserTest {
 		stream.openField();
 		
 		///Here is the data
-		stream.append("name: bob, billy\n");		
-		stream.append("\n");//white space
-		stream.append("bad-data");//to be ignored		
-		stream.append("age: 42\n");
-		stream.append("speed: 7.2\n");
-		
+		appender.accept(stream);
 
 		//Done with the data
 		int lenWritten = stream.length();
@@ -257,6 +274,105 @@ public class GreenParserTest {
 		
 		return streamOut;
 	}
-	
-	
+
+	public enum FieldType {
+		integer,
+		string,
+		floatingPoint,
+		int64
+	}
+
+	public static final FieldType[] types = new FieldType[] {
+			integer,
+			integer,
+			string,
+			integer,
+			integer,
+			floatingPoint,
+			int64,
+			int64,
+			string,
+			string,
+			string,
+	};
+
+	final static String[] patterns = new String[] {
+			"st%u",
+			"sn%u",
+			"pn\"%b\"",
+			"cl%u",
+			"cc%u",
+			"pp%i",
+			"fd%u",
+			"sd%u",
+			"pf\"%b\"",
+			"ld\"%b\"",
+			"in\"%b\"",
+	};
+
+	static GreenTokenMap buildTokenizerMap() {
+		GreenTokenMap map = new GreenTokenMap();
+		for (int i = 0; i < patterns.length; i++) {
+			map = map.add(i, patterns[i]);
+		}
+		return map;
+	}
+
+	final static String complexData = "st2sn1020pn\"NX-DCV-SM-BLU-2-V0-L0-S0-00\"cl637512101cc1pp36.3833pf\"N\"ld\"N\"in\"A\"";
+
+	private static void complexStreamAppend(DataOutputBlobWriter<?> stream) {
+		stream.append(complexData);
+	}
+
+	@Test
+	@Ignore
+	public void complexStringTest() {
+		NumberFormat formatter = new DecimalFormat("#0.0000");
+		final GreenReader reader = buildTokenizerMap().newReader();
+		BlobReader testToRead = generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
+			@Override
+			public void accept(DataOutputBlobWriter<?> dataOutputBlobWriter) {
+				complexStreamAppend(dataOutputBlobWriter);
+			}
+		});
+		reader.beginRead(testToRead);
+		StringBuilder rebuild = new StringBuilder();
+		while (reader.hasMore()) {
+			int parsedId = (int)reader.readToken();
+			if (parsedId == -1) {
+				reader.skipByte();
+			}
+			else {
+				final FieldType fieldType = types[parsedId];
+				final String key = patterns[parsedId].substring(0, 2);
+				rebuild.append(key);
+				switch (fieldType) {
+					case integer: {
+						int value = (int) reader.extractedLong(0);
+						rebuild.append(value);
+						break;
+					}
+					case int64: {
+						long value = reader.extractedLong(0);
+						rebuild.append(value);
+						break;
+					}
+					case string: {
+						StringBuilder value = new StringBuilder();
+						reader.copyExtractedUTF8ToAppendable(0, value);
+						rebuild.append("\"");
+						rebuild.append(value);
+						rebuild.append("\"");
+						break;
+					}
+					case floatingPoint: {
+						double value = reader.extractedDouble(0);
+						rebuild.append(formatter.format(value));
+						break;
+					}
+				}
+			}
+		}
+		assertEquals(complexData, rebuild.toString());
+	}
 }
