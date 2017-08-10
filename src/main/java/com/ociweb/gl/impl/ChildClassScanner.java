@@ -1,11 +1,14 @@
 package com.ociweb.gl.impl;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.pronghorn.pipe.BlobWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 
 /**
@@ -38,7 +41,8 @@ public class ChildClassScanner {
 												 ChildClassScannerVisitor visitor,
 												 Class<? extends Object> c,
 												 Class targetType, 
-												 Object topParent) {
+												 Object topParent,
+												 Collection<Object> seen) {
 			
 			Field[] fields = c.getDeclaredFields();
 	                        
@@ -78,20 +82,32 @@ public class ChildClassScanner {
 									&& (!name.startsWith("com.ociweb.pronghorn.pipe."))  
 									&& (!name.startsWith("[Lcom.ociweb.pronghorn.pipe.")) 
 									
+									&& (!name.startsWith("com.ociweb.pronghorn.util."))  
+									&& (!name.startsWith("[Lcom.ociweb.pronghorn.util.")) 
+									
+									&& (!name.startsWith("com.ociweb.pronghorn.network."))  
+									&& (!name.startsWith("[Lcom.ociweb.pronghorn.network.")) 
+									
 									&& (!name.startsWith("org.slf4j."))
 									&& (!obj.getClass().isEnum())
-									&& (!(obj instanceof MsgRuntime))               		
+									&& (!(obj instanceof MsgRuntime))  
+									&& (!(obj instanceof BlobWriter))  
+									&& (!(obj instanceof BuilderImpl)) 
+									
 									&& !fields[f].isSynthetic()
 									&& fields[f].isAccessible() 
-									&& depth<=13) { //stop recursive depth
+									&& depth<=11) { //stop recursive depth
 								
+								if (!seen.contains(obj)) {
+									seen.add(obj);
 								                		//if (depth <3 && obj.getClass().getName().startsWith("[")) {
 								                		//	logger.info(depth+" "+obj.getClass().getName());
 								                		//}
 								
 								//recursive check for command channels
-								if (!visitUsedByClass(obj, depth+1, visitor, topParent, targetType)) {
-									return false;
+									if (!visitUsedByClass(obj, depth+1, visitor, topParent, targetType, seen)) {
+										return false;
+									}
 								}
 							}
 						}
@@ -106,12 +122,12 @@ public class ChildClassScanner {
 		}
 
 	static boolean visitUsedByClass(Object obj, int depth, ChildClassScannerVisitor visitor, 
-			     Object topParent, Class targetType) {
+			     Object topParent, Class targetType, Collection<Object> seen) {
 		
 	    if (null!=obj) {
 		    Class<? extends Object> c = obj.getClass();
 		    while (null != c) {
-		    	if (!visitByClass(obj, depth, visitor, c, targetType, topParent)) {
+		    	if (!visitByClass(obj, depth, visitor, c, targetType, topParent, seen)) {
 		    		return false;
 		    	}
 		    	c = c.getSuperclass();
@@ -122,7 +138,7 @@ public class ChildClassScanner {
 
 	public static boolean visitUsedByClass(Object listener, ChildClassScannerVisitor visitor, Class target) {
 	
-		return visitUsedByClass(listener, 0, visitor, listener, target);
+		return visitUsedByClass(listener, 0, visitor, listener, target, new ArrayList<Object>());
 	}
 
 }

@@ -483,7 +483,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		publishGo(1, builder.netIndex(), this);
     		    	            
             return true;
-        }        
+        } else {
+        	if (!PipeWriter.hasRoomForWrite(goPipe)) {
+        		logger.warn("go pipe is not large enough and backed up for http Get: {}",goPipe);
+        	}
+        	if (!PipeWriter.hasRoomForWrite(httpRequest)) {
+        		logger.warn("http request pipe is not large enough and backed up for http Get: {}",httpRequest);
+        	}
+        }
         return false;
 	}
 	

@@ -503,7 +503,7 @@ public class BuilderImpl implements Builder {
 				
 		int ideal = idealThreadCount();
 		final int countStages = GraphManager.countStages(gm);
-		if (threadLimit<=0 && countStages > 10*ideal) {
+		if (threadLimit<=0 && countStages > 4*ideal) {
 			//do not allow the ThreadPerStageScheduler to be used, we must group
 			threadLimit = idealThreadCount()*4;//this must be large so give them a few more
 			threadLimitHard = true;//must make this a hard limit or we can saturate the system easily.
@@ -925,7 +925,10 @@ public class BuilderImpl implements Builder {
     	}
 		
 		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS/4, (short)maxInFlight, maxMessageLength );
+		return mqtt = new MQTTConfigImpl(host, port, clientId, 
+				                    this, 
+				                    defaultSleepRateNS>=10_000?defaultSleepRateNS/4:defaultSleepRateNS, 
+				                    (short)maxInFlight, maxMessageLength );
 	}
 	
 	@Override
