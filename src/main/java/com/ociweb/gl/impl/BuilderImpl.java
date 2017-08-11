@@ -112,7 +112,7 @@ public class BuilderImpl implements Builder {
 	/////////////////
 	/////////////////
     
-    private long defaultSleepRateNS = 1_200;// should normally be between 900 and 10_000; 
+    private long defaultSleepRateNS = 4_800;// should normally be between 900 and 10_000; 
     
 	private final int shutdownTimeoutInSeconds = 1;
 
@@ -129,6 +129,8 @@ public class BuilderImpl implements Builder {
 		
 	private boolean isTelemetryEnabled = false;
 	private String telemetryHost = null;
+	private int telemetryPort = 8098;
+	
 	
 	//TODO: set these vales when we turn on the client usage??
 	private int connectionsInBit = 3; 
@@ -716,6 +718,10 @@ public class BuilderImpl implements Builder {
 		return isTelemetryEnabled;
 	}
 
+	public int telmetryPort() {
+		return telemetryPort;
+	}
+	
 	public String telemetryHost() {
 		return telemetryHost;
 	}
@@ -971,6 +977,7 @@ public class BuilderImpl implements Builder {
 	public MessageSchema schemaMapper(MessageSchema schema) {
 		return schema;
 	}
+
 
 
 
