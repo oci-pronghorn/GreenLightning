@@ -1,9 +1,7 @@
 package com.ociweb.gl.api;
 
-import static com.ociweb.gl.api.GreenParserTest.FieldType.*;
 import static org.junit.Assert.*;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,13 +11,6 @@ import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.RawDataSchema;
-
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
-
-interface MyConsumer<T> {
-	void accept(T t);
-}
 
 public class GreenParserTest {
 
@@ -118,10 +109,14 @@ public class GreenParserTest {
 				              .add(3, "curly")
 				              .add(0, "shemp")
 				              .newReader();
-		
-		
-		BlobReader testToRead = generateSimpleDataToTest();
-		
+
+		BlobReader testToRead = BlobReaderFactory.generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
+			@Override
+			public void accept(DataOutputBlobWriter<?> dataOutputBlobWriter) {
+				larryShempStreamAppend(dataOutputBlobWriter);
+			}
+		});
+
 		///////
 		//example consumer code starts here
 		///////
@@ -157,30 +152,9 @@ public class GreenParserTest {
 		
 	}
 
-
-	private BlobReader generateSimpleDataToTest() {
-		
-		Pipe<RawDataSchema> p = RawDataSchema.instance.newPipe(10, 300);
-		p.initBuffers();		
-		int size = Pipe.addMsgIdx(p, 0);
-		DataOutputBlobWriter<?> stream = Pipe.outputStream(p);		
-		stream.openField();
-		
-		///Here is the data
-		
+	private static void larryShempStreamAppend(DataOutputBlobWriter<?> stream) {
 		stream.append("larry");
 		stream.append("shemp");
-		
-		//Done with the data
-		
-		stream.closeLowLevelField();
-		Pipe.confirmLowLevelWrite(p,size);
-		Pipe.publishWrites(p);
-		
-		Pipe.takeMsgIdx(p);
-		DataInputBlobReader<?> streamOut = Pipe.inputStream(p);
-		streamOut.openLowLevelAPIField();
-		return streamOut;
 	}
 	
 	@Test
@@ -193,7 +167,7 @@ public class GreenParserTest {
 				              .add(0, "\n")
 				              .newReader();
 				
-		BlobReader testToRead = generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
+		BlobReader testToRead = BlobReaderFactory.generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
 			@Override
 			public void accept(DataOutputBlobWriter<?> dataOutputBlobWriter) {
 				defaultStreamAppend(dataOutputBlobWriter);
@@ -246,133 +220,5 @@ public class GreenParserTest {
 		stream.append("bad-data");//to be ignored
 		stream.append("age: 42\n");
 		stream.append("speed: 7.2\n");
-	}
-	
-	private BlobReader generateExtractionDataToTest(MyConsumer<DataOutputBlobWriter<?>> appender) {
-		
-		Pipe<RawDataSchema> p = RawDataSchema.instance.newPipe(10, 300);
-		p.initBuffers();		
-		int size = Pipe.addMsgIdx(p, 0);
-		DataOutputBlobWriter<?> stream = Pipe.outputStream(p);		
-		stream.openField();
-		
-		///Here is the data
-		appender.accept(stream);
-
-		//Done with the data
-		int lenWritten = stream.length();
-		
-		stream.closeLowLevelField();
-		Pipe.confirmLowLevelWrite(p,size);
-		Pipe.publishWrites(p);
-		
-		Pipe.takeMsgIdx(p);
-		DataInputBlobReader<?> streamOut = Pipe.inputStream(p);
-		streamOut.openLowLevelAPIField();
-		
-		assertEquals(lenWritten, streamOut.available());
-		
-		return streamOut;
-	}
-
-	public enum FieldType {
-		integer,
-		string,
-		floatingPoint,
-		int64
-	}
-
-	public static final FieldType[] types = new FieldType[] {
-			integer,
-			integer,
-			string,
-			integer,
-			integer,
-			floatingPoint,
-			int64,
-			int64,
-			string,
-			string,
-			string,
-	};
-
-	final static String[] patterns = new String[] {
-			"st%u",
-			"sn%u",
-			"pn\"%b\"",
-			"cl%u",
-			"cc%u",
-			"pp%i",
-			"fd%u",
-			"sd%u",
-			"pf\"%b\"",
-			"ld\"%b\"",
-			"in\"%b\"",
-	};
-
-	static GreenTokenMap buildTokenizerMap() {
-		GreenTokenMap map = new GreenTokenMap();
-		for (int i = 0; i < patterns.length; i++) {
-			map = map.add(i, patterns[i]);
-		}
-		return map;
-	}
-
-	final static String complexData = "st2sn1020pn\"NX-DCV-SM-BLU-2-V0-L0-S0-00\"cl637512101cc1pp36.3833pf\"N\"ld\"N\"in\"A\"fd61423765200000sd61426357200000";
-
-	private static void complexStreamAppend(DataOutputBlobWriter<?> stream) {
-		stream.append(complexData);
-	}
-
-	@Test
-	@Ignore
-	public void complexStringTest() {
-		NumberFormat formatter = new DecimalFormat("#0.0000");
-		final GreenReader reader = buildTokenizerMap().newReader();
-		BlobReader testToRead = generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
-			@Override
-			public void accept(DataOutputBlobWriter<?> dataOutputBlobWriter) {
-				complexStreamAppend(dataOutputBlobWriter);
-			}
-		});
-		reader.beginRead(testToRead);
-		StringBuilder rebuild = new StringBuilder();
-		while (reader.hasMore()) {
-			int parsedId = (int)reader.readToken();
-			if (parsedId == -1) {
-				reader.skipByte();
-			}
-			else {
-				final FieldType fieldType = types[parsedId];
-				final String key = patterns[parsedId].substring(0, 2);
-				rebuild.append(key);
-				switch (fieldType) {
-					case integer: {
-						int value = (int) reader.extractedLong(0);
-						rebuild.append(value);
-						break;
-					}
-					case int64: {
-						long value = reader.extractedLong(0);
-						rebuild.append(value);
-						break;
-					}
-					case string: {
-						StringBuilder value = new StringBuilder();
-						reader.copyExtractedUTF8ToAppendable(0, value);
-						rebuild.append("\"");
-						rebuild.append(value);
-						rebuild.append("\"");
-						break;
-					}
-					case floatingPoint: {
-						double value = reader.extractedDouble(0);
-						rebuild.append(formatter.format(value));
-						break;
-					}
-				}
-			}
-		}
-		assertEquals(complexData, rebuild.toString());
 	}
 }
