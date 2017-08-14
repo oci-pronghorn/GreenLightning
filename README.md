@@ -6,7 +6,7 @@ This is early days for the project but we have enough here to prove out the core
 Please consider sponsoring continued work on this BSD open source project. 
 
 Drop a note to info@ociweb.com if you would like to set up a meeting to talk about Green Lightning.  
-What featrues are most important to you?
+What features are most important to you?
 
 
 When running tests with a small 30 byte file I was able to to hit the following numbers
