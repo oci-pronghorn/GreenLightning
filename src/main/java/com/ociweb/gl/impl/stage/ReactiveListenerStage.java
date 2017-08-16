@@ -71,12 +71,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
      
     protected boolean startupCompleted;
     protected boolean shutdownCompleted;
+    private boolean shutdownInProgress;
     
     //all non shutdown listening reactors will be shutdown only after the listeners have finished.
     protected static AtomicInteger liveShutdownListeners = new AtomicInteger();
     protected static AtomicInteger totalLiveReactors = new AtomicInteger();    
     protected static AtomicBoolean shutdownRequsted = new AtomicBoolean(false);
     protected static Runnable lastCall;
+   
     ///////////////////////////
     
 
@@ -330,48 +332,61 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     @Override
     public void run() {
         
-    	if (shutdownRequsted.get()) {
-    		if (!shutdownCompleted) {
-    			
-    			if (listener instanceof ShutdownListener) {    				
-    				if (((ShutdownListener)listener).acceptShutdown()) {
-    					int remaining = liveShutdownListeners.decrementAndGet();
-    					assert(remaining>=0);
-    					requestShutdown();
-    					return;
-    				}
-    				//else continue with normal run processing
-    				
-    			} else {
-    				//this one is not a listener so we must wait for all the listeners to close first
-    				
-    				if (0 == liveShutdownListeners.get()) {    					
-    					requestShutdown();
-    					return;
-    				}
-    				//else continue with normal run processing.
-    				
+    	if (!shutdownInProgress) {
+	    	if (shutdownRequsted.get()) {
+	    		if (!shutdownCompleted) {
+	    			
+	    			if (listener instanceof ShutdownListener) {    				
+	    				if (((ShutdownListener)listener).acceptShutdown()) {
+	    					int remaining = liveShutdownListeners.decrementAndGet();
+	    					assert(remaining>=0);
+	    					shutdownInProgress = true;
+	    					return;
+	    				}
+	    				//else continue with normal run processing
+	    				
+	    			} else {
+	    				//this one is not a listener so we must wait for all the listeners to close first
+	    				
+	    				if (0 == liveShutdownListeners.get()) {    					
+	    					shutdownInProgress = true;
+	    					return;
+	    				}
+	    				//else continue with normal run processing.
+	    				
+	    			}
+	    		} else {
+	    			assert(shutdownCompleted);
+	    			assert(false) : "run should not have been called if this stage was shut down.";
+	    			return;
+	    		}
+	    	}
+	    	    	
+	        if (timeEvents) {         	
+				processTimeEvents(timeListener, timeTrigger);            
+			}
+	        
+	        //behaviors
+	        consumer.process(this);
+	        
+	        //all transducers
+	        int j = consumers.size();
+	        while(--j>=0) {
+	        	consumers.get(j).process(this);
+	        }
+	  
+    	} else {
+    		//shutdown in progress logic
+    		int i = outputPipes.length;    		
+    		while (--i>=0) {
+    			if (!Pipe.hasRoomForWrite(outputPipes[i], Pipe.EOF_SIZE)) {
+    				return;//must wait for pipe to empty
     			}
-    		} else {
-    			assert(shutdownCompleted);
-    			assert(false) : "run should not have been called if this stage was shut down.";
-    			return;
-    		}
+    		}		
+    		//now free to shut down, we know there is room to do so.
+    		requestShutdown();
+    		return;
     	}
-    	    	
-        if (timeEvents) {         	
-			processTimeEvents(timeListener, timeTrigger);            
-		}
-        
-        //behaviors
-        consumer.process(this);
-        
-        //all transducers
-        int j = consumers.size();
-        while(--j>=0) {
-        	consumers.get(j).process(this);
-        }
-  
     }
 
 
@@ -379,13 +394,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     public void shutdown() {
 		
 		assert(!shutdownCompleted) : "already shut down why was this called a second time?";
-		int i = outputPipes.length;
-		
-		while (--i>=0) {
-			Pipe<?> output = outputPipes[i];			
-			Pipe.spinBlockForRoom(output, Pipe.EOF_SIZE);
-			Pipe.publishEOF(output);
-		}		
+
+		Pipe.publishEOF(outputPipes);
+				
 
 		if (totalLiveReactors.decrementAndGet()==0) {
 			//ready for full system shutdown.
@@ -635,8 +646,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                         Pipe.confirmLowLevelRead(p, SIZE_OF_MSG_STATECHANGE);
                     break;
                 case -1:
-                    
-                    requestShutdown();
+                	shutdownInProgress = true;
                     Pipe.confirmLowLevelRead(p, Pipe.EOF_SIZE);
                     Pipe.releaseReadLock(p);
                     return;
