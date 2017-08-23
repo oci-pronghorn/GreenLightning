@@ -28,7 +28,7 @@ public class MQTTApp implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 		
-		mqttConfig = builder.useMQTT("127.0.0.1", 1883, "my name")
+		mqttConfig = builder.useMQTT("127.0.0.1", 1883, false, "my name")
 							.cleanSession(true)
 							.transmissionOoS(MQTTQOS.exactlyOnce)
 							.subscriptionQoS(MQTTQOS.exactlyOnce) //TODO: do tests for will and retain

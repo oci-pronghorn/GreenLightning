@@ -904,20 +904,22 @@ public class BuilderImpl implements Builder {
 	}
 	
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
-		return useMQTT(host, port, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId) {		
+		return useMQTT(host, port, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
 	}
 
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, CharSequence clientId) {
-		return useMQTT(host, isTLSClient ? 8883 : 1883, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+	public MQTTConfigImpl useMQTT(CharSequence host, boolean isTLS, CharSequence clientId) {
+		return useMQTT(host, isTLS ? 8883 : 1883, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
 	}
 		
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight) {		
-		return useMQTT(host, port, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);	
+	@Override
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight) {		
+		return useMQTT(host, port, isTLS, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);	
 	}
 	
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {		
+	@Override
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight, int maxMessageLength) {		
 		if (maxInFlight>(1<<15)) {
 			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
 		}
@@ -934,7 +936,7 @@ public class BuilderImpl implements Builder {
 		return mqtt = new MQTTConfigImpl(host, port, clientId, 
 				                    this, 
 				                    defaultSleepRateNS>=10_000?defaultSleepRateNS/4:defaultSleepRateNS, 
-				                    (short)maxInFlight, maxMessageLength );
+				                    (short)maxInFlight, maxMessageLength, isTLS);
 	}
 	
 	@Override

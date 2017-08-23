@@ -41,7 +41,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private Writable willPayload = null;
 	//
 	private int flags;
-	private boolean isTLS; //derive from host/port args
+	private final boolean isTLS;
+	
 	private final short maxInFlight;
 	private final int maximumLenghOfVariableLengthFields;
 	//
@@ -60,8 +61,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	
 	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
 			       BuilderImpl builder, long rate, 
-			       short maxInFlight, int maxMessageLength) {
+			       short maxInFlight, int maxMessageLength,
+			       boolean isTLS) {
 		
+		this.isTLS =isTLS;
 		this.host = host;
 		this.port = port;
 		this.clientId = clientId;
