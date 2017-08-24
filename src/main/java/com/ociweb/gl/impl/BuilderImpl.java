@@ -67,6 +67,9 @@ import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
+import static com.ociweb.gl.api.MQTTBridge.defaultPort;
+import static com.ociweb.gl.api.MQTTBridge.tlsPort;
+
 public class BuilderImpl implements Builder {
 
 	private static final int DEFAULT_MAX_MQTT_IN_FLIGHT = 10;
@@ -910,7 +913,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, boolean isTLS, CharSequence clientId) {
-		return useMQTT(host, isTLS ? 8883 : 1883, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+		return useMQTT(host, isTLS ? tlsPort : defaultPort, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
 	}
 		
 	@Override
