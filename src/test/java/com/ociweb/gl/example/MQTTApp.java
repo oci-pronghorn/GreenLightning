@@ -14,6 +14,8 @@ import com.ociweb.gl.impl.MQTTQOS;
 import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.pipe.BlobWriter;
 
+import static com.ociweb.gl.api.MQTTBridge.defaultPort;
+
 public class MQTTApp implements GreenApp {
 
 	private MQTTBridge mqttConfig;
@@ -27,8 +29,8 @@ public class MQTTApp implements GreenApp {
 		
 	@Override
 	public void declareConfiguration(Builder builder) {
-		
-		mqttConfig = builder.useMQTT("127.0.0.1", 1883, false, "my name")
+
+		mqttConfig = builder.useMQTT("127.0.0.1", defaultPort, false, "my name")
 							.cleanSession(true)
 							.transmissionOoS(MQTTQOS.exactlyOnce)
 							.subscriptionQoS(MQTTQOS.exactlyOnce) //TODO: do tests for will and retain

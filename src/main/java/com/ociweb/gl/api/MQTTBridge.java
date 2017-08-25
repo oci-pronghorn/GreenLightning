@@ -6,6 +6,9 @@ import com.ociweb.gl.impl.mqtt.MQTTConfigTransmission;
 
 public interface MQTTBridge extends BridgeConfig<MQTTConfigTransmission, MQTTConfigSubscription> {
 
+	int defaultPort = 1883;
+	int tlsPort = 8883;
+
 	public MQTTBridge keepAliveSeconds(int seconds);
 	public MQTTBridge cleanSession(boolean clean);
 	public MQTTBridge authentication(CharSequence user, CharSequence pass);
