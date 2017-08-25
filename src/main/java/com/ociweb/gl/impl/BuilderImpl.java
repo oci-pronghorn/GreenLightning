@@ -223,7 +223,7 @@ public class BuilderImpl implements Builder {
     		throw new UnsupportedOperationException("invalid host name "+String.valueOf(bindHost));
     	}
     	this.bindPort = bindPort;
-    	if (bindPort<=0 || (bindPort>(1<<15))) {
+    	if (bindPort<=0 || (bindPort>=(1<<16))) {
     		throw new UnsupportedOperationException("invalid port "+bindPort);
     	}
     }
