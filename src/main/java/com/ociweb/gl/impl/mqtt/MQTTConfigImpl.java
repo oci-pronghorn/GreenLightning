@@ -71,7 +71,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		this.builder = builder;
 		this.rate = rate;
 		this.maxInFlight = maxInFlight;
-		this.maximumLenghOfVariableLengthFields = maxMessageLength;
+		this.maximumLenghOfVariableLengthFields = isTLS? Math.max(maxMessageLength, 1<<15) : maxMessageLength;
 		
 	}
 	
