@@ -463,10 +463,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean httpGet(CharSequence host, CharSequence route) {    	
     	return httpGet(host, builder.isClientTLS()?443:80, route, (HTTPResponseListener)listener);
     }
-    public boolean httpGet(CharSequence host, CharSequence route, int behaviorId) {
-    	return httpGet(host, builder.isClientTLS()?443:80, route, behaviorId);
+    
+    //TODO: this needs a much better name.
+    public boolean httpGet(CharSequence host, CharSequence route, int responseId) {
+    	return httpGet(host, builder.isClientTLS()?443:80, route, responseId);
     }
-	public boolean httpGet(CharSequence host, int port, CharSequence route, int behaviorId) {
+    
+    public boolean httpGet(CharSequence host, int port, CharSequence route, int behaviorId) {
+    	return httpGet(host,port,route,"",behaviorId);
+    }
+    
+	public boolean httpGet(CharSequence host, int port, CharSequence route, CharSequence headers, int behaviorId) {
 		assert(builder.isUseNetClient());
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
@@ -476,7 +483,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, host);
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, route);
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_LISTENER_10, behaviorId);
-    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, "");
+    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, headers);
     		    		
     		PipeWriter.publishWrites(httpRequest);
                 		
