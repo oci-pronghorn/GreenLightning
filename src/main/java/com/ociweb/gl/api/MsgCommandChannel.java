@@ -529,7 +529,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return false;
 	}
 	
-
+	public boolean httpPost(CharSequence domain, int port, CharSequence route, Writable payload) {
+		return httpPost(domain, port, route, "", payload);
+	}
+	
     /**
      * Submits an HTTP POST request asynchronously.
      *
@@ -542,7 +545,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    public boolean httpPost(CharSequence domain, int port, CharSequence route, Writable payload) {
+    public boolean httpPost(CharSequence domain, int port, CharSequence route, CharSequence headers, Writable payload) {
     	int behaviorId = builder.behaviorId((HTTPResponseListener)(HTTPResponseListener)listener);
 		
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
@@ -553,7 +556,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, domain);
 			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_LISTENER_10, behaviorId);
-    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7, "");
+    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7, headers);
     				    
 		    PayloadWriter<ClientHTTPRequestSchema> pw = (PayloadWriter<ClientHTTPRequestSchema>) Pipe.outputStream(httpRequest);
 
