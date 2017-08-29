@@ -2,6 +2,7 @@ package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
@@ -18,10 +19,13 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 		super(pipe);
 	}
 
-	public void setParseDetails(IntHashTable table, TrieParser headerTrieParser) {
+	public void setParseDetails(IntHashTable table, 
+			                    TrieParser headerTrieParser,
+			                    HTTPSpecification<?,?,?,?> httpSpec) {
 		this.paraIndexCount = 0; //count of fields before headers which are before the payload
 		this.headerHash = table;
 		this.headerTrieParser = headerTrieParser;
+		this.httpSpec = httpSpec;
 	}
 
 	public void setStatusCode(short statusId) { //TODO: hide these so maker does not see them.

@@ -4,6 +4,6 @@ import com.ociweb.pronghorn.pipe.BlobReader;
 
 public interface Headable {
 
-	public void read(BlobReader reader);
+	public void read(int headerId, BlobReader reader);
 
 }

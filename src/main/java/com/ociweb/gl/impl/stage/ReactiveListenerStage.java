@@ -431,7 +431,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
  				  reader.setParseDetails( builder.routeExtractionParser(routeId),
  						                  builder.routeHeaderToPositionTable(routeId), 
  						                  builder.routeExtractionParserIndexCount(routeId),
- 						                  builder.routeHeaderTrieParser(routeId)
+ 						                  builder.routeHeaderTrieParser(routeId),
+ 						                  builder.httpSpec
  						                 );
  				  
     	    	  int parallelRevision = Pipe.takeInt(p);
@@ -469,7 +470,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    		  }
     	    	  }
              	      
-    	    	  reader.setParseDetails(null,null,0,null);//just to be safe.
+    	    	  reader.setParseDetails(null,null,0,null,builder.httpSpec);//just to be safe.
     	      
     	      } else {
     	    	  logger.error("unrecognized message on {} ",p);
@@ -513,7 +514,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	
 	            	 final short statusId = reader.readShort();	
-				     reader.setParseDetails(headerToPositionTable, headerTrieParser);
+				     reader.setParseDetails(headerToPositionTable, headerTrieParser, builder.httpSpec);
 
 				     reader.setStatusCode(statusId);
 				     reader.setConnectionId(ccId1);

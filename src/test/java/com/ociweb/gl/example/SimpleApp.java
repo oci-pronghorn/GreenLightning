@@ -34,8 +34,7 @@ public class SimpleApp implements GreenApp {
 	public void declareConfiguration(Builder builder) {
 
 		builder.setTimerPulseRate(TimeTrigger.OnTheSecond);
-		builder.parallelism(8);
-				
+					
 		String bindHost = "127.0.0.1";
 		builder.enableServer(isTLS, isLarge, bindHost, port);
 		

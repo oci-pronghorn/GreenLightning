@@ -92,7 +92,7 @@ public class MathUnit implements RestListener {
 		Headable eat = new Headable() {
 
 			@Override
-			public void read(BlobReader httpPayloadReader) {
+			public void read(int id, BlobReader httpPayloadReader) {
 				httpPayloadReader.readUTF(cookieValue);
 				lastCookie = cookieValue.toString();
 			}

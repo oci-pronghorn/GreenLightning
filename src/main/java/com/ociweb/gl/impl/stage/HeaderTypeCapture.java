@@ -16,7 +16,7 @@ public class HeaderTypeCapture implements Headable{
 	}
 	
 	@Override
-	public void read(BlobReader reader) {
+	public void read(int id, BlobReader reader) {
 		
 		short type = reader.readShort();
 		if (type<0) {

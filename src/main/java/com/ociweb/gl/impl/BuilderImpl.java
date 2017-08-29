@@ -165,8 +165,10 @@ public class BuilderImpl implements Builder {
 	//////////////////////////////
 	//support for REST modules and routing
 	//////////////////////////////
-	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> httpSpec = HTTPSpecification.defaultSpec();
-	private HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig;	//////////////////////////////
+	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
+	             httpSpec = HTTPSpecification.defaultSpec();
+	private HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
+	             routerConfig;	//////////////////////////////
 	//////////////////////////////
 	
 	    

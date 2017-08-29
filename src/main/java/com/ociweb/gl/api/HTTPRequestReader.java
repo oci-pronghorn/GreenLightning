@@ -1,6 +1,7 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
@@ -27,12 +28,16 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	}
 
 	
-	public void setParseDetails(TrieParser extractionParser, IntHashTable table, 
-			                   int paraIndexCount, TrieParser headerTrieParser) {
+	public void setParseDetails(TrieParser extractionParser, 
+			                    IntHashTable table, 
+			                    int paraIndexCount, 
+			                    TrieParser headerTrieParser,
+			                    HTTPSpecification httpSpec) {
 		this.paraIndexCount = paraIndexCount; //count of fields before headers which are before the payload
 		this.extractionParser = extractionParser;
 		this.headerHash = table;
 		this.headerTrieParser = headerTrieParser;
+		this.httpSpec = httpSpec;
 	}
 	
 	public void setVerb(HTTPVerbDefaults verb) {
@@ -115,8 +120,9 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	}
 	
 	protected TrieParser extractionParser;
+	
 	public long getFieldId(byte[] fieldName) {
-		long id = reader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
+		long id = TrieParserReader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
 		if (id<0) {
 			throw new UnsupportedOperationException("unknown field name '"+new String(fieldName)+"'");
 		}

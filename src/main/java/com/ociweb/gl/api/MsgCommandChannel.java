@@ -17,6 +17,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
+import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.pipe.BlobWriter;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
@@ -459,6 +460,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     private boolean httpGet(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
     	return httpGet(host, port, route, builder.behaviorId((HTTPResponseListener)listener)); 	
     }
+
     
     public boolean httpGet(CharSequence host, CharSequence route) {    	
     	return httpGet(host, builder.isClientTLS()?443:80, route, (HTTPResponseListener)listener);
@@ -483,7 +485,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, host);
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, route);
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_LISTENER_10, behaviorId);
-    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, headers);
+			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, headers);
     		    		
     		PipeWriter.publishWrites(httpRequest);
                 		
