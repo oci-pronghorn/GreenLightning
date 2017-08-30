@@ -99,7 +99,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 			
 			httpSpec.writeHeader(target, headerOrdinal, this);
 			try {
-				target.append("\n\r");
+				target.append("\r\n");
 			} catch (IOException e) {
 				throw new RuntimeException(e);
 			}		
