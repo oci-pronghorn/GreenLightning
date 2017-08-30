@@ -737,6 +737,20 @@ public class BuilderImpl implements Builder {
 		return telemetryHost = NetGraphBuilder.bindHost();
 	}
 	
+	@Override
+	public String enableTelemetry(int port) {
+		isTelemetryEnabled = true;
+		telemetryPort = port;
+		return telemetryHost = NetGraphBuilder.bindHost();
+	}
+	
+	@Override
+	public void enableTelemetry(String host, int port) {
+		isTelemetryEnabled = true;
+		telemetryPort = port;
+		telemetryHost = host;
+	}
+	
 	public final long getDefaultSleepRateNS() {
 		return defaultSleepRateNS;
 	}
