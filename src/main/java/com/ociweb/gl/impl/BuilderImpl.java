@@ -105,6 +105,8 @@ public class BuilderImpl implements Builder {
 
 	public Enum<?> beginningState;
     private int parallelism = 1;//default is one
+    
+    
 
 	/////////////////
 	///Pipes for initial startup declared subscriptions. (Not part of graph)
@@ -129,7 +131,10 @@ public class BuilderImpl implements Builder {
 	private boolean isLarge = false;
 	private boolean isTLSServer = true; 
 	private boolean isTLSClient = true; 
-		
+
+	private ClientCoordinator ccm;
+
+	
 	private boolean isTelemetryEnabled = false;
 	private String telemetryHost = null;
 	private int telemetryPort = 8098;
@@ -210,6 +215,11 @@ public class BuilderImpl implements Builder {
 	
 	public final String defaultHostPath() {
 		return defaultHostPath;
+	}
+	
+	
+	public ClientCoordinator getClientCoordinator() {
+		return ccm;
 	}
 	
 	public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
@@ -422,12 +432,14 @@ public class BuilderImpl implements Builder {
 
 	public final Builder useNetClient() {
 		this.useNetClient = true;
+
 		return this;
 	}
 	
 	public final Builder useInsecureNetClient() {
 		this.useNetClient = true;
 		this.isTLSClient = false;
+
 		return this;
 	}
 
@@ -486,9 +498,9 @@ public class BuilderImpl implements Builder {
 		channelBlocker = new Blocker(maxGoPipeId+1);
 	}
 
-	protected final boolean useNetClient(IntHashTable netPipeLookup, Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
+	protected final boolean useNetClient(Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
 
-		return !IntHashTable.isEmpty(netPipeLookup) && (netRequestPipes.length!=0);
+		return (netRequestPipes.length!=0);
 	}
 
 	protected final void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
@@ -701,12 +713,6 @@ public class BuilderImpl implements Builder {
 		return routerConfig().headerTrieParser(routeId);
 	}
 
-	public final ClientCoordinator getClientCoordinator() {
-		boolean isTLS = true;
-		return useNetClient ? new ClientCoordinator(connectionsInBit, maxPartialResponse, isTLS) : null;
-		
-	}
-
 	public final Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {
 		final boolean hasNoRoutes = (0==routerConfig().routesCount());
 		Pipe<HTTPRequestSchema> pipe = new Pipe<HTTPRequestSchema>(restPipeConfig) {
@@ -761,7 +767,7 @@ public class BuilderImpl implements Builder {
 	}
 
 
-	public void buildStages(IntHashTable subscriptionPipeLookup2, IntHashTable netPipeLookup2, GraphManager gm2) {
+	public void buildStages(IntHashTable subscriptionPipeLookup2, GraphManager gm2) {
 
 		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfTypeWithNoProducer(gm2, NetResponseSchema.instance);
 		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfTypeWithNoProducer(gm2, MessageSubscription.instance);
@@ -776,7 +782,7 @@ public class BuilderImpl implements Builder {
 		int eventSchemas = 0;
 		
 		IDX_MSG = (IntHashTable.isEmpty(subscriptionPipeLookup2) && subscriptionPipes.length==0 && messagePubSub.length==0) ? -1 : eventSchemas++;
-		IDX_NET = useNetClient(netPipeLookup2, httpClientRequestPipes) ? eventSchemas++ : -1;
+		IDX_NET = useNetClient(httpClientRequestPipes) ? eventSchemas++ : -1;
 						
         long timeout = 20_000; //20 seconds
 		
@@ -822,13 +828,10 @@ public class BuilderImpl implements Builder {
 				PipeCleanerStage.newInstance(gm, orderPipes[t]);
 			}
 		}
-		
-		
-		
-		
+				
 		initChannelBlocker(maxGoPipeId);
 		
-		buildHTTPClientGraph(netPipeLookup2, httpClientResponsePipes, httpClientRequestPipes, masterGoOut, masterAckIn);
+		buildHTTPClientGraph(httpClientResponsePipes, httpClientRequestPipes, masterGoOut, masterAckIn);
 		
 		/////////
 		//always create the pub sub and state management stage?
@@ -842,13 +845,14 @@ public class BuilderImpl implements Builder {
 		}
 	}
 
-	protected void buildHTTPClientGraph(IntHashTable netPipeLookup2, Pipe<NetResponseSchema>[] netResponsePipes,
+	
+	protected void buildHTTPClientGraph(Pipe<NetResponseSchema>[] netResponsePipes,
 			Pipe<ClientHTTPRequestSchema>[] netRequestPipes, Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn) {
 		////////
 		//create the network client stages
 		////////
-		if (useNetClient(netPipeLookup2, netRequestPipes)) {
+		if (useNetClient(netRequestPipes)) {
 			
 			int connectionsInBits=10;			
 			int maxPartialResponses=4;
@@ -872,7 +876,7 @@ public class BuilderImpl implements Builder {
 					
 					
 			//BUILD GRAPH
-			ClientCoordinator ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
+			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
 		
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;
@@ -883,8 +887,7 @@ public class BuilderImpl implements Builder {
 						
 
 			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, 
-					netPipeLookup2, responseQueue, 
-					responseSize, clientRequests, netResponsePipes);
+					responseQueue, responseSize, clientRequests, netResponsePipes);
 						
 		}
 	}

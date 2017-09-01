@@ -17,8 +17,6 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -436,14 +434,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * The response to this HTTP GET will be sent to any HTTPResponseListeners
      * associated with the listener for this command channel.
      *
-     * @param domain Root domain to submit the request to (e.g., google.com)
-     * @param port Port to submit the request to.
+     * @param session Root domain/port to submit the request to (e.g., google.com)
      * @param path Route on the domain to submit the request to (e.g., /api/hello)
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    public boolean httpGet(CharSequence domain, int port, CharSequence path) {
-    	return httpGet(domain,port,path,(HTTPResponseListener)listener);
+    public boolean httpGet(HTTPSession session, CharSequence path) {
+    	return httpGet(session,path,(HTTPResponseListener)listener);
 
     }
 
@@ -457,34 +454,41 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    private boolean httpGet(CharSequence host, int port, CharSequence route, HTTPResponseListener listener) {
-    	return httpGet(host, port, route, builder.behaviorId((HTTPResponseListener)listener)); 	
-    }
-
-    
-    public boolean httpGet(CharSequence host, CharSequence route) {    	
-    	return httpGet(host, builder.isClientTLS()?443:80, route, (HTTPResponseListener)listener);
+    private boolean httpGet(HTTPSession session, CharSequence route, HTTPResponseListener listener) {
+    	return httpGet(session, route, builder.behaviorId((HTTPResponseListener)listener)); 	
     }
     
-    //TODO: this needs a much better name.
-    public boolean httpGet(CharSequence host, CharSequence route, int responseId) {
-    	return httpGet(host, builder.isClientTLS()?443:80, route, responseId);
+    public boolean httpGet(HTTPSession session, CharSequence route, int behaviorId) {
+    	return httpGet(session,route,"",behaviorId);
     }
     
-    public boolean httpGet(CharSequence host, int port, CharSequence route, int behaviorId) {
-    	return httpGet(host,port,route,"",behaviorId);
-    }
+    //TODO: once we know the command channel add support for FAST calls.
+    //Connection/Session Object   (Host, Port, SessionId) - this object will cache connnection ID for performance.
+   
     
-	public boolean httpGet(CharSequence host, int port, CharSequence route, CharSequence headers, int behaviorId) {
+	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers, int behaviorId) {
 		assert(builder.isUseNetClient());
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
+		//TODO: add back channel to pick up the connectionId once it is established?
+		//      TODO: switch to other call and add this block to all http methods....
+		if (session.getConnectionId()<0) {
+			long id = builder.getClientCoordinator().lookup(
+					    session.host, 0, session.host.length, Integer.MAX_VALUE,
+					    session.port, session.sessionId);
+		    if (id>=0) {
+		    	session.setConnectionId(id);
+		    }
+		}
+		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
                 	    
-    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1, port);
-    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, host);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, behaviorId);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10, session.sessionId);
+			
+    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1, session.port);
+    		PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, session.host);
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, route);
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_LISTENER_10, behaviorId);
 			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, headers);
     		    		
     		PipeWriter.publishWrites(httpRequest);
@@ -502,25 +506,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
         return false;
 	}
-	
-    public boolean httpClose(CharSequence host) {    	
-    	return httpClose(host, builder.isClientTLS()?443:80, (HTTPResponseListener)listener);
-    }
-    private boolean httpClose(CharSequence host, int port, HTTPResponseListener listener) {
-    	return httpClose(host, port, builder.behaviorId((HTTPResponseListener)listener)); 	
-    }
-    public boolean httpClose(CharSequence host, int behaviorId) {
-    	return httpClose(host, builder.isClientTLS()?443:80, behaviorId);
-    }
-	public boolean httpClose(CharSequence host, int port, int behaviorId) {
+
+	public boolean httpClose(HTTPSession session) {
 		assert(builder.isUseNetClient());
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104)) {
                 	    
-			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_HOST_2, host);
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_LISTENER_10, behaviorId);
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_PORT_1, port);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_SESSION_10, session.sessionId);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_PORT_1, session.port);
+			PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_HOST_2, session.host);
 		
     		PipeWriter.publishWrites(httpRequest);
                 		
@@ -531,8 +526,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return false;
 	}
 	
-	public boolean httpPost(CharSequence domain, int port, CharSequence route, Writable payload) {
-		return httpPost(domain, port, route, "", payload);
+	public boolean httpPost(HTTPSession session, CharSequence route, Writable payload) {
+		return httpPost(session, route, "", payload);
 	}
 	
     /**
@@ -541,23 +536,23 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * The response to this HTTP POST will be sent to any HTTPResponseListeners
      * associated with the listener for this command channel.
      *
-     * @param domain Root domain to submit the request to (e.g., google.com)
-     * @param port Port to submit the request to.
+     * @param session Root domain/port to submit the request to (e.g., google.com)
      * @param route Route on the domain to submit the request to (e.g., /api/hello)
      *
      * @return True if the request was successfully submitted, and false otherwise.
      */
-    public boolean httpPost(CharSequence domain, int port, CharSequence route, CharSequence headers, Writable payload) {
+    public boolean httpPost(HTTPSession session, CharSequence route, CharSequence headers, Writable payload) {
     	int behaviorId = builder.behaviorId((HTTPResponseListener)(HTTPResponseListener)listener);
 		
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
-		        	    
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, port);
-			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, domain);
+
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_DESTINATION_11, behaviorId);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_SESSION_10, session.sessionId);
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, session.port);
+			PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, session.host);
 			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_LISTENER_10, behaviorId);
     		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7, headers);
     				    
 		    PayloadWriter<ClientHTTPRequestSchema> pw = (PayloadWriter<ClientHTTPRequestSchema>) Pipe.outputStream(httpRequest);

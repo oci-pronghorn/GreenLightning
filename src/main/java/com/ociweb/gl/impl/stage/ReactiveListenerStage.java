@@ -132,9 +132,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private HTTPSpecification httpSpec;
     private IntHashTable headerToPositionTable; //for HTTPClient
     private TrieParser headerTrieParser; //for HTTPClient
-   
-    
-    private final ClientCoordinator ccm;
+       
     protected ReactiveManagerPipeConsumer consumer;
 
 	protected static final long MS_to_NS = 1_000_000;
@@ -166,9 +164,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                                        
         this.states = builder.getStates();
         this.graphManager = graphManager;
-             
-        this.ccm = builder.getClientCoordinator();
-        
+
         int totalCount = totalLiveReactors.incrementAndGet();
         assert(totalCount>=0);
         if (listener instanceof ShutdownListener) {
@@ -489,8 +485,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     
 	final void consumeNetResponse(Object listener, Pipe<NetResponseSchema> p) {
-		 assert(null!=ccm) : "must define coordinator";
-
 		 
     	 while (Pipe.hasContentToRead(p)) {                
              

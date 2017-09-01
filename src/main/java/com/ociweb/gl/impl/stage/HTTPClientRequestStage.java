@@ -95,14 +95,21 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 				            		final int hostLen = PipeReader.readBytesLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
 				            		final int hostMask = Pipe.blobMask(requestPipe);
 				                	
+				            		int routeId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11);
+				            		
 					                int port = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1);
-					                int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_LISTENER_10);
+					                int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10);
+
+					                
 					                
 					                long connectionId = ccm.lookup(hostBack, hostPos, hostLen, hostMask, port, userId);	
 					                
 					                ClientConnection clientConnection;
 					                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.get(connectionId) ) ) {
-						                
+						               
+					                	assert(clientConnection.singleUsage(stageId)) : "Only a single Stage may update the clientConnection.";
+					                	clientConnection.recordDestinationRouteId(routeId);
+						        		
 					                	int outIdx = clientConnection.requestPipeLineIdx();
 					                	
 					                	clientConnection.incRequestsSent();//count of messages can only be done here.
@@ -157,9 +164,10 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 				            		final int hostPos = PipeReader.readBytesPosition(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2);
 				            		final int hostLen = PipeReader.readBytesLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2);
 				            		final int hostMask = Pipe.blobMask(requestPipe);
-				                	
+
+				            		int routeId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_DESTINATION_11);
+				            		int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_SESSION_10);
 					                int port = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1);
-					                int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_LISTENER_10);
 					                
 					                long connectionId = ccm.lookup(hostBack, hostPos, hostLen, hostMask, port, userId);	
 					                //openConnection(activeHost, port, userId, outIdx);
@@ -167,6 +175,10 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 					                ClientConnection clientConnection;
 					                if ((-1 != connectionId) && (null!=(clientConnection = (ClientConnection)ccm.get(connectionId)))) {
 					                	
+						                
+						        		//TODO: due to this thread unsafe method we must only have 1 HTTPClientRequestStage per client coord.
+						        		clientConnection.recordDestinationRouteId(userId);
+						        		
 					                	int outIdx = clientConnection.requestPipeLineIdx();
 					                					                  	
 					                	clientConnection.incRequestsSent();//count of messages can only be done here.
@@ -223,7 +235,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 			            		final int hostLen = PipeReader.readBytesLength(requestPipe, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_HOST_2);
 			            		final int hostMask = Pipe.blobMask(requestPipe);
 				                final int port = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_PORT_1);
-				                final int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_LISTENER_10);
+				                final int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_SESSION_10);
 				                
 				                long connectionId = ccm.lookup(hostBack, hostPos, hostLen, hostMask, port, userId);	
 				                //only close if we find a live connection
@@ -277,7 +289,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 		
 		
 		int port = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1);
-		int userId = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_LISTENER_10);		
+		int userId = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10);		
 						
 		ClientConnection activeConnection = ClientCoordinator.openConnection(
 				ccm, hostBack, hostPos, hostLen, hostMask, port, userId, output,	

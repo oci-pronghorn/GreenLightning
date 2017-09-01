@@ -74,7 +74,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected int netResponsePipeIdx = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
     protected int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
     protected final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
-    protected final IntHashTable netPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
     
     private BridgeConfig[] bridges = new BridgeConfig[0];
     
@@ -366,13 +365,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			};
 			Pipe<NetResponseSchema> netResponsePipe = netResponsePipe1;        	
             int pipeIdx = netResponsePipeIdx++;
-            inputPipes[--pipesCount] = netResponsePipe;            
-            boolean addedItem = IntHashTable.setItem(netPipeLookup, builder.behaviorId((Behavior)listener), pipeIdx);
-            if (!addedItem) {
-            	throw new RuntimeException("Behaviors must only be registered once.\n\nAn instance of "
-            			+listener.getClass().getCanonicalName()+" was discovered to be registered twice. "
-            			+"\n\nThis stack trace captures the second known registration occurance.");
-            }
+            inputPipes[--pipesCount] = netResponsePipe; 
             
         }
         

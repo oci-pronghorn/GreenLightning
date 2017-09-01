@@ -69,7 +69,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	    
 	    System.out.println("To exit app press Ctrl-C");
 
-			runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.netPipeLookup, runtime.gm);
+			runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.gm);
 
 			   runtime.logStageScheduleRates();
 
@@ -95,7 +95,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
         runtime.declareBehavior(app);
 
-			runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.netPipeLookup, runtime.gm);
+			runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.gm);
 
 			   runtime.logStageScheduleRates();
 
