@@ -59,6 +59,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     protected String telemetryHost;
     
+    
     //NOTE: keep short since the MessagePubSubStage will STOP consuming message until the one put on here
     //      is actually taken off and consumed.  We have little benefit to making this longer.
     protected static final int defaultCommandChannelSubscriberLength = 8;
@@ -366,7 +367,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			Pipe<NetResponseSchema> netResponsePipe = netResponsePipe1;        	
             int pipeIdx = netResponsePipeIdx++;
             inputPipes[--pipesCount] = netResponsePipe; 
-            
+
+            builder.registerHTTPClientId(builder.behaviorId(listener), pipeIdx);            
         }
         
         if (this.builder.isListeningToSubscription(listener)) {   

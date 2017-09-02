@@ -102,6 +102,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.parallelInstanceId = parallelInstanceId;
     }
 
+
+    
     public boolean hasRoomFor(int messageCount) {
 		return Pipe.hasRoomForWrite(goPipe, 
     			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(goPipe))*messageCount);
@@ -455,7 +457,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the request was successfully submitted, and false otherwise.
      */
     private boolean httpGet(HTTPSession session, CharSequence route, HTTPResponseListener listener) {
-    	return httpGet(session, route, builder.behaviorId((HTTPResponseListener)listener)); 	
+    	
+    	return httpGet(session, route,
+    			builder.behaviorId((HTTPResponseListener)listener)
+    			); 	
+    	
     }
     
     public boolean httpGet(HTTPSession session, CharSequence route, int behaviorId) {
@@ -464,9 +470,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     //TODO: once we know the command channel add support for FAST calls.
     //Connection/Session Object   (Host, Port, SessionId) - this object will cache connnection ID for performance.
-   
-    
-	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers, int behaviorId) {
+       
+	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers, int routeId) {
 		assert(builder.isUseNetClient());
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
@@ -483,7 +488,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
                 	    
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, behaviorId);
+			int pipeId = builder.lookupHTTPClientPipe(routeId);
+			
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, pipeId);
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10, session.sessionId);
 			
     		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1, session.port);
@@ -542,13 +549,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the request was successfully submitted, and false otherwise.
      */
     public boolean httpPost(HTTPSession session, CharSequence route, CharSequence headers, Writable payload) {
-    	int behaviorId = builder.behaviorId((HTTPResponseListener)(HTTPResponseListener)listener);
+    	int routeId = builder.behaviorId((HTTPResponseListener)(HTTPResponseListener)listener);
 		
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
 
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_DESTINATION_11, behaviorId);
+			int pipeId = builder.lookupHTTPClientPipe(routeId);
+			
+			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_DESTINATION_11, pipeId);
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_SESSION_10, session.sessionId);
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, session.port);
 			PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, session.host);

@@ -106,6 +106,8 @@ public class BuilderImpl implements Builder {
 	public Enum<?> beginningState;
     private int parallelism = 1;//default is one
     
+    private final int maxBehaviorBits = 15;
+    private IntHashTable netPipeLookup = new IntHashTable(maxBehaviorBits);
     
 
 	/////////////////
@@ -180,6 +182,19 @@ public class BuilderImpl implements Builder {
     public final ReactiveOperators operators;
 	
 	
+    public void registerHTTPClientId(int routeId, int pipeIdx) {
+		boolean addedItem = IntHashTable.setItem(netPipeLookup, routeId, pipeIdx);
+        if (!addedItem) {
+        	throw new RuntimeException("Behaviors must only be registered once.\n\nAn instance "
+        			+"was discovered to be registered twice. "
+        			+"\n\nThis stack trace captures the second known registration occurance.");
+        }
+    }
+    
+    public int lookupHTTPClientPipe(int routeId) {
+    	return IntHashTable.getItem(netPipeLookup, routeId);
+    }
+    
 	public int pubSubIndex() {
 		return IDX_MSG;
 	}
