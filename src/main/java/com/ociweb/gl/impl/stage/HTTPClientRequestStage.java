@@ -105,7 +105,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 					                long connectionId = ccm.lookup(hostBack, hostPos, hostLen, hostMask, port, userId);	
 					                
 					                ClientConnection clientConnection;
-					                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.get(connectionId) ) ) {
+					                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId) ) ) {
 						               
 					                	assert(clientConnection.singleUsage(stageId)) : "Only a single Stage may update the clientConnection.";
 					                	clientConnection.recordDestinationRouteId(routeId);
@@ -173,7 +173,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 					                //openConnection(activeHost, port, userId, outIdx);
 					                
 					                ClientConnection clientConnection;
-					                if ((-1 != connectionId) && (null!=(clientConnection = (ClientConnection)ccm.get(connectionId)))) {
+					                if ((-1 != connectionId) && (null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId)))) {
 					                	
 						                
 						        		//TODO: due to this thread unsafe method we must only have 1 HTTPClientRequestStage per client coord.
@@ -240,7 +240,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 				                long connectionId = ccm.lookup(hostBack, hostPos, hostLen, hostMask, port, userId);	
 				                //only close if we find a live connection
 				                if ((-1 != connectionId)) {
-				                	ClientConnection connectionToKill = (ClientConnection)ccm.get(connectionId);
+				                	ClientConnection connectionToKill = (ClientConnection)ccm.connectionForSessionId(connectionId);
 				                	if (null!=connectionToKill) {
 				                	
 					                	Pipe<NetPayloadSchema> outputPipe = output[connectionToKill.requestPipeLineIdx()];

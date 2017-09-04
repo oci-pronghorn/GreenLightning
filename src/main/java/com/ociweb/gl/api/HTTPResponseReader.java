@@ -22,10 +22,12 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	public void setParseDetails(IntHashTable table, 
 			                    TrieParser headerTrieParser,
 			                    HTTPSpecification<?,?,?,?> httpSpec) {
-		this.paraIndexCount = 0; //count of fields before headers which are before the payload
+		//there is 1 field which holds the index to where the payload begins, eg after the headers.
+		this.paraIndexCount = 1; //count of fields before headers which are before the payload
 		this.headerHash = table;
 		this.headerTrieParser = headerTrieParser;
 		this.httpSpec = httpSpec;
+		this.payloadIndexOffset = 1;
 	}
 
 	public void setStatusCode(short statusId) { //TODO: hide these so maker does not see them.

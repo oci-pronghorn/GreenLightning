@@ -22,6 +22,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	protected TrieParser headerTrieParser; //look up header id from the header string bytes
 	protected TrieParserReader reader = new TrieParserReader(0, true);
 	protected HTTPSpecification httpSpec;
+	protected int payloadIndexOffset;
 	
 	private static final Logger logger = LoggerFactory.getLogger(HTTPPayloadReader.class);
 	
@@ -113,8 +114,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	public boolean openPayloadData(Payloadable reader) {
 		
 		if (hasRemainingBytes()) {		
-			//logger.trace("reading the position of the body {} from position {} ",readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)),paraIndexCount + IntHashTable.count(headerHash));
-			setPositionBytesFromStart(readFromEndLastInt(paraIndexCount + IntHashTable.count(headerHash)));
+			setPositionBytesFromStart(readFromEndLastInt(payloadIndexOffset));
 			reader.read(this);//even when we have zero length...
 			return true;
 		} else {
