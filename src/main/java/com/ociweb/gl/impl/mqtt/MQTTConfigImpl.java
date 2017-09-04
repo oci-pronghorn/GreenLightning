@@ -37,8 +37,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	//
 	private CharSequence user = null;
 	private CharSequence pass = null;
-	private CharSequence willTopic = null;
-	private Writable willPayload = null;
+	private CharSequence lastWillTopic = null;
+	private Writable lastWillPayload = null;
 	//
 	private int flags;
 	private final boolean isTLS;
@@ -58,6 +58,11 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 
 	private int transmissionFieldQOS = 0; 
 	private int transmissionFieldRetain = 0;
+
+	private CharSequence firstWillTopic = null;
+	private Writable firstWillPayload = null;
+	private boolean firstWillRetain = false;
+	private MQTTQOS firstWillQoS = null;
 	
 	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
 			       BuilderImpl builder, long rate, 
@@ -104,12 +109,12 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	    PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_KEEPALIVESEC_28, keepAliveSeconds);
 	    PipeWriter.writeInt(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_FLAGS_29, flags);
 	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_CLIENTID_30, (CharSequence) clientId);
-	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_WILLTOPIC_31, (CharSequence) willTopic);
+	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_WILLTOPIC_31, (CharSequence) lastWillTopic);
 	    
 	    DataOutputBlobWriter<MQTTClientRequestSchema> writer = PipeWriter.outputStream(output);
 	    DataOutputBlobWriter.openField(writer);	
-	    if(null!=willPayload) {
-	    	willPayload.write((MQTTWriter)writer);
+	    if(null!= lastWillPayload) {
+	    	lastWillPayload.write((MQTTWriter)writer);
 	    }
 	    DataOutputBlobWriter.closeHighLevelField(writer, MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_WILLPAYLOAD_32);
 	    
@@ -187,7 +192,20 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		return this;
 	}
 
-	public MQTTBridge will(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write ) {
+	public MQTTBridge firstWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
+		firstWillTopic = topic;
+		firstWillPayload = write;
+		firstWillRetain = retain;
+		firstWillQoS = willQoS;
+		// TODO: On connect ack received publish this message
+		return this;
+	}
+
+	public MQTTBridge lastWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
+		return will(retain, willQoS, topic, write);
+	}
+
+	public MQTTBridge will(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
@@ -201,8 +219,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		
 		flags |= MQTTEncoder.CONNECT_FLAG_WILL_FLAG_2;
 		
-		this.willTopic = topic;
-		this.willPayload = write;
+		this.lastWillTopic = topic;
+		this.lastWillPayload = write;
 		
 		return this;
 	}
