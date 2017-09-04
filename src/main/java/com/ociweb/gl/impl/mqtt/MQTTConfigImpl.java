@@ -196,8 +196,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		
 		flags = setBitByBoolean(flags, retain, MQTTEncoder.CONNECT_FLAG_WILL_RETAIN_5);
 		
-		flags = setBitByBoolean(flags, (1&willQoS.ordinal())!=0, MQTTEncoder.CONNECT_FLAG_WILL_QOS_3);
-		flags = setBitByBoolean(flags, (2&willQoS.ordinal())!=0, MQTTEncoder.CONNECT_FLAG_WILL_QOS_4);
+		flags = setBitByBoolean(flags, (1&willQoS.getSpecification())!=0, MQTTEncoder.CONNECT_FLAG_WILL_QOS_3);
+		flags = setBitByBoolean(flags, (2&willQoS.getSpecification())!=0, MQTTEncoder.CONNECT_FLAG_WILL_QOS_4);
 		
 		flags |= MQTTEncoder.CONNECT_FLAG_WILL_FLAG_2;
 		
