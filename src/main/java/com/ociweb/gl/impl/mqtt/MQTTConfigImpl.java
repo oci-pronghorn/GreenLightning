@@ -1,7 +1,6 @@
 package com.ociweb.gl.impl.mqtt;
 
 import com.ociweb.gl.impl.MQTTQOS;
-import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,10 +56,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private int transmissionFieldQOS = 0; 
 	private int transmissionFieldRetain = 0;
 
-	private CharSequence firstWillTopic = null;
-	private Writable firstWillPayload = null;
-	private int firstWillRetain = 0;
-	private int firstWillQoS = 0;
+	private final MQTTMessage firstWill = new MQTTMessage();
 	
 	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
 			       BuilderImpl builder, long rate, 
@@ -75,7 +71,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		this.rate = rate;
 		this.maxInFlight = maxInFlight;
 		this.maximumLenghOfVariableLengthFields = isTLS? Math.max(maxMessageLength, 1<<15) : maxMessageLength;
-		
 	}
 	
 	
@@ -119,7 +114,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_USER_33, (CharSequence) user);
 	    PipeWriter.writeUTF8(output,MQTTClientRequestSchema.MSG_CONNECT_1_FIELD_PASS_34, (CharSequence) pass);
 	    PipeWriter.publishWrites(output);
-			
 	}
 	
 	public MQTTBridge keepAliveSeconds(int seconds) {
@@ -191,10 +185,11 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	public MQTTBridge firstWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
-		firstWillTopic = topic;
-		firstWillPayload = write;
-		firstWillRetain = retain?1:0;
-		firstWillQoS = willQoS.getSpecification();
+		firstWill.externalTopic = topic;
+		firstWill.internalTopic = "$connection/mqtt";
+		firstWill.payload = write;
+		firstWill.retain = retain?1:0;
+		firstWill.qos = willQoS.getSpecification();
 		return this;
 	}
 
@@ -383,7 +378,11 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		assert(internalTopicsXmit.length == convertersXmit.length);
 		
 		assert(internalTopicsSub.length == externalTopicsSub.length);
-		assert(internalTopicsSub.length == convertersSub.length);		
+		assert(internalTopicsSub.length == convertersSub.length);
+
+		if (firstWill != null) {
+			builder.addStartupSubscription(firstWill.internalTopic, code);
+		}
 		
 		if (internalTopicsSub.length>0) {
 			
@@ -396,34 +395,14 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 				PipeWriter.publishWrites(clientRequest);
 			}
 
-			//now publish our firstWill
-			if (firstWillTopic != null) {
-				PipeWriter.presumeWriteFragment(clientRequest, MQTTClientRequestSchema.MSG_PUBLISH_3);
-				PipeWriter.writeInt(clientRequest, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, firstWillQoS);
-				PipeWriter.writeInt(clientRequest, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, firstWillRetain);
-
-				DataOutputBlobWriter<MQTTClientRequestSchema> stream = PipeWriter.outputStream(clientRequest);
-				DataOutputBlobWriter.openField(stream);
-				PipeReader.readUTF8(clientRequest, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, stream);
-				DataOutputBlobWriter.closeHighLevelField(stream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23);
-
-				DataOutputBlobWriter<MQTTClientRequestSchema> writer = PipeWriter.outputStream(clientRequest);
-				DataOutputBlobWriter.openField(writer);
-				if(null!= firstWillPayload) {
-					firstWillPayload.write(writer);
-				}
-				DataOutputBlobWriter.closeHighLevelField(writer, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_PAYLOAD_25);
-
-				PipeWriter.publishWrites(clientRequest);
-			}
-			
-			new IngressMQTTStage(builder.gm, clientResponse, new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), externalTopicsSub, internalTopicsSub, convertersSub);
+			new IngressMQTTStage(builder.gm, clientResponse, new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), externalTopicsSub, internalTopicsSub, convertersSub,
+					firstWill.internalTopic);
 		} else {
 			PipeCleanerStage.newInstance(builder.gm, clientResponse);
 		}
 		
 		if (internalTopicsXmit.length>0) {
-			new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, qosXmit, retainXmit);
+			new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, qosXmit, retainXmit, firstWill);
 		} else {
 			PipeNoOp.newInstance(builder.gm, clientRequest);			
 		}
@@ -461,7 +440,4 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		activeRow = (int)id;
 		return subsConf;
 	}
-
-
-
 }

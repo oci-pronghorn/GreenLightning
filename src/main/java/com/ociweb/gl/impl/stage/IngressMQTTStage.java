@@ -1,5 +1,6 @@
 package com.ociweb.gl.impl.stage;
 
+import com.ociweb.pronghorn.pipe.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -7,13 +8,12 @@ import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeReader;
-import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+
+import static com.ociweb.gl.impl.schema.IngressMessages.MSG_PUBLISH_103;
+import static com.ociweb.gl.impl.schema.IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3;
+import static com.ociweb.gl.impl.schema.IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1;
 
 public class IngressMQTTStage extends PronghornStage {
 
@@ -21,6 +21,7 @@ public class IngressMQTTStage extends PronghornStage {
 	private final Pipe<IngressMessages> output;
 	private final CharSequence[] externalTopic; 
 	private final CharSequence[] internalTopic;
+	private final CharSequence connectionTopic;
 	private final IngressConverter[] converter;
 	private boolean allTopicsMatch;
 	private static final Logger logger = LoggerFactory.getLogger(IngressMQTTStage.class);
@@ -38,17 +39,18 @@ public class IngressMQTTStage extends PronghornStage {
 		
 	public IngressMQTTStage(GraphManager graphManager, Pipe<MQTTClientResponseSchema> input, Pipe<IngressMessages> output, 
             CharSequence[] externalTopic, CharSequence[] internalTopic) {
-		this(graphManager, input, output, externalTopic, internalTopic, asArray(copyConverter, internalTopic.length ));
+		this(graphManager, input, output, externalTopic, internalTopic, asArray(copyConverter, internalTopic.length ), null);
 	}
 	
 	public IngressMQTTStage(GraphManager graphManager, Pipe<MQTTClientResponseSchema> input, Pipe<IngressMessages> output, 
-			                CharSequence[] externalTopic, CharSequence[] internalTopic, IngressConverter[] converter) {
+			                CharSequence[] externalTopic, CharSequence[] internalTopic, IngressConverter[] converter, CharSequence connectionTopic) {
 		
 		super(graphManager, input, output);
 		this.input = input;
 		this.output = output;
 		this.externalTopic = externalTopic;
 		this.internalTopic = internalTopic;
+		this.connectionTopic = connectionTopic;
 		this.allTopicsMatch = isMatching(internalTopic,externalTopic,converter);
 		this.converter = converter;
 		
@@ -102,12 +104,12 @@ public class IngressMQTTStage extends PronghornStage {
 		        	if (allTopicsMatch) {
 		        		i = 0;//to select the common converter for all.
 		        		
-						PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
+						PipeWriter.presumeWriteFragment(output, MSG_PUBLISH_103);
 			        	//direct copy of topic
 			        	DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
 			        	DataOutputBlobWriter.openField(stream);
 			        	PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, stream);
-			        	DataOutputBlobWriter.closeHighLevelField(stream, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+			        	DataOutputBlobWriter.closeHighLevelField(stream, MSG_PUBLISH_103_FIELD_TOPIC_1);
 
 		        	} else {
 			        	boolean topicMatches = false;
@@ -122,8 +124,8 @@ public class IngressMQTTStage extends PronghornStage {
 		        			logger.warn("Unknown topic from external broker {}",PipeReader.readUTF8(input, MQTTClientResponseSchema.MSG_MESSAGE_3_FIELD_TOPIC_23, new StringBuilder()));
 		        			break;
 		        		}
-						PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
-						PipeWriter.writeUTF8(output, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, internalTopic[i]);
+						PipeWriter.presumeWriteFragment(output, MSG_PUBLISH_103);
+						PipeWriter.writeUTF8(output, MSG_PUBLISH_103_FIELD_TOPIC_1, internalTopic[i]);
         	
 		        	}		       	
 	
@@ -141,7 +143,7 @@ public class IngressMQTTStage extends PronghornStage {
 					
 					converter[i].convertData(inputStream, outputStream);
 															
-					int length = DataOutputBlobWriter.closeHighLevelField(outputStream, IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+					int length = DataOutputBlobWriter.closeHighLevelField(outputStream, MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 
 					/////////////////////
 					/////////////////////
@@ -155,9 +157,21 @@ public class IngressMQTTStage extends PronghornStage {
 					StringBuilder fieldErrorText = PipeReader.readUTF8(input,MQTTClientResponseSchema.MSG_ERROR_4_FIELD_ERRORTEXT_42,new StringBuilder(PipeReader.readBytesLength(input,MQTTClientResponseSchema.MSG_ERROR_4_FIELD_ERRORTEXT_42)));
 			            
 					//TODO: what should we do with these errors?
-					
-					
+
 		        break;
+
+				case MQTTClientResponseSchema.MSG_COONECTIONMADE_5:
+					if (connectionTopic != null) {
+						int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_COONECTIONMADE_5_FIELD_SESSIONPRESENT_51);
+						PipeWriter.presumeWriteFragment(output, MSG_PUBLISH_103);
+						PipeWriter.writeUTF8(output, MSG_PUBLISH_103_FIELD_TOPIC_1, connectionTopic);
+						DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
+						DataOutputBlobWriter.openField(stream);
+						stream.writeBoolean(sessionPresent != 0);
+						DataOutputBlobWriter.closeHighLevelField(stream, MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+						PipeWriter.publishWrites(output);
+					}
+				break;
 		        case -1:
 		           requestShutdown();
 		        break;
