@@ -106,8 +106,8 @@ public class BuilderImpl implements Builder {
 	public Enum<?> beginningState;
     private int parallelism = 1;//default is one
     
-    private final int maxBehaviorBits = 15;
-    private IntHashTable netPipeLookup = new IntHashTable(maxBehaviorBits);
+    private static final int maxBehaviorBits = 15;
+    private final IntHashTable netPipeLookup;
         
 	private static final int BehaviorMask = 1<<31;//high bit on
 	
@@ -187,9 +187,8 @@ public class BuilderImpl implements Builder {
     public void registerHTTPClientId(int routeId, int pipeIdx) {
 		boolean addedItem = IntHashTable.setItem(netPipeLookup, routeId, pipeIdx);
         if (!addedItem) {
-        	throw new RuntimeException("Behaviors must only be registered once.\n\nAn instance "
-        			+"was discovered to be registered twice. "
-        			+"\n\nThis stack trace captures the second known registration occurance.");
+        	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"
+        			+ "Check that each HTTP Client consumer does not share an Id with any other.",routeId);
         }
     }
     
@@ -416,7 +415,7 @@ public class BuilderImpl implements Builder {
 		int maxMQTTMessageSize = 1024;
 		this.pcm.addConfig(new PipeConfig(IngressMessages.instance, maxMQTTMessagesQueue, maxMQTTMessageSize));
 		
-
+		this.netPipeLookup = new IntHashTable(maxBehaviorBits);
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {

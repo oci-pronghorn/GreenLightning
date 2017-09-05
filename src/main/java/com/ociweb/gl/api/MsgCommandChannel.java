@@ -464,8 +464,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	
     }
     
-    public boolean httpGet(HTTPSession session, CharSequence route, int behaviorId) {
-    	return httpGet(session,route,"",behaviorId);
+    public boolean httpGet(HTTPSession session, CharSequence route, int routeId) {
+    	return httpGet(session,route,"",routeId);
     }
     
     //TODO: once we know the command channel add support for FAST calls.
@@ -477,6 +477,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		
 		//TODO: add back channel to pick up the connectionId once it is established?
 		//      TODO: switch to other call and add this block to all http methods....
+		
 		if (session.getConnectionId()<0) {
 			long id = builder.getClientCoordinator().lookup(
 					    session.host, 0, session.host.length, Integer.MAX_VALUE,
@@ -486,7 +487,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		    }
 		}
 		
-		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
+		if (PipeWriter.hasRoomForWrite(goPipe) 
+			&& PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
                 	    
 			int pipeId = builder.lookupHTTPClientPipe(routeId);
 			

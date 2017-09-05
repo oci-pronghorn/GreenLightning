@@ -356,19 +356,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 
 	protected void populateGreenPipes(Behavior listener, int pipesCount, Pipe<?>[] inputPipes) {
+		
+		//if this listener is an HTTP listener then add its behavior id for this pipe
 		if (this.builder.isListeningToHTTPResponse(listener)) {        	
-        	Pipe<NetResponseSchema> netResponsePipe1 = new Pipe<NetResponseSchema>(builder.pcm.getConfig(NetResponseSchema.class)) {
-				@SuppressWarnings("unchecked")
-				@Override
-				protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
-					return new HTTPResponseReader(this);
-				}
-			};
-			Pipe<NetResponseSchema> netResponsePipe = netResponsePipe1;        	
-            int pipeIdx = netResponsePipeIdx++;
-            inputPipes[--pipesCount] = netResponsePipe; 
-
-            builder.registerHTTPClientId(builder.behaviorId(listener), pipeIdx);            
+        	inputPipes[--pipesCount] = buildNetResponsePipe();
+            
+        	int behaviorId = builder.behaviorId(listener);
+        	int pipeIdx = netResponsePipeIdx++;
+     
+			builder.registerHTTPClientId(behaviorId, pipeIdx);
+            
         }
         
         if (this.builder.isListeningToSubscription(listener)) {   
@@ -394,6 +391,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         		inputPipes[--pipesCount] = httpRequestPipes[i];                		
         	}
         }
+	}
+
+	private Pipe<NetResponseSchema> buildNetResponsePipe() {
+		Pipe<NetResponseSchema> netResponsePipe = new Pipe<NetResponseSchema>(builder.pcm.getConfig(NetResponseSchema.class)) {
+			@SuppressWarnings("unchecked")
+			@Override
+			protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
+				return new HTTPResponseReader(this);
+			}
+		};
+		return netResponsePipe;
 	}
 
     /**
@@ -743,8 +751,19 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	/////////
     	int pipesCount = addGreenPipesCount(listener, 0);
         Pipe<?>[] inputPipes = new Pipe<?>[pipesCount];
+        
+        final int httpClientPipeId = netResponsePipeIdx; //must be grabbed first
+        
         populateGreenPipes(listener, pipesCount, inputPipes);                
 
+        if (httpClientPipeId != netResponsePipeIdx) {
+
+        	//add any custom routes?
+        	//builder.registerHTTPClientId(routeId, httpClientPipeId);
+        	
+        }
+        
+        
         //////////////////////
         //////////////////////
         
