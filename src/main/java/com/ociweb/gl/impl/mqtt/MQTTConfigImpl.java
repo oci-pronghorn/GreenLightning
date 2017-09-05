@@ -1,6 +1,8 @@
 package com.ociweb.gl.impl.mqtt;
 
 import com.ociweb.gl.impl.MQTTQOS;
+import com.ociweb.gl.impl.schema.MessageSubscription;
+import com.ociweb.pronghorn.pipe.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,10 +21,6 @@ import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.mqtt.MQTTEncoder;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeConfig;
-import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.stage.test.PipeNoOp;
 
@@ -61,8 +59,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 
 	private CharSequence firstWillTopic = null;
 	private Writable firstWillPayload = null;
-	private boolean firstWillRetain = false;
-	private MQTTQOS firstWillQoS = null;
+	private int firstWillRetain = 0;
+	private int firstWillQoS = 0;
 	
 	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
 			       BuilderImpl builder, long rate, 
@@ -195,9 +193,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	public MQTTBridge firstWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
 		firstWillTopic = topic;
 		firstWillPayload = write;
-		firstWillRetain = retain;
-		firstWillQoS = willQoS;
-		// TODO: On connect ack received publish this message
+		firstWillRetain = retain?1:0;
+		firstWillQoS = willQoS.getSpecification();
 		return this;
 	}
 
@@ -210,7 +207,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
 		assert(null!=topic);
-		assert(null!=write);
 		
 		flags = setBitByBoolean(flags, retain, MQTTEncoder.CONNECT_FLAG_WILL_RETAIN_5);
 		
@@ -397,6 +393,27 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 				PipeWriter.presumeWriteFragment(clientRequest, MQTTClientRequestSchema.MSG_SUBSCRIBE_8);
 				PipeWriter.writeInt(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_QOS_21, qosSub[i]);
 				PipeWriter.writeUTF8(clientRequest,MQTTClientRequestSchema.MSG_SUBSCRIBE_8_FIELD_TOPIC_23, externalTopicsSub[i]);
+				PipeWriter.publishWrites(clientRequest);
+			}
+
+			//now publish our firstWill
+			if (firstWillTopic != null) {
+				PipeWriter.presumeWriteFragment(clientRequest, MQTTClientRequestSchema.MSG_PUBLISH_3);
+				PipeWriter.writeInt(clientRequest, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, firstWillQoS);
+				PipeWriter.writeInt(clientRequest, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, firstWillRetain);
+
+				DataOutputBlobWriter<MQTTClientRequestSchema> stream = PipeWriter.outputStream(clientRequest);
+				DataOutputBlobWriter.openField(stream);
+				PipeReader.readUTF8(clientRequest, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, stream);
+				DataOutputBlobWriter.closeHighLevelField(stream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23);
+
+				DataOutputBlobWriter<MQTTClientRequestSchema> writer = PipeWriter.outputStream(clientRequest);
+				DataOutputBlobWriter.openField(writer);
+				if(null!= firstWillPayload) {
+					firstWillPayload.write(writer);
+				}
+				DataOutputBlobWriter.closeHighLevelField(writer, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_PAYLOAD_25);
+
 				PipeWriter.publishWrites(clientRequest);
 			}
 			
