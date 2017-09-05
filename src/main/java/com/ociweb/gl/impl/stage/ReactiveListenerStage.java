@@ -80,7 +80,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     protected static Runnable lastCall;
    
     ///////////////////////////
-    
+    private int httpClientPipeId = Integer.MIN_VALUE; ///unused
+
+	private static final int MAX_HTTP_CLIENT_ID = ((1<<30)-1);
 
 	///////////////////
 	//only used for direct method dispatch upon subscription topic arrival
@@ -176,14 +178,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         	timeListener = (TimeListener)listener;
         } else {
         	timeListener = null;
-        }
-       
+        }       
     }
+        
+	public void configureHTTPClientResponseSupport(int httpClientPipeId) {
+		this.httpClientPipeId = httpClientPipeId;
+	}
 
     private static Pipe[] consumerJoin(Pipe<?>[] inputPipes,
     		                   Iterator<ReactiveManagerPipeConsumer> iterator) {
-    	if (iterator.hasNext()) {
-    		
+    	if (iterator.hasNext()) {    		
     		return consumerJoin(join(inputPipes, iterator.next().inputs),iterator);    		
     	} else {
     		return inputPipes;
@@ -854,11 +858,17 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		return false;
 	}
 
+	
+	@Override
+	public void includeHTTPClientId(int id) {
+		assert(id >= 0) : "Id must be zero or greater but less than "+MAX_HTTP_CLIENT_ID;
+		assert(id < MAX_HTTP_CLIENT_ID) : "Id must be less than or equal to "+MAX_HTTP_CLIENT_ID;		
+		builder.registerHTTPClientId(MAX_HTTP_CLIENT_ID&id, httpClientPipeId);
+	}
 
 	@SuppressWarnings("unchecked")
-	public final ListenerFilter addSubscription(
-			CharSequence topic, 
-			final CallableMethod callable) {
+	public final ListenerFilter addSubscription(CharSequence topic, 
+		                                    	final CallableMethod callable) {
 		
 		return addSubscription(topic, new CallableStaticMethod() {
 			@Override
@@ -908,9 +918,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		return this;
 	}
-	
-	//httpResponseReader
-	
     
     public int getId() {
     	return builder.behaviorId((Behavior)listener);

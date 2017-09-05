@@ -56,5 +56,6 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 	
 	int getId();	
 	
+	void includeHTTPClientId(int id);
 	
 }
