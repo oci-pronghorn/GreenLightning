@@ -135,6 +135,7 @@ public class EgressMQTTStage extends PronghornStage {
 			    switch(msgIdx) {
 			        case MessageSubscription.MSG_PUBLISH_103:
 						if (firstWill.internalTopic != null && PipeReader.isEqual(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, firstWill.internalTopic)) {
+							PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
 							PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, firstWill.qos);
 							PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, firstWill.retain);
 							PipeWriter.writeUTF8(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23, firstWill.externalTopic);
