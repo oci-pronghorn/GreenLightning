@@ -108,7 +108,9 @@ public class BuilderImpl implements Builder {
     
     private final int maxBehaviorBits = 15;
     private IntHashTable netPipeLookup = new IntHashTable(maxBehaviorBits);
-    
+        
+	private static final int BehaviorMask = 1<<31;//high bit on
+	
 
 	/////////////////
 	///Pipes for initial startup declared subscriptions. (Not part of graph)
@@ -281,9 +283,9 @@ public class BuilderImpl implements Builder {
 	public boolean hasArgument(String longName, String shortName) {
 		return MsgRuntime.hasArg(longName, shortName, args);
 	}
-    
+
     public int behaviorId(Behavior b) {
-    	return System.identityHashCode(b); //TODO: we may want to find a beter way to compute this, not sure.
+    	return BehaviorMask | System.identityHashCode(b);
     }
     
     public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {

@@ -459,8 +459,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     private boolean httpGet(HTTPSession session, CharSequence route, HTTPResponseListener listener) {
     	
     	return httpGet(session, route,
-    			builder.behaviorId((HTTPResponseListener)listener)
-    			); 	
+    				   builder.behaviorId((HTTPResponseListener)listener)
+    			      ); 	
     	
     }
     
