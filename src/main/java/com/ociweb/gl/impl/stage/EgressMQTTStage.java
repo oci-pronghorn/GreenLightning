@@ -134,68 +134,56 @@ public class EgressMQTTStage extends PronghornStage {
 			    
 			    switch(msgIdx) {
 			        case MessageSubscription.MSG_PUBLISH_103:
-						if (firstWill.internalTopic != null && PipeReader.isEqual(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, firstWill.internalTopic)) {
+						int i = internalTopic.length;
+						if (allTopicsMatch) {
+							i = 0;//to select the common converter for all.
 							PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
-							PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, firstWill.qos);
-							PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, firstWill.retain);
-							PipeWriter.writeUTF8(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23, firstWill.externalTopic);
-							DataInputBlobReader<MessageSubscription> inputStream = PipeReader.inputStream(input, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-							DataOutputBlobWriter<MQTTClientRequestSchema> outputStream = PipeWriter.outputStream(output);
-							DataOutputBlobWriter.openField(outputStream);
-							DataOutputBlobWriter.closeHighLevelField(outputStream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_PAYLOAD_25);
-							PipeWriter.publishWrites(output);
-						}
-						else {
-							int i = internalTopic.length;
-							if (allTopicsMatch) {
-								i = 0;//to select the common converter for all.
-								PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
-								PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, fieldQOS[i]);
-								PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, fieldRetain[i]);
+							PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, fieldQOS[i]);
+							PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, fieldRetain[i]);
 
-								//direct copy of topic
-								DataOutputBlobWriter<MQTTClientRequestSchema> stream = PipeWriter.outputStream(output);
+							//direct copy of topic
+							DataOutputBlobWriter<MQTTClientRequestSchema> stream = PipeWriter.outputStream(output);
 
-								DataOutputBlobWriter.openField(stream);
-								PipeReader.readUTF8(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, stream);
-								DataOutputBlobWriter.closeHighLevelField(stream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23);
+							DataOutputBlobWriter.openField(stream);
+							PipeReader.readUTF8(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, stream);
+							DataOutputBlobWriter.closeHighLevelField(stream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23);
 
-							} else {
-								boolean topicMatches = false;
-								while (--i >= 0) { //TODO: this is very bad, swap out with trie parser instead of linear search
-									if (PipeReader.isEqual(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, internalTopic[i])) {
-										topicMatches = true;
-										break;
-									}
+						} else {
+							boolean topicMatches = false;
+							while (--i >= 0) { //TODO: this is very bad, swap out with trie parser instead of linear search
+								if (PipeReader.isEqual(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, internalTopic[i])) {
+									topicMatches = true;
+									break;
 								}
-								assert (topicMatches) : "ERROR, this topic was not known " + PipeReader.readUTF8(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, new StringBuilder());
-
-								PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
-								PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, fieldQOS[i]);
-								PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, fieldRetain[i]);
-								PipeWriter.writeUTF8(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23, externalTopic[i]);
 							}
-			        	
-							//////////////////////
-							//converter
-							//////////////////////
+							assert (topicMatches) : "ERROR, this topic was not known " + PipeReader.readUTF8(input, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1, new StringBuilder());
 
-							//debug
-							//StringBuilder b = new StringBuilder("EgressMQTTStage ");
-							//System.err.println(PipeReader.readUTF8(input, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3 , b));
-
-
-							DataInputBlobReader<MessageSubscription> inputStream = PipeReader.inputStream(input, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-
-							DataOutputBlobWriter<MQTTClientRequestSchema> outputStream = PipeWriter.outputStream(output);
-							DataOutputBlobWriter.openField(outputStream);
-
-							converter[i].convert(inputStream,outputStream);
-
-							DataOutputBlobWriter.closeHighLevelField(outputStream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_PAYLOAD_25);
-
-							PipeWriter.publishWrites(output);
+							PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
+							PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, fieldQOS[i]);
+							PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, fieldRetain[i]);
+							PipeWriter.writeUTF8(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23, externalTopic[i]);
 						}
+
+						//////////////////////
+						//converter
+						//////////////////////
+
+						//debug
+						//StringBuilder b = new StringBuilder("EgressMQTTStage ");
+						//System.err.println(PipeReader.readUTF8(input, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3 , b));
+
+
+						DataInputBlobReader<MessageSubscription> inputStream = PipeReader.inputStream(input, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+
+						DataOutputBlobWriter<MQTTClientRequestSchema> outputStream = PipeWriter.outputStream(output);
+						DataOutputBlobWriter.openField(outputStream);
+
+						converter[i].convert(inputStream,outputStream);
+
+						DataOutputBlobWriter.closeHighLevelField(outputStream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_PAYLOAD_25);
+
+						PipeWriter.publishWrites(output);
+
 					break;
 			        case MessageSubscription.MSG_STATECHANGED_71:
 			        	//int fieldOldOrdinal = PipeReader.readInt(input,MessageSubscription.MSG_STATECHANGED_71_FIELD_OLDORDINAL_8);
@@ -212,9 +200,17 @@ public class EgressMQTTStage extends PronghornStage {
 	
 			
 		} while (foundWork);
-		
-				
 	}
 
-
+	private void sendFirstWillMessage() {
+		System.out.print(String.format("******** %s\n", firstWill));
+		PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
+		PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, firstWill.qos);
+		PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, firstWill.retain);
+		PipeWriter.writeUTF8(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23, firstWill.externalTopic);
+		DataOutputBlobWriter<MQTTClientRequestSchema> outputStream = PipeWriter.outputStream(output);
+		DataOutputBlobWriter.openField(outputStream);
+		DataOutputBlobWriter.closeHighLevelField(outputStream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_PAYLOAD_25);
+		PipeWriter.publishWrites(output);
+	}
 }

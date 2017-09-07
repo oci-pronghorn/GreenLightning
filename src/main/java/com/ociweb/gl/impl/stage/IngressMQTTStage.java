@@ -5,8 +5,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.schema.IngressMessages;
-import com.ociweb.gl.impl.schema.MessageSubscription;
-import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -152,26 +150,22 @@ public class IngressMQTTStage extends PronghornStage {
 					PipeWriter.publishWrites(output);					
 		            
 		        break;
-		        case MQTTClientResponseSchema.MSG_ERROR_4:
-					int fieldErrorCode = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_ERROR_4_FIELD_ERRORCODE_41);
-					StringBuilder fieldErrorText = PipeReader.readUTF8(input,MQTTClientResponseSchema.MSG_ERROR_4_FIELD_ERRORTEXT_42,new StringBuilder(PipeReader.readBytesLength(input,MQTTClientResponseSchema.MSG_ERROR_4_FIELD_ERRORTEXT_42)));
-			            
-					//TODO: what should we do with these errors?
 
-		        break;
+				case MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5:
+					int resultCode = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_RESULTCODE_51);
+					int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_SESSIONPRESENT_52);
+					sendConnectionStatusToEgress(resultCode, sessionPresent);
+				break;
 
-				case MQTTClientResponseSchema.MSG_COONECTIONMADE_5:
-					if (connectionTopic != null) {
-						int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_COONECTIONMADE_5_FIELD_SESSIONPRESENT_51);
-						PipeWriter.presumeWriteFragment(output, MSG_PUBLISH_103);
-						PipeWriter.writeUTF8(output, MSG_PUBLISH_103_FIELD_TOPIC_1, connectionTopic);
-						DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
-						DataOutputBlobWriter.openField(stream);
-						stream.writeBoolean(sessionPresent != 0);
-						DataOutputBlobWriter.closeHighLevelField(stream, MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-						PipeWriter.publishWrites(output);
+		        case MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4:
+					int fieldErrorCode = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4_FIELD_MAXQOS_41);
+					if (fieldErrorCode == 0x80) {
+					}
+					else {
+						// TODO: do we tell the business logic of the failure or change from requested qos?
 					}
 				break;
+
 		        case -1:
 		           requestShutdown();
 		        break;
@@ -181,5 +175,8 @@ public class IngressMQTTStage extends PronghornStage {
 		
 	}
 
-	
+	private void sendConnectionStatusToEgress(int resultCode, int sessionPresent) {
+		if (connectionTopic != null) {
+        }
+	}
 }

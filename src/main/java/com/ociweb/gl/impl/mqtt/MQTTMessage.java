@@ -8,4 +8,9 @@ public class MQTTMessage {
     public int retain;
     public int qos;
     public Writable payload;
+
+    @Override
+    public String toString() {
+        return String.format("%s -> %s %d %d", internalTopic, externalTopic, retain, qos);
+    }
 }
