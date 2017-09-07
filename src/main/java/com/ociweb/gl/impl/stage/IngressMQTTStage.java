@@ -1,5 +1,6 @@
 package com.ociweb.gl.impl.stage;
 
+import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -152,7 +153,18 @@ public class IngressMQTTStage extends PronghornStage {
 				case MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5:
 					int resultCode = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_RESULTCODE_51);
 					int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_SESSIONPRESENT_52);
-					// TODO: send feedback to business logic
+
+					System.out.print("****** G Connect " + resultCode);
+					// TODO: this may be published too early
+					PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
+					// TODO: come up with standard feedback loop set of topics
+					PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, "$/MQTT/Connection");
+					DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
+					DataOutputBlobWriter.openField(stream);
+					stream.writeInt(resultCode);
+					stream.writeInt(sessionPresent);
+					stream.closeHighLevelField(IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+					PipeWriter.publishWrites(output);
 				break;
 
 		        case MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4:

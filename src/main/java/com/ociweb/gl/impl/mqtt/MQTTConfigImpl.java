@@ -183,14 +183,11 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	@Override
-	public MQTTBridge firstWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
-		return this;
-	}
-
 	public MQTTBridge lastWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
 		return will(retain, willQoS, topic, write);
 	}
 
+	@Override
 	public MQTTBridge will(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");

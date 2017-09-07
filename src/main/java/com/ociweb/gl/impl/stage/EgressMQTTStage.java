@@ -1,6 +1,5 @@
 package com.ociweb.gl.impl.stage;
 
-import com.ociweb.gl.impl.mqtt.MQTTMessage;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.pipe.*;
