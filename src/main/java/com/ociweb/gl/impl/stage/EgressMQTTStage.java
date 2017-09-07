@@ -13,7 +13,6 @@ public class EgressMQTTStage extends PronghornStage {
 	private final Pipe<MQTTClientRequestSchema> output;
 	private final CharSequence[] internalTopic;
 	private final CharSequence[] externalTopic;
-	private final MQTTMessage firstWill;
 	private boolean allTopicsMatch;
 	private final EgressConverter[] converter;
 	
@@ -37,7 +36,7 @@ public class EgressMQTTStage extends PronghornStage {
 						   CharSequence[] internalTopic, 
 						   CharSequence[] externalTopic, 
 						   int[] fieldQOS, int[] fieldRetain) {
-		this(graphManager,input,output,internalTopic, externalTopic, asArray(copyConverter,internalTopic.length), fieldQOS, fieldRetain, null);
+		this(graphManager,input,output,internalTopic, externalTopic, asArray(copyConverter,internalTopic.length), fieldQOS, fieldRetain);
 
 	}
 	
@@ -51,7 +50,7 @@ public class EgressMQTTStage extends PronghornStage {
 
 	public EgressMQTTStage(GraphManager graphManager, Pipe<MessageSubscription> input, Pipe<MQTTClientRequestSchema> output,
 							CharSequence[] internalTopic,	CharSequence[] externalTopic, EgressConverter[] converter,
-							int[] fieldQOS, int[] fieldRetain, MQTTMessage firstWill) {
+							int[] fieldQOS, int[] fieldRetain) {
 		super(graphManager, input, output);
 		this.input = input;
 		this.output = output;
@@ -60,8 +59,7 @@ public class EgressMQTTStage extends PronghornStage {
 		this.converter = converter;
 		this.fieldQOS = fieldQOS;
 		this.fieldRetain = fieldRetain;
-		this.firstWill = firstWill;
-		
+
 		this.allTopicsMatch = isMatching(internalTopic,externalTopic,converter,fieldQOS,fieldRetain);
 		
 		supportsBatchedRelease = false; //must have immediate release
@@ -200,17 +198,5 @@ public class EgressMQTTStage extends PronghornStage {
 	
 			
 		} while (foundWork);
-	}
-
-	private void sendFirstWillMessage() {
-		System.out.print(String.format("******** %s\n", firstWill));
-		PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
-		PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_QOS_21, firstWill.qos);
-		PipeWriter.writeInt(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_RETAIN_22, firstWill.retain);
-		PipeWriter.writeUTF8(output, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23, firstWill.externalTopic);
-		DataOutputBlobWriter<MQTTClientRequestSchema> outputStream = PipeWriter.outputStream(output);
-		DataOutputBlobWriter.openField(outputStream);
-		DataOutputBlobWriter.closeHighLevelField(outputStream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_PAYLOAD_25);
-		PipeWriter.publishWrites(output);
 	}
 }

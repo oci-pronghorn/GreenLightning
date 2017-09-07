@@ -19,7 +19,6 @@ public class IngressMQTTStage extends PronghornStage {
 	private final Pipe<IngressMessages> output;
 	private final CharSequence[] externalTopic; 
 	private final CharSequence[] internalTopic;
-	private final CharSequence connectionTopic;
 	private final IngressConverter[] converter;
 	private boolean allTopicsMatch;
 	private static final Logger logger = LoggerFactory.getLogger(IngressMQTTStage.class);
@@ -37,18 +36,17 @@ public class IngressMQTTStage extends PronghornStage {
 		
 	public IngressMQTTStage(GraphManager graphManager, Pipe<MQTTClientResponseSchema> input, Pipe<IngressMessages> output, 
             CharSequence[] externalTopic, CharSequence[] internalTopic) {
-		this(graphManager, input, output, externalTopic, internalTopic, asArray(copyConverter, internalTopic.length ), null);
+		this(graphManager, input, output, externalTopic, internalTopic, asArray(copyConverter, internalTopic.length ));
 	}
 	
 	public IngressMQTTStage(GraphManager graphManager, Pipe<MQTTClientResponseSchema> input, Pipe<IngressMessages> output, 
-			                CharSequence[] externalTopic, CharSequence[] internalTopic, IngressConverter[] converter, CharSequence connectionTopic) {
+			                CharSequence[] externalTopic, CharSequence[] internalTopic, IngressConverter[] converter) {
 		
 		super(graphManager, input, output);
 		this.input = input;
 		this.output = output;
 		this.externalTopic = externalTopic;
 		this.internalTopic = internalTopic;
-		this.connectionTopic = connectionTopic;
 		this.allTopicsMatch = isMatching(internalTopic,externalTopic,converter);
 		this.converter = converter;
 		
@@ -154,16 +152,12 @@ public class IngressMQTTStage extends PronghornStage {
 				case MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5:
 					int resultCode = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_RESULTCODE_51);
 					int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_SESSIONPRESENT_52);
-					sendConnectionStatusToEgress(resultCode, sessionPresent);
+					// TODO: send feedback to business logic
 				break;
 
 		        case MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4:
-					int fieldErrorCode = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4_FIELD_MAXQOS_41);
-					if (fieldErrorCode == 0x80) {
-					}
-					else {
-						// TODO: do we tell the business logic of the failure or change from requested qos?
-					}
+					int qosSpecification = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4_FIELD_MAXQOS_41);
+					// TODO: send feedback to business logic
 				break;
 
 		        case -1:
@@ -171,12 +165,6 @@ public class IngressMQTTStage extends PronghornStage {
 		        break;
 		    }
 		    PipeReader.releaseReadLock(input);
-		}			
-		
-	}
-
-	private void sendConnectionStatusToEgress(int resultCode, int sessionPresent) {
-		if (connectionTopic != null) {
-        }
+		}
 	}
 }

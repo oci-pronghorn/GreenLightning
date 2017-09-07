@@ -5,6 +5,8 @@ public enum MQTTQOS {
 	atLeastOnce(1),
 	exactlyOnce(2);
 
+	static final int failure = 0x80;
+
 	private final int specification;
 
 	MQTTQOS(int specification) {
