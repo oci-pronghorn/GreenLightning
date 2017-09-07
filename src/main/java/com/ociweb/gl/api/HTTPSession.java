@@ -15,6 +15,12 @@ public class HTTPSession {
 		this.sessionId = sessionId;
 	}
 	
+	public HTTPSession(String host, int port) {
+		this.host = host.getBytes();
+		this.port = port;
+		this.sessionId = 0;
+	}
+	
 	void setConnectionId(long id) {
 		connectionId = id;		
 	}
