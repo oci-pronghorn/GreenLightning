@@ -1,12 +1,11 @@
 package com.ociweb.gl.impl.stage;
 
+import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.schema.IngressMessages;
-import com.ociweb.gl.impl.schema.MessageSubscription;
-import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -21,7 +20,6 @@ public class IngressMQTTStage extends PronghornStage {
 	private final Pipe<IngressMessages> output;
 	private final CharSequence[] externalTopic; 
 	private final CharSequence[] internalTopic;
-	private final CharSequence connectionTopic;
 	private final IngressConverter[] converter;
 	private boolean allTopicsMatch;
 	private static final Logger logger = LoggerFactory.getLogger(IngressMQTTStage.class);
@@ -39,18 +37,17 @@ public class IngressMQTTStage extends PronghornStage {
 		
 	public IngressMQTTStage(GraphManager graphManager, Pipe<MQTTClientResponseSchema> input, Pipe<IngressMessages> output, 
             CharSequence[] externalTopic, CharSequence[] internalTopic) {
-		this(graphManager, input, output, externalTopic, internalTopic, asArray(copyConverter, internalTopic.length ), null);
+		this(graphManager, input, output, externalTopic, internalTopic, asArray(copyConverter, internalTopic.length ));
 	}
 	
 	public IngressMQTTStage(GraphManager graphManager, Pipe<MQTTClientResponseSchema> input, Pipe<IngressMessages> output, 
-			                CharSequence[] externalTopic, CharSequence[] internalTopic, IngressConverter[] converter, CharSequence connectionTopic) {
+			                CharSequence[] externalTopic, CharSequence[] internalTopic, IngressConverter[] converter) {
 		
 		super(graphManager, input, output);
 		this.input = input;
 		this.output = output;
 		this.externalTopic = externalTopic;
 		this.internalTopic = internalTopic;
-		this.connectionTopic = connectionTopic;
 		this.allTopicsMatch = isMatching(internalTopic,externalTopic,converter);
 		this.converter = converter;
 		
@@ -152,34 +149,34 @@ public class IngressMQTTStage extends PronghornStage {
 					PipeWriter.publishWrites(output);					
 		            
 		        break;
-		        case MQTTClientResponseSchema.MSG_ERROR_4:
-					int fieldErrorCode = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_ERROR_4_FIELD_ERRORCODE_41);
-					StringBuilder fieldErrorText = PipeReader.readUTF8(input,MQTTClientResponseSchema.MSG_ERROR_4_FIELD_ERRORTEXT_42,new StringBuilder(PipeReader.readBytesLength(input,MQTTClientResponseSchema.MSG_ERROR_4_FIELD_ERRORTEXT_42)));
-			            
-					//TODO: what should we do with these errors?
 
-		        break;
+				case MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5:
+					int resultCode = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_RESULTCODE_51);
+					int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_SESSIONPRESENT_52);
 
-				case MQTTClientResponseSchema.MSG_COONECTIONMADE_5:
-					if (connectionTopic != null) {
-						int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_COONECTIONMADE_5_FIELD_SESSIONPRESENT_51);
-						PipeWriter.presumeWriteFragment(output, MSG_PUBLISH_103);
-						PipeWriter.writeUTF8(output, MSG_PUBLISH_103_FIELD_TOPIC_1, connectionTopic);
-						DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
-						DataOutputBlobWriter.openField(stream);
-						stream.writeBoolean(sessionPresent != 0);
-						DataOutputBlobWriter.closeHighLevelField(stream, MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-						PipeWriter.publishWrites(output);
-					}
+					System.out.print("****** G Connect " + resultCode);
+					// TODO: this may be published too early
+					PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
+					// TODO: come up with standard feedback loop set of topics
+					PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, "$/MQTT/Connection");
+					DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
+					DataOutputBlobWriter.openField(stream);
+					stream.writeInt(resultCode);
+					stream.writeInt(sessionPresent);
+					stream.closeHighLevelField(IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+					PipeWriter.publishWrites(output);
 				break;
+
+		        case MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4:
+					int qosSpecification = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4_FIELD_MAXQOS_41);
+					// TODO: send feedback to business logic
+				break;
+
 		        case -1:
 		           requestShutdown();
 		        break;
 		    }
 		    PipeReader.releaseReadLock(input);
-		}			
-		
+		}
 	}
-
-	
 }

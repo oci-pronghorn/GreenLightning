@@ -55,8 +55,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 
 	private int transmissionFieldQOS = 0; 
 	private int transmissionFieldRetain = 0;
-
-	private final MQTTMessage firstWill = new MQTTMessage();
 	
 	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
 			       BuilderImpl builder, long rate, 
@@ -165,7 +163,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		
 		return this;
 	}
-	
+
 	@Override
 	public MQTTBridge subscriptionQoS(MQTTQOS qos) {
 		subscriptionQoS = qos.getSpecification();
@@ -184,19 +182,12 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		return this;
 	}
 
-	public MQTTBridge firstWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
-		firstWill.externalTopic = topic;
-		firstWill.internalTopic = "$connection/mqtt";
-		firstWill.payload = write;
-		firstWill.retain = retain?1:0;
-		firstWill.qos = willQoS.getSpecification();
-		return this;
-	}
-
+	@Override
 	public MQTTBridge lastWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
 		return will(retain, willQoS, topic, write);
 	}
 
+	@Override
 	public MQTTBridge will(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
@@ -379,10 +370,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		
 		assert(internalTopicsSub.length == externalTopicsSub.length);
 		assert(internalTopicsSub.length == convertersSub.length);
-
-		if (firstWill != null) {
-			builder.addStartupSubscription(firstWill.internalTopic, code);
-		}
 		
 		if (internalTopicsSub.length>0) {
 			
@@ -395,14 +382,13 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 				PipeWriter.publishWrites(clientRequest);
 			}
 
-			new IngressMQTTStage(builder.gm, clientResponse, new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), externalTopicsSub, internalTopicsSub, convertersSub,
-					firstWill.internalTopic);
+			new IngressMQTTStage(builder.gm, clientResponse, new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), externalTopicsSub, internalTopicsSub, convertersSub);
 		} else {
 			PipeCleanerStage.newInstance(builder.gm, clientResponse);
 		}
 		
 		if (internalTopicsXmit.length>0) {
-			new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, qosXmit, retainXmit, firstWill);
+			new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, qosXmit, retainXmit);
 		} else {
 			PipeNoOp.newInstance(builder.gm, clientRequest);			
 		}
