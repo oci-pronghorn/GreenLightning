@@ -1,15 +1,15 @@
-package com.ociweb.gl.impl;
+package com.ociweb.gl.api;
 
-public enum MQTTQOS {
+public enum MQTTQoS {
 	atMostOnce(0),
 	atLeastOnce(1),
 	exactlyOnce(2);
 
-	static final int failure = 0x80;
+	static final int failedSubscription = 0x80;
 
 	private final int specification;
 
-	MQTTQOS(int specification) {
+	MQTTQoS(int specification) {
 		this.specification = specification;
 	}
 

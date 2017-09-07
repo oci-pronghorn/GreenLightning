@@ -1,6 +1,6 @@
 package com.ociweb.gl.impl.mqtt;
 
-import com.ociweb.gl.impl.MQTTQOS;
+import com.ociweb.gl.api.MQTTQoS;
 import com.ociweb.pronghorn.pipe.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -165,13 +165,13 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	@Override
-	public MQTTBridge subscriptionQoS(MQTTQOS qos) {
+	public MQTTBridge subscriptionQoS(MQTTQoS qos) {
 		subscriptionQoS = qos.getSpecification();
 		return this;
 	}
 
 	@Override
-	public MQTTBridge transmissionOoS(MQTTQOS qos) {
+	public MQTTBridge transmissionOoS(MQTTQoS qos) {
 		transmissionFieldQOS = qos.getSpecification();
 		return this;
 	}
@@ -183,12 +183,12 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	@Override
-	public MQTTBridge lastWill(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
+	public MQTTBridge lastWill(boolean retain, MQTTQoS willQoS, CharSequence topic, Writable write) {
 		return will(retain, willQoS, topic, write);
 	}
 
 	@Override
-	public MQTTBridge will(boolean retain, MQTTQOS willQoS, CharSequence topic, Writable write) {
+	public MQTTBridge will(boolean retain, MQTTQoS willQoS, CharSequence topic, Writable write) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
@@ -397,7 +397,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private int activeRow = -1;	
 	private final MQTTConfigTransmission transConf = new MQTTConfigTransmission() {
 		@Override
-		public MQTTConfigTransmission setQoS(MQTTQOS qos) {
+		public MQTTConfigTransmission setQoS(MQTTQoS qos) {
 			qosXmit[activeRow] = qos.getSpecification();
 			return transConf;
 		}
@@ -410,7 +410,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	};
 	private final MQTTConfigSubscription subsConf = new MQTTConfigSubscription() {
 		@Override
-		public void setQoS(MQTTQOS qos) {
+		public void setQoS(MQTTQoS qos) {
 			qosSub[activeRow] = qos.getSpecification();
 		}
 	};

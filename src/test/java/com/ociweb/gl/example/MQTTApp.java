@@ -10,7 +10,7 @@ import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
-import com.ociweb.gl.impl.MQTTQOS;
+import com.ociweb.gl.api.MQTTQoS;
 import com.ociweb.pronghorn.pipe.BlobReader;
 import com.ociweb.pronghorn.pipe.BlobWriter;
 
@@ -32,8 +32,8 @@ public class MQTTApp implements GreenApp {
 
 		mqttConfig = builder.useMQTT("127.0.0.1", defaultPort, false, "my name")
 							.cleanSession(true)
-							.transmissionOoS(MQTTQOS.exactlyOnce)
-							.subscriptionQoS(MQTTQOS.exactlyOnce) //TODO: do tests for will and retain
+							.transmissionOoS(MQTTQoS.exactlyOnce)
+							.subscriptionQoS(MQTTQoS.exactlyOnce) //TODO: do tests for will and retain
 							.keepAliveSeconds(10); //TODO: test with 2 seconds or less to make pings go.
 		
 		builder.setTimerPulseRate(1000); //TODO: bump this up so we can test pings.
