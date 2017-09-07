@@ -38,13 +38,15 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		this.headerHash = table;
 		this.headerTrieParser = headerTrieParser;
 		this.httpSpec = httpSpec;
-		this.payloadIndexOffset = paraIndexCount + IntHashTable.count(headerHash);
+		this.payloadIndexOffset = paraIndexCount + (headerHash == null ? 0 : IntHashTable.count(headerHash));
 	}
 	
 	public void setVerb(HTTPVerbDefaults verb) {
 		this.verb = verb;
 	}
-	
+
+	public HTTPVerbDefaults getVerb() { return this.verb; }
+
 	public boolean isVerbGet() {
 		return HTTPVerbDefaults.GET == verb;
 	}

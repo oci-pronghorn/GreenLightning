@@ -13,7 +13,7 @@ import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ServerCoordinator;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -1042,7 +1042,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	public boolean publishHTTPResponse(HTTPFieldReader reqeustReader, 
             int statusCode,
-            HTTPContentTypeDefaults contentType,
+									   HTTPContentType contentType,
             Writable writable) {
 	
 		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
@@ -1052,8 +1052,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}	
 	
 	public boolean publishHTTPResponse(HTTPFieldReader reqeustReader, 
-										            int statusCode, final int context, 
-										            HTTPContentTypeDefaults contentType,
+										            int statusCode, final int context,
+									   HTTPContentType contentType,
 										            Writable writable) {
 		
 		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
@@ -1073,7 +1073,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
 			                                            int statusCode, final int context, 
-			                                            HTTPContentTypeDefaults contentType,
+			                                            HTTPContentType contentType,
 			                                            Writable writable) {
 		
 		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
