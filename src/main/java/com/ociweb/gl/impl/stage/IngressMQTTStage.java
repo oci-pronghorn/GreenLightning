@@ -149,7 +149,7 @@ public class IngressMQTTStage extends PronghornStage {
 					PipeWriter.publishWrites(output);					
 		            
 		        break;
-/*
+
 				case MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5:
 					int connectResponse = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_RESULTCODE_51);
 					int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_SESSIONPRESENT_52);
@@ -161,7 +161,7 @@ public class IngressMQTTStage extends PronghornStage {
 					int qosSpecification = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4_FIELD_MAXQOS_41);
 					// TODO: send feedback to business logic
 				break;
-*/
+
 		        case -1:
 		           requestShutdown();
 		        break;
@@ -169,7 +169,6 @@ public class IngressMQTTStage extends PronghornStage {
 		    PipeReader.releaseReadLock(input);
 		}
 	}
-/*
 	private void publishConnectionFeedback(int connectResponse, int sessionPresent) {
 		// TODO: come up with standard feedback pattern
 		// The business log can react to connectivity issues, bad behaving external connections, and completion
@@ -185,5 +184,4 @@ public class IngressMQTTStage extends PronghornStage {
 		stream.closeHighLevelField(IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 		PipeWriter.publishWrites(output);
 	}
-	*/
 }
