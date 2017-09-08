@@ -174,9 +174,10 @@ public class IngressMQTTStage extends PronghornStage {
 		// The business log can react to connectivity issues, bad behaving external connections, and completion
 		// of some async tasks
 		// For now we are publishing an internal topic
-		System.out.print(String.format("****** Issue Connect Feedback %d %d", connectResponse, sessionPresent));
+		final String topic = "$/MQTT/Connection";
+		logger.info("Issue Connect Feedback ({}, {}) on {}", connectResponse, sessionPresent, topic);
 		PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
-		PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, "$/MQTT/Connection");
+		PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);
 		DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
 		DataOutputBlobWriter.openField(stream);
 		stream.writeInt(connectResponse);
