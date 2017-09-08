@@ -151,20 +151,9 @@ public class IngressMQTTStage extends PronghornStage {
 		        break;
 
 				case MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5:
-					int resultCode = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_RESULTCODE_51);
+					int connectResponse = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_RESULTCODE_51);
 					int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_SESSIONPRESENT_52);
-
-					System.out.print("****** G Connect " + resultCode);
-					// TODO: this may be published too early
-					PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
-					// TODO: come up with standard feedback loop set of topics
-					PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, "$/MQTT/Connection");
-					DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
-					DataOutputBlobWriter.openField(stream);
-					stream.writeInt(resultCode);
-					stream.writeInt(sessionPresent);
-					stream.closeHighLevelField(IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-					PipeWriter.publishWrites(output);
+					publishConnectionFeedback(connectResponse, sessionPresent);
 				break;
 
 		        case MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4:
@@ -178,5 +167,21 @@ public class IngressMQTTStage extends PronghornStage {
 		    }
 		    PipeReader.releaseReadLock(input);
 		}
+	}
+
+	private void publishConnectionFeedback(int connectResponse, int sessionPresent) {
+		// TODO: come up with standard feedback pattern
+		// The business log can react to connectivity issues, bad behaving external connections, and completion
+		// of some async tasks
+		// For now we are publishing an internal topic
+		System.out.print(String.format("****** Issue Connect Feedback %d %d", connectResponse, sessionPresent));
+		PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
+		PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, "$/MQTT/Connection");
+		DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
+		DataOutputBlobWriter.openField(stream);
+		stream.writeInt(connectResponse);
+		stream.writeInt(sessionPresent);
+		stream.closeHighLevelField(IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+		PipeWriter.publishWrites(output);
 	}
 }
