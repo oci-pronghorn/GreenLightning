@@ -149,10 +149,11 @@ public class IngressMQTTStage extends PronghornStage {
 					PipeWriter.publishWrites(output);					
 		            
 		        break;
-
+/*
 				case MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5:
 					int connectResponse = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_RESULTCODE_51);
 					int sessionPresent = PipeReader.readInt(input, MQTTClientResponseSchema.MSG_CONNECTIONATTEMPT_5_FIELD_SESSIONPRESENT_52);
+					logger.info("Connect Feedback ({}, {})", connectResponse, sessionPresent);
 					publishConnectionFeedback(connectResponse, sessionPresent);
 				break;
 
@@ -160,7 +161,7 @@ public class IngressMQTTStage extends PronghornStage {
 					int qosSpecification = PipeReader.readInt(input,MQTTClientResponseSchema.MSG_SUBSCRIPTIONRESULT_4_FIELD_MAXQOS_41);
 					// TODO: send feedback to business logic
 				break;
-
+*/
 		        case -1:
 		           requestShutdown();
 		        break;
@@ -168,15 +169,15 @@ public class IngressMQTTStage extends PronghornStage {
 		    PipeReader.releaseReadLock(input);
 		}
 	}
-
+/*
 	private void publishConnectionFeedback(int connectResponse, int sessionPresent) {
 		// TODO: come up with standard feedback pattern
 		// The business log can react to connectivity issues, bad behaving external connections, and completion
 		// of some async tasks
 		// For now we are publishing an internal topic
-		System.out.print(String.format("****** Issue Connect Feedback %d %d", connectResponse, sessionPresent));
+		final String topic = "$/MQTT/Connection";
 		PipeWriter.presumeWriteFragment(output, IngressMessages.MSG_PUBLISH_103);
-		PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, "$/MQTT/Connection");
+		PipeWriter.writeUTF8(output,IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);
 		DataOutputBlobWriter<IngressMessages> stream = PipeWriter.outputStream(output);
 		DataOutputBlobWriter.openField(stream);
 		stream.writeInt(connectResponse);
@@ -184,4 +185,5 @@ public class IngressMQTTStage extends PronghornStage {
 		stream.closeHighLevelField(IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 		PipeWriter.publishWrites(output);
 	}
+	*/
 }
