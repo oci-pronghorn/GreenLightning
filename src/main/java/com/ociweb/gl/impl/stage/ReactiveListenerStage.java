@@ -469,9 +469,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			              }
     	    		  }
     	    	  }
-             	      
-    	    	  reader.setParseDetails(null,null,0,null,builder.httpSpec);//just to be safe.
-    	      
+
     	      } else {
     	    	  logger.error("unrecognized message on {} ",p);
     	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);
