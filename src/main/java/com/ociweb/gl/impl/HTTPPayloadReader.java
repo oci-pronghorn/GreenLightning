@@ -51,6 +51,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 				assert(posFromStart<=getBackingPipe(this).maxVarLen) : "index position "+posFromStart+" is out of bounds "+getBackingPipe(this).maxVarLen;
 				assert(posFromStart>=0) : "index position must be zero or positive";
 				
+				//we look back 2 bytes to grab the short for this header
 				assert(matchesHeader(headerId, posFromStart-2)) : "Index did not point to the expeced header";
 				
 				setPositionBytesFromStart(posFromStart);

@@ -38,6 +38,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      }
 
      //must not have two ints or we may use a comma betweeen them to cause a bug.
+     //Delete method in October...     
      @Deprecated
      public GreenCommandChannel newCommandChannel(int features, int customChannelLength, CharSequence ... supportedTopics) { 
         

@@ -108,6 +108,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 					                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId) ) ) {
 						               
 					                	assert(clientConnection.singleUsage(stageId)) : "Only a single Stage may update the clientConnection.";
+					                	assert(routeId>=0);
 					                	clientConnection.recordDestinationRouteId(routeId);
 						        		
 					                	int outIdx = clientConnection.requestPipeLineIdx();
