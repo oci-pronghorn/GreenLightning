@@ -285,6 +285,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }    
 
     public void shutdownRuntime() {
+    	shutdownRuntime(3);
+    }
+    
+    public void shutdownRuntime(final int secondsTimeout) {
     	//only do if not already done.
     	if (!ReactiveListenerStage.isShutdownRequested()) {
     	
@@ -307,19 +311,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				@Override
 				public void run() {
 					scheduler.shutdown();
-					scheduler.awaitTermination(3, TimeUnit.SECONDS, lastCall, lastCall);
+					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCall, lastCall);
 				}
 	    		
 	    	});
     	}
-    }
-
-    public void shutdownRuntime(int timeoutInSeconds) {
-        //clean shutdown providing time for the pipe to empty
-        scheduler.shutdown();
-        scheduler.awaitTermination(timeoutInSeconds, TimeUnit.SECONDS); //timeout error if this does not exit cleanly withing this time.
-        //all the software has now stopped so now shutdown the hardware.
-        builder.shutdown();
     }
     
 

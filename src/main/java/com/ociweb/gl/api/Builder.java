@@ -55,6 +55,8 @@ public interface Builder extends ArgumentProvider {
 	void enableServer(boolean isTLS, int bindPort);
 	void enableServer(int bindPort);
 	void enableServer(int bindPort, String defaultPath);
+	void enableServer(String host, int bindPort);
+	void enableServer(String host, int bindPort, String defaultPath);
 	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath);	
 	void enableServer(boolean isTLS, int bindPort, String defaultPath);
 	

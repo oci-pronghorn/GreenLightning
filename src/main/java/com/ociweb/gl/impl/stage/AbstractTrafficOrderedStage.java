@@ -266,7 +266,6 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 			assert(-1==activeCounts[a]);
 			activeCounts[a] = PipeReader.readInt(localPipe, TrafficReleaseSchema.MSG_RELEASE_20_FIELD_COUNT_22);
 		}else{
-			System.err.println("shtudown ack");
 			assert(msgIdx == -1);
 			if (--hitPoints == 0) {
 				requestShutdown();

@@ -178,7 +178,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         	timeListener = (TimeListener)listener;
         } else {
         	timeListener = null;
-        }       
+        }   
+        
+        GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "burlywood2", this);
+        
+        
     }
         
 	public void configureHTTPClientResponseSupport(int httpClientPipeId) {

@@ -270,9 +270,17 @@ public class BuilderImpl implements Builder {
 	public final void enableServer(int bindPort) {
 		enableServer(bindPort, "");
 	}
+	
+	public final void enableServer(String host, int bindPort) {
+		enableServer(host, bindPort, "");
+	}
     
     public final void enableServer(int bindPort, String defaultPath) {
     	enableServer(true,false,NetGraphBuilder.bindHost(),bindPort);
+    }
+    
+    public final void enableServer(String host, int bindPort, String defaultPath) {
+    	enableServer(true,false,null==host?NetGraphBuilder.bindHost():host,bindPort);
     }
     
     public String getArgumentValue(String longName, String shortName, String defaultValue) {
