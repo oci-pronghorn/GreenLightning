@@ -34,18 +34,13 @@ public class AppTest {
 	    }
 
 	private void simulateUser() {
-		new Thread(new Runnable() {
+		new Thread(()->{
 
-			@Override
-			public void run() {
-				
 				TLSUtil.trustAllCerts("127.0.0.1");
 				
 				hitFirstURL();				
 				
-				hitSecondURL();
-				
-			}
+				hitSecondURL();			
 			   
 		   }).start();
 	}

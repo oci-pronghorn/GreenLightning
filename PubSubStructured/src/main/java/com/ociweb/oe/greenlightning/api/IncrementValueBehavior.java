@@ -1,54 +1,50 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.field.MessageConsumer;
 
-public class DecrementValueBehavior implements PubSubListener {
+public class IncrementValueBehavior implements PubSubListener {
 	private final GreenCommandChannel channel;
     private final MessageConsumer consumer;
     private final CharSequence publishTopic;
     private final GreenRuntime runtime;
-    private final long decrementBy;
-
+    private final long stepSize = 1;
+    private final AppendableProxy console;
+    private final int limit = 100;
 	private long lastValue;
 		
-    DecrementValueBehavior(GreenRuntime runtime, CharSequence publishTopic, long decrementBy) {
+    IncrementValueBehavior(GreenRuntime runtime, CharSequence publishTopic, AppendableProxy console) {
     	this.channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
-
+    	this.console = console;
     	// Process each field in order. Return false to stop processing.
 		this.consumer = new MessageConsumer()
-				            .integerProcessor(PubSubStructured.COUNT_DOWN_FIELD, value -> {
+				            .integerProcessor(PubSubStructured.VALUE_FIELD, value -> {
 								lastValue = (int) value;
 								return true;
 							});
 		
 		this.publishTopic = publishTopic;
 		this.runtime = runtime;
-		this.decrementBy = decrementBy;
 	}
 
 	@Override
 	public boolean message(CharSequence topic, BlobReader payload) {
-		//
-		////NOTE: this one line will copy messages from payload if consumer returns true
-		////      when the message is copied its topic is changed to the first argument string
-		//
-		//cmd.copyStructuredTopic(publishTopic, payload, consumer);
-		//
-		// consumer.process returns the process chain return value
+
 		if (consumer.process(payload)) {
-			if (lastValue>0) {
-				// If not zero, republish the message
-				System.out.println(lastValue);
+			if (lastValue<=limit) {// If not zero, republish the message
+				
+				Appendables.appendValue(console, lastValue).append('\n');				
+				
 				return channel.publishStructuredTopic(publishTopic, writer -> {
-					writer.writeLong(PubSubStructured.COUNT_DOWN_FIELD, lastValue-decrementBy);
+					writer.writeLong(PubSubStructured.VALUE_FIELD, lastValue + stepSize);
 					writer.writeUTF8(PubSubStructured.SENDER_FIELD, "from thing one behavior");
 				});
 			} else {
-				// When zero, shutdown the system
 				runtime.shutdownRuntime();
 				return true;
 			} 
