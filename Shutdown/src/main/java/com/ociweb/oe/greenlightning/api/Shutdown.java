@@ -7,9 +7,18 @@ import com.ociweb.gl.api.GreenRuntime;
 
 public class Shutdown implements GreenApp
 {	
-    @Override
+	private final String host;
+	public Shutdown(String host) {
+		this.host = host;
+	}
+	
+	public Shutdown() {
+		this.host = null;
+	}
+	
+    @Override    
     public void declareConfiguration(Builder c) {
-    	c.enableServer(8443);    	
+    	c.enableServer(host, 8443);    	
     	c.defineRoute("/shutdown?key=${key}");
     }
   
