@@ -1,18 +1,23 @@
 package com.ociweb.oe.greenlightning.api;
 
 import com.ociweb.gl.api.StateChangeListener;
-import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.oe.greenlightning.api.StateMachine.StopLight;
+import com.ociweb.pronghorn.util.AppendableProxy;
 
-public class StateChangeBehavior implements StateChangeListener {
+public class StateChangeBehavior implements StateChangeListener<StopLight> {
 
+	private final AppendableProxy console;
+	
+	public StateChangeBehavior(AppendableProxy console) {
+		this.console = console;
+	}
 
 	@Override
-	public boolean stateChange(Enum oldState, Enum newState) {
+	public boolean stateChange(StopLight oldState, StopLight newState) {
+				
+		console.append("                        It is time to ").append(newState.name()).append('\n');
 		
-		System.out.println("The light has chnaged to " + ((StopLight) newState).getColor());
-		return true;
+		return true; //if we need to 'delay' the state change false can be returned.
 	}
 
 }

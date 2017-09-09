@@ -6,32 +6,28 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
+import com.ociweb.pronghorn.util.Appendables;
 
-/**
- * Unit test for simple App.
- */
 public class AppTest { 
-
 	
 	 @Test
 	    public void testApp()
 	    {
-		    GreenRuntime runtime = GreenRuntime.test(new Timer());	    	
-	    	NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();    	
-	    
-	    	scheduler.startup();
-	    	
-	    	int iterations = 10;
-			while (--iterations >= 0) {
-				    		
-					scheduler.run();
-					
-					//test application here
-					
-			}
+		    StringBuilder result = new StringBuilder();
+		    		    
+		    long timeoutMS = 100;
+			boolean cleanExit = GreenRuntime.testUntilShutdownRequested(new Timer(result, 1), timeoutMS);
+
+			////////////////////////////
+			//System.out.println(builder);
+			////////////////////////////			
 			
-			scheduler.shutdown();
+			assertTrue("Test did not exit", cleanExit);
+			
+			CharSequence[] rows = Appendables.split(result, '\n');
+			
+			assertEquals(7, rows.length);
+			assertEquals("Event Triggered",rows[5]);
 			
 	    }
 }

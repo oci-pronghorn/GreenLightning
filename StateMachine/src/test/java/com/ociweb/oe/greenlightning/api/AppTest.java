@@ -2,36 +2,42 @@ package com.ociweb.oe.greenlightning.api;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertThat;
+import static org.hamcrest.core.StringStartsWith.startsWith;
+import static org.hamcrest.core.StringEndsWith.endsWith;
 
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
+import com.ociweb.pronghorn.util.Appendables;
 
-/**
- * Unit test for simple App.
- */
+
 public class AppTest { 
-
 	
 	 @Test
 	    public void testApp()
 	    {
-		    GreenRuntime runtime = GreenRuntime.test(new StateMachine());	    	
-	    	NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();    	
-	    
-	    	scheduler.startup();
-	    	
-	    	int iterations = 10;
-			while (--iterations >= 0) {
-				    		
-					scheduler.run();
-					
-					//test application here
-					
-			}
-			
-			scheduler.shutdown();
-			
+		    StringBuilder result = new StringBuilder();
+		    
+		    boolean cleanExit = GreenRuntime.testUntilShutdownRequested(new StateMachine(result,1), 500);
+		    
+		    /////////////////////////////
+		    //System.out.println(result);
+		    /////////////////////////////
+
+		    CharSequence[] rows = Appendables.split(result, '\n');
+		    
+		    assertTrue(cleanExit);
+		    assertEquals(17, rows.length);	
+		    int i = 0;
+		    int iterations = 3;
+		    while (--iterations>=0) {
+			    assertThat(rows[i++].toString(), startsWith("Green"));
+			    assertThat(rows[i++].toString(), endsWith("Go"));
+			    assertThat(rows[i++].toString(), startsWith("Yellow"));
+			    assertThat(rows[i++].toString(), startsWith("Red"));
+			    assertThat(rows[i++].toString(), endsWith("Stop"));
+		    }
 	    }
+	
 }

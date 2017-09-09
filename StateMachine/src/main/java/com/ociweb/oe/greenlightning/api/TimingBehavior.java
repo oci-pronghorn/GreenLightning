@@ -1,41 +1,51 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.TimeListener;
 import com.ociweb.oe.greenlightning.api.StateMachine.StopLight;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class TimingBehavior implements TimeListener {
-	private static long startTime;
-	private static boolean haveStartTime = false;
-	private static final long fullTime = 15_000; //time from one red light to the next in milliseconds
-    final GreenCommandChannel channel;
 
-	public TimingBehavior(GreenRuntime runtime) {
-		channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+	private static final long fullCycle = 20; //from one red light to the next in iterations
+    
+	private final GreenCommandChannel channel;
+	private final AppendableProxy console;
+	private final GreenRuntime runtime;
 
+	public TimingBehavior(GreenRuntime runtime, AppendableProxy console) {
+		this.channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		this.console = console;
+		this.runtime = runtime;
 	}
-
 
 	@Override
 	public void timeEvent(long time, int iteration) {
-		
-		if((time-startTime)%fullTime == 5_000) {
-			System.out.print("Go! ");
-			channel.changeStateTo(StopLight.Go);
+
+		if(iteration%fullCycle == 0) {
+			changeState(time, StopLight.Go);
 		}
-		else if((time-startTime)%fullTime == 10_000) {
-			System.out.print("Caution. ");
-			channel.changeStateTo(StopLight.Caution);
+		else if(iteration%fullCycle == 8) {
+			changeState(time, StopLight.Caution);
 		}
-		else if((time-startTime)%fullTime == 0) {
-			System.out.print("Stop! ");
-			channel.changeStateTo(StopLight.Stop);
+		else if(iteration%fullCycle == 11) {
+			changeState(time, StopLight.Stop);
 		}
 		
-		if(!haveStartTime) {
-			startTime = time;
-			haveStartTime = true;
+		if (iteration == (fullCycle*3)) {
+			runtime.shutdownRuntime(7);
+		}
+
+	}
+
+	private void changeState(long time, StopLight target) {
+		if (channel.changeStateTo(target)) {
+			console.append(target.getColor()).append(" ");
+			Appendables.appendEpochTime(console, time).append('\n');
+		} else {
+			console.append("unable to send state change, to busy");
 		}
 	}
 

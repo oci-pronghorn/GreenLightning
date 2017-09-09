@@ -1,22 +1,19 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.*;
-import com.ociweb.oe.greenlightning.api.StateMachine.StopLight;
-
-import com.ociweb.gl.api.StateChangeListener;
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class StateMachine implements GreenApp
 {
 
-	static String cGreen = "Green";
-	static String cYellow = "Yellow";
-	static String cRed = "Red";
-	
 	public enum StopLight{
 		
-		Go(cGreen), 
-		Caution(cYellow), 
-		Stop(cRed);
+		Go("Green"), 
+		Caution("Yellow"), 
+		Stop("Red");
 		
 		private String color;
 		
@@ -28,23 +25,32 @@ public class StateMachine implements GreenApp
 			return color;
 		}
 	}
-
+	
+	private final AppendableProxy console;
+	private final int rate;
+	
+	public StateMachine(Appendable console, int rate) {
+		this.console = Appendables.proxy(console);
+		this.rate = rate;
+	}
 	
     @Override
     public void declareConfiguration(Builder c) {
     	
     	c.startStateMachineWith(StopLight.Stop);
-    	c.setTimerPulseRate(1);
+    	c.setTimerPulseRate(rate);
     }
 
-   
-	@SuppressWarnings("unchecked")
 	@Override
     public void declareBehavior(GreenRuntime runtime) {
-
         
-        runtime.addTimePulseListener(new TimingBehavior(runtime));
-		runtime.addStateChangeListener(new StateChangeBehavior());
+        runtime.addTimePulseListener(new TimingBehavior(runtime, console));
+		runtime.addStateChangeListener(new StateChangeBehavior(console))
+		                     .includeStateChangeTo(StopLight.Go);
+		runtime.addStateChangeListener(new StateChangeBehavior(console))
+		                     .includeStateChangeTo(StopLight.Stop);
+				
+		
     }
           
 }
