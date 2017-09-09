@@ -5,7 +5,7 @@ import com.ociweb.gl.api.GreenRuntime;
 public class GreenLightning {
 
 	public static void main(String[] args) {
-		GreenRuntime.run(new Startup());
+		GreenRuntime.run(new Startup(System.out));
 	}
 	
 }

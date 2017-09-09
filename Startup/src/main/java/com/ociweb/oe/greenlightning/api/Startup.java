@@ -1,12 +1,22 @@
 package com.ociweb.oe.greenlightning.api;
 
 
+import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.Builder;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class Startup implements GreenApp
 {
+	
+	private final AppendableProxy console;
+	
+	public Startup(Appendable console) {
+		this.console = Appendables.proxy(console);
+	}
+	
+	
     @Override
     public void declareConfiguration(Builder c) {
 
@@ -16,7 +26,11 @@ public class Startup implements GreenApp
     public void declareBehavior(GreenRuntime runtime) {
 
     	runtime.addStartupListener(()->{
-    		System.out.println("Hello, this message will display once at start");
+    		console.append("Hello, this message will display once at start\n");
+    		//now we shutdown the app
+    		runtime.shutdownRuntime();
     	});
+    	
+    	
     }
 }

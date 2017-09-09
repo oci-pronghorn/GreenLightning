@@ -6,7 +6,6 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 
 /**
  * Unit test for simple App.
@@ -17,21 +16,16 @@ public class AppTest {
 	 @Test
 	    public void testApp()
 	    {
-		    GreenRuntime runtime = GreenRuntime.test(new Startup());	    	
-	    	NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();    	
-
-	    	scheduler.startup();
-	    	
-	    	int iterations = 10;
-			while (--iterations >= 0) {
-				    		
-					scheduler.run();
-					
-					//test application here
-					
-			}
-			
-			scheduler.shutdown();
+		 	StringBuilder result = new StringBuilder();
+		 	boolean cleanExit = GreenRuntime.testUntilShutdownRequested(new Startup(result), 100);
+		 	
+		 	/////////////////////
+		 	//System.out.println(result);
+		    ////////////////////
+		 	
+		 	assertTrue(cleanExit);
+		 	assertEquals("Hello, this message will display once at start\n",result.toString());
+		 	
 			
 	    }
 }
