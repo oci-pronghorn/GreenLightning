@@ -979,9 +979,10 @@ public class BuilderImpl implements Builder {
     	}
 		
 		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
+		long rate = defaultSleepRateNS>200_000?defaultSleepRateNS/4:defaultSleepRateNS;
+		
 		return mqtt = new MQTTConfigImpl(host, port, clientId, 
-				                    this, 
-				                    defaultSleepRateNS>=10_000?defaultSleepRateNS/4:defaultSleepRateNS, 
+				                    this, rate, 
 				                    (short)maxInFlight, maxMessageLength, isTLS);
 	}
 	

@@ -227,7 +227,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			short maxPartialResponses = 2;
 			
 			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, isTLS, 
-					                              maxInFlight, maximumLenghOfVariableLengthFields, 
+					                              maxInFlight,
+					                              maximumLenghOfVariableLengthFields, 
 					                              clientRequest, clientResponse, rate, 
 					                              totalConnectionsInBits,
 					                              maxPartialResponses);
