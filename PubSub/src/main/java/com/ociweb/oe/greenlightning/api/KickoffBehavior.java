@@ -1,8 +1,8 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.StartupListener;
 import com.ociweb.pronghorn.util.AppendableProxy;
 
 public class KickoffBehavior implements StartupListener{

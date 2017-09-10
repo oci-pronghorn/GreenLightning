@@ -1,15 +1,19 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.*;
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
 
 public class PubSub implements GreenApp
 {
-	private final Appendable target;
+	private final AppendableProxy target;
 	private final int seed;
 	
 	public PubSub(Appendable target, int seed) {
-		this.target = target;
+		this.target = Appendables.proxy(target);
 		this.seed = seed;
 	}
 	
@@ -18,13 +22,19 @@ public class PubSub implements GreenApp
         //no connections are needed
     }
 
-
     @Override
     public void declareBehavior(GreenRuntime runtime) {
 
     	runtime.addStartupListener(new KickoffBehavior(runtime, target));
-    	runtime.addPubSubListener(new GenerateBehavior(runtime, "Count", target, seed)).addSubscription("Next");
-    	runtime.addPubSubListener(new CountBehavior(runtime, "Next")).addSubscription("Count");
+    	
+    	runtime.addPubSubListener(new GenerateBehavior(runtime, "Count", target, seed))
+    	                     .addSubscription("Next");
+    	
+    	CountBehavior counter = new CountBehavior(runtime, "Next");
+		runtime.registerListener(counter)
+		           			.addSubscription("Count", counter::triggerNextAndCount)
+		           			.addSubscription("AnExample", counter::anotherMessage);
+    	
     	
     	
     }

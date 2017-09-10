@@ -2,24 +2,24 @@ package com.ociweb.oe.greenlightning.api;
 
 import java.util.Random;
 
-import com.ociweb.gl.api.MessageReader;
-import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class GenerateBehavior implements PubSubListener {
 
-	Random rand;
+	private Random rand;
     private final CharSequence publishTopic;
-	final GreenCommandChannel channel1;
-	private final Appendable target;
+	private final GreenCommandChannel channel;
+	private final AppendableProxy target;
 	
-	public GenerateBehavior(GreenRuntime runtime, CharSequence publishTopic, Appendable target, int seed) {
+	public GenerateBehavior(GreenRuntime runtime, CharSequence publishTopic, AppendableProxy target, int seed) {
 		
 		this.target = target;
-		channel1 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		this.channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		
 		this.publishTopic = publishTopic;
 		this.rand = new Random(seed);
@@ -28,11 +28,13 @@ public class GenerateBehavior implements PubSubListener {
 
 	@Override
 	public boolean message(CharSequence topic, BlobReader payload) {
-		int n = rand.nextInt(101);
-		Appendables.appendValue(target, "", n, " ");
 		
-		return channel1.publishTopic(publishTopic);
+		//Note if this behavior is subscribed to more than 1 topic we will need
+		//to branch here based on the value of topic.
 		
+		Appendables.appendValue(target, rand.nextInt(101)).append(' ');		
+		return channel.publishTopic(publishTopic);		
+	
 	}
 
 }
