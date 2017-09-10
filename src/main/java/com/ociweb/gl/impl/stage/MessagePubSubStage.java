@@ -78,7 +78,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private int stateChangeInFlight = -1;
 
     //TODO: if on watch for special $ topic to turn it on for specific topics..
-    private boolean enableTrace = false;
+    private static final boolean enableTrace = false;
 	private MessagePubSubTrace pubSubTrace = new MessagePubSubTrace();
     
 
@@ -333,52 +333,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	    	//process the pending publications, this must be completed before we continue
 	    	//////////////////////
 	        if (pendingPublishCount>0) { //must do these first.
-	        	int limit = pendingPublishCount;
-	        	pendingPublishCount = 0;//set to zero to collect the new failed values
-	        	foundWork=true;
-	        	switch(pendingDeliveryType) {
-		        	case Message:
-			        	{
-			        		if (pendingIngress) {
-			        			
-			        			Pipe<IngressMessages> pipe = ingressMessagePipes[pendingReleaseCountIdx];
-	
-			        			
-				        		for(int i = 0; i<limit; i++) {
-				        			copyToSubscriber(pipe, pendingPublish[i],
-				        					IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-				        					IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
-				        		}
-			        			
-			        		} else {
-				            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];		           	 	
-				        		Pipe<MessagePubSub> pipe = incomingSubsAndPubsPipe[pendingReleaseCountIdx];
-	
-				        		for(int i = 0; i<limit; i++) {			        			
-				        			copyToSubscriber(pipe, pendingPublish[i], targetMakrs, 
-				        					 MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-				        					 MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
-				        		}
-			        		}
-	
-			        	}
-		        		break;
-		        	case State:
-			        	{
-			        		assert(!pendingIngress);
-			            	long[] targetMakrs = consumedMarks[pendingReleaseCountIdx];
-			           	 
-			        		//finishing the remaining copies that could not be done before because the pipes were full
-			        		for(int i = 0; i<limit; i++) {
-			        			copyToSubscriberState(currentState, newState, pendingPublish[i], targetMakrs);                
-			        		}
-		
-			        		if (0 == pendingPublishCount) {
-			        			currentState = newState;
-			        		}
-			        	}
-		        		break;
-	        	}
+	        	processPending();
 	            if (pendingPublishCount>0) {
 	            	foundWork = false;
 	            	//do not pick up new work until this is done or we may get out of order messages.
@@ -420,19 +375,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		        	 			logger.info("new message to be routed, {}", pubSubTrace); 
 		        	 		}
 			        				        	 		
-		        	 		final int limit = 1+listIdx+length;
-		        	 		
-	                    	
-	                    	for(int j = listIdx+1; j<limit ; j++) {
-	                    	
-								int pipeIdx = subscriberLists[j];
-	                    		
-								copyToSubscriber(ingessPipe, pipeIdx,
-											IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-											IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3
-	                    				);
-								
-	                    	}
+		        	 		allMessagesForIngress(ingessPipe, listIdx, 1+listIdx+length, subscriberLists);
 	                	}
 	        			
 	                    if (pendingPublishCount>0) {
@@ -465,6 +408,74 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     	
     	
     }
+
+
+	private void allMessagesForIngress(Pipe<IngressMessages> ingessPipe, int listIdx, final int limit,
+			int[] localSubList) {
+		for(int j = listIdx+1; j<limit ; j++) {
+		
+			copyToSubscriber(ingessPipe, localSubList[j],
+						IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+						IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3
+					);
+			
+		}
+	}
+
+
+	private void processPending() {
+		int limit = pendingPublishCount;
+		pendingPublishCount = 0;//set to zero to collect the new failed values
+		foundWork=true;
+		switch(pendingDeliveryType) {
+			case Message:
+		    	{
+		    		if (pendingIngress) {		    			
+		    			allPendingIngressMessages(limit, pendingPublish, ingressMessagePipes[pendingReleaseCountIdx]);
+		    		} else {
+		            	allPendingNormalMessages(limit, pendingPublish, consumedMarks[pendingReleaseCountIdx], incomingSubsAndPubsPipe[pendingReleaseCountIdx]);
+		    		}
+		    	}
+				break;
+			case State:
+		    	{
+		    		assert(!pendingIngress);
+		        	allPendingStateChanges(limit, pendingPublish, consumedMarks[pendingReleaseCountIdx], currentState, newState);
+
+		    		if (0 == pendingPublishCount) {
+		    			currentState = newState;
+		    		}
+		    	}
+				break;
+		}
+	}
+
+
+	private void allPendingNormalMessages(int limit, int[] localPP, long[] targetMakrs, Pipe<MessagePubSub> pipe) {
+		for(int i = 0; i<limit; i++) {			        			
+			copyToSubscriber(pipe, localPP[i], targetMakrs, 
+					 MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+					 MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+		}
+	}
+
+
+	private void allPendingIngressMessages(int limit, int[] localPP, Pipe<IngressMessages> pipe) {
+		for(int i = 0; i<limit; i++) {
+			copyToSubscriber(pipe, localPP[i],
+					IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+					IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+		}
+	}
+
+
+	private void allPendingStateChanges(int limit, int[] localPP, long[] targetMakrs, int localCurState,
+			int localNewState) {
+		//finishing the remaining copies that could not be done before because the pipes were full
+		for(int i = 0; i<limit; i++) {
+			copyToSubscriberState(localCurState, localNewState, localPP[i], targetMakrs);                
+		}
+	}
     
     @Override
     protected void processMessagesForPipe(int a) {
@@ -597,13 +608,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	                        	////////////
 	                        	////////////
 	                        	///////////
-	                        	final int limit = 1+listIdx+length;                                	
-	                        	for(int i = listIdx+1; i<limit; i++) {
-	                        		copyToSubscriber(pipe, subscriberLists[i], targetMakrs,
-	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-	                        				MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
-	                        				);                                
-	                        	}
+                        		allMessageSubscribers(pipe, targetMakrs, listIdx, subscriberLists, 1+listIdx+length);
 	                        	int sumLen = length;
 	                    		
 	                    		
@@ -649,10 +654,25 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     }
 
 
+	private void allMessageSubscribers(Pipe<MessagePubSub> pipe, long[] targetMakrs, int listIdx, int[] localSubs,
+			final int limit) {
+		for(int i = listIdx+1; i<limit; i++) {
+			copyToSubscriber(pipe, localSubs[i], targetMakrs,
+					MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
+					MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
+					);                                
+		}
+	}
+
+	private CollectTargetLists visitor;
+
 	private void collectAllSubscriptionLists(final byte[] backing, final int pos, final int len, final int mask) {
 		//right after all the subscribers use the rest of the data
-		//Appendables.appendUTF8(System.out.append('\n'), backing, pos, len, mask).append('\n');
-		CollectTargetLists visitor = new CollectTargetLists(subscriberLists, subscriberListSize*totalSubscriberLists);
+		if (null != visitor) {
+			visitor.reset(subscriberLists, subscriberListSize*totalSubscriberLists);
+		} else {
+			visitor = new CollectTargetLists(subscriberLists, subscriberListSize*totalSubscriberLists);
+		}
 		localSubscriptionTrieReader.visit(localSubscriptionTrie, visitor, backing, pos, len, mask);
 		this.subscriberLists = visitor.targetArray(); //must assign back in case we made it grow.
 

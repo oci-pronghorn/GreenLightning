@@ -87,9 +87,37 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		return runtime;
     }
 	
+	@Deprecated
     public static GreenRuntime test(GreenApp app) {
     	GreenRuntime runtime = new GreenRuntime();
-        //force hardware to TestHardware regardless of where or what platform its run on.
+        test(app, runtime);
+		return runtime;
+    }
+
+	public static boolean testUntilShutdownRequested(GreenApp app, long timeoutMS) {
+		GreenRuntime runtime = new GreenRuntime();
+        NonThreadScheduler s = test(app, runtime);
+        
+        long limit = System.currentTimeMillis() + timeoutMS;
+        boolean result = true;
+        s.startup();
+    	
+                
+		while (!NonThreadScheduler.isShutdownRequested(s)) {
+				s.run();
+				if (System.currentTimeMillis()>limit) {
+					result = false;
+					break;
+				}
+		}		
+		s.shutdown();
+		return result;
+	}
+	
+	
+	
+	private static NonThreadScheduler test(GreenApp app, GreenRuntime runtime) {
+		//force hardware to TestHardware regardless of where or what platform its run on.
         //this is done because this is the test() method and must behave the same everywhere.
         runtime.builder = new BuilderImpl(runtime.gm,runtime.args);
 
@@ -98,20 +126,21 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
         runtime.declareBehavior(app);
 
-			runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.gm);
+		runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.gm);
 
-			   runtime.logStageScheduleRates();
+	    runtime.logStageScheduleRates();
 
-			   if ( runtime.builder.isTelemetryEnabled()) {
-				   runtime.gm.enableTelemetry(runtime.builder.telemetryHost(),8098);
-			   }
-		   //exportGraphDotFile();
+	    if ( runtime.builder.isTelemetryEnabled()) {
+		   runtime.gm.enableTelemetry(8098);
+	    }
 
-		   runtime.scheduler = new NonThreadScheduler(runtime.gm);
-				   //runtime.builder.createScheduler(runtime);
-        //for test we do not call startup and wait instead for this to be done by test.
+	      //exportGraphDotFile();
 
-        return runtime;
-    }
+		runtime.scheduler = new NonThreadScheduler(runtime.gm);
+		return (NonThreadScheduler) runtime.scheduler;
+	}
+    
+    
+    
     
 }

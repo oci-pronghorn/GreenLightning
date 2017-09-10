@@ -17,6 +17,8 @@ import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
+import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -953,42 +955,51 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
         
+	//returns consumed boolean
 	public boolean copyStructuredTopic(CharSequence topic, 
-            MessageReader reader, 
+			BlobReader reader, 
             MessageConsumer consumer) {
 		return copyStructuredTopic(topic, reader, consumer, WaitFor.All);
 	}
 	
+	//returns consumed boolean
     public boolean copyStructuredTopic(CharSequence topic, 
-    		                           MessageReader reader, 
+    								   BlobReader inputReader, 
     		                           MessageConsumer consumer,
     		                           WaitFor ap) {
+    	DataInputBlobReader<?> reader = (DataInputBlobReader<?>)inputReader;
+    	
     	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
     	
     	int pos = reader.absolutePosition();    	
-    	if (consumer.process(reader) 
-    		&& PipeWriter.hasRoomForWrite(goPipe) 
-        	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)  ) {
+    	if (consumer.process(reader)) {
     		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-    		
-    		PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
-        	
-            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-            DataOutputBlobWriter.openField(pw);
-            reader.absolutePosition(pos);//restore position as unread
-            //direct copy from one to the next
-            reader.readInto(pw, reader.available());
-
-            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-            PipeWriter.publishWrites(messagePubSub);
- 
-           	publishGo(1,builder.pubSubIndex(), this);  		
-    		
-    		return true;
+    		if (PipeWriter.hasRoomForWrite(goPipe) 
+        	    && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)  ) {
+    
+	    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
+	    		
+	    		PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
+	        	
+	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+	            DataOutputBlobWriter.openField(pw);
+	            reader.absolutePosition(pos);//restore position as unread
+	            //direct copy from one to the next
+	            reader.readInto(pw, reader.available());
+	
+	            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+	            PipeWriter.publishWrites(messagePubSub);
+	 
+	           	publishGo(1,builder.pubSubIndex(), this);  		
+	    		
+	    		return true;
+    		} else {
+    			reader.absolutePosition(pos);//restore position as unread
+    			return false;//needed to consume but no place to go.
+    		}
+    	
     	} else {
-    		reader.absolutePosition(pos);//restore position as unread
-    		return false;
+    		return true;
     	}
     }
     

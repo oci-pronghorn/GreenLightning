@@ -11,9 +11,14 @@ public class CollectTargetLists implements ByteSquenceVisitor {
 	
 	public CollectTargetLists(int[] subscriberLists, int collectedIndex) {
 		this.targetLists = subscriberLists;
-		this.collectedIndex = collectedIndex;
+		this.collectedIndex = collectedIndex;//offset found after all the data we need to keep
 	}
 
+	public void reset(int[] subscriberLists, int collectedIndex) {
+		this.targetLists = subscriberLists;
+		this.collectedIndex=collectedIndex;
+	}
+	
 	@Override
 	public void addToResult(long value) {
 		

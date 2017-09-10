@@ -250,8 +250,8 @@ public class BuilderImpl implements Builder {
     	this.isTLSServer = isTLS;
     	this.isLarge = isLarge;
     	this.bindHost = bindHost;
-    	if (null==bindHost) {
-    		throw new UnsupportedOperationException("invalid host name "+String.valueOf(bindHost));
+    	if (null==this.bindHost) {
+    		this.bindHost = NetGraphBuilder.bindHost();
     	}
     	this.bindPort = bindPort;
     	if (bindPort<=0 || (bindPort>=(1<<16))) {
@@ -270,9 +270,17 @@ public class BuilderImpl implements Builder {
 	public final void enableServer(int bindPort) {
 		enableServer(bindPort, "");
 	}
+	
+	public final void enableServer(String host, int bindPort) {
+		enableServer(host, bindPort, "");
+	}
     
     public final void enableServer(int bindPort, String defaultPath) {
     	enableServer(true,false,NetGraphBuilder.bindHost(),bindPort);
+    }
+    
+    public final void enableServer(String host, int bindPort, String defaultPath) {
+    	enableServer(true,false,null==host?NetGraphBuilder.bindHost():host,bindPort);
     }
     
     public String getArgumentValue(String longName, String shortName, String defaultValue) {
@@ -971,9 +979,10 @@ public class BuilderImpl implements Builder {
     	}
 		
 		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
+		long rate = defaultSleepRateNS>200_000?defaultSleepRateNS/4:defaultSleepRateNS;
+		
 		return mqtt = new MQTTConfigImpl(host, port, clientId, 
-				                    this, 
-				                    defaultSleepRateNS>=10_000?defaultSleepRateNS/4:defaultSleepRateNS, 
+				                    this, rate, 
 				                    (short)maxInFlight, maxMessageLength, isTLS);
 	}
 	
