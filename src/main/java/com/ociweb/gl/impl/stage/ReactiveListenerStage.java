@@ -169,16 +169,23 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
         int totalCount = totalLiveReactors.incrementAndGet();
         assert(totalCount>=0);
+        
         if (listener instanceof ShutdownListener) {
+        	toStringDetails = toStringDetails+"ShutdownListener\n";
         	int shudownListenrCount = liveShutdownListeners.incrementAndGet();
         	assert(shudownListenrCount>=0);
         }
         
         if (listener instanceof TimeListener) {
+        	toStringDetails = toStringDetails+"TimeListener\n";
         	timeListener = (TimeListener)listener;
         } else {
         	timeListener = null;
         }   
+        
+        if (listener instanceof StartupListener) {
+        	toStringDetails = toStringDetails+"StartupListener\n";
+        }
         
         GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "burlywood2", this);
         
