@@ -1,14 +1,10 @@
 package com.ociweb.gl.impl.mqtt;
 
-import com.ociweb.gl.api.MQTTQoS;
+import com.ociweb.gl.api.*;
 import com.ociweb.pronghorn.pipe.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.MQTTBridge;
-import com.ociweb.gl.api.MQTTWriter;
-import com.ociweb.gl.api.MsgRuntime;
-import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.impl.BridgeConfigImpl;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
@@ -35,6 +31,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private CharSequence user = null;
 	private CharSequence pass = null;
 	private CharSequence lastWillTopic = null;
+	private CharSequence connectionFeedbackTopic;
 	private Writable lastWillPayload = null;
 	//
 	private int flags;
@@ -183,27 +180,24 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	@Override
-	public MQTTBridge lastWill(boolean retain, MQTTQoS willQoS, CharSequence topic, Writable write) {
-		return will(retain, willQoS, topic, write);
-	}
-
-	@Override
-	public MQTTBridge will(boolean retain, MQTTQoS willQoS, CharSequence topic, Writable write) {
+	public MQTTBridge connectionWill(MQTTConnectionWill will) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
-		assert(null!=topic);
+		assert(null!=will);
 
-		flags |= MQTTEncoder.CONNECT_FLAG_WILL_FLAG_2;
-		if (retain) {
-			flags |= MQTTEncoder.CONNECT_FLAG_WILL_RETAIN_5;
+		if (will.lastWillTopic != null) {
+			flags |= MQTTEncoder.CONNECT_FLAG_WILL_FLAG_2;
+			if (will.latWillRetain) {
+				flags |= MQTTEncoder.CONNECT_FLAG_WILL_RETAIN_5;
+			}
+			byte qos = (byte) (will.lastWillQoS.getSpecification() << 3);
+			flags |= qos;
+
+			this.lastWillTopic = will.lastWillTopic;
+			this.lastWillPayload = will.lastWillPayload;
 		}
-		byte qos = (byte)(willQoS.getSpecification() << 3);
-		flags |= qos;
-
-		this.lastWillTopic = topic;
-		this.lastWillPayload = write;
-		
+		this.connectionFeedbackTopic = will.connectFeedbackTopic;
 		return this;
 	}
 
@@ -383,7 +377,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 				PipeWriter.publishWrites(clientRequest);
 			}
 
-			new IngressMQTTStage(builder.gm, clientResponse, new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), externalTopicsSub, internalTopicsSub, convertersSub);
+			new IngressMQTTStage(builder.gm, clientResponse, new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), externalTopicsSub, internalTopicsSub, convertersSub, connectionFeedbackTopic);
 		} else {
 			PipeCleanerStage.newInstance(builder.gm, clientResponse);
 		}
