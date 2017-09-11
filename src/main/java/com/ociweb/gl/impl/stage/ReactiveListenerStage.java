@@ -246,7 +246,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     }
 
 
-	private String toStringDetails = "\n";
+	protected String toStringDetails = "\n";
+
     public String toString() {
     	String parent = super.toString();
     	
