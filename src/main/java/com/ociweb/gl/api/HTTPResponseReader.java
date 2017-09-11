@@ -1,7 +1,10 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.gl.impl.stage.HeaderTypeCapture;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -14,7 +17,9 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	private HTTPContentType httpContentType;
 	private int flags;
 	private long connectionId;
-	
+	private HeaderTypeCapture htc;
+	 
+    	
 	public HTTPResponseReader(Pipe<NetResponseSchema> pipe) {
 		super(pipe);
 	}
@@ -28,6 +33,9 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 		this.headerTrieParser = headerTrieParser;
 		this.httpSpec = httpSpec;
 		this.payloadIndexOffset = 1;
+		if (null==htc) {
+			this.htc  = new HeaderTypeCapture(httpSpec);
+		}
 	}
 
 	public void setStatusCode(short statusId) { //TODO: hide these so maker does not see them.
@@ -41,13 +49,14 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	public short statusCode() {
 		return this.status;
 	}
-
-	public void setContentType(HTTPContentType httpContentType) {
-		this.httpContentType = httpContentType;
-	}
 	
 	public HTTPContentType contentType() {
-		return this.httpContentType;
+		
+	   	 if (openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.ordinal(), htc)) {
+			 return htc.type();
+		 } else {
+			 return HTTPContentTypeDefaults.UNKNOWN;
+		 }
 	}
 
 	public void setFlags(int flags) {

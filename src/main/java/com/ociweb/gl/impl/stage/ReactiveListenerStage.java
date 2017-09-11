@@ -242,6 +242,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     public static void requestSystemShutdown(Runnable shutdownRunnable) {
     	lastCall = shutdownRunnable;
     	shutdownRequsted.set(true);
+    	
+    	
     	//logger.info("shutdown requested");
     }
 
@@ -280,6 +282,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	
     };
     
+
+    
     @Override
     public void startup() {              
  
@@ -294,7 +298,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	}
     	
     	httpSpec = HTTPSpecification.defaultSpec();   	 
-		htc  = new HeaderTypeCapture(httpSpec);
+		
 	
     	//////////////////
     	///HTTPClient support
@@ -494,7 +498,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	
 	}
 
-    private HeaderTypeCapture htc;
     
     
 	final void consumeNetResponse(Object listener, Pipe<NetResponseSchema> p) {
@@ -528,11 +531,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				     
 				     //logger.trace("data avail {} status {} ",reader.available(),statusId);
 				     
-	            	 if (reader.openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.rootBytes(), htc)) {
-	            		 reader.setContentType(htc.type());
-	            	 } else {
-	            		 logger.info("no content type was found...");
-	            	 }	            	 	            	 
+            	 	            	 
 	            	 reader.setFlags(flags);
 	        
 	            	 
