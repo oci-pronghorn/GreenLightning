@@ -48,7 +48,7 @@ public class HTTPResponder {
 		};
 	}
 		
-	public void readReqesterData(BlobReader reader) {
+	public boolean readReqesterData(BlobReader reader) {
 		
 		if (Pipe.hasContentToRead(pipe)) {
 			
@@ -63,34 +63,53 @@ public class HTTPResponder {
                         						   hasContinuation, headers, writable);
 			}
 			connectionId = -1;
-			sequenceCode = -1;				
+			sequenceCode = -1;	
+			return true;
 		} else {
-			//wait for second call
+			if (connectionId>=0 && sequenceCode>=0) {
 			
-			////example of what the writer does
-			//writer.writePackedLong(connectionId);
-			//writer.writePackedLong(sequenceCode);
-			
-			connectionId = reader.readPackedLong();
-			sequenceCode = reader.readPackedLong();
+				return false;
+			} else {
+				//wait for second call
+				
+				////example of what the writer does
+				//writer.writePackedLong(connectionId);
+				//writer.writePackedLong(sequenceCode);
+				
+				connectionId = reader.readPackedLong();
+				sequenceCode = reader.readPackedLong();
+				return true;
+			}
 		}
 		
 	}
 	
-	public void respondWith(boolean hasContinuation, String headers, Writable writable) {
+	public boolean respondWith(boolean hasContinuation, String headers, Writable writable) {
 		
 		if (connectionId>=0 && sequenceCode>=0) {
+			
 			commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
 				                           hasContinuation, headers, writable);
 		    connectionId = -1;
 		    sequenceCode = -1;
+		    return true;
+		    
 		} else {
-			//store data to write later.
-			this.hasContinuation = hasContinuation;
-			this.headers = headers;
-			
-			storeData(writable);
+		 
+			if (Pipe.hasContentToRead(pipe)) {
+				return false;
 				
+			} else {
+			
+				//store data to write later.
+				this.hasContinuation = hasContinuation;
+				this.headers = headers;
+				
+				storeData(writable);
+			
+				return true;
+				
+			}
 		}
 		
 	}
@@ -105,21 +124,30 @@ public class HTTPResponder {
 		Pipe.publishWrites(pipe);
 	}
 	
-    public void respondWith(int statusCode, boolean hasContinuation, HTTPContentType contentType, Writable writable) {
+    public boolean respondWith(int statusCode, boolean hasContinuation, HTTPContentType contentType, Writable writable) {
 		
     	if (connectionId>=0 && sequenceCode>=0) {
     		commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
 				                           statusCode, hasContinuation, contentType, writable);
 		    connectionId = -1;
-		    sequenceCode = -1;    		
+		    sequenceCode = -1; 
+		    return true;
     	} else {
     		
-    		this.hasContinuation = hasContinuation;
-    		this.contentType = contentType;
-    		this.statusCode = statusCode;
-
-			storeData(writable);
+    		if (Pipe.hasContentToRead(pipe)) {
+				return false;
 				
+			} else {
+    		
+	    		this.hasContinuation = hasContinuation;
+	    		this.contentType = contentType;
+	    		this.statusCode = statusCode;
+	
+				storeData(writable);
+				
+				return true;
+				
+			}
     	}
 	}
 	
