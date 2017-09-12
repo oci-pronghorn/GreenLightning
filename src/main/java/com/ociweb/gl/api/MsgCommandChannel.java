@@ -14,6 +14,8 @@ import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
+import com.ociweb.pronghorn.network.http.AbstractRestStage;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -1045,32 +1047,31 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		//logger.info("Building response for connection {} sequence {} ",w.getConnectionId(),w.getSequenceCode());
 		
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
-				statusCode,
-				HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION,
-				null,
-				Writable.NO_OP); //no type and no body so use null
+				statusCode,false,null,Writable.NO_OP); //no type and no body so use null
 	}
 
 	public boolean publishHTTPResponse(HTTPFieldReader reqeustReader, 
-            int statusCode,
-									   HTTPContentType contentType,
-            Writable writable) {
+            							int statusCode,
+									    HTTPContentType contentType,
+									   	Writable writable) {
 	
 		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
-		statusCode, HTTPFieldReader.END_OF_RESPONSE | HTTPFieldReader.CLOSE_CONNECTION, contentType, writable);
+									statusCode, false, contentType, writable);
 	}	
 	
+	//TODO: add method taking string headers....
+	
 	public boolean publishHTTPResponse(HTTPFieldReader reqeustReader, 
-										            int statusCode, final int context,
+									   int statusCode, boolean hasContinuation,
 									   HTTPContentType contentType,
-										            Writable writable) {
+									   Writable writable) {
 		
 		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
-				                statusCode, context, contentType, writable);
+				                statusCode, hasContinuation, contentType, writable);
 	}	
 
 	///////////////////////////////////
@@ -1083,9 +1084,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	////////////////////////////////////
 	
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
-			                                            int statusCode, final int context, 
-			                                            HTTPContentType contentType,
-			                                            Writable writable) {
+			                           int statusCode, boolean hasContinuation,
+			                           HTTPContentType contentType,
+			                           Writable writable) {
 		
 		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
@@ -1117,14 +1118,21 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		
 		outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 		
-		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);
+		int context;
+		if (hasContinuation) {
+			context = 0;
+			lastResponseWriterFinished = 0;
+		} else {
+			context = HTTPFieldReader.END_OF_RESPONSE;
+			lastResponseWriterFinished = 1;	
+		}
 
 		//NB: context passed in here is looked at to know if this is END_RESPONSE and if so
 		//then the length is added if not then the header will designate chunked.
 		outputStream.openField(statusCode, context, contentType);
 		writable.write(outputStream); 
 		
-		if (0 == lastResponseWriterFinished) {
+		if (hasContinuation) {
 			// for chunking we must end this block			
 			outputStream.write(RETURN_NEWLINE);
 		}
@@ -1135,6 +1143,79 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	}
 
+	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
+							           boolean hasContinuation,
+							           CharSequence headers,
+							           Writable writable) {
+
+				assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
+				
+				final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
+				final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
+				
+				assert(1==lastResponseWriterFinished) : "Previous write was not ended can not start another.";
+				
+				Pipe<ServerResponseSchema> pipe = netResponse.length>1 ? netResponse[parallelIndex] : netResponse[0];
+				
+				if (!Pipe.hasRoomForWrite(pipe)) {
+					return false;
+				}		
+								
+				///////////////////////////////////////
+				//message 1 which contains the headers
+				//////////////////////////////////////		
+				holdEmptyBlock(connectionId, sequenceNo, pipe);
+				
+				//////////////////////////////////////////
+				//begin message 2 which contains the body
+				//////////////////////////////////////////
+				NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);	
+				
+				Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
+				Pipe.addLongValue(connectionId, pipe);
+				Pipe.addIntValue(sequenceNo, pipe);	
+				
+				outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
+				
+				int context;
+				if (hasContinuation) {
+					context = 0;
+					lastResponseWriterFinished = 0;
+				} else {
+					context = HTTPFieldReader.END_OF_RESPONSE;
+					lastResponseWriterFinished = 1;	
+				}	
+				
+				DataOutputBlobWriter.openField(outputStream);
+				writable.write(outputStream); 
+				
+				if (hasContinuation) {
+					// for chunking we must end this block			
+					outputStream.write(RETURN_NEWLINE);
+				}
+				
+				int len = NetResponseWriter.closeLowLevelField(outputStream); //end of writing the payload    	
+				
+				Pipe.addIntValue(context, outputStream.getPipe());  //real context    	
+				Pipe.confirmLowLevelWrite(outputStream.getPipe());
+				   	
+				////////////////////Write the header
+
+				DataOutputBlobWriter.openFieldAtPosition(outputStream, block1HeaderBlobPosition);
+				outputStream.writeUTF(headers);
+
+				int propperLength = DataOutputBlobWriter.length(outputStream);
+				Pipe.validateVarLength(outputStream.getPipe(), propperLength);
+				Pipe.setIntValue(propperLength, outputStream.getPipe(), block1PositionOfLen); //go back and set the right length.
+				outputStream.getPipe().closeBlobFieldWrite();
+				
+				//now publish both header and payload
+				Pipe.publishWrites(outputStream.getPipe());
+				
+				return true;
+
+	}
+	
 	private void holdEmptyBlock(long connectionId, final int sequenceNo, Pipe<ServerResponseSchema> pipe) {
 	
 			Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
@@ -1166,12 +1247,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 	
 	public boolean publishHTTPResponseContinuation(HTTPFieldReader w, 
-										int context, Writable writable) {
-		return publishHTTPResponseContinuation(w.getConnectionId(),w.getSequenceCode(), context, writable);
+										boolean hasContinuation, Writable writable) {
+		return publishHTTPResponseContinuation(w.getConnectionId(),w.getSequenceCode(), hasContinuation, writable);
 	}
 
 	public boolean publishHTTPResponseContinuation(long connectionId, long sequenceCode, 
-			                                       int context, Writable writable) {
+												   boolean hasContinuation, Writable writable) {
 		
     	assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
@@ -1203,13 +1284,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		Pipe.addIntValue(sequenceNo, pipe);	
 		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 	
-		outputStream.openField(context);
+		outputStream.openField(hasContinuation? 0: HTTPFieldReader.END_OF_RESPONSE);
+		lastResponseWriterFinished = hasContinuation ? 0 : 1;		
 		
 		writable.write(outputStream); 
 		//this is not the end of the data so we must close this block
 		outputStream.write(RETURN_NEWLINE);
 		
-		lastResponseWriterFinished = 1&(context>>ServerCoordinator.END_RESPONSE_SHIFT);		
 
 		if (1 == lastResponseWriterFinished) {			
 			//this is the end of the data, we must close the block

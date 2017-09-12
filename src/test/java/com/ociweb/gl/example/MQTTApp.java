@@ -58,7 +58,7 @@ public class MQTTApp implements GreenApp {
 						
 						System.err.println("sent "+d);
 						writer.writeUTF8Text("egress body "+d);
-						
+
 					}
 				};
 				cmdChnl.publishTopic("topic/egress", writable);
@@ -85,6 +85,7 @@ public class MQTTApp implements GreenApp {
 					public void write(BlobWriter writer) {
 						
 						writer.writeUTF("second step test message");
+
 					}
 					
 				};

@@ -10,6 +10,6 @@ public interface Writable {
 		}		
 	};
 	
-	void write(BlobWriter writer);
+	void write(BlobWriter writer); //returns true if we have more data to write.
 
 }
