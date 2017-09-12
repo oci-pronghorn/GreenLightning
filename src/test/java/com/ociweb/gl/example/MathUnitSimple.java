@@ -96,7 +96,7 @@ public class MathUnitSimple implements RestListener {
 			
 		};
 		
-		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, 
+		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, false, 
 				                   HTTPContentTypeDefaults.JSON, consume);		
 
 	}
