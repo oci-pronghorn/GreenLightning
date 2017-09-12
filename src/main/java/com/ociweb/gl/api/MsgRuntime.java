@@ -610,7 +610,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		final GraphManager graphManager = gm; 
 		
 				
-		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOfServerStages(graphManager, serverCoord,
+		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOfServerStages(
+				                                            graphManager, serverCoord,
 				                                            serverConfig, handshakeIncomingGroup, -1);
 		
 		NetGraphBuilder.buildOrderingSupers(graphManager, serverCoord, routerCount, fromModulesToOrderSuper, fromOrderedContent, -1);

@@ -76,13 +76,13 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	    
 	    System.out.println("To exit app press Ctrl-C");
 
-			runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.gm);
+		runtime.builder.buildStages(runtime.subscriptionPipeLookup, runtime.gm);
 
-			   runtime.logStageScheduleRates();
+	    runtime.logStageScheduleRates();
 
-			   if ( runtime.builder.isTelemetryEnabled()) {
-				   runtime.telemetryHost = runtime.gm.enableTelemetry(runtime.builder.telemetryHost(),runtime.builder.telmetryPort());
-			   }
+		if ( runtime.builder.isTelemetryEnabled()) {
+			   runtime.telemetryHost = runtime.gm.enableTelemetry(runtime.builder.telemetryHost(),runtime.builder.telmetryPort());
+		}
 		   //exportGraphDotFile();
 
 		runtime.scheduler = runtime.builder.createScheduler(runtime);

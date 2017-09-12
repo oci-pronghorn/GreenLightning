@@ -544,11 +544,13 @@ public class BuilderImpl implements Builder {
 
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
+		final int scale = 2;
+		
 		int ideal = idealThreadCount();
 		final int countStages = GraphManager.countStages(gm);
-		if (threadLimit<=0 && countStages > 4*ideal) {
+		if (threadLimit<=0 && countStages > scale*ideal) {
 			//do not allow the ThreadPerStageScheduler to be used, we must group
-			threadLimit = idealThreadCount()*4;//this must be large so give them a few more
+			threadLimit = idealThreadCount()*scale;//this must be large so give them a few more
 			threadLimitHard = true;//must make this a hard limit or we can saturate the system easily.
 		}
 		
@@ -973,10 +975,7 @@ public class BuilderImpl implements Builder {
 			throw new UnsupportedOperationException("Specification does not support values larger than 256M");
 		}
 		 
-    		//also ensure consumers have pipes which can consume this.
-    	if (MsgCommandChannel.isTooSmall(maxInFlight, maxMessageLength, pcm.getConfig(MessageSubscription.class))) {
-    		pcm.addConfig(maxInFlight, maxMessageLength, MessageSubscription.class); 
-    	}
+		pcm.ensureSize(MessageSubscription.class, maxInFlight, maxMessageLength);
 		
 		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
 		long rate = defaultSleepRateNS>200_000?defaultSleepRateNS/4:defaultSleepRateNS;

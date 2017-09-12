@@ -125,25 +125,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
     	}
     	growCommandCountRoom(queueLength);
-    	this.initFeatures |= DYNAMIC_MESSAGING;    
-    	PipeConfig<MessagePubSub> config1 = pcm.getConfig(MessagePubSub.class);
-		if (isTooSmall(queueLength, maxMessageSize, config1)) {
-    		this.pcm.addConfig(Math.max(config1.minimumFragmentsOnPipe(), queueLength),
-			           Math.max(config1.maxVarLenSize(), maxMessageSize), MessagePubSub.class);  
-    		//also ensure consumers have pipes which can consume this.
-    		PipeConfig<MessageSubscription> config2 = pcm.getConfig(MessageSubscription.class);
-			if (isTooSmall(queueLength, maxMessageSize, config2)) {
-    			builder.pcm.addConfig(Math.max(config2.minimumFragmentsOnPipe(), queueLength),
-				           Math.max(config2.maxVarLenSize(), maxMessageSize), MessageSubscription.class); 
-    		}			
-			
-			//IngressMessages Confirm that MQTT ingress is big enough as well
-			PipeConfig<IngressMessages> config3 = pcm.getConfig(IngressMessages.class);
-			if (isTooSmall(queueLength, maxMessageSize, config3)) {
-    			builder.pcm.addConfig(Math.max(config3.minimumFragmentsOnPipe(), queueLength),
-				                      Math.max(config3.maxVarLenSize(), maxMessageSize), IngressMessages.class); 
-    		}	
-        }
+    	this.initFeatures |= DYNAMIC_MESSAGING;  
+    	
+    	pcm.ensureSize(MessagePubSub.class, queueLength, maxMessageSize);
+
+		//also ensure consumers have pipes which can consume this.    		
+		pcm.ensureSize(MessageSubscription.class, queueLength, maxMessageSize);
+		
+		//IngressMessages Confirm that MQTT ingress is big enough as well			
+		pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
+	
     }
 
 	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
@@ -163,11 +154,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	}
     	growCommandCountRoom(queueLength);
     	this.initFeatures |= NET_REQUESTER;
-    	PipeConfig<ClientHTTPRequestSchema> config = pcm.getConfig(ClientHTTPRequestSchema.class);
-		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
-    		this.pcm.addConfig(Math.max(config.minimumFragmentsOnPipe(), queueLength),
-			           Math.max(config.maxVarLenSize(), maxMessageSize), ClientHTTPRequestSchema.class); 
-    	}
+    	
+    	pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
+
     }
    
     public void ensureHTTPServerResponse() {
@@ -183,11 +172,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	}
     	growCommandCountRoom(queueLength);
     	this.initFeatures |= NET_RESPONDER;    	
-    	PipeConfig<ServerResponseSchema> config = pcm.getConfig(ServerResponseSchema.class);
-		if (queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize()) {
-    		this.pcm.addConfig(Math.max(config.minimumFragmentsOnPipe(), queueLength),
-			           Math.max(config.maxVarLenSize(), maxMessageSize), ServerResponseSchema.class);  
-    	}
+    	
+    	pcm.ensureSize(ServerResponseSchema.class, queueLength, maxMessageSize);
+
     }
     
     
@@ -195,6 +182,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	if (null!=this.goPipe) {
     		throw new UnsupportedOperationException("Too late, this method must be called in define behavior.");
     	}
+    	
     	PipeConfig<TrafficOrderSchema> goConfig = this.pcm.getConfig(TrafficOrderSchema.class);
     	this.pcm.addConfig(count + goConfig.minimumFragmentsOnPipe(), 0, TrafficOrderSchema.class);
 
@@ -1056,7 +1044,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 									   	Writable writable) {
 	
 		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
-		
+
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
 									statusCode, false, contentType, writable);
 	}	
