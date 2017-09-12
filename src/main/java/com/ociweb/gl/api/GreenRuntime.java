@@ -20,6 +20,10 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
          super(args);
       }
      
+     public GreenCommandChannel newCommandChannel() { 
+    	 return newCommandChannel(0);
+     }
+     
      public GreenCommandChannel newCommandChannel(int features) { 
          
      	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
