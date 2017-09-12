@@ -121,7 +121,7 @@ public class BuilderImpl implements Builder {
 	/////////////////
 	/////////////////
     
-    private long defaultSleepRateNS = 4_800;// should normally be between 900 and 10_000; 
+    private long defaultSleepRateNS = 20_000;// should normally be between 900 and 20_000; 
     
 	private final int shutdownTimeoutInSeconds = 1;
 
@@ -787,7 +787,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public final void setDefaultRate(long ns) {
-		defaultSleepRateNS = ns;
+		defaultSleepRateNS = Math.max(ns, 4_800); //protect against too small 
 	}
 
 
