@@ -4,8 +4,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -39,13 +38,15 @@ public class AppTest {
 			//////////////////
 			
 			System.err.println(result);
-			
-			CharSequence[] rows = Appendables.split(result, '\n');
-			
-			
-			
-			
-			
+
+		 	CharSequence[] rows = Appendables.split(result, '\n');
+
+		 	assertEquals(5, rows.length);
+			assertEquals("Arg Int: 42", rows[0]);
+		 	assertEquals("COOKIE: oreo", rows[1]);
+		 	assertEquals("POST: \u0000\fpeanutbutterpayload", rows[2]);
+		 	assertEquals("COOKIE: peanutbutter", rows[3]);
+		 	assertEquals("", rows[4]);
 	    }
 	 
 
@@ -55,7 +56,7 @@ public class AppTest {
 					TLSUtil.trustAllCerts(host);
 					
 					int countDown = 200;
-					while (!hitURL("https://"+host+":8088/testPageB", null, null)) {
+					while (!hitURL("https://"+host+":8088/testPageB", null, null, "beginning of text file\n")) {
 						if (--countDown<=0) {
 							fail("Server was not running");
 							break;
@@ -67,16 +68,21 @@ public class AppTest {
 						}
 					}
 					
-					hitURL("https://"+host+":8088/testPageA?arg=42", "oreo", null);	
+					hitURL("https://"+host+":8088/testPageA?arg=42", "oreo", null,
+							"");
 							
-					hitURL("https://"+host+":8088/testPageC", "peanutbutter", "payload");
+					hitURL("https://"+host+":8088/testPageC", "peanutbutter", "payload",
+							"beginning of text file\n" + "ending of text file\n");
 
-					hitURL("https://"+host+":8088/shutdown?key=shutdown", null, null);	
+					//hitURL("https://"+host+":8088/testPageD", "peanutbutter2", "payload2", "ending of text file\n");
+
+					hitURL("https://"+host+":8088/shutdown?key=shutdown", null, null,
+							"beginning of text file\n" + "ending of text file\n");
 										
 			   }).start();
 		}
 
-		private boolean hitURL(String urlString, String cookie, String payload) {
+		private boolean hitURL(String urlString, String cookie, String payload, String body) {
 			try {
 				URL url = new URL(urlString);				
 				HttpURLConnection http = (HttpURLConnection)url.openConnection();
@@ -95,11 +101,24 @@ public class AppTest {
 					out.close();
 					
 				}
-				
-				
+
 				
 				http.setReadTimeout(timeoutMS);
-				assertEquals(200, http.getResponseCode());			
+				http.connect();
+
+				assertEquals(200, http.getResponseCode());
+
+				InputStream br;
+				if (200 <= http.getResponseCode() && http.getResponseCode() <= 299) {
+					br = http.getInputStream();
+				} else {
+					br = http.getErrorStream();
+				}
+				if (body != null) {
+					String result = readFullyAsString(br, "UTF-8");
+					assertEquals(body, result);
+				}
+
 				
 			} catch (MalformedURLException e) {			
 				e.printStackTrace();
@@ -114,7 +133,19 @@ public class AppTest {
 			return true;
 		}
 
+		public String readFullyAsString(InputStream inputStream, String encoding) throws IOException {
+			return readFully(inputStream).toString(encoding);
+		}
 
+		private ByteArrayOutputStream readFully(InputStream inputStream) throws IOException {
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			byte[] buffer = new byte[1024];
+			int length = 0;
+			while ((length = inputStream.read(buffer)) != -1) {
+				baos.write(buffer, 0, length);
+			}
+			return baos;
+		}
 	 
 	 
 }

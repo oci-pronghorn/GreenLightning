@@ -11,3 +11,13 @@ buildNumber.properties
 # Avoid ignoring Maven wrapper jar file (.jar files are usually ignored)
 !/.mvn/wrapper/maven-wrapper.jar
 /.project
+
+####
+# IntelliJ
+*.iml
+target/
+/.settings
+/.classpath
+/.project
+/.attach_pid25440
+.idea/

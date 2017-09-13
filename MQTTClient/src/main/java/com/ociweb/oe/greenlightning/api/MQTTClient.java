@@ -1,10 +1,6 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.MQTTBridge;
-import com.ociweb.gl.api.MQTTQoS;
+import com.ociweb.gl.api.*;
 import com.ociweb.oe.greenlightning.api.behaviors.EgressBehavior;
 import com.ociweb.oe.greenlightning.api.behaviors.IngressBehavior;
 import com.ociweb.oe.greenlightning.api.behaviors.TimeBehavior;
@@ -23,10 +19,13 @@ public class MQTTClient implements GreenApp {
 		//final String brokerHost = "172.16.10.28"; // Nathan's PC
 		//final String brokerHost = "thejoveexpress.local"; // Raspberry Pi0
 		// Create a single mqtt client
+		MQTTConnectionWill will = new MQTTConnectionWill();
+		will.lastWillTopic = "last/will";
+		will.lastWillPayload =  blobWriter -> {blobWriter.writeBoolean(true);};
 		mqttConfig = builder.useMQTT(brokerHost, 1883, false, "MQTTClientTest",200) //default of 10 in flight
 							.cleanSession(true)	
 							.keepAliveSeconds(10)
-							.will(false, MQTTQoS.atMostOnce, "last/will", blobWriter -> {blobWriter.writeBoolean(true);});
+							.connectionWill(will);
 
 		// Timer rate
 		builder.setTimerPulseRate(300); 
