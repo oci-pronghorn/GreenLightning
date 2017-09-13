@@ -1,57 +1,47 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.Headable;
-import com.ociweb.gl.api.Payloadable;
-import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.RestListener;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class RestBehaviorEmptyResponse implements RestListener {
 
-	final byte[] cookieHeader = HTTPHeaderDefaults.COOKIE.rootBytes();
-	final byte[] fieldName;
+	private final int cookieHeader = HTTPHeaderDefaults.COOKIE.ordinal();
+	private final byte[] fieldName;
 	private final GreenCommandChannel cmd;
+	private final AppendableProxy console;
 	
-	public RestBehaviorEmptyResponse(GreenRuntime runtime, byte[] myArgName) {
-		this.fieldName = myArgName;		
+	public RestBehaviorEmptyResponse(GreenRuntime runtime, String myArgName, AppendableProxy console) {
+		this.fieldName = myArgName.getBytes();		
 		this.cmd = runtime.newCommandChannel(NET_RESPONDER);
+		this.console = console;
 	}
-	
-	Payloadable reader = new Payloadable() {
-		
-		@Override
-		public void read(BlobReader reader) {
-			
-			System.out.println("POST: "+reader.readUTFOfLength(reader.available()));
-			
-		}			
-	};
-
-	private Headable headReader = new Headable() {
-
-		@Override
-		public void read(int id, BlobReader reader) { 
-			
-			System.out.println("COOKIE: "+reader.readUTFOfLength(reader.available()));
-						
-		}
-		
-	};
-
 
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
 	    int argInt = request.getInt(fieldName);
-	    System.out.println("Arg Int: "+argInt);
-		
-		request.openHeaderData(cookieHeader, headReader);
+	    Appendables.appendValue(console, "Arg Int: ", argInt, "\n");
+	    		
+		request.openHeaderData(cookieHeader, (id,reader)-> {
+			
+			console.append("COOKIE: ");
+			reader.readUTF(console).append('\n');
+					
+		});
 		
 		if (request.isVerbPost()) {
-			request.openPayloadData(reader );
+			request.openPayloadData((reader)->{
+				
+				console.append("POST: ");
+				reader.readUTFOfLength(reader.available(), console);
+				console.append('\n');
+									
+			});
 		}
 		
 		//no body just a 200 ok response.

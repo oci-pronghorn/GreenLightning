@@ -1,67 +1,55 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.HTTPFieldReader;
-import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.Writable;
-import com.ociweb.gl.api.Payloadable;
-import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPFieldReader;
+import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.RestListener;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.util.AppendableProxy;
 
 public class RestBehaviorLargeResponse implements RestListener {
 
+	private final int cookieHeader = HTTPHeaderDefaults.COOKIE.ordinal();
 	private final GreenCommandChannel cmd;
 	private int partNeeded = 0;
+	private final AppendableProxy console;
 	
-	public RestBehaviorLargeResponse(GreenRuntime runtime) {	
+	public RestBehaviorLargeResponse(GreenRuntime runtime, AppendableProxy console) {	
 		this.cmd = runtime.newCommandChannel(NET_RESPONDER);
+		this.console = console;
 	}
-	
-	Payloadable reader = new Payloadable() {
-		
-		@Override
-		public void read(BlobReader reader) {
-			
-			System.out.println("POST: "+reader.readUTFOfLength(reader.available()));
-			
-		}			
-	};
-
-
-	Writable writableA = new Writable() {
-		
-		@Override
-		public void write(BlobWriter writer) {
-			writer.writeUTF8Text("beginning of text file\n");//23 in length
-		}
-		
-	};
-	
-	Writable writableB = new Writable() {
-		
-		@Override
-		public void write(BlobWriter writer) {
-			writer.writeUTF8Text("ending of text file\n");//20 in length
-		}
-		
-	};
 	
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
 		if (request.isVerbPost()) {
-			request.openPayloadData(reader);
+			request.openPayloadData((reader)->{
+				
+				console.append("POST: ");
+				//TODO: why is this payload pointing to the cookie??
+				//reader.readUTF(console);
+				reader.readUTFOfLength(reader.available(),console);
+				console.append('\n');
+				
+			});
 		}
+		
+		request.openHeaderData(cookieHeader, (id,reader)-> {
+			
+			console.append("COOKIE: ");
+			reader.readUTF(console).append('\n');
+					
+		});
 		
 		if (0 == partNeeded) {
 			boolean okA = cmd.publishHTTPResponse(request, 200, 
-									request.getRequestContext(),
+									true,
 					                HTTPContentTypeDefaults.TXT,
-					                writableA);
+					                (writer)->{
+					                	writer.writeUTF8Text("beginning of text file\n");
+					                });
 			if (!okA) {
 				return false;
 			} 
@@ -70,12 +58,14 @@ public class RestBehaviorLargeResponse implements RestListener {
 		//////
 		//NB: this block is here for demo reasons however one could
 		//    publish a topic back to this behavior to complete the
-		//    continuaton at a future time
+		//    continuation at a future time
 		//////
 	
 		boolean okB = cmd.publishHTTPResponseContinuation(request,
-						 		request.getRequestContext() | HTTPFieldReader.END_OF_RESPONSE,
-						 		writableB);
+						 		false,
+						 		(writer)-> {
+						 			writer.writeUTF8Text("ending of text file\n");
+						 		});
 		if (okB) {
 			partNeeded = 0;
 			return true;

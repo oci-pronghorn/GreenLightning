@@ -1,29 +1,48 @@
 package com.ociweb.oe.greenlightning.api;
 
 
-import com.ociweb.gl.api.*;
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class HTTPServer implements GreenApp
 {
-	byte[] cookieHeader = HTTPHeaderDefaults.COOKIE.rootBytes();
+	private byte[] cookieHeader = HTTPHeaderDefaults.COOKIE.rootBytes();
 	
-	int emptyResponseRouteId;
-	int smallResponseRouteId;
-	int largeResponseRouteId;
-	int fileServerId;
+	private int emptyResponseRouteId;
+	private int smallResponseRouteId;
+	private int largeResponseRouteId;
+	private int shutdownRouteId;
+		
+	private AppendableProxy console;
+	private final String host;
 	
+	public HTTPServer(String host, Appendable console) {
+		this.host = host;
+		this.console = Appendables.proxy(console);
+	}
 	
-	byte[] myArgName = "myarg".getBytes();
+	public HTTPServer(Appendable console) {
+		this.host = null;
+		this.console = Appendables.proxy(console);
+	}
 	
     @Override
     public void declareConfiguration(Builder c) {
         
-		c.enableServer(false, 8088);    	
+		c.enableServer(host, 8088);
+		
 		emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
 		smallResponseRouteId = c.registerRoute("/testpageB");
 		largeResponseRouteId = c.registerRoute("/testpageC", cookieHeader);
-		fileServerId         = c.registerRoute("/file${path}");
+		
+		//only do in test mode... 
+		//in production it is a bad idea to let clients turn off server.
+		shutdownRouteId = c.registerRoute("/shutdown?key=${key}");
+				
 		c.enableTelemetry();
 		
     }
@@ -31,19 +50,20 @@ public class HTTPServer implements GreenApp
 
     @Override
     public void declareBehavior(GreenRuntime runtime) {
-        runtime.addRestListener(new RestBehaviorEmptyResponse(runtime, myArgName))
+    	
+        runtime.addRestListener(new RestBehaviorEmptyResponse(runtime, "myarg", console))
                  .includeRoutes(emptyResponseRouteId);
         
-        runtime.addRestListener(new RestBehaviorSmallResponse(runtime))
+        runtime.addRestListener(new RestBehaviorSmallResponse(runtime, console))
         		.includeRoutes(smallResponseRouteId);
         
-        runtime.addRestListener(new RestBehaviorLargeResponse(runtime))
+        runtime.addRestListener(new RestBehaviorLargeResponse(runtime, console))
         		 .includeRoutes(largeResponseRouteId);
         
-        //NOTE .includeAllRoutes() can be used to write a behavior taking all routes
+        runtime.addRestListener(new ShutdownRestListener(runtime))
+                  .includeRoutes(shutdownRouteId);
         
-        //NOTE when using the above no routes need to be registered and if they are
-        //     all other routes will return a 404
+        //NOTE .includeAllRoutes() can be used to write a behavior taking all routes
 
     }
    
