@@ -2,8 +2,11 @@ package com.ociweb.oe.greenlightning.api.behaviors;
 
 import java.util.Date;
 
-import com.ociweb.gl.api.*;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.TimeListener;
+import com.ociweb.gl.api.WaitFor;
+import com.ociweb.gl.api.Writable;
 
 public class TimeBehavior implements TimeListener {
 	private int droppedCount = 0;

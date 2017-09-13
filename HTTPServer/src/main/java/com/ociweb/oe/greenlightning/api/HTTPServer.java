@@ -15,6 +15,7 @@ public class HTTPServer implements GreenApp
 	private int emptyResponseRouteId;
 	private int smallResponseRouteId;
 	private int largeResponseRouteId;
+	private int splitResponseRouteId;
 	private int shutdownRouteId;
 		
 	private AppendableProxy console;
@@ -38,6 +39,7 @@ public class HTTPServer implements GreenApp
 		emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
 		smallResponseRouteId = c.registerRoute("/testpageB");
 		largeResponseRouteId = c.registerRoute("/testpageC", cookieHeader);
+		splitResponseRouteId = c.registerRoute("/testpageD");
 		
 		//only do in test mode... 
 		//in production it is a bad idea to let clients turn off server.
@@ -59,6 +61,17 @@ public class HTTPServer implements GreenApp
         
         runtime.addRestListener(new RestBehaviorLargeResponse(runtime, console))
         		 .includeRoutes(largeResponseRouteId);
+        
+        runtime.addRestListener(new RestBehaviorHandoff(runtime, "responder"))
+        		 .includeRoutes(splitResponseRouteId);
+        
+        runtime.addPubSubListener(new RestBehaviorHandoffResponder(runtime, console))
+		         .addSubscription("responder");
+        
+
+
+        
+        //splitResponseRouteId
         
         runtime.addRestListener(new ShutdownRestListener(runtime))
                   .includeRoutes(shutdownRouteId);

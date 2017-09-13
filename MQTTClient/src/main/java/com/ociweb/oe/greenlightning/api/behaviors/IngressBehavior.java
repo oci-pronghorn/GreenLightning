@@ -1,10 +1,10 @@
 package com.ociweb.oe.greenlightning.api.behaviors;
 
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.WaitFor;
 import com.ociweb.gl.api.Writable;
-import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.pipe.BlobReader;
 
 public class IngressBehavior implements PubSubMethodListener {

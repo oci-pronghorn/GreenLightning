@@ -1,39 +1,21 @@
 package com.ociweb.oe.greenlightning.api;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
 import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 
 /**
  * Unit test for simple App.
  */
 public class AppTest { 
-
 	
 	 //@Test
-	@Ignore
-	    public void testApp()
-	    {
-		    GreenRuntime runtime = GreenRuntime.test(new HTTPClient());	    	
-	    	NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();    	
-	    
-	    	scheduler.startup();
-	    	
-	    	int iterations = 10;
-			while (--iterations >= 0) {
-				    		
-					scheduler.run();
-					
-					//test application here
-					
-			}
-			
-			scheduler.shutdown();
-			
-	    }
+	 @Ignore
+	 public void testApp() {
+				
+		   long timeoutMS = 10_000;
+		   GreenRuntime.testUntilShutdownRequested(new HTTPClient(), timeoutMS);
+		
+	 }
 }

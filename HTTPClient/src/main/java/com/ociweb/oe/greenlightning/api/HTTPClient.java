@@ -11,7 +11,7 @@ public class HTTPClient implements GreenApp
     @Override
     public void declareConfiguration(Builder c) {
     	c.useNetClient();
-    	c.enableTelemetry();
+    	//c.enableTelemetry();
     }
 
     @Override
@@ -23,8 +23,7 @@ public class HTTPClient implements GreenApp
     	
     	int responseId = runtime.addResponseListener(new HTTPResponse()).getId();    	
     	runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, responseId));
-    	
-    	
+    	    	
     	
     }
           
