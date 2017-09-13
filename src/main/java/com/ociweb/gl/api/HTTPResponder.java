@@ -31,6 +31,7 @@ public class HTTPResponder {
 	    int maximumMessages = 4;
 	    
 	    commandChannel.ensureHTTPServerResponse(maximumMessages, maximumPayloadSize);
+	    
 	    //temp space for only if they appear out of order.
 		this.pipe = RawDataSchema.instance.newPipe(maximumMessages, maximumPayloadSize);
 		this.pipe.initBuffers();

@@ -511,7 +511,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//Must call here so the beginning stages of the graph are drawn first when exporting graph.
 		app.declareBehavior(this);
 		
-		buildLastHalfOfGraphForServer(app, serverConfig, serverCoord, routerCount, acks, handshakeIncomingGroup, planIncomingGroup);
+		buildLastHalfOfGraphForServer(app, serverConfig, serverCoord, routerCount, 
+				                      acks, handshakeIncomingGroup, planIncomingGroup);
 	}
 
 
@@ -598,7 +599,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		int r = routerCount;
 		while (--r>=0) {
 			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
-			fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);			
+			Pipe<ServerResponseSchema>[] temp = fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);
+			
+			//this block is required to make sure the ordering stage has room
+			int c = temp.length;
+			while (--c>=0) {
+				//ensure that the ordering stage can consume messages of this size
+				serverConfig.ensureServerCanWrite(temp[c].config().maxVarLenSize());
+			}			
+			
 		}
 				
 		
@@ -606,15 +615,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, 
 				                     fromRouterToModules, errorResponsePipes, routerConfig,
 				                     serverCoord, -1, catchAll);
-
-		final GraphManager graphManager = gm; 
 		
-				
-		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOfServerStages(
-				                                            graphManager, serverCoord,
-				                                            serverConfig, handshakeIncomingGroup, -1);
+	
+		//NOTE: this array populated here must be equal or larger than the fromModules..
+		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup, (long) -1);
 		
-		NetGraphBuilder.buildOrderingSupers(graphManager, serverCoord, routerCount, fromModulesToOrderSuper, fromOrderedContent, -1);
+		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
+		
+		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, routerCount, 
+				                            fromModulesToOrderSuper, fromOrderedContent, -1);
 	}
 	//////////////////
 	//end of server and other behavior
