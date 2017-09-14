@@ -180,24 +180,28 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	@Override
-	public MQTTBridge connectionWill(MQTTConnectionWill will) {
+	public MQTTBridge lastWill(CharSequence topic, boolean retain, MQTTQoS qos, Writable payload) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
-		assert(null!=will);
+		assert(null!=topic);
 
-		if (will.lastWillTopic != null) {
-			flags |= MQTTEncoder.CONNECT_FLAG_WILL_FLAG_2;
-			if (will.latWillRetain) {
-				flags |= MQTTEncoder.CONNECT_FLAG_WILL_RETAIN_5;
-			}
-			byte qos = (byte) (will.lastWillQoS.getSpecification() << 3);
-			flags |= qos;
-
-			this.lastWillTopic = will.lastWillTopic;
-			this.lastWillPayload = will.lastWillPayload;
+		flags |= MQTTEncoder.CONNECT_FLAG_WILL_FLAG_2;
+		if (retain) {
+			flags |= MQTTEncoder.CONNECT_FLAG_WILL_RETAIN_5;
 		}
-		this.connectionFeedbackTopic = will.connectFeedbackTopic;
+		byte qosFlag = (byte) (qos.getSpecification() << 3);
+		flags |= qosFlag;
+
+		this.lastWillTopic = topic;
+		this.lastWillPayload = payload;
+
+		return this;
+	}
+
+
+	public MQTTBridge connectionFeedbackTopic(CharSequence connectFeedbackTopic) {
+		this.connectionFeedbackTopic = connectFeedbackTopic;
 		return this;
 	}
 

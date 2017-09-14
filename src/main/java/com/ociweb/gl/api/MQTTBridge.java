@@ -11,9 +11,9 @@ public interface MQTTBridge extends BridgeConfig<MQTTConfigTransmission, MQTTCon
 	public MQTTBridge keepAliveSeconds(int seconds);
 	public MQTTBridge cleanSession(boolean clean);
 	public MQTTBridge authentication(CharSequence user, CharSequence pass);
-	public MQTTBridge connectionWill(MQTTConnectionWill will);
+	public MQTTBridge lastWill(CharSequence topic, boolean retain, MQTTQoS qos, Writable payload);
+	public MQTTBridge connectionFeedbackTopic(CharSequence connectFeedbackTopic);
 	public MQTTBridge subscriptionQoS(MQTTQoS qos);
 	public MQTTBridge transmissionOoS(MQTTQoS qos);
 	public MQTTBridge transmissionRetain(boolean value);
-	
 }
