@@ -74,7 +74,7 @@ public class AppTest {
 					hitURL("https://"+host+":8088/testPageC", "peanutbutter", "payload",
 							"beginning of text file\n" + "ending of text file\n");
 
-					//hitURL("https://"+host+":8088/testPageD", "peanutbutter2", "payload2", "ending of text file\n");
+					hitURL("https://"+host+":8088/testPageD", "peanutbutter2", "payload2", "\u0000\u0011sent by responder");
 
 					hitURL("https://"+host+":8088/shutdown?key=shutdown", null, null,
 							"beginning of text file\n" + "ending of text file\n");
