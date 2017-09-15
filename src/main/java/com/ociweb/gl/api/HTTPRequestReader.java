@@ -39,7 +39,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		this.headerHash = table;
 		this.headerTrieParser = headerTrieParser;
 		this.httpSpec = httpSpec;
-		this.payloadIndexOffset = paraIndexCount + IntHashTable.count(headerHash);
+		this.payloadIndexOffset = paraIndexCount + IntHashTable.count(headerHash) + 1;
 	}
 	
 	public void setVerb(HTTPVerbDefaults verb) {
