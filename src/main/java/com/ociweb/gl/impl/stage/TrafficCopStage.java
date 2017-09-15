@@ -44,14 +44,7 @@ public class TrafficCopStage extends PronghornStage {
         this.primaryIn = primaryIn;
         this.ackIn = ackIn;
         this.goOut = goOut;
-        
-        if (!noNulls(goOut)) {
-        	throw new UnsupportedOperationException("None of the Go pipes can be null");
-        }
-        if (!noNulls(ackIn)) {
-        	throw new UnsupportedOperationException("None of the Ack pipes can be null");
-        }
-        
+      
         
         this.graphManager = graphManager;//for toString
         this.builder = builder;
@@ -80,7 +73,7 @@ public class TrafficCopStage extends PronghornStage {
     	if (shutdownInProgress) {
     		int i = goOut.length;
     		while (--i>=0) {
-    			if (!Pipe.hasRoomForWrite(goOut[i])) {
+    			if ((null!=goOut[i]) && (!Pipe.hasRoomForWrite(goOut[i]))) {
     				return;
     			}
     		}
