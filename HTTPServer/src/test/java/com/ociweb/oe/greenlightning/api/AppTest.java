@@ -44,7 +44,7 @@ public class AppTest {
 		 	assertEquals(5, rows.length);
 			assertEquals("Arg Int: 42", rows[0]);
 		 	assertEquals("COOKIE: oreo", rows[1]);
-		 	assertEquals("POST: \u0000\fpeanutbutterpayload", rows[2]);
+		 	assertEquals("POST: payload", rows[2]);
 		 	assertEquals("COOKIE: peanutbutter", rows[3]);
 		 	assertEquals("", rows[4]);
 	    }
