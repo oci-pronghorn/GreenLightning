@@ -115,6 +115,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	public boolean openPayloadData(Payloadable reader) {
 		
 		if (hasRemainingBytes()) {		
+					
 			setPositionBytesFromStart(readFromEndLastInt(payloadIndexOffset));
 			reader.read(this);//even when we have zero length...
 			return true;
