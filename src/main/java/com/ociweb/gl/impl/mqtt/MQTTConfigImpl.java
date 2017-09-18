@@ -221,8 +221,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			
 			clientResponse = new Pipe<MQTTClientResponseSchema>(newPipeConfig2);
 
-			byte totalConnectionsInBits = 2; //only 4 brokers
-			short maxPartialResponses = 2;
+			final byte totalConnectionsInBits = 2; //only 4 brokers
+			final short maxPartialResponses = 1;
 			
 			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, isTLS, 
 					                              maxInFlight,
