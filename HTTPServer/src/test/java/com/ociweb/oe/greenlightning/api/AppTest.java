@@ -74,6 +74,7 @@ public class AppTest {
 					hitURL("https://"+host+":8088/testPageC", "peanutbutter", "payload",
 							"beginning of text file\n" + "ending of text file\n");
 
+					// The binary data encoded in the payload below is due to the binary 2-byte-counted UTF write (utfWrite) performed by RestBehaviorHandoffResponder
 					hitURL("https://"+host+":8088/testPageD", "peanutbutter2", "payload2", "\u0000\u0011sent by responder");
 
 					hitURL("https://"+host+":8088/shutdown?key=shutdown", null, null,

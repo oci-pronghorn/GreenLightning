@@ -19,7 +19,7 @@ public class MQTTClient implements GreenApp {
 		//final String brokerHost = "172.16.10.28"; // Nathan's PC
 		//final String brokerHost = "thejoveexpress.local"; // Raspberry Pi0
 		// Create a single mqtt client
-		mqttConfig = builder.useMQTT(brokerHost, 1883, false, "MQTTClientTest",200) //default of 10 in flight
+		mqttConfig = builder.useMQTT(brokerHost, 1883, true, "MQTTClientTest",200) //default of 10 in flight
 							.cleanSession(true)	
 							.keepAliveSeconds(10)
 							.lastWill("last/will", false, MQTTQoS.atMostOnce, blobWriter -> {blobWriter.writeBoolean(true);});
@@ -27,7 +27,7 @@ public class MQTTClient implements GreenApp {
 		// Timer rate
 		builder.setTimerPulseRate(300); 
 		
-		builder.enableTelemetry();
+		//builder.enableTelemetry();
 	}
 
 	@Override
