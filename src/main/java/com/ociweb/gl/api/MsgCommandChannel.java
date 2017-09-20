@@ -27,6 +27,7 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
@@ -335,6 +336,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     
     private static <B extends BuilderImpl> Pipe<MessagePubSub> newPubSubPipe(PipeConfig<MessagePubSub> config, B builder) {
+    	//TODO: need to create these pipes with constants for the topics we can avoid the copy...
+    	//      this will add a new API where a constant can be used instead of a topic string...
+    	//      in many cases this change will double the throughput or do even better.
+    	
     	return new Pipe<MessagePubSub>(config) {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -719,30 +724,37 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean publishTopic(CharSequence topic, Writable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
-        assert(isNotPrivate(topic)) : "private topics may not be selected by CharSequence.";
-        
-        if (PipeWriter.hasRoomForWrite(goPipe) && 
-        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-    		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
 
-            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-           
-        	DataOutputBlobWriter.openField(pw);
-        	writable.write(pw);
-            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-            
-            PipeWriter.publishWrites(messagePubSub);
-
-            publishGo(1,builder.pubSubIndex(), this);
-                        
-            
-            return true;
-            
-        } else {
-            return false;
-        }
+        int token =  null==privateTopicsTrieReader ? -1 :
+        		     (int)TrieParserReader.query(privateTopicsTrieReader,
+                							privateTopicsTrie, topic);
+		
+		if (token>=0) {
+			return publishOnPrivateTopic(token, writable);
+		} else {
+	        if (PipeWriter.hasRoomForWrite(goPipe) && 
+	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+	    		
+	    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
+	        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+	
+	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+	           
+	        	DataOutputBlobWriter.openField(pw);
+	        	writable.write(pw);
+	            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+	            
+	            PipeWriter.publishWrites(messagePubSub);
+	
+	            publishGo(1,builder.pubSubIndex(), this);
+	                        
+	            
+	            return true;
+	            
+	        } else {
+	            return false;
+	        }
+		}
     }
 
     public boolean publishTopic(CharSequence topic) {
@@ -751,82 +763,134 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     public boolean publishTopic(CharSequence topic, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-        assert(isNotPrivate(topic)) : "private topics may not be selected by CharSequence.";
-        
-        if (PipeWriter.hasRoomForWrite(goPipe) && 
-        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-    		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
-        	
-        	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-               
-        	DataOutputBlobWriter.openField(pw);            
-            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-            
-            PipeWriter.publishWrites(messagePubSub);
 
-            publishGo(1,builder.pubSubIndex(), this);
-                        
-            return true;
-            
+        int token = null==privateTopicsTrieReader ? -1 :
+        	          (int)TrieParserReader.query(privateTopicsTrieReader,
+                privateTopicsTrie, topic);
+
+		if (token>=0) {
+			return publishOnPrivateTopic(token);
+		} else {
+			        
+	        if (PipeWriter.hasRoomForWrite(goPipe) && 
+	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+	    		
+	    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
+	        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+	        	
+				PipeWriter.writeSpecialBytesPosAndLen(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3, -1, 0);
+				PipeWriter.publishWrites(messagePubSub);
+	
+	            publishGo(1,builder.pubSubIndex(), this);
+	                        
+	            return true;
+	            
+	        } else {
+	            return false;
+	        }
+		}
+		
+    }
+  
+    public boolean publishTopic(byte[] topic, Writable writable) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+        assert(writable != null);
+ 
+        int token = null==privateTopicsTrieReader ? -1 :
+        		    (int)TrieParserReader.query(privateTopicsTrieReader,
+        		                                   privateTopicsTrie, 
+        		                                   topic, 0, topic.length, Integer.MAX_VALUE);
+        
+        if (token>=0) {
+        	return publishOnPrivateTopic(token, writable);
         } else {
-            return false;
+        	//should not be called when	DYNAMIC_MESSAGING is not on.
+        	
+	        //this is a public topic
+        	if (PipeWriter.hasRoomForWrite(goPipe) && 
+	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+	            
+	        	PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+	        	
+	            PubSubWriter writer = (PubSubWriter) Pipe.outputStream(messagePubSub);
+	            
+	            writer.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);
+	            writable.write(writer);
+	            writer.publish();
+	            publishGo(1,builder.pubSubIndex(), this);
+	                        
+	            return true;
+	            
+	        } else {
+	            return false;
+	        }
+        }
+    }
+
+    public boolean publishTopic(byte[] topic) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+ 
+        int token = null==privateTopicsTrieReader ? -1 :
+        		    (int)TrieParserReader.query(privateTopicsTrieReader,
+        		                                   privateTopicsTrie, 
+        		                                   topic, 0, topic.length, Integer.MAX_VALUE);
+        
+        if (token>=0) {
+        	return publishOnPrivateTopic(token);
+        } else {
+        	//should not be called when	DYNAMIC_MESSAGING is not on.
+        	
+	        //this is a public topic
+        	if (PipeWriter.hasRoomForWrite(goPipe) && 
+	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+	            
+	        	PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+	        		        	
+				PipeWriter.writeSpecialBytesPosAndLen(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3, -1, 0);
+				PipeWriter.publishWrites(messagePubSub);
+	            	            
+	            publishGo(1,builder.pubSubIndex(), this);
+	                        
+	            return true;
+	            
+	        } else {
+	            return false;
+	        }
         }
     }
     
-    //TODO: add privateTopic support
+	private boolean publishOnPrivateTopic(int token, Writable writable) {
+		//this is a private topic            
+		Pipe<MessagePrivate> output = privateTopicPipes[token];
+		if (PipeWriter.tryWriteFragment(output, MessagePrivate.MSG_PUBLISH_1)) {
+					
+			DataOutputBlobWriter<MessagePrivate> writer = PipeWriter.outputStream(output);
+			DataOutputBlobWriter.openField(writer);
+			writable.write(writer);
+			DataOutputBlobWriter.closeHighLevelField(writer, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3);
+			
+			PipeWriter.publishWrites(output);
+
+			return true;
+		} else {
+			return false;
+		}
+	}
     
-//    public boolean publishTopic(byte[] topic, Writable writable) {
-//		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-//        assert(writable != null);
-//        
-//        int token = (int)privateTopicsTrieReader.query(privateTopicsTrieReader,
-//        		                                   privateTopicsTrie, 
-//        		                                   topic, 0, topic.length, Integer.MAX_VALUE);
-//        
-//        if (token>=0) {
-//        	//this is a private topic
-//            
-//			Pipe<MessagePrivate> output = privateTopicPipes[token];
-//			if (PipeWriter.tryWriteFragment(output, MessagePrivate.MSG_PUBLISH_1)) {
-//			
-////			PubSubWriter pw = (PubSubWriter) Pipe.outputStream(output);
-////            pw.openField(MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3,this);
-////            writable.write(pw);//TODO: cool feature, writable to return false to abandon write..
-////            pw.publish();
-//		        	
-//				throw new UnsupportedOperationException();
-//        	
-//        		//return true;
-//			} else {
-//				return false;
-//			}
-//        } else {
-//        	//should not be called when	DYNAMIC_MESSAGING is not on.
-//        	
-//	        //this is a public topic
-//        	if (PipeWriter.hasRoomForWrite(goPipe) && 
-//	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-//	            
-//	        	PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
-//	        	
-//	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-//	            
-//	            pw.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,this);
-//	            writable.write(pw);//TODO: cool feature, writable to return false to abandon write..
-//	                        
-//	            pw.publish();
-//	            publishGo(1,builder.pubSubIndex(), this);
-//	                        
-//	            return true;
-//	            
-//	        } else {
-//	            return false;
-//	        }
-//        }
-//    }
-    
+	private boolean publishOnPrivateTopic(int token) {
+		//this is a private topic            
+		Pipe<MessagePrivate> output = privateTopicPipes[token];
+		if (PipeWriter.tryWriteFragment(output, MessagePrivate.MSG_PUBLISH_1)) {
+			
+			PipeWriter.writeSpecialBytesPosAndLen(output, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3, -1, 0);
+			PipeWriter.publishWrites(output);
+
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
     public void presumePublishTopic(TopicWritable topic, Writable writable) {
     	presumePublishTopic(topic,writable,WaitFor.All);
     }        
@@ -850,87 +914,104 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean publishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
-        assert(isNotPrivate(topic)) : "private topics may not be dynamicaly constructed.";
-                
-        if (PipeWriter.hasRoomForWrite(goPipe) && 
-        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-        	
-    		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-
-            
-            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-        	DataOutputBlobWriter.openField(pw);
-        	topic.write(pw);
-        	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
-           
-        	DataOutputBlobWriter.openField(pw);
-        	writable.write(pw);
-            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-            
-            PipeWriter.publishWrites(messagePubSub);
-
-            publishGo(1,builder.pubSubIndex(), this);
-            
-                        
-            return true;
-            
-        } else {
-            return false;
-        }
+        
+		int token = tokenForPrivateTopic(topic);
+		
+		if (token>=0) {
+			return publishOnPrivateTopic(token, writable);
+		} else { 
+	        if (PipeWriter.hasRoomForWrite(goPipe) && 
+	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+	        	
+	    		
+	    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
+	
+	            
+	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+	        	DataOutputBlobWriter.openField(pw);
+	        	topic.write(pw);
+	        	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	           
+	        	DataOutputBlobWriter.openField(pw);
+	        	writable.write(pw);
+	            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+	            
+	            PipeWriter.publishWrites(messagePubSub);
+	
+	            publishGo(1,builder.pubSubIndex(), this);
+	            
+	                        
+	            return true;
+	            
+	        } else {
+	            return false;
+	        }
+		}
     }
     
-    
+    private final int maxDynamicTopicLength = 128;
+    private Pipe<RawDataSchema> tempTopicPipe;
+        
     public boolean publishTopic(TopicWritable topic) {
     	return publishTopic(topic, WaitFor.All);
-    }    
-    public boolean publishTopic(TopicWritable topic, WaitFor ap) {
-		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-        assert(isNotPrivate(topic)) : "private topics may not be dynamicaly constructed.";
-                
-        if (PipeWriter.hasRoomForWrite(goPipe) && 
-        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-        	    		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-        	
-        	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-        	DataOutputBlobWriter.openField(pw);
-        	topic.write(pw);
-        	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
-           
-        	DataOutputBlobWriter.openField(pw);            
-            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-            
-            PipeWriter.publishWrites(messagePubSub);
-
-            publishGo(1,builder.pubSubIndex(), this);
-                        
-            return true;
-            
-        } else {
-            return false;
-        }
     }
     
-	private boolean isNotPrivate(TopicWritable topic) {
-		StringBuilder target = new StringBuilder();
-		topic.write(target);
-		String topicString = target.toString();
-		return isNotPrivate(topicString);
-	}
+    public boolean publishTopic(TopicWritable topic, WaitFor ap) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+        
+		int token = tokenForPrivateTopic(topic);
+		
+		if (token>=0) {
+			return publishOnPrivateTopic(token);
+		} else {
+	        if (PipeWriter.hasRoomForWrite(goPipe) && 
+	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
+	        	    		
+	    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
+	        	
+	        	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+	        	DataOutputBlobWriter.openField(pw);
+	        	topic.write(pw);
+	        	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	                   	
+				PipeWriter.writeSpecialBytesPosAndLen(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3, -1, 0);
+				PipeWriter.publishWrites(messagePubSub);
+	
+	            publishGo(1,builder.pubSubIndex(), this);
+	                        
+	            return true;
+	            
+	        } else {
+	            return false;
+	        }
+		}
+    }
 
-	private boolean isNotPrivate(CharSequence topicString) {
-		if (null == privateTopics) {
-			return true;
+	private int tokenForPrivateTopic(TopicWritable topic) {
+		if (null==privateTopicsTrieReader) {
+			return -1;
 		}
-		int i = privateTopics.length;
-		while (--i>=0) {
-			if (topicString.equals(privateTopics[i])) {
-				return false;
-			}
+		if (null==tempTopicPipe) {
+			tempTopicPipe = RawDataSchema.instance.newPipe(2, maxDynamicTopicLength);
+			tempTopicPipe.initBuffers();
 		}
-		return true;
+
+		int size = Pipe.addMsgIdx(tempTopicPipe, RawDataSchema.MSG_CHUNKEDSTREAM_1);
+		DataOutputBlobWriter<RawDataSchema> output = Pipe.openOutputStream(tempTopicPipe);
+		topic.write(output);
+		DataOutputBlobWriter.closeLowLevelField(output);
+		Pipe.confirmLowLevelWrite(tempTopicPipe, size);
+		Pipe.publishWrites(tempTopicPipe);			
+        
+		Pipe.takeMsgIdx(tempTopicPipe);
+		int token = (int)TrieParserReader.query(privateTopicsTrieReader,
+                							    privateTopicsTrie, 
+                							    tempTopicPipe, -1);
+		Pipe.confirmLowLevelRead(tempTopicPipe, size);
+		Pipe.releaseReadLock(tempTopicPipe);
+		return token;
 	}
+    
 
 	public void presumePublishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
