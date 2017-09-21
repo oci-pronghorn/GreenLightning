@@ -70,41 +70,49 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		return (this.readShort() == headerId);
 	}
 
+	private int findHeaderOrdinal(int itemId) {
+		final int offset = paraIndexCount + 1 + itemId;
+		final int sizeOfHeaderId = 2;
+
+		int headerFieldIdx = readFromEndLastInt(offset);
+
+		if(headerFieldIdx > 0) {
+			setPositionBytesFromStart(headerFieldIdx-sizeOfHeaderId);
+			return readShort();
+		}
+
+		return -1;
+	}
+
 	public void visitHeaders(Headable headReader) {
 		
 		int item = IntHashTable.count(headerHash); //this is the payload position
-		final int base = paraIndexCount + 1;
-		
-		final int sizeOfHeaderId = 2;
+
 		while (--item >= 0) {
 				
-			int headerFieldIdx = readFromEndLastInt(base + item);
-			setPositionBytesFromStart(headerFieldIdx-sizeOfHeaderId);
-			
-			int headerOrdinal = readShort();
-			headReader.read(headerOrdinal, this);			
+			int headerOrdinal = findHeaderOrdinal(item);
+			if(headerOrdinal >= 0) {
+				headReader.read(headerOrdinal, this);
+			}
 		}		
 	}
 	
 	public <A extends Appendable> A headers(A target) {		
 		
 		int item = IntHashTable.count(headerHash); //this is the payload position
-		final int base = paraIndexCount + 1;
-		
-		final int sizeOfHeaderId = 2;
+
 		while (--item >= 0) {
 				
-			int headerFieldIdx = readFromEndLastInt(base + item);
-			setPositionBytesFromStart(headerFieldIdx-sizeOfHeaderId);
-			
-			int headerOrdinal = readShort();
-			
-			httpSpec.writeHeader(target, headerOrdinal, this);
-			try {
-				target.append("\r\n");
-			} catch (IOException e) {
-				throw new RuntimeException(e);
-			}		
+			int headerOrdinal = findHeaderOrdinal(item);
+
+			if (headerOrdinal >= 0) {
+				httpSpec.writeHeader(target, headerOrdinal, this);
+				try {
+					target.append("\r\n");
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+			}
 		}
 		
 		
