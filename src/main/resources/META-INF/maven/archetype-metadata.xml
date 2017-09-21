@@ -19,6 +19,18 @@
         <include>**/*.java</include>
       </includes>
     </fileSet>
+    <fileSet filtered="false" packaged="false">
+      <directory>src/main/resources/certificate</directory>
+      <includes>
+        <include>**/*.*	</include>
+      </includes>
+    </fileSet>
+    <fileSet filtered="false" packaged="false">
+      <directory></directory>
+      <includes>
+        <include>README.md</include>
+      </includes>
+    </fileSet>
     <fileSet filtered="true" packaged="false" encoding="UTF-8">
       <directory/>
       <includes>
