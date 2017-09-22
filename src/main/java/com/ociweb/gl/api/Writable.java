@@ -1,15 +1,15 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public interface Writable {
 
 	Writable NO_OP = new Writable() {
 		@Override
-		public void write(BlobWriter writer) {
+		public void write(ChannelWriter writer) {
 		}		
 	};
 	
-	void write(BlobWriter writer); //returns true if we have more data to write.
+	void write(ChannelWriter writer); //returns true if we have more data to write.
 
 }

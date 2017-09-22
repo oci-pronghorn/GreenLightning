@@ -6,7 +6,7 @@ import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -110,7 +110,7 @@ public class GreenParserTest {
 				              .add(0, "shemp")
 				              .newReader();
 
-		BlobReader testToRead = BlobReaderFactory.generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
+		ChannelReader testToRead = BlobReaderFactory.generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
 			@Override
 			public void accept(DataOutputBlobWriter<?> dataOutputBlobWriter) {
 				larryShempStreamAppend(dataOutputBlobWriter);
@@ -167,7 +167,7 @@ public class GreenParserTest {
 				              .add(0, "\n")
 				              .newReader();
 				
-		BlobReader testToRead = BlobReaderFactory.generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
+		ChannelReader testToRead = BlobReaderFactory.generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
 			@Override
 			public void accept(DataOutputBlobWriter<?> dataOutputBlobWriter) {
 				defaultStreamAppend(dataOutputBlobWriter);

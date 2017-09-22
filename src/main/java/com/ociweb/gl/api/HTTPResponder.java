@@ -1,8 +1,8 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.pronghorn.network.config.HTTPContentType;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -38,7 +38,7 @@ public class HTTPResponder {
 		
 	    this.writable = new Writable() {
 			@Override
-			public void write(BlobWriter writer) {
+			public void write(ChannelWriter writer) {
 				int size = Pipe.takeMsgIdx(pipe);												
 				DataInputBlobReader<RawDataSchema> dataStream = Pipe.inputStream(pipe);
 				dataStream.openLowLevelAPIField();
@@ -49,7 +49,7 @@ public class HTTPResponder {
 		};
 	}
 		
-	public boolean readReqesterData(BlobReader reader) {
+	public boolean readReqesterData(ChannelReader reader) {
 		
 		if (Pipe.hasContentToRead(pipe)) {
 			

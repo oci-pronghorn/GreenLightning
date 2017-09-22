@@ -19,7 +19,7 @@ import com.ociweb.pronghorn.network.http.AbstractRestStage;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
@@ -1028,14 +1028,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         
 	//returns consumed boolean
 	public boolean copyStructuredTopic(CharSequence topic, 
-			BlobReader reader, 
+			ChannelReader reader, 
             MessageConsumer consumer) {
 		return copyStructuredTopic(topic, reader, consumer, WaitFor.All);
 	}
 	
 	//returns consumed boolean
     public boolean copyStructuredTopic(CharSequence topic, 
-    								   BlobReader inputReader, 
+    								   ChannelReader inputReader, 
     		                           MessageConsumer consumer,
     		                           WaitFor ap) {
     	DataInputBlobReader<?> reader = (DataInputBlobReader<?>)inputReader;

@@ -4,7 +4,7 @@ import com.ociweb.gl.impl.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
@@ -106,7 +106,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		this.sequenceCode = sequenceCode;
 	}
 	
-	public void handoff(BlobWriter writer) {
+	public void handoff(ChannelWriter writer) {
 		writer.writePackedLong(connectionId);
 		writer.writePackedLong(sequenceCode);
 	}

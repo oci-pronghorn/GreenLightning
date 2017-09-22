@@ -11,8 +11,8 @@ import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.api.MQTTQoS;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 import static com.ociweb.gl.api.MQTTBridge.defaultPort;
 
@@ -53,7 +53,7 @@ public class MQTTApp implements GreenApp {
 			public void timeEvent(long time, int iteration) {
 				Writable writable = new Writable() {
 					@Override
-					public void write(BlobWriter writer) {	
+					public void write(ChannelWriter writer) {	
 						Date d =new Date(System.currentTimeMillis());
 						
 						System.err.println("sent "+d);
@@ -73,7 +73,7 @@ public class MQTTApp implements GreenApp {
 			
 			
 			@Override
-			public boolean message(CharSequence topic, BlobReader payload) {
+			public boolean message(CharSequence topic, ChannelReader payload) {
 				
 				System.out.print("\ningress body: ");
 				payload.readUTFOfLength(payload.available(), System.out);
@@ -82,7 +82,7 @@ public class MQTTApp implements GreenApp {
 				Writable writable = new Writable() {
 
 					@Override
-					public void write(BlobWriter writer) {
+					public void write(ChannelWriter writer) {
 						
 						writer.writeUTF("second step test message");
 
@@ -98,7 +98,7 @@ public class MQTTApp implements GreenApp {
 			
 		PubSubListener localTest = new PubSubListener() {
 			@Override
-			public boolean message(CharSequence topic, BlobReader payload) {
+			public boolean message(CharSequence topic, ChannelReader payload) {
 				
 				System.out.println("got topic "+topic+" payload "+payload.readUTF());
 				

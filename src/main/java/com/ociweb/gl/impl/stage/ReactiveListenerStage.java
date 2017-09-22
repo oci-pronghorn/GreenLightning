@@ -42,7 +42,7 @@ import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
@@ -880,7 +880,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		return addSubscription(topic, new CallableStaticMethod() {
 			@Override
-			public boolean method(Object that, CharSequence title, BlobReader reader) {
+			public boolean method(Object that, CharSequence title, ChannelReader reader) {
 				//that must be found as the declared field of the lambda
 				assert(childIsFoundIn(that,callable)) : "may only call methods on this same Behavior instance";
 				return callable.method(title, reader);

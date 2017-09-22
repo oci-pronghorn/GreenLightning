@@ -1,9 +1,9 @@
 package com.ociweb.gl.impl.stage;
 
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 
 public interface CallableStaticMethod<T> {
 	
-	boolean method(T that, CharSequence title, BlobReader reader);
+	boolean method(T that, CharSequence title, ChannelReader reader);
 	
 }

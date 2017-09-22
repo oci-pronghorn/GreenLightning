@@ -8,7 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.MsgRuntime;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 
 /**
@@ -91,7 +91,7 @@ public class ChildClassScanner {
 									&& (!name.startsWith("org.slf4j."))
 									&& (!obj.getClass().isEnum())
 									&& (!(obj instanceof MsgRuntime))  
-									&& (!(obj instanceof BlobWriter))  
+									&& (!(obj instanceof ChannelWriter))  
 									&& (!(obj instanceof BuilderImpl)) 
 									
 									&& !fields[f].isSynthetic()

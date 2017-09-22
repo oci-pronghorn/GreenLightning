@@ -1,9 +1,9 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 
 public interface Payloadable {
 
-	void read(BlobReader reader);
+	void read(ChannelReader reader);
 
 }

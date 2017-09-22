@@ -17,8 +17,8 @@ import com.ociweb.gl.impl.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.math.Decimal;
 import com.ociweb.pronghorn.util.math.DecimalResult;
@@ -41,7 +41,7 @@ public class MathUnit implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeX = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(BlobWriter writer, HTTPFieldReader source) {
+			public void fetch(ChannelWriter writer, HTTPFieldReader source) {
 				source.getText(fieldA, writer);
 			}
 			
@@ -50,7 +50,7 @@ public class MathUnit implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeY = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(BlobWriter writer, HTTPFieldReader source) {
+			public void fetch(ChannelWriter writer, HTTPFieldReader source) {
 				source.getText(fieldB, writer);
 			}
 			
@@ -59,7 +59,7 @@ public class MathUnit implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeSum = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(final BlobWriter writer, HTTPFieldReader source) {
+			public void fetch(final ChannelWriter writer, HTTPFieldReader source) {
 				 DecimalResult adder = new DecimalResult() {
 						@Override
 						public void result(long m, byte e) {
@@ -92,7 +92,7 @@ public class MathUnit implements RestListener {
 		Headable eat = new Headable() {
 
 			@Override
-			public void read(int id, BlobReader httpPayloadReader) {
+			public void read(int id, ChannelReader httpPayloadReader) {
 				httpPayloadReader.readUTF(cookieValue);
 				lastCookie = cookieValue.toString();
 			}
@@ -103,7 +103,7 @@ public class MathUnit implements RestListener {
 		Writable render = new Writable() {
 
 			@Override
-			public void write(BlobWriter writer) {
+			public void write(ChannelWriter writer) {
 					template.render(writer, request);
 			}
 			

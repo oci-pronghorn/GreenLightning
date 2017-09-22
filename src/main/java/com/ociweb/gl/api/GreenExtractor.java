@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.math.Decimal;
 import com.ociweb.pronghorn.util.math.DecimalResult;
@@ -17,7 +17,7 @@ public class GreenExtractor {
 		return TrieParserReader.capturedFieldCount(tpr);		
 	}
 	
-	public int copyExtractedBytesToWriter(int idx, BlobWriter writer) {
+	public int copyExtractedBytesToWriter(int idx, ChannelWriter writer) {
 		return TrieParserReader.capturedFieldBytes(tpr, idx, writer);
 	}
 	
@@ -25,7 +25,7 @@ public class GreenExtractor {
 		return TrieParserReader.capturedFieldBytesLength(tpr, idx);
 	}
 	
-	public int copyExtractedUTF8ToWriter(int idx, BlobWriter writer) {
+	public int copyExtractedUTF8ToWriter(int idx, ChannelWriter writer) {
 		return TrieParserReader.writeCapturedUTF8(tpr, idx, writer);
 	}
 	

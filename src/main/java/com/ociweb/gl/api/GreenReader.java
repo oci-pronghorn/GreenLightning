@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
@@ -16,12 +16,12 @@ public class GreenReader extends GreenExtractor {
 	}
 
 	@SuppressWarnings("unchecked")
-	public void beginRead(BlobReader reader) {
+	public void beginRead(ChannelReader reader) {
 		TrieParserReader.parseSetup(tpr, (DataInputBlobReader)reader);
 	}
 	
 	@SuppressWarnings("unchecked")
-	public void beginRead(BlobReader reader, int maxBytes) {
+	public void beginRead(ChannelReader reader, int maxBytes) {
 		TrieParserReader.parseSetup(tpr, (DataInputBlobReader)reader, maxBytes);
 	}
 	
@@ -48,7 +48,7 @@ public class GreenReader extends GreenExtractor {
 		
 	}
 	
-	public static void exampleConsume(GreenReader reader, BlobReader blob) {
+	public static void exampleConsume(GreenReader reader, ChannelReader blob) {
 		
 		reader.beginRead(blob);
 		while (reader.hasMore()) {

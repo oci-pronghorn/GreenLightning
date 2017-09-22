@@ -4,7 +4,7 @@ import com.ociweb.gl.api.Headable;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 
 public class HeaderTypeCapture implements Headable{
 
@@ -16,7 +16,7 @@ public class HeaderTypeCapture implements Headable{
 	}
 	
 	@Override
-	public void read(int id, BlobReader reader) {
+	public void read(int id, ChannelReader reader) {
 		
 		short type = reader.readShort();
 		if (type<0) {

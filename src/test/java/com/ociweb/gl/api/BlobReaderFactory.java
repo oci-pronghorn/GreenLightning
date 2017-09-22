@@ -10,7 +10,7 @@ interface MyConsumer<T> {
 
 public class BlobReaderFactory {
 
-    public static BlobReader generateExtractionDataToTest(MyConsumer<DataOutputBlobWriter<?>> appender) {
+    public static ChannelReader generateExtractionDataToTest(MyConsumer<DataOutputBlobWriter<?>> appender) {
         Pipe<RawDataSchema> p = RawDataSchema.instance.newPipe(10, 300);
         p.initBuffers();
         int size = Pipe.addMsgIdx(p, 0);

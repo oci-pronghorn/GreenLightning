@@ -1,7 +1,7 @@
 package com.ociweb.gl.example;
 
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.gl.api.*;
 
 public class MassiveBehavior implements GreenApp {
@@ -31,7 +31,7 @@ public class MassiveBehavior implements GreenApp {
 			final Writable writable = new Writable() {
 
 				@Override
-				public void write(BlobWriter writer) {
+				public void write(ChannelWriter writer) {
 					writer.writePackedInt(value);
 				}
 				
@@ -51,7 +51,7 @@ public class MassiveBehavior implements GreenApp {
 			
 			PubSubListener subs = new PubSubListener() {
 				
-				public boolean message(CharSequence topic, BlobReader payload) {
+				public boolean message(CharSequence topic, ChannelReader payload) {
 					
 					
 					return true;

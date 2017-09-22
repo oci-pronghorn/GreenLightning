@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import org.junit.Test;
 
@@ -79,7 +79,7 @@ public class GreenParserMessageTest {
     public void complexStringTest() {
         NumberFormat formatter = new DecimalFormat("#0.0000");
         final GreenReader reader = buildParser().newReader();
-        BlobReader testToRead = BlobReaderFactory.generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
+        ChannelReader testToRead = BlobReaderFactory.generateExtractionDataToTest(new MyConsumer<DataOutputBlobWriter<?>>() {
             @Override
             public void accept(DataOutputBlobWriter<?> dataOutputBlobWriter) {
                 complexStreamAppend(dataOutputBlobWriter);
