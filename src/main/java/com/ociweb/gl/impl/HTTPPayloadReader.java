@@ -132,7 +132,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		}
 	}
 
-
-
-	
+	public HTTPSpecification getHttpSpecification() {
+		return httpSpec;
+	}
 }
