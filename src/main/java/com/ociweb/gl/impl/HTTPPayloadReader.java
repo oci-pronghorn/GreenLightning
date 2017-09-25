@@ -56,7 +56,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 				
 				setPositionBytesFromStart(posFromStart);
 				
-				headReader.read(headerId, this);				
+				headReader.read(this.httpSpec.getHeader(headerId), this);
 				
 				return true;
 			}
@@ -92,7 +92,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 				
 			int headerOrdinal = findHeaderOrdinal(item);
 			if(headerOrdinal >= 0) {
-				headReader.read(headerOrdinal, this);
+				headReader.read(this.httpSpec.getHeader(headerOrdinal), this);
 			}
 		}		
 	}
