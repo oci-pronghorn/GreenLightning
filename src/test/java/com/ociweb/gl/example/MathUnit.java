@@ -1,5 +1,6 @@
 package com.ociweb.gl.example;
 
+import com.ociweb.pronghorn.network.config.HTTPHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +93,7 @@ public class MathUnit implements RestListener {
 		Headable eat = new Headable() {
 
 			@Override
-			public void read(int id, ChannelReader httpPayloadReader) {
+			public void read(HTTPHeader header, ChannelReader httpPayloadReader) {
 				httpPayloadReader.readUTF(cookieValue);
 				lastCookie = cookieValue.toString();
 			}
