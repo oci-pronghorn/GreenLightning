@@ -10,6 +10,8 @@ import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 
+import static com.ociweb.gl.api.Builder.defaultTelemetryPort;
+
 public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	
     public GreenRuntime() {
@@ -133,7 +135,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	    runtime.logStageScheduleRates();
 
 	    if ( runtime.builder.isTelemetryEnabled()) {
-		   runtime.gm.enableTelemetry(8098);
+		   runtime.gm.enableTelemetry(defaultTelemetryPort);
 	    }
 
 	      //exportGraphDotFile();

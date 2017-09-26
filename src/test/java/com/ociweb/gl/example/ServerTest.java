@@ -1,5 +1,6 @@
 package com.ociweb.gl.example;
 
+import static com.ociweb.gl.api.Builder.defaultTelemetryPort;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -28,7 +29,7 @@ public class ServerTest {
     @Ignore //cloud bees is not letting us open a socket here.
     public void serverTestNormal() {
     	boolean isTLS = false;    	
-    	testSimpleCallAndCookie(isTLS,8098);
+    	testSimpleCallAndCookie(isTLS,defaultTelemetryPort);
     }
     
 	private void testSimpleCallAndCookie(boolean isTLS, int port) {

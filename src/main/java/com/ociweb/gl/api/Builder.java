@@ -60,7 +60,7 @@ public interface Builder extends ArgumentProvider {
 	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath);	
 	void enableServer(boolean isTLS, int bindPort, String defaultPath);
 	
-	
+	int defaultTelemetryPort = 8098;
 	String enableTelemetry();
 	String enableTelemetry(int port);
 	void enableTelemetry(String host, int port);

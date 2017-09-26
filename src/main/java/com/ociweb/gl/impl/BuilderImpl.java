@@ -141,7 +141,7 @@ public class BuilderImpl implements Builder {
 	
 	private boolean isTelemetryEnabled = false;
 	private String telemetryHost = null;
-	private int telemetryPort = 8098;
+	private int telemetryPort = defaultTelemetryPort;
 	
 	
 	//TODO: set these vales when we turn on the client usage??
