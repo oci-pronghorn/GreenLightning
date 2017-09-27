@@ -1,14 +1,13 @@
 package com.ociweb.gl.impl;
 import java.io.IOException;
 
+import com.ociweb.pronghorn.network.config.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.HeaderReader;
 import com.ociweb.gl.api.Payloadable;
-import com.ociweb.pronghorn.network.config.HTTPHeader;
-import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
@@ -21,7 +20,12 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	protected int paraIndexCount; //how may fields to skip over before starting
 	protected TrieParser headerTrieParser; //look up header id from the header string bytes
 	protected TrieParserReader reader = new TrieParserReader(0, true);
-	protected HTTPSpecification httpSpec;
+	protected HTTPSpecification<
+			? extends Enum<? extends HTTPContentType>,
+			? extends Enum<? extends HTTPRevision>,
+			? extends Enum<? extends HTTPVerb>,
+			? extends Enum<? extends HTTPHeader>> httpSpec;
+
 	protected int payloadIndexOffset;
 	
 	private static final Logger logger = LoggerFactory.getLogger(HTTPPayloadReader.class);
@@ -33,6 +37,14 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 
 	public HTTPPayloadReader(Pipe<S> pipe) {
 		super(pipe);
+	}
+
+	public HTTPSpecification<
+			? extends Enum<? extends HTTPContentType>,
+			? extends Enum<? extends HTTPRevision>,
+			? extends Enum<? extends HTTPVerb>,
+			? extends Enum<? extends HTTPHeader>> getSpec() {
+		return this.httpSpec;
 	}
 
 
@@ -131,8 +143,4 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 			return false;
 		}
 	}
-
-
-
-	
 }
