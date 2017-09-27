@@ -543,20 +543,22 @@ public class BuilderImpl implements Builder {
 
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
-		final int scale = 2;
-		
-		int ideal = idealThreadCount();
-		final int countStages = GraphManager.countStages(gm);
-		if (threadLimit<=0 && countStages > scale*ideal) {
-			//do not allow the ThreadPerStageScheduler to be used, we must group
-			threadLimit = idealThreadCount()*scale;//this must be large so give them a few more
-			threadLimitHard = true;//must make this a hard limit or we can saturate the system easily.
-		}
-		
-		final StageScheduler scheduler =  (threadLimit<0 || threadLimit>countStages) ?
-				                                             new ThreadPerStageScheduler(this.gm): 
- 			                                                 new FixedThreadsScheduler(this.gm, this.threadLimit, this.threadLimitHard);
-		
+		final StageScheduler scheduler = StageScheduler.defaultScheduler(gm);
+//////////////delete block once the above is tested.		
+//		final int scale = 2;
+//		
+//		int ideal = idealThreadCount();
+//		final int countStages = GraphManager.countStages(gm);
+//		if (threadLimit<=0 && countStages > scale*ideal) {
+//			//do not allow the ThreadPerStageScheduler to be used, we must group
+//			threadLimit = idealThreadCount()*scale;//this must be large so give them a few more
+//			threadLimitHard = true;//must make this a hard limit or we can saturate the system easily.
+//		}
+//		
+//		final StageScheduler scheduler =  (threadLimit<0 || threadLimit>countStages) ?
+//				                                             new ThreadPerStageScheduler(this.gm): 
+// 			                                                 new FixedThreadsScheduler(this.gm, this.threadLimit, this.threadLimitHard);
+//		
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				scheduler.shutdown();
