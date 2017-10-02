@@ -17,6 +17,7 @@ import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeReader;
+import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -274,6 +275,8 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 		
 	}
 
+	private PipeUTF8MutableCharSquence mCharSequence = new PipeUTF8MutableCharSquence();
+	
 	//has side effect fo storing the active connectino as a member so it neeed not be looked up again later.
 	public boolean hasOpenConnection(Pipe<ClientHTTPRequestSchema> requestPipe, 
 											Pipe<NetPayloadSchema>[] output, ClientCoordinator ccm) {
@@ -282,19 +285,16 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 			return com.ociweb.pronghorn.network.http.HTTPClientRequestStage.hasRoomForEOF(output);
 		}
 		
-		int hostPos =  PipeReader.peekDataPosition(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
+		int hostMeta =  PipeReader.peekDataMeta(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
 		int hostLen =  PipeReader.peekDataLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
-
-		byte[] hostBack = Pipe.blob(requestPipe);
-		int hostMask = Pipe.blobMask(requestPipe);
-		
 		
 		int port = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1);
 		int userId = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10);		
 						
+		PipeUTF8MutableCharSquence mCharSeq = mCharSequence.setToField(requestPipe, hostMeta, hostLen);
 		ClientConnection activeConnection = ClientCoordinator.openConnection(
-				ccm, hostBack, hostPos, hostLen, hostMask, port, userId, output,	
-		        ccm.lookup(hostBack,hostPos,hostLen,hostMask, port, userId));
+				ccm, mCharSeq, port, userId, output,	
+		        ccm.lookup(mCharSeq, port, userId));
 				
 		
 		if (null != activeConnection) {
