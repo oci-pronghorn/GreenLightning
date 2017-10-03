@@ -1178,13 +1178,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		//////////////////////////////////////////
 		//begin message 2 which contains the body
 		//////////////////////////////////////////
-		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);	
-		
+
 		Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
 		Pipe.addLongValue(connectionId, pipe);
-		Pipe.addIntValue(sequenceNo, pipe);	
-		
-		outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
+		Pipe.addIntValue(sequenceNo, pipe);
+
+		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 		
 		int context;
 		if (hasContinuation) {

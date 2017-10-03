@@ -128,11 +128,11 @@ public class HTTPResponder {
     public boolean respondWith(int statusCode, boolean hasContinuation, HTTPContentType contentType, Writable writable) {
 		
     	if (connectionId>=0 && sequenceCode>=0) {
-    		commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
+    		boolean publishResult = commandChannel.publishHTTPResponse(connectionId, sequenceCode,
 				                           statusCode, hasContinuation, contentType, writable);
 		    connectionId = -1;
 		    sequenceCode = -1; 
-		    return true;
+		    return publishResult;
     	} else {
     		
     		if (Pipe.hasContentToRead(pipe)) {
