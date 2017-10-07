@@ -11,14 +11,18 @@ import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.ListenerTransducer;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.RestListener;
-import com.ociweb.gl.api.StateChangeListener;
+import com.ociweb.gl.api.PubSubMethodListener;
+import com.ociweb.gl.api.RestMethodListener;
 import com.ociweb.gl.api.TimeTrigger;
+import com.ociweb.gl.api.transducer.HTTPResponseListenerTransducer;
+import com.ociweb.gl.api.transducer.PubSubListenerTransducer;
+import com.ociweb.gl.api.transducer.RestListenerTransducer;
+import com.ociweb.gl.api.transducer.StateChangeListenerTransducer;
+import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -28,6 +32,8 @@ import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
 import com.ociweb.gl.impl.stage.HTTPClientRequestStage;
 import com.ociweb.gl.impl.stage.MessagePubSubStage;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
+import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
+import com.ociweb.gl.impl.stage.ReactiveOperators;
 import com.ociweb.gl.impl.stage.TrafficCopStage;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
@@ -36,6 +42,7 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
@@ -60,8 +67,19 @@ import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
+import static com.ociweb.gl.api.MQTTBridge.defaultPort;
+import static com.ociweb.gl.api.MQTTBridge.tlsPort;
+
 public class BuilderImpl implements Builder {
 
+	private static final int DEFAULT_MAX_MQTT_IN_FLIGHT = 10;
+	private static final int DEFAULT_MAX__MQTT_MESSAGE = 1<<12;
+	//NB: The Green Lightning maximum header size 64K is defined here HTTP1xRouterStage.MAX_HEADER
+	protected static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
+	//  This has a large impact on memory usage but also on performance volume
+	protected static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<8;
+	protected static final int MINIMUM_TLS_BLOB_SIZE = 1<<15;
+	
 	protected boolean useNetClient;
 	protected boolean useNetServer;
 
@@ -79,18 +97,20 @@ public class BuilderImpl implements Builder {
 	private static final int DEFAULT_LENGTH = 16;
 	private static final int DEFAULT_PAYLOAD_SIZE = 128;
 
-	protected final PipeConfig<TrafficReleaseSchema> releasePipesConfig   = new PipeConfig<TrafficReleaseSchema>(TrafficReleaseSchema.instance, DEFAULT_LENGTH);
-	protected final PipeConfig<TrafficOrderSchema> orderPipesConfig       = new PipeConfig<TrafficOrderSchema>(TrafficOrderSchema.instance, DEFAULT_LENGTH);
-	protected final PipeConfig<TrafficAckSchema> ackPipesConfig           = new PipeConfig<TrafficAckSchema>(TrafficAckSchema.instance, DEFAULT_LENGTH);
-
 	protected static final long MS_TO_NS = 1_000_000;
 
 	private static final Logger logger = LoggerFactory.getLogger(BuilderImpl.class);
 
-	public final PipeConfig<HTTPRequestSchema> restPipeConfig = new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 1<<9, 256);
-	
+	public final PipeConfigManager pcm = new PipeConfigManager();
+
 	public Enum<?> beginningState;
     private int parallelism = 1;//default is one
+    
+    private static final int maxBehaviorBits = 15;
+    private final IntHashTable netPipeLookup;
+        
+	private static final int BehaviorMask = 1<<31;//high bit on
+	
 
 	/////////////////
 	///Pipes for initial startup declared subscriptions. (Not part of graph)
@@ -101,7 +121,7 @@ public class BuilderImpl implements Builder {
 	/////////////////
 	/////////////////
     
-    private long defaultSleepRateNS = 1_200;// should normally be between 900 and 10_000; 
+    private long defaultSleepRateNS = 20_000;// should normally be between 900 and 20_000; 
     
 	private final int shutdownTimeoutInSeconds = 1;
 
@@ -109,13 +129,20 @@ public class BuilderImpl implements Builder {
 
 	protected MQTTConfigImpl mqtt = null;
 		
+	private String defaultHostPath = "";
 	private String bindHost = null;
 	private int bindPort = -1;
 	private boolean isLarge = false;
 	private boolean isTLSServer = true; 
 	private boolean isTLSClient = true; 
-		
+
+	private ClientCoordinator ccm;
+
+	
 	private boolean isTelemetryEnabled = false;
+	private String telemetryHost = null;
+	private int telemetryPort = defaultTelemetryPort;
+	
 	
 	//TODO: set these vales when we turn on the client usage??
 	private int connectionsInBit = 3; 
@@ -147,12 +174,28 @@ public class BuilderImpl implements Builder {
 	//////////////////////////////
 	//support for REST modules and routing
 	//////////////////////////////
-	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> httpSpec = HTTPSpecification.defaultSpec();
-	private final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig
-	                               = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(httpSpec); 
+	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
+	             httpSpec = HTTPSpecification.defaultSpec();
+	private HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
+	             routerConfig;	//////////////////////////////
 	//////////////////////////////
-	//////////////////////////////
-
+	
+	    
+    public final ReactiveOperators operators;
+	
+	
+    public void registerHTTPClientId(int routeId, int pipeIdx) {
+		boolean addedItem = IntHashTable.setItem(netPipeLookup, routeId, pipeIdx);
+        if (!addedItem) {
+        	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"
+        			+ "Check that each HTTP Client consumer does not share an Id with any other.",routeId);
+        }
+    }
+    
+    public int lookupHTTPClientPipe(int routeId) {
+    	return IntHashTable.getItem(netPipeLookup, routeId);
+    }
+    
 	public int pubSubIndex() {
 		return IDX_MSG;
 	}
@@ -186,30 +229,76 @@ public class BuilderImpl implements Builder {
 		return bindPort;
 	}
 	
-    public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
+	public final String defaultHostPath() {
+		return defaultHostPath;
+	}
+	
+	
+	public ClientCoordinator getClientCoordinator() {
+		return ccm;
+	}
+	
+	public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
+		enableServer(isTLS, isLarge, bindHost, bindPort, "");
+	}
+	
+    public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath) {
     	
     	this.useNetServer();
+
+    	this.defaultHostPath = defaultPath;
     	this.isTLSServer = isTLS;
     	this.isLarge = isLarge;
     	this.bindHost = bindHost;
+    	if (null==this.bindHost) {
+    		this.bindHost = NetGraphBuilder.bindHost();
+    	}
     	this.bindPort = bindPort;
-    	
+    	if (bindPort<=0 || (bindPort>=(1<<16))) {
+    		throw new UnsupportedOperationException("invalid port "+bindPort);
+    	}
     }
  
-    public final void enableServer(boolean isTLS, int bindPort) {
-    	enableServer(isTLS,false,NetGraphBuilder.bindHost(),bindPort);
+	public final void enableServer(boolean isTLS, int bindPort) {
+		enableServer(isTLS, bindPort, "");
+	}
+	
+    public final void enableServer(boolean isTLS, int bindPort, String defaultPath) {
+    	enableServer(isTLS,false,NetGraphBuilder.bindHost(),bindPort,defaultPath);
     }
     
-    public final void enableServer(int bindPort) {
+	public final void enableServer(int bindPort) {
+		enableServer(bindPort, "");
+	}
+	
+	public final void enableServer(String host, int bindPort) {
+		enableServer(host, bindPort, "");
+	}
+    
+    public final void enableServer(int bindPort, String defaultPath) {
     	enableServer(true,false,NetGraphBuilder.bindHost(),bindPort);
     }
     
+    public final void enableServer(String host, int bindPort, String defaultPath) {
+    	enableServer(true,false,null==host?NetGraphBuilder.bindHost():host,bindPort);
+    }
     
+    public String getArgumentValue(String longName, String shortName, String defaultValue) {
+    	return MsgRuntime.getOptArg(longName, shortName, args, defaultValue);
+    }
+
+	public boolean hasArgument(String longName, String shortName) {
+		return MsgRuntime.hasArg(longName, shortName, args);
+	}
+
     public int behaviorId(Behavior b) {
-    	return System.identityHashCode(b); //TODO: we may want to find a beter way to compute this, not sure.
+    	return BehaviorMask | System.identityHashCode(b);
     }
     
     public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {
+    	if (null==routerConfig) {
+    		routerConfig = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(httpSpec); 
+    	}    	
     	return routerConfig;
     }
  
@@ -229,6 +318,11 @@ public class BuilderImpl implements Builder {
 			
 			assert(parallelism>=1);
 			assert(routesCount>-1);	
+			
+			//for catch all route since we have no specific routes.
+			if (routesCount==0) {
+				routesCount = 1;
+			}
 			
 			collectedHTTPRequstPipes = (ArrayList<Pipe<HTTPRequestSchema>>[][]) new ArrayList[parallelism][routesCount];
 			
@@ -289,31 +383,46 @@ public class BuilderImpl implements Builder {
  	   recordPipeMapping(pipe, parallelInstanceId);
  	   return pipe;
     }
-	
-    //Linear search only used once in startup method for the stage.
-	public final void lookupRouteAndPara(Pipe<?> localPipe, int idx, int[] routes, int[] para) {
 
-		int p = parallelism();
-		while (--p >= 0) {
-
-			int r = routerConfig().routesCount();
-			while (--r >= 0) {
-				if (collectedHTTPRequstPipes[p][r].contains(localPipe)) {
-					routes[idx] = r;
-					para[idx] = p;	
-					return;
-				}
-			}
-		}
-		throw new UnsupportedOperationException("can not find "+localPipe);
-	}
 	////////////////////////////////
 	
 	public BuilderImpl(GraphManager gm, String[] args) {	
-
+		
+		this.operators = ReactiveListenerStage.reactiveOperators();
+		
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
 		this.args = args;
+		
+		this.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
+									                   MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT, 
+									                   MAXIMUM_INCOMMING_REST_SIZE));
+				
+		int requestQueue = 4;
+		this.pcm.addConfig(new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,
+				                                    requestQueue,
+				                                    MINIMUM_TLS_BLOB_SIZE)); 		
+			
+		int maxMessagesQueue = 8;
+		int maxMessageSize = 256;
+		this.pcm.addConfig(new PipeConfig<MessageSubscription>(MessageSubscription.instance,
+				maxMessagesQueue,
+				maxMessageSize)); 		
+
+
+		this.pcm.addConfig(new PipeConfig<TrafficReleaseSchema>(TrafficReleaseSchema.instance, DEFAULT_LENGTH));
+		this.pcm.addConfig(new PipeConfig<TrafficAckSchema>(TrafficAckSchema.instance, DEFAULT_LENGTH));
+
+	    int defaultCommandChannelLength = 16;
+	    int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support	    
+		this.pcm.addConfig(new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload));   
+
+		//for MQTT ingress
+		int maxMQTTMessagesQueue = 8;
+		int maxMQTTMessageSize = 1024;
+		this.pcm.addConfig(new PipeConfig(IngressMessages.instance, maxMQTTMessagesQueue, maxMQTTMessageSize));
+		
+		this.netPipeLookup = new IntHashTable(maxBehaviorBits);
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {
@@ -346,12 +455,14 @@ public class BuilderImpl implements Builder {
 
 	public final Builder useNetClient() {
 		this.useNetClient = true;
+
 		return this;
 	}
 	
 	public final Builder useInsecureNetClient() {
 		this.useNetClient = true;
 		this.isTLSClient = false;
+
 		return this;
 	}
 
@@ -375,8 +486,12 @@ public class BuilderImpl implements Builder {
 		return timeTriggerStart;
 	}
 
-    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Object listener, Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, int parallelInstance) {
-        return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, this, parallelInstance);
+    public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Behavior listener, 
+    		                		Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, 
+    		                		ArrayList<ReactiveManagerPipeConsumer> consumers, int parallelInstance) {
+    	assert(null!=listener);
+    	
+    	return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, consumers, this, parallelInstance);
     }
 
 	public <G extends MsgCommandChannel> G newCommandChannel(
@@ -406,9 +521,9 @@ public class BuilderImpl implements Builder {
 		channelBlocker = new Blocker(maxGoPipeId+1);
 	}
 
-	protected final boolean useNetClient(IntHashTable netPipeLookup, Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
+	protected final boolean useNetClient(Pipe<ClientHTTPRequestSchema>[] netRequestPipes) {
 
-		return !IntHashTable.isEmpty(netPipeLookup) && (netRequestPipes.length!=0);
+		return (netRequestPipes.length!=0);
 	}
 
 	protected final void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
@@ -428,16 +543,8 @@ public class BuilderImpl implements Builder {
 
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
-		int ideal = idealThreadCount();
-		if (threadLimit<=0 && GraphManager.countStages(gm) > 10*ideal) {
-			//do not allow the ThreadPerStageScheduler to be used, we must group
-			threadLimit = idealThreadCount()*4;//this must be large so give them a few more
-			threadLimitHard = true;//must make this a hard limit or we can saturate the system easily.
-		}
-		
-		final StageScheduler scheduler =  threadLimit <= 0 ? new ThreadPerStageScheduler(this.gm): 
-			                                                 new FixedThreadsScheduler(this.gm, this.threadLimit, this.threadLimitHard);
-		
+		final StageScheduler scheduler = StageScheduler.defaultScheduler(gm);
+
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
 				scheduler.shutdown();
@@ -453,16 +560,33 @@ public class BuilderImpl implements Builder {
 		return shutdownTimeoutInSeconds;
 	}
 
-	public final boolean isListeningToSubscription(Object listener) {
-		return listener instanceof PubSubListener || listener instanceof StateChangeListener<?>;
+	
+	protected final ChildClassScannerVisitor deepListener = new ChildClassScannerVisitor<ListenerTransducer>() {
+		@Override
+		public boolean visit(ListenerTransducer child, Object topParent) {
+			return false;
+		}		
+	};
+	
+	public final boolean isListeningToSubscription(Behavior listener) {
+			
+		//NOTE: we only call for scan if the listener is not already of this type
+		return listener instanceof PubSubMethodListenerBase ||
+			   listener instanceof StateChangeListenerBase<?> 
+		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, PubSubListenerTransducer.class)
+		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, StateChangeListenerTransducer.class);
 	}
 
 	public final boolean isListeningToHTTPResponse(Object listener) {
-		return listener instanceof HTTPResponseListener;
+		return listener instanceof HTTPResponseListenerBase ||
+			   //will return false if HTTPResponseListenerBase was encountered
+			  !ChildClassScanner.visitUsedByClass(listener, deepListener, HTTPResponseListenerTransducer.class);
 	}
 
 	public final boolean isListeningHTTPRequest(Object listener) {
-		return listener instanceof RestListener;
+		return listener instanceof RestMethodListenerBase ||
+			    //will return false if RestListenerBase was encountered
+			   !ChildClassScanner.visitUsedByClass(listener, deepListener, RestListenerTransducer.class);
 	}
 	
 	/**
@@ -565,38 +689,50 @@ public class BuilderImpl implements Builder {
 	}
 		
 	@Override
-	public final int registerRoute(CharSequence route, byte[] ... headers) {		
-		return routerConfig.registerRoute(route, headers);
+	public final int registerRoute(CharSequence route, byte[] ... headers) {
+		if (route.length()==0) {
+			throw new UnsupportedOperationException("path must be of length one or more and start with /");
+		}
+		if (route.charAt(0)!='/') {
+			throw new UnsupportedOperationException("path must start with /");
+		}
+		return routerConfig().registerRoute(route, headers);
+	}
+	
+	@Override
+	public final int defineRoute(CharSequence route, byte[] ... headers) {
+		if (route.length()==0) {
+			throw new UnsupportedOperationException("path must be of length one or more and start with /");
+		}
+		if (route.charAt(0)!='/') {
+			throw new UnsupportedOperationException("path must start with /");
+		}
+		return routerConfig().registerRoute(route, headers);
 	}
 
 	public final TrieParser routeExtractionParser(int route) {
-		return routerConfig.extractionParser(route).getRuntimeParser();
+		return routerConfig().extractionParser(route).getRuntimeParser();
 	}
 	
 	public final int routeExtractionParserIndexCount(int route) {
-		return routerConfig.extractionParser(route).getIndexCount();
+		return routerConfig().extractionParser(route).getIndexCount();
 	}
 	
 	public IntHashTable routeHeaderToPositionTable(int routeId) {
-		return routerConfig.headerToPositionTable(routeId);
+		return routerConfig().headerToPositionTable(routeId);
 	}
 	
 	public TrieParser routeHeaderTrieParser(int routeId) {
-		return routerConfig.headerTrieParser(routeId);
-	}
-
-	public final ClientCoordinator getClientCoordinator() {
-		boolean isTLS = true;
-		return useNetClient ? new ClientCoordinator(connectionsInBit, maxPartialResponse, isTLS) : null;
-		
+		return routerConfig().headerTrieParser(routeId);
 	}
 
 	public final Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {
+		final boolean hasNoRoutes = (0==routerConfig().routesCount());
 		Pipe<HTTPRequestSchema> pipe = new Pipe<HTTPRequestSchema>(restPipeConfig) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<HTTPRequestSchema> createNewBlobReader() {
-				return new HTTPRequestReader(this);
+				return new HTTPRequestReader(this, hasNoRoutes);
 			}
 		};
 		return pipe;
@@ -606,11 +742,32 @@ public class BuilderImpl implements Builder {
 		return isTelemetryEnabled;
 	}
 
+	public int telmetryPort() {
+		return telemetryPort;
+	}
+	
+	public String telemetryHost() {
+		return telemetryHost;
+	}
+	
 	@Override
-	public void enableTelemetry() {
+	public String enableTelemetry() {
 		isTelemetryEnabled = true;
-		
-		//TODO: build more of the object here if possible
+		return telemetryHost = NetGraphBuilder.bindHost();
+	}
+	
+	@Override
+	public String enableTelemetry(int port) {
+		isTelemetryEnabled = true;
+		telemetryPort = port;
+		return telemetryHost = NetGraphBuilder.bindHost();
+	}
+	
+	@Override
+	public void enableTelemetry(String host, int port) {
+		isTelemetryEnabled = true;
+		telemetryPort = port;
+		telemetryHost = host;
 	}
 	
 	public final long getDefaultSleepRateNS() {
@@ -619,24 +776,26 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public final void setDefaultRate(long ns) {
-		defaultSleepRateNS = ns;
+		defaultSleepRateNS = Math.max(ns, 4_800); //protect against too small 
 	}
 
 
+	public void buildStages(IntHashTable subscriptionPipeLookup2, GraphManager gm2) {
 
-	public void buildStages(IntHashTable subscriptionPipeLookup2, IntHashTable netPipeLookup2, GraphManager gm2) {
-		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfType(gm2, MessageSubscription.instance);
-		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfType(gm2, NetResponseSchema.instance);
-		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfType(gm2, TrafficOrderSchema.instance);
-		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfType(gm2, MessagePubSub.instance);
-		Pipe<ClientHTTPRequestSchema>[] httpClientRequestPipes = GraphManager.allPipesOfType(gm2, ClientHTTPRequestSchema.instance);
-		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfType(gm2, IngressMessages.instance);
+		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfTypeWithNoProducer(gm2, NetResponseSchema.instance);
+		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfTypeWithNoProducer(gm2, MessageSubscription.instance);
+		
+		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm2, TrafficOrderSchema.instance);
+		Pipe<ClientHTTPRequestSchema>[] httpClientRequestPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm2, ClientHTTPRequestSchema.instance);			
+		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfTypeWithNoConsumer(gm2, MessagePubSub.instance);
+		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfTypeWithNoConsumer(gm2, IngressMessages.instance);
+		
 		
 		int commandChannelCount = orderPipes.length;
 		int eventSchemas = 0;
 		
 		IDX_MSG = (IntHashTable.isEmpty(subscriptionPipeLookup2) && subscriptionPipes.length==0 && messagePubSub.length==0) ? -1 : eventSchemas++;
-		IDX_NET = useNetClient(netPipeLookup2, httpClientRequestPipes) ? eventSchemas++ : -1;
+		IDX_NET = useNetClient(httpClientRequestPipes) ? eventSchemas++ : -1;
 						
         long timeout = 20_000; //20 seconds
 		
@@ -682,13 +841,10 @@ public class BuilderImpl implements Builder {
 				PipeCleanerStage.newInstance(gm, orderPipes[t]);
 			}
 		}
-		
-		
-		
-		
+				
 		initChannelBlocker(maxGoPipeId);
 		
-		buildHTTPClientGraph(netPipeLookup2, httpClientResponsePipes, httpClientRequestPipes, masterGoOut, masterAckIn);
+		buildHTTPClientGraph(httpClientResponsePipes, httpClientRequestPipes, masterGoOut, masterAckIn);
 		
 		/////////
 		//always create the pub sub and state management stage?
@@ -702,13 +858,14 @@ public class BuilderImpl implements Builder {
 		}
 	}
 
-	protected void buildHTTPClientGraph(IntHashTable netPipeLookup2, Pipe<NetResponseSchema>[] netResponsePipes,
+	
+	protected void buildHTTPClientGraph(Pipe<NetResponseSchema>[] netResponsePipes,
 			Pipe<ClientHTTPRequestSchema>[] netRequestPipes, Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn) {
 		////////
 		//create the network client stages
 		////////
-		if (useNetClient(netPipeLookup2, netRequestPipes)) {
+		if (useNetClient(netRequestPipes)) {
 			
 			int connectionsInBits=10;			
 			int maxPartialResponses=4;
@@ -716,8 +873,6 @@ public class BuilderImpl implements Builder {
 			int responseQueue = 10;
 			int responseSize = 1<<16;
 			int outputsCount = 1;
-			int requestQueue = 4;
-			int requestSize = 1<<15; //must be no smaller than 32K to ensure TLS works.
 			
 			
 			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
@@ -729,12 +884,12 @@ public class BuilderImpl implements Builder {
 			
 			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
 			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
-			
-			
-			PipeConfig<NetPayloadSchema> clientNetRequestConfig = new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,requestQueue,requestSize); 		
-		
+
+			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
+					
+					
 			//BUILD GRAPH
-			ClientCoordinator ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
+			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
 		
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;
@@ -745,8 +900,7 @@ public class BuilderImpl implements Builder {
 						
 
 			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, 
-					netPipeLookup2, responseQueue, 
-					responseSize, clientRequests, netResponsePipes);
+					responseQueue, responseSize, clientRequests, netResponsePipes);
 						
 		}
 	}
@@ -755,11 +909,11 @@ public class BuilderImpl implements Builder {
 	protected int populateGoAckPipes(int maxGoPipeId, Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn, Pipe<TrafficReleaseSchema>[] goOut, Pipe<TrafficAckSchema>[] ackIn,
 			int p) {
-		addToLastNonNull(masterGoOut[p], goOut[p] = new Pipe<TrafficReleaseSchema>(releasePipesConfig));
+		addToLastNonNull(masterGoOut[p], goOut[p] = new Pipe<TrafficReleaseSchema>(this.pcm.getConfig(TrafficReleaseSchema.class)));
 		
 		maxGoPipeId = Math.max(maxGoPipeId, goOut[p].id);				
 		
-		addToLastNonNull(masterAckIn[p], ackIn[p] = new Pipe<TrafficAckSchema>(ackPipesConfig));
+		addToLastNonNull(masterAckIn[p], ackIn[p] = new Pipe<TrafficAckSchema>(this.pcm.getConfig(TrafficAckSchema.class)));
 		return maxGoPipeId;
 	}
 	
@@ -785,8 +939,37 @@ public class BuilderImpl implements Builder {
 	}
 	
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {		
-		return mqtt = new MQTTConfigImpl(host, port, clientId, this, defaultSleepRateNS);
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId) {		
+		return useMQTT(host, port, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+	}
+
+	@Override
+	public MQTTConfigImpl useMQTT(CharSequence host, boolean isTLS, CharSequence clientId) {
+		return useMQTT(host, isTLS ? tlsPort : defaultPort, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+	}
+		
+	@Override
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight) {		
+		return useMQTT(host, port, isTLS, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);	
+	}
+	
+	@Override
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight, int maxMessageLength) {		
+		if (maxInFlight>(1<<15)) {
+			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
+		}
+		if (maxMessageLength>(256*(1<<20))) {
+			throw new UnsupportedOperationException("Specification does not support values larger than 256M");
+		}
+		 
+		pcm.ensureSize(MessageSubscription.class, maxInFlight, maxMessageLength);
+		
+		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
+		long rate = defaultSleepRateNS>200_000?defaultSleepRateNS/4:defaultSleepRateNS;
+		
+		return mqtt = new MQTTConfigImpl(host, port, clientId, 
+				                    this, rate, 
+				                    (short)maxInFlight, maxMessageLength, isTLS);
 	}
 	
 	@Override
@@ -819,6 +1002,17 @@ public class BuilderImpl implements Builder {
 			blockChannelUntil(pipeId, currentTimeMillis() + durationMills );
 	    }
 	}
+
+	/**
+	 * Enables the child classes to modify which schemas are used.
+	 * For the pi this allows for using i2c instead of digital or analog in transducers.
+	 * 
+	 * @param schema
+	 */
+	public MessageSchema schemaMapper(MessageSchema schema) {
+		return schema;
+	}
+
 
 
 

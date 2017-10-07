@@ -1,8 +1,10 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
@@ -19,18 +21,25 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	private int routeId;
 	private int requestContext;
 	private HTTPVerbDefaults verb;
+	private final boolean hasNoRoutes;
 	
-	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe) {
+	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe, boolean hasNoRoutes) {
 		super(pipe);
+		this.hasNoRoutes = hasNoRoutes;
 	}
 
 	
-	public void setParseDetails(TrieParser extractionParser, IntHashTable table, 
-			                   int paraIndexCount, TrieParser headerTrieParser) {
+	public void setParseDetails(TrieParser extractionParser, 
+			                    IntHashTable table, 
+			                    int paraIndexCount, 
+			                    TrieParser headerTrieParser,
+			                    HTTPSpecification httpSpec) {
 		this.paraIndexCount = paraIndexCount; //count of fields before headers which are before the payload
 		this.extractionParser = extractionParser;
 		this.headerHash = table;
 		this.headerTrieParser = headerTrieParser;
+		this.httpSpec = httpSpec;
+		this.payloadIndexOffset = paraIndexCount + IntHashTable.count(headerHash) + 1;
 	}
 	
 	public void setVerb(HTTPVerbDefaults verb) {
@@ -41,6 +50,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		return this.verb;
 	}
 	
+
 	public boolean isVerbGet() {
 		return HTTPVerbDefaults.GET == verb;
 	}
@@ -99,6 +109,11 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		this.sequenceCode = sequenceCode;
 	}
 	
+	public void handoff(ChannelWriter writer) {
+		writer.writePackedLong(connectionId);
+		writer.writePackedLong(sequenceCode);
+	}
+	
 	public long getConnectionId() {
 		return connectionId;
 	}
@@ -117,11 +132,17 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	}
 	
 	protected TrieParser extractionParser;
+	
 	public long getFieldId(byte[] fieldName) {
-		long id = reader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
+		long id = TrieParserReader.query(reader, extractionParser, fieldName, 0, fieldName.length, Integer.MAX_VALUE);
 		if (id<0) {
 			throw new UnsupportedOperationException("unknown field name '"+new String(fieldName)+"'");
 		}
+		
+//		Appendables.appendHexDigits(
+//		Appendables.appendUTF8(System.out, fieldName,0,fieldName.length,Integer.MAX_VALUE)
+//		           .append(" -> ID: "),id).append('\n');
+
 		return id;
 	}
 	
@@ -321,34 +342,55 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		return getText(getFieldId(fieldName),appendable);		
 	}
 	
+	/**
+	 * Only call this method when NO routes have been defined.
+	 * @param appendable
+	 * 
+	 */
+	public <A extends Appendable> A getRoutePath(A appendable) {
+		if (hasNoRoutes) {		
+			int assumedId = 0x620001;
+			assert(getFieldId("path".getBytes()) == assumedId) : "error: "+getFieldId("path".getBytes());	
+			return getText(assumedId,appendable);		
+		} else {
+			throw new UnsupportedOperationException("this method can only be used when no routes have been defined.");
+		}
+	}
+	
+	
 	@SuppressWarnings("unchecked")
 	public <A extends Appendable> A getText(long fieldId, A appendable) {
 		
 		if (fieldId<0) {
 			throw new UnsupportedOperationException("unknown field name");
 		}
+		
 		setPositionBytesFromStart(computePosition(fieldId));
-		checkLimit(this,2);
+		
 		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_BYTES) {
+			checkLimit(this,2);
 			readUTF(appendable);
 			return appendable;
 		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
+			checkLimit(this,1);
 			Appendables.appendValue(appendable, readPackedLong());
 			return appendable;			
 		} else if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
+			checkLimit(this,2);
 			long numerator = DataInputBlobReader.readPackedLong(this);
 			long denominator = DataInputBlobReader.readPackedLong(this);
 			Appendables.appendValue(Appendables.appendValue(appendable, numerator),"/",denominator);	
 			return appendable;
 		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
+			checkLimit(this,2);
 			long m = DataInputBlobReader.readPackedLong(this); 
 			byte e = readByte();
 			Appendables.appendDecimalValue(appendable, m, e);
 			return appendable;
 		}
-		throw new UnsupportedOperationException("unknown type "+type);
+		throw new UnsupportedOperationException("unknown field type "+type);
 	}
 
 	@Override

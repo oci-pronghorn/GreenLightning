@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class NetResponseTemplate<T> {
 
@@ -29,7 +29,7 @@ public class NetResponseTemplate<T> {
 		append(
 				new NetResponseTemplateData<T>() {
 					@Override
-					public void fetch(BlobWriter writer, T source) {
+					public void fetch(ChannelWriter writer, T source) {
 						writer.write(byteData);				
 					}					
 				}
@@ -44,7 +44,7 @@ public class NetResponseTemplate<T> {
 		return this;
 	}
 	
-    public void render(BlobWriter writer, T source) {
+    public void render(ChannelWriter writer, T source) {
     	
     	for(int i=0;i<count;i++) {
     		script[i].fetch(writer,source);

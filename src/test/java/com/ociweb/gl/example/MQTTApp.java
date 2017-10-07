@@ -4,21 +4,21 @@ import java.util.Date;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.MQTTConfig;
-import com.ociweb.gl.api.MessageReader;
-import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.MQTTBridge;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.PubSubWritable;
-import com.ociweb.gl.api.PubSubWriter;
 import com.ociweb.gl.api.TimeListener;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.gl.api.Writable;
+import com.ociweb.gl.api.MQTTQoS;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
+
+import static com.ociweb.gl.api.MQTTBridge.defaultPort;
 
 public class MQTTApp implements GreenApp {
 
-	private MQTTConfig mqttConfig;
+	private MQTTBridge mqttConfig;
 	
 	//monitor    mosquitto_sub -v -t '#' -h 127.0.0.1
 	//test       mosquitto_pub -h 127.0.0.1 -t 'topic/ingress' -m 'hello'
@@ -29,11 +29,11 @@ public class MQTTApp implements GreenApp {
 		
 	@Override
 	public void declareConfiguration(Builder builder) {
-		
-		mqttConfig = builder.useMQTT("127.0.0.1", 1883, "my name")
+
+		mqttConfig = builder.useMQTT("127.0.0.1", defaultPort, false, "my name")
 							.cleanSession(true)
-							.transmissionOoS(2)
-							.subscriptionQoS(2) //TODO: do tests for will and retain 
+							.transmissionOoS(MQTTQoS.exactlyOnce)
+							.subscriptionQoS(MQTTQoS.exactlyOnce) //TODO: do tests for will and retain
 							.keepAliveSeconds(10); //TODO: test with 2 seconds or less to make pings go.
 		
 		builder.setTimerPulseRate(1000); //TODO: bump this up so we can test pings.
@@ -44,27 +44,27 @@ public class MQTTApp implements GreenApp {
 	@Override
 	public void declareBehavior(final GreenRuntime runtime) {
 				
-		runtime.subscriptionBridge("topic/ingress", mqttConfig); //optional 2 topics, optional transform lambda
-		runtime.transmissionBridge("topic/egress", mqttConfig); //optional 2 topics, optional transform lambda
+		runtime.bridgeSubscription("topic/ingress", mqttConfig); //optional 2 topics, optional transform lambda
+		runtime.bridgeTransmission("topic/egress", mqttConfig); //optional 2 topics, optional transform lambda
 		
 		final MsgCommandChannel cmdChnl = runtime.newCommandChannel(DYNAMIC_MESSAGING);		
 		TimeListener timeListener = new TimeListener() {
 			@Override
 			public void timeEvent(long time, int iteration) {
-				PubSubWritable writable = new PubSubWritable() {
+				Writable writable = new Writable() {
 					@Override
-					public void write(BlobWriter writer) {	
+					public void write(ChannelWriter writer) {	
 						Date d =new Date(System.currentTimeMillis());
 						
 						System.err.println("sent "+d);
 						writer.writeUTF8Text("egress body "+d);
-						
+
 					}
 				};
 				cmdChnl.publishTopic("topic/egress", writable);
 			}
 		};
-		runtime.addTimeListener(timeListener);
+		runtime.addTimePulseListener(timeListener);
 		
 		
 		final MsgCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
@@ -73,18 +73,19 @@ public class MQTTApp implements GreenApp {
 			
 			
 			@Override
-			public boolean message(CharSequence topic, BlobReader payload) {
+			public boolean message(CharSequence topic, ChannelReader payload) {
 				
 				System.out.print("\ningress body: ");
 				payload.readUTFOfLength(payload.available(), System.out);
 				System.out.println();
 				
-				PubSubWritable writable = new PubSubWritable() {
+				Writable writable = new Writable() {
 
 					@Override
-					public void write(BlobWriter writer) {
+					public void write(ChannelWriter writer) {
 						
 						writer.writeUTF("second step test message");
+
 					}
 					
 				};
@@ -97,7 +98,7 @@ public class MQTTApp implements GreenApp {
 			
 		PubSubListener localTest = new PubSubListener() {
 			@Override
-			public boolean message(CharSequence topic, BlobReader payload) {
+			public boolean message(CharSequence topic, ChannelReader payload) {
 				
 				System.out.println("got topic "+topic+" payload "+payload.readUTF());
 				

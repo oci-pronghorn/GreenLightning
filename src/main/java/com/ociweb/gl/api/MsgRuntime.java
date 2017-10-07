@@ -2,7 +2,6 @@ package com.ociweb.gl.api;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -13,10 +12,15 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BridgeConfigImpl;
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.ChildClassScanner;
+import com.ociweb.gl.impl.ChildClassScannerVisitor;
+import com.ociweb.gl.impl.RestListenerBase;
 import com.ociweb.gl.impl.schema.MessageSubscription;
+import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
+import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
@@ -30,6 +34,7 @@ import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
@@ -37,58 +42,77 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
-import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
-    private static final Logger logger = LoggerFactory.getLogger(MsgRuntime.class);
+    public static final Logger logger = LoggerFactory.getLogger(MsgRuntime.class);
 
     
     protected static final int nsPerMS = 1_000_000;
 	public B builder;
-    protected final GraphManager gm;
+
+	protected final GraphManager gm;
 
     protected final String[] args;
     
     protected StageScheduler scheduler;
     
+    protected String telemetryHost;
+    
+    
+    //NOTE: keep short since the MessagePubSubStage will STOP consuming message until the one put on here
+    //      is actually taken off and consumed.  We have little benefit to making this longer.
+    protected static final int defaultCommandChannelSubscriberLength = 8;
+    
     protected static final int defaultCommandChannelLength = 16;
     protected static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
     protected static final int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support
-    
-    
-    protected static final PipeConfig<NetResponseSchema> responseNetConfig = new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload);   
-    protected static final PipeConfig<ClientHTTPRequestSchema> requestNetConfig = new PipeConfig<ClientHTTPRequestSchema>(ClientHTTPRequestSchema.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
-    protected static final PipeConfig<ServerResponseSchema> serverResponseNetConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
-    protected static final PipeConfig<MessageSubscription> messageSubscriptionConfig = new PipeConfig<MessageSubscription>(MessageSubscription.instance, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
-    protected static final PipeConfig<ServerResponseSchema> fileResponseConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, 1<<12, defaultCommandChannelHTTPMaxPayload);
-    
+
+    protected boolean transducerAutowiring = true;
+
+	private PipeConfig<HTTPRequestSchema> fileRequestConfig;// = builder.restPipeConfig.grow2x();
+
     protected int netResponsePipeIdx = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
     protected int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
     protected final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
-    protected final IntHashTable netPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
     
     private BridgeConfig[] bridges = new BridgeConfig[0];
     
 	protected int parallelInstanceUnderActiveConstruction = -1;
+	
 	protected Pipe<?>[] outputPipes = null;
-	protected Pipe<HTTPRequestSchema>[] httpRequestPipes = null;
-    protected CommandChannelVisitor gatherPipesVisitor = new CommandChannelVisitor() {
+    protected ChildClassScannerVisitor gatherPipesVisitor = new ChildClassScannerVisitor<MsgCommandChannel>() {
     	
 		@Override
-		public void visit(MsgCommandChannel cmdChnl) {
-			
+		public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
+			    
+            IntHashTable usageChecker = getUsageChecker();
+            if (null!=usageChecker) {
+				if (!ChildClassScanner.notPreviouslyHeld(cmdChnl, topParent, usageChecker)) {
+	            	logger.error("Command channel found in "+
+	            			topParent.getClass().getSimpleName()+
+	            	             " can not be used in more than one Behavior");                	
+	            	assert(false) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";                   
+	            }
+            }
             
+            MsgCommandChannel.setListener(cmdChnl, (Behavior)topParent);
             //add this to the count of publishers
             //CharSequence[] supportedTopics = cmdChnl.supportedTopics();
             //get count of subscribers per topic as well.
 			//get the pipe ID of the singular PubSub...
 			
-			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());			
+			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());
+			return true;//keep looking
+					
 		}
 
     };
-
+    
+    public void disableTransducerAutowiring() {
+    	transducerAutowiring = false;
+    }
+    
     private void keepBridge(BridgeConfig bridge) {
     	boolean isFound = false;
     	int i = bridges.length;
@@ -116,30 +140,36 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return args;
     }
     
-	public final void subscriptionBridge(CharSequence topic, BridgeConfig config) {		
-		config.addSubscription(topic);
+	public final <T,S> S bridgeSubscription(CharSequence topic, BridgeConfig<T,S> config) {		
+		long id = config.addSubscription(topic);
 		keepBridge(config);
+		return config.subscriptionConfigurator(id);
 	}
-	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
-		config.addSubscription(internalTopic,extrnalTopic);
+	public final <T,S> S bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config) {		
+		long id = config.addSubscription(internalTopic,extrnalTopic);
 		keepBridge(config);
+		return config.subscriptionConfigurator(id);
 	}
-	public final void subscriptionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, IngressConverter converter) {		
-		config.addSubscription(internalTopic,extrnalTopic,converter);
+	public final <T,S> S bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config, IngressConverter converter) {		
+		long id = config.addSubscription(internalTopic,extrnalTopic,converter);
 		keepBridge(config);
+		return config.subscriptionConfigurator(id);
 	}
 	
-	public final void transmissionBridge(CharSequence topic, BridgeConfig config) {		
-		config.addTransmission(this, topic);
+	public final <T,S> T bridgeTransmission(CharSequence topic, BridgeConfig<T,S> config) {		
+		long id = config.addTransmission(this, topic);
 		keepBridge(config);
+		return config.transmissionConfigurator(id);
 	}
-	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config) {		
-		config.addTransmission(this, internalTopic,extrnalTopic);
-		keepBridge(config);
+	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> bridge) {		
+		long id = bridge.addTransmission(this, internalTopic,extrnalTopic);
+		keepBridge(bridge);
+		return bridge.transmissionConfigurator(id);
 	}	
-	public final void transmissionBridge(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig config, EgressConverter converter) {		
-		config.addTransmission(this, internalTopic,extrnalTopic, converter);
+	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config, EgressConverter converter) {		
+		long id = config.addTransmission(this, internalTopic,extrnalTopic, converter);
 		keepBridge(config);
+		return config.transmissionConfigurator(id);
 	}	
 	
     public final L addRestListener(RestListener listener) {
@@ -162,11 +192,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return (L) registerListenerImpl(listener);
     }
     
-    @Deprecated
-    public final L addTimeListener(TimeListener listener) {
-        return (L) addTimePulseListener(listener);
-    }
-    
     public final L addPubSubListener(PubSubListener listener) {
         return (L) registerListenerImpl(listener);
     }
@@ -175,73 +200,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return (L) registerListenerImpl(listener);
     }
       
-    public L registerListener(Object listener) {
+    public L registerListener(Behavior listener) {
     	return (L) registerListenerImpl(listener);
     }
-    public L registerBehavior(Behavior behavior) {
-    	return (L) registerListenerImpl(behavior);
-    }
-    
-    public static void visitCommandChannelsUsedByListener(Object listener, CommandChannelVisitor visitor) {
-
-    	visitCommandChannelsUsedByListener(listener, 0, visitor);
-    }
-	protected static void visitCommandChannelsUsedByListener(Object listener, int depth, CommandChannelVisitor visitor) {
-
-        Class<? extends Object> c = listener.getClass();
-        while (null != c) {
-        	visitCommandChannelsByClass(listener, depth, visitor, c);
-        	c = c.getSuperclass();
-        }
-
-    }
-
-	private static void visitCommandChannelsByClass(Object listener, int depth, 
-											 CommandChannelVisitor visitor,
-											 Class<? extends Object> c) {
-		
-		Field[] fields = c.getDeclaredFields();
-                        
-        int f = fields.length;
-        while (--f >= 0) {
-            try {
-                fields[f].setAccessible(true);   
-                Object obj = fields[f].get(listener);
-                                
-                if (obj instanceof MsgCommandChannel) {
-                	logger.trace("found command channel in {} ",listener.getClass().getSimpleName());
-                    MsgCommandChannel cmdChnl = (MsgCommandChannel)obj;                 
-                   // assert(channelNotPreviouslyUsed(cmdChnl)) : "A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.";
-                    MsgCommandChannel.setListener(cmdChnl, listener);
-                    
-                    visitor.visit(cmdChnl);
-                                        
-                } else {      
-          
-                	if ((!obj.getClass().isPrimitive()) 
-                		&& (obj != listener) 
-                		&& (!obj.getClass().getName().startsWith("java."))  
-                		&& (!obj.getClass().isEnum())
-                		&& (!(obj instanceof MsgRuntime))
-                		&& (!(obj instanceof MessageConsumer))                		
-                		&& !fields[f].isSynthetic()
-                		&& fields[f].isAccessible() 
-                		&& depth<=5) { //stop recursive depth
-          
-//                		if (depth == 2) {
-//                			System.out.println(depth+" "+obj.getClass().getName());
-//                		}
-                		//recursive check for command channels
-                		visitCommandChannelsUsedByListener(obj, depth+1, visitor);
-            		}
-                }
-                
-            } catch (Throwable e) {
-                logger.debug("unable to find CommandChannel",e);
-            }
-        }
-	}
-    
+  
+   
     public long fieldId(int routeId, byte[] fieldName) {
     	return builder.fieldId(routeId, fieldName);
     }    
@@ -263,6 +226,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
            }
     }
     
+    public String getArgumentValue(String longName, String shortName, String defaultValue) {
+    	return getOptArg(longName,shortName, args, defaultValue);
+    }
+    
+    public boolean hasArgument(String longName, String shortName) {
+    	return hasArg(longName, shortName, this.args);
+    }
+
     public static String getOptArg(String longName, String shortName, String[] args, String defaultValue) {
         
         String prev = null;
@@ -278,12 +249,19 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         return reportChoice(longName, shortName, defaultValue);
     }
     
+
+    public static boolean hasArg(String longName, String shortName, String[] args) {
+        for(String token : args) {
+            if(longName.equals(token) || shortName.equals(token)) {
+            	reportChoice(longName, shortName, "");
+                return true;
+            }
+        }
+        return false;
+    }
+    
     static String reportChoice(final String longName, final String shortName, final String value) {
-        System.out.print(longName);
-        System.out.print(" ");
-        System.out.print(shortName);
-        System.out.print(" ");
-        System.out.println(value);
+        System.out.append(longName).append(" ").append(shortName).append(" ").append(value).append("\n");
         return value;
     }
     
@@ -307,6 +285,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }    
 
     public void shutdownRuntime() {
+    	shutdownRuntime(3);
+    }
+    
+    public void shutdownRuntime(final int secondsTimeout) {
     	//only do if not already done.
     	if (!ReactiveListenerStage.isShutdownRequested()) {
     	
@@ -329,52 +311,31 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				@Override
 				public void run() {
 					scheduler.shutdown();
-					scheduler.awaitTermination(3, TimeUnit.SECONDS, lastCall, lastCall);
+					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCall, lastCall);
 				}
 	    		
 	    	});
     	}
-    }
-
-    public void shutdownRuntime(int timeoutInSeconds) {
-        //clean shutdown providing time for the pipe to empty
-        scheduler.shutdown();
-        scheduler.awaitTermination(timeoutInSeconds, TimeUnit.SECONDS); //timeout error if this does not exit cleanly withing this time.
-        //all the software has now stopped so now shutdown the hardware.
-        builder.shutdown();
     }
     
 
 	//////////
     //only build this when assertions are on
     //////////
-    private static IntHashTable cmdChannelUsageChecker;
+    public static IntHashTable cmdChannelUsageChecker;
     static {
         assert(setupForChannelAssertCheck());
     }    
     private static boolean setupForChannelAssertCheck() {
         cmdChannelUsageChecker = new IntHashTable(9);
         return true;
+    }    
+    private static IntHashTable getUsageChecker() {
+    	return cmdChannelUsageChecker;
     }
-    protected boolean channelNotPreviouslyUsed(MsgCommandChannel cmdChnl) {
-        int hash = System.identityHashCode(cmdChnl);
-           
-        if (IntHashTable.hasItem(cmdChannelUsageChecker, hash)) {
-                //this was already assigned somewhere so this is  an error
-                logger.error("A CommandChannel instance can only be used exclusivly by one object or lambda. Double check where CommandChannels are passed in.", new UnsupportedOperationException());
-                return false;
-        } 
-        //keep so this is detected later if use;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-        
-        
-        IntHashTable.setItem(cmdChannelUsageChecker, hash, 42);
-        return true;
-    }
-    ///////////
-    ///////////
     
-
-	protected int addGreenPipesCount(Object listener, int pipesCount) {
+    protected int addGreenPipesCount(Behavior listener, int pipesCount) {
+		
 		if (this.builder.isListeningToHTTPResponse(listener)) {
         	pipesCount++; //these are calls to URL responses        	
         }
@@ -384,35 +345,27 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         }
         
         if (this.builder.isListeningHTTPRequest(listener)) {
-        	pipesCount += httpRequestPipes.length; //NOTE: these are all accumulated from the command chanel as for routes we listen to (change in the future)
+        	pipesCount += ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
         }
 		return pipesCount;
 	}
 
-	protected void populateGreenPipes(Object listener, int pipesCount, Pipe<?>[] inputPipes) {
+
+	protected void populateGreenPipes(Behavior listener, int pipesCount, Pipe<?>[] inputPipes) {
+		
+		//if this listener is an HTTP listener then add its behavior id for this pipe
 		if (this.builder.isListeningToHTTPResponse(listener)) {        	
-        	Pipe<NetResponseSchema> netResponsePipe1 = new Pipe<NetResponseSchema>(responseNetConfig) {
-				@SuppressWarnings("unchecked")
-				@Override
-				protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
-					return new HTTPResponseReader(this);
-				}
-			};
-			Pipe<NetResponseSchema> netResponsePipe = netResponsePipe1;        	
-            int pipeIdx = netResponsePipeIdx++;
-            inputPipes[--pipesCount] = netResponsePipe;            
-            boolean addedItem = IntHashTable.setItem(netPipeLookup, builder.behaviorId((Behavior)listener), pipeIdx);
-            if (!addedItem) {
-            	throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
-            }
+        	inputPipes[--pipesCount] = buildNetResponsePipe();
+            
+        	int behaviorId = builder.behaviorId(listener);
+        	int pipeIdx = netResponsePipeIdx++;
+     
+			builder.registerHTTPClientId(behaviorId, pipeIdx);
             
         }
         
-        if (this.builder.isListeningToSubscription(listener)) {
-   
-            Pipe<MessageSubscription> subscriptionPipe = buildPublishPipe(listener);
-            
-            inputPipes[--pipesCount]=(subscriptionPipe);
+        if (this.builder.isListeningToSubscription(listener)) {   
+            inputPipes[--pipesCount]=buildPublishPipe(listener);
         }
 
         
@@ -423,13 +376,28 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         //for mutiple we must send them all to the reactor.
         
         
-        if (this.builder.isListeningHTTPRequest(listener) ) {
+		if (this.builder.isListeningHTTPRequest(listener) ) {
         	
-        	int i = httpRequestPipes.length;
-        	while (--i >= 0) {        		
+			Pipe<HTTPRequestSchema>[] httpRequestPipes;
+        	httpRequestPipes = ListenerConfig.newHTTPRequestPipes(builder,  ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction));
+
+        	int i = httpRequestPipes.length;        	
+        	assert(i>0) : "This listens to Rest requests but none have been routed here";        
+        	while (--i >= 0) {        
         		inputPipes[--pipesCount] = httpRequestPipes[i];                		
         	}
         }
+	}
+
+	private Pipe<NetResponseSchema> buildNetResponsePipe() {
+		Pipe<NetResponseSchema> netResponsePipe = new Pipe<NetResponseSchema>(builder.pcm.getConfig(NetResponseSchema.class)) {
+			@SuppressWarnings("unchecked")
+			@Override
+			protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
+				return new HTTPResponseReader(this);
+			}
+		};
+		return netResponsePipe;
 	}
 
     /**
@@ -462,7 +430,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 
 	private Pipe<MessageSubscription> buildMessageSubscriptionPipe() {
-		Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(messageSubscriptionConfig) {
+		
+	    Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(builder.pcm.getConfig(MessageSubscription.class)) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<MessageSubscription> createNewBlobReader() {
@@ -511,15 +480,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 	
 	private void buildGraphForServer(MsgApp app) {
-		
-		
+
 		ServerPipesConfig serverConfig = new ServerPipesConfig(builder.isLarge(), builder.isServerTLS());
 
 		ServerCoordinator serverCoord = new ServerCoordinator( builder.isServerTLS(),
 															   (String) builder.bindHost(), builder.bindPort(), 
 				                                               serverConfig.maxConnectionBitsOnServer, 
 				                                               serverConfig.maxPartialResponsesServer, 
-				                                               builder.parallelism());
+				                                               builder.parallelism(),
+				                                               "Server",builder.defaultHostPath());
 		
 		final int routerCount = builder.parallelism();
 		
@@ -532,7 +501,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		if (builder.isServerTLS()) {
 			planIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);
-			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
+			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, 
+					                      serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
 					                      encryptedIncomingGroup, planIncomingGroup, acks, -1);
 		} else {
 			planIncomingGroup = encryptedIncomingGroup;
@@ -541,12 +511,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//Must call here so the beginning stages of the graph are drawn first when exporting graph.
 		app.declareBehavior(this);
 		
-		buildLastHalfOfGraphForServer(app, serverConfig, serverCoord, routerCount, acks, handshakeIncomingGroup, planIncomingGroup);
+		buildLastHalfOfGraphForServer(app, serverConfig, serverCoord, routerCount, 
+				                      acks, handshakeIncomingGroup, planIncomingGroup);
 	}
 
 
 	private void buildLastHalfOfGraphForServer(MsgApp app, ServerPipesConfig serverConfig,
-			ServerCoordinator serverCoord, final int routerCount, Pipe[] acks, Pipe[] handshakeIncomingGroup,
+			ServerCoordinator serverCoord, final int routerCount, Pipe[] acks, 
+			Pipe[] handshakeIncomingGroup,
 			Pipe[] planIncomingGroup) {
 		////////////////////////
 		//create the working modules
@@ -559,6 +531,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				constructingParallelInstance(i);
 				((MsgAppParallel)app).declareParallelBehavior(this);  //this creates all the modules for this parallel instance								
 			}	
+		} else {
+			if (builder.parallelism()>1) {
+				throw new UnsupportedOperationException(
+						"Remove call to parallelism("+builder.parallelism()+") OR make the application implement GreenAppParallel or something extending it.");
+			}
 		}
 
 		//////////////////
@@ -569,20 +546,36 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		ArrayList<Pipe> forPipeCleaner = new ArrayList<Pipe>();
 		Pipe<HTTPRequestSchema>[][] fromRouterToModules = new Pipe[routerCount][];	
 		int t = routerCount;
+		int totalRequestPipes = 0;
 		while (--t>=0) {
 			//[router/parallel] then [parser/routes] 
 			int path = routerConfig.routesCount();
-			fromRouterToModules[t] = new Pipe[path]; 
+
+			/////////////////
+			///for catch all
+			///////////////
+			if (path==0) {
+				path=1;
+			}
+			/////////////
 			
+			fromRouterToModules[t] = new Pipe[path]; 
 		    while (--path >= 0) {
 		    	
 		    	ArrayList<Pipe<HTTPRequestSchema>> requestPipes = builder.buildFromRequestArray(t, path);
+		    	
 		    	//with a single pipe just pass it one, otherwise use the replicator to fan out from a new single pipe.
-		    	if (1==requestPipes.size()) {
+		    	int size = requestPipes.size();
+		    	totalRequestPipes += size;
+		    	
+				if (1==size) {
 		    		fromRouterToModules[t][path] = requestPipes.get(0);
-		    	} else {	
-		    		fromRouterToModules[t][path] = builder.newHTTPRequestPipe(builder.restPipeConfig);		    		
-		    		if (0==requestPipes.size()) {
+		    	} else {
+		    		//we only create a pipe when we are about to use the replicator
+		    		fromRouterToModules[t][path] =  
+		    				builder.newHTTPRequestPipe(builder.pcm.getConfig(HTTPRequestSchema.class));		    		
+		    		if (0==size) {
+		    			logger.info("warning there are routes without any consumers");
 		    			//we have no consumer so tie it to pipe cleaner		    		
 		    			forPipeCleaner.add(fromRouterToModules[t][path]);
 		    		} else {
@@ -590,8 +583,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    		}
 		    	}
 		    }
+		    if (0==totalRequestPipes) {
+		    	logger.warn("ERROR: includeRoutes or includeAllRoutes must be called on REST listener.");
+		    }
 		}
-		
 		
 		if (!forPipeCleaner.isEmpty()) {
 			PipeCleanerStage.newInstance(gm, forPipeCleaner.toArray(new Pipe[forPipeCleaner.size()]));
@@ -604,18 +599,31 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		int r = routerCount;
 		while (--r>=0) {
 			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
-			fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);			
+			Pipe<ServerResponseSchema>[] temp = fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);
+			
+			//this block is required to make sure the ordering stage has room
+			int c = temp.length;
+			while (--c>=0) {
+				//ensure that the ordering stage can consume messages of this size
+				serverConfig.ensureServerCanWrite(temp[c].config().maxVarLenSize());
+			}			
+			
 		}
-		
-		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, fromRouterToModules, errorResponsePipes, routerConfig, serverCoord, -1);
-
-		final GraphManager graphManager = gm; 
-		
 				
-		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOfServerStages(graphManager, serverCoord,
-				                                            serverConfig, handshakeIncomingGroup, -1);
 		
-		NetGraphBuilder.buildOrderingSupers(graphManager, serverCoord, routerCount, fromModulesToOrderSuper, fromOrderedContent, -1);
+		boolean catchAll = builder.routerConfig().routesCount()==0;
+		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, 
+				                     fromRouterToModules, errorResponsePipes, routerConfig,
+				                     serverCoord, -1, catchAll);
+		
+	
+		//NOTE: this array populated here must be equal or larger than the fromModules..
+		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup, (long) -1);
+		
+		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
+		
+		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, routerCount, 
+				                            fromModulesToOrderSuper, fromOrderedContent, -1);
 	}
 	//////////////////
 	//end of server and other behavior
@@ -635,73 +643,46 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return runtime.gm;
 	}
 	
-
 	
-	
-	
-	////////////////
-	//add file server
-	////////////////
-	
-	public void addFileServer(String path, int ... routes) {
-
-        File rootPath = buildFilePath(path);
-        
-        
-		//due to internal implementation we must keep the same number of outputs as inputs.
-		int r = routes.length;
-		int p = computeParaMulti();
-		
-		int count = r*p;
-		
-		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
-		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
-		populatePipeArrays(r, p, inputs, outputs, routes);		
-		
+	public RouteFilter addFileServer(String path) { //adds server to all routes
+		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
+                		
+        //due to internal implementation we must keep the same number of outputs as inputs.
+		Pipe<HTTPRequestSchema>[] inputs = new Pipe[1];
+		Pipe<ServerResponseSchema>[] outputs = new Pipe[1];		
+		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
+			
+		File rootPath = buildFilePath(path);
 		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
 				
+		return new StageRouteFilter(inputs[0], builder, parallelIndex);
 	}
 	
-	public void addFileServer(String resourceRoot, String resourceDefault, int ... routes) {
+	public RouteFilter addFileServer(String resourceRoot, String resourceDefault) {
+		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
 		
 		//due to internal implementation we must keep the same number of outputs as inputs.
-		int r = routes.length;
-		int p = computeParaMulti();
-		
-		int count = r*p;
-		
-		Pipe<HTTPRequestSchema>[] inputs = new Pipe[count];
-		Pipe<ServerResponseSchema>[] outputs = new Pipe[count];
-		populatePipeArrays(r, p, inputs, outputs, routes);		
-		
+		Pipe<HTTPRequestSchema>[] inputs = new Pipe[1];
+		Pipe<ServerResponseSchema>[] outputs = new Pipe[1];		
+		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
+				
 		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
+					
+		return new StageRouteFilter(inputs[0], builder, parallelIndex);
 				
 	}
 
 
-	private int computeParaMulti() {
-		if (-1==parallelInstanceUnderActiveConstruction ) {
-			return builder.parallelism();
-		} else {
-			return 1;
-		}
-	}
-
-
-	private void populatePipeArrays(int r, int p, Pipe<HTTPRequestSchema>[] inputs,	Pipe<ServerResponseSchema>[] outputs, int[] routes) {
-		int idx = inputs.length;
-		assert(inputs.length==outputs.length);
+	private void populateHTTPInOut(Pipe<HTTPRequestSchema>[] inputs, 
+			                      Pipe<ServerResponseSchema>[] outputs, 
+			                      int idx, int parallelIndex) {
 		
-		while (--r>=0) {
-			int x = p;
-			while (--x >= 0) {
-				idx--;
-				int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? x : parallelInstanceUnderActiveConstruction;
-				inputs[idx] = builder.newHTTPRequestPipe(builder.restPipeConfig.grow2x());
-				builder.appendPipeMapping(inputs[idx], routes[r], parallelIndex);
-				outputs[idx] = builder.newNetResponsePipe(fileResponseConfig, parallelIndex);
-			}
+		if (null == fileRequestConfig) {
+			fileRequestConfig = builder.pcm.getConfig(HTTPRequestSchema.class).grow2x();
 		}
+		inputs[idx] = builder.newHTTPRequestPipe(fileRequestConfig);
+		outputs[idx] = builder.newNetResponsePipe(builder.pcm.getConfig(ServerResponseSchema.class), parallelIndex);
+
 	}
 	
 
@@ -758,54 +739,54 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	}
     	return this.builder;
     }
-    
-    
-
-
-    
-    private ListenerFilter registerListenerImpl(Object listener) {
-                
-    	outputPipes = new Pipe<?>[0];
-		
-		if (listener instanceof RestListener) {
-			
-			final int p = ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
-						
-			httpRequestPipes = ListenerConfig.newHTTPRequestPipes(builder,  p);
-
-		} else {
-			httpRequestPipes = (Pipe<HTTPRequestSchema>[]) new Pipe<?>[0];     	
-			
-		}
-		
-		//extract pipes used by listener
-		visitCommandChannelsUsedByListener(listener, 0, gatherPipesVisitor);//populates  httpRequestPipes and outputPipes
-		
-		
-    	/////////
-    	//pre-count how many pipes will be needed so the array can be built to the right size
-    	/////////
-    	int pipesCount = 0;
-
-        pipesCount = addGreenPipesCount(listener, pipesCount);
-                
-        Pipe<?>[] inputPipes = new Pipe<?>[pipesCount];
-    	 	
+        
+    private ListenerFilter registerListenerImpl(final Behavior listener) {
     	
-    	///////
-        //Populate the inputPipes array with the required pipes
-    	///////      
+    	////////////
+    	//OUTPUT
+    	///////////
+    	outputPipes = new Pipe<?>[0];
+    	//extract pipes used by listener and use cmdChannelUsageChecker to confirm its not re-used
+    	ChildClassScanner.visitUsedByClass(listener, gatherPipesVisitor, MsgCommandChannel.class);//populates outputPipes
 
+    	
+    	/////////////
+    	//INPUT
+    	//add green features, count first then create the pipes
+    	//NOTE: that each Behavior is inspected and will find Transducers which need inputs as well
+    	/////////
+    	int pipesCount = addGreenPipesCount(listener, 0);
+        Pipe<?>[] inputPipes = new Pipe<?>[pipesCount];
+        
+        final int httpClientPipeId = netResponsePipeIdx; //must be grabbed first
+        
         populateGreenPipes(listener, pipesCount, inputPipes);                
 
+        if (httpClientPipeId != netResponsePipeIdx) {
+
+        	//add any custom routes?
+        	//builder.registerHTTPClientId(routeId, httpClientPipeId);
+        	
+        }
+        
+        
         //////////////////////
         //////////////////////
+        
+        //this is empty when transducerAutowiring is off
+        final ArrayList<ReactiveManagerPipeConsumer> consumers = new ArrayList<ReactiveManagerPipeConsumer>(); 
+        
+        //extract this into common method to be called in GL and FL
+		if (transducerAutowiring) {
+			inputPipes = autoWireTransducers(listener, inputPipes, consumers);
+		}       
         
         ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
-        		                                inputPipes, outputPipes, parallelInstanceUnderActiveConstruction);
+        		                                inputPipes, outputPipes, consumers,
+        		                                parallelInstanceUnderActiveConstruction);
 
         
-        if (listener instanceof RestListener) {
+        if (listener instanceof RestListenerBase) {
 			GraphManager.addNota(gm, GraphManager.DOT_RANK_NAME, "ModuleStage", reactiveListener);
 			
 		}
@@ -832,5 +813,54 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         
     }
 
+	protected Pipe<?>[] autoWireTransducers(final Behavior listener, Pipe<?>[] inputPipes,
+			final ArrayList<ReactiveManagerPipeConsumer> consumers) {
+		
+		if (inputPipes.length==0) {
+			return inputPipes;//no work since no inputs are used.
+		}
+		
+		final Grouper g = new Grouper(inputPipes);
+		
+		ChildClassScannerVisitor tVisitor = new ChildClassScannerVisitor() {
+			@Override
+			public boolean visit(Object child, Object topParent) {					
+				if (g.additions()==0) {
+					//add first value
+					Pipe[] pipes = builder.operators.createPipes(builder, listener, g);
+					consumers.add(new ReactiveManagerPipeConsumer(listener, builder.operators, pipes));
+					g.add(pipes);
+				}					
+				
+				int c = consumers.size();
+				while (--c>=0) {
+					if (consumers.get(c).obj == child) {
+						//do not add this one it is already recorded
+						return true;
+					}
+				}
+				
+				Pipe[] pipes = builder.operators.createPipes(builder, child, g);
+				consumers.add(new ReactiveManagerPipeConsumer(child, builder.operators, pipes));
+				g.add(pipes);		
+				
+				return true;
+			}				
+		};
+		
+		ChildClassScanner.visitUsedByClass(listener, tVisitor, ListenerTransducer.class);
+					
+		if (g.additions()>0) {
+			inputPipes = g.firstArray();
+			g.buildReplicators(gm, consumers);
+		}
+		return inputPipes;
+	}
+
+	protected PipeConfigManager buildPipeManager() {
+		PipeConfigManager pcm = new PipeConfigManager();
+		pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class );
+		return pcm;
+	}
     
 }

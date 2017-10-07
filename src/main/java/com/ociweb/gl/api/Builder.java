@@ -1,7 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.MQTTConfigImpl;
-
 /**
  * Base interface for an IoT device's hardware.
  * <p>
@@ -12,7 +10,7 @@ import com.ociweb.gl.impl.MQTTConfigImpl;
  *
  * @author Nathan Tippy
  */
-public interface Builder {
+public interface Builder extends ArgumentProvider {
 
 
     /**
@@ -50,27 +48,52 @@ public interface Builder {
 
 	void parallelism(int parallel);
 	
+	int defineRoute(CharSequence route, byte[] ... headers);
 	int registerRoute(CharSequence route, byte[] ... headers);
       
-	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
-	
+	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);	
 	void enableServer(boolean isTLS, int bindPort);
-	
 	void enableServer(int bindPort);
+	void enableServer(int bindPort, String defaultPath);
+	void enableServer(String host, int bindPort);
+	void enableServer(String host, int bindPort, String defaultPath);
+	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath);	
+	void enableServer(boolean isTLS, int bindPort, String defaultPath);
 	
-	void enableTelemetry();
+	int defaultTelemetryPort = 8098;
+	String enableTelemetry();
+	String enableTelemetry(int port);
+	void enableTelemetry(String host, int port);
 	
 	void setDefaultRate(long ns);
 	
 	long fieldId(int routeId, byte[] fieldName);
 	
-	MQTTConfig useMQTT(CharSequence host, int port, CharSequence clientId);
+	/*
+	 * The default in-flight messages is 10
+	 * The default maximum messageLength is 4K
+	 */
+	MQTTBridge useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId);
+	
+	MQTTBridge useMQTT(CharSequence host, boolean isTLS, CharSequence clientId);
+	
+	/*
+	 * The maximum in-flight messages must be <= 32K
+	 * The maximum messageLength must be <= 256M
+	 */
+	MQTTBridge useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientIdint, int maxInFlight);
+
+	/*
+	 * The maximum in-flight messages must be <= 32K
+	 * The maximum messageLength must be <= 256M
+	 */
+	MQTTBridge useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight, int maxMessageLength);
+		
 	
 	void privateTopics(String ... topic);
-	
-	String[] args();
+
 	
 	Builder useNetClient();
 	Builder useInsecureNetClient();
-	
+
 }

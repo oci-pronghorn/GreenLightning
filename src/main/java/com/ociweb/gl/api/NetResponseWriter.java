@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.config.HTTPContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 	
     private int context;
     public int statusCode;
-    private HTTPContentTypeDefaults contentType;
+    private HTTPContentType contentType;
     
     private static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
     
@@ -30,19 +31,11 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     public void writeString(CharSequence value) {
         writeUTF(value);
     }
-    
-   
-    public void close() {
-    	  	
-    	  	new UnsupportedOperationException("this is not the method you are looking for.").printStackTrace();
-    	  	System.exit(-1);
-    	  	
-    }
-
+  
 	private static void writeHeader(NetResponseWriter outputStream, final int headerBlobPosition, 
 			                        final long positionOfLen,
 									int statusCode, final int context, 
-									HTTPContentTypeDefaults contentType, 
+									HTTPContentType contentType,
 									int length, boolean chunked) {
 		//logger.info("writing head at position {} ", headerBlobPosition);
 		DataOutputBlobWriter.openFieldAtPosition(outputStream, headerBlobPosition);
@@ -127,7 +120,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 	}
     
 	   
-    void openField(int statusCode, final int context, HTTPContentTypeDefaults contentType) {
+    void openField(int statusCode, final int context, HTTPContentType contentType) {
 
     	this.statusCode = statusCode;
     	this.contentType = contentType;

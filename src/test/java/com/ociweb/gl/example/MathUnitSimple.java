@@ -1,5 +1,6 @@
 package com.ociweb.gl.example;
 
+import com.ociweb.pronghorn.network.config.HTTPHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,14 +13,14 @@ import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.NetResponseTemplate;
 import com.ociweb.gl.api.NetResponseTemplateData;
 import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.NetWritable;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.impl.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class MathUnitSimple implements RestListener {
@@ -40,7 +41,7 @@ public class MathUnitSimple implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeX = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(BlobWriter writer, HTTPFieldReader source) {
+			public void fetch(ChannelWriter writer, HTTPFieldReader source) {
 				source.getText(fieldA, writer);
 			}
 			
@@ -49,7 +50,7 @@ public class MathUnitSimple implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeY = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(BlobWriter writer, HTTPFieldReader source) {
+			public void fetch(ChannelWriter writer, HTTPFieldReader source) {
 				source.getText(fieldB, writer);
 			}
 			
@@ -58,7 +59,7 @@ public class MathUnitSimple implements RestListener {
 		NetResponseTemplateData<HTTPFieldReader> consumeSum = new NetResponseTemplateData<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(BlobWriter writer, HTTPFieldReader source) {
+			public void fetch(ChannelWriter writer, HTTPFieldReader source) {
 				Appendables.appendValue(writer, source.getInt(fieldA) +source.getInt(fieldB));	
 			}
 			
@@ -78,7 +79,7 @@ public class MathUnitSimple implements RestListener {
 		Headable eat = new Headable() {
 
 			@Override
-			public void read(BlobReader httpPayloadReader) {
+			public void read(HTTPHeader header, ChannelReader httpPayloadReader) {
 				httpPayloadReader.readUTF(cookieValue);
 				lastCookie = cookieValue.toString();
 			}
@@ -87,16 +88,16 @@ public class MathUnitSimple implements RestListener {
 		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(), eat);
 				
 		
-		NetWritable consume = new NetWritable() {
+		Writable consume = new Writable() {
 
 			@Override
-			public void write(BlobWriter writer) {
+			public void write(ChannelWriter writer) {
 				template.render(writer, request);
 			}
 			
 		};
 		
-		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, END_OF_RESPONSE, 
+		return cc.publishHTTPResponse(request.getConnectionId(), request.getSequenceCode(), 200, false, 
 				                   HTTPContentTypeDefaults.JSON, consume);		
 
 	}

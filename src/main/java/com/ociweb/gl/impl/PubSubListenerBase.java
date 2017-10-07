@@ -1,0 +1,17 @@
+package com.ociweb.gl.impl;
+
+import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.PubSubMethodListener;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+
+
+public interface PubSubListenerBase extends PubSubMethodListenerBase {
+
+    /**
+     * Invoked when a new publication is received from the {@link MsgRuntime}.
+     *
+     * @param topic Topic of the publication.
+     * @param payload {@link ChannelReader} for the topic contents.
+     */
+    boolean message(CharSequence topic, ChannelReader payload);
+}

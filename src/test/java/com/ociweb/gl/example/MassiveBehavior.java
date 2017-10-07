@@ -1,7 +1,7 @@
 package com.ociweb.gl.example;
 
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.gl.api.*;
 
 public class MassiveBehavior implements GreenApp {
@@ -13,7 +13,7 @@ public class MassiveBehavior implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 		builder.setTimerPulseRate(500);//1);//TimeTrigger.OnTheSecond);
-		//builder.enableTelemetry();
+		builder.enableTelemetry();
 
 	}
 
@@ -22,16 +22,16 @@ public class MassiveBehavior implements GreenApp {
 		
 		//runtime.addTimePulseListener(new stopperBehavior(runtime));
 		
-		int i = 5;//100;
+		int i = 7;
 		while (--i>=0) {
 			final GreenCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			final String topic = "topic"+i;
 			final int value = i;
 			
-			final PubSubWritable writable = new PubSubWritable() {
+			final Writable writable = new Writable() {
 
 				@Override
-				public void write(BlobWriter writer) {
+				public void write(ChannelWriter writer) {
 					writer.writePackedInt(value);
 				}
 				
@@ -51,15 +51,17 @@ public class MassiveBehavior implements GreenApp {
 			
 			PubSubListener subs = new PubSubListener() {
 				
-				public boolean message(CharSequence topic, BlobReader payload) {
+				public boolean message(CharSequence topic, ChannelReader payload) {
 					
 					
 					return true;
 				}
 			};
 	
-			runtime.addPubSubListener(subs).addSubscription(topic);
-			
+			runtime
+			 .addPubSubListener(subs)
+			 .addSubscription(topic);
+			 
 			
 		}
 	

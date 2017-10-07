@@ -8,34 +8,22 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobReader<S> {
 
-	private TrieParserReader reader = new TrieParserReader(true);
-	private int limit = -1;
-	
 	public PayloadReader(Pipe<S> pipe) {
         super(pipe);
     }
 	
-
     protected static <S extends MessageSchema<S>> void checkLimit(PayloadReader<S> that, int min) {
-    	if ( (that.position+min) > that.limit ) {
-    		throw new RuntimeException("Read attempted beyond the end of the field data");
+      	
+    	if ( ((that.position-that.bytesLowBound) + min) > that.length) { 
+    		throw new RuntimeException(
+    				"Read attempted beyond the end of the field data. Pos:"
+    		              +(that.position-that.bytesLowBound)
+    		              +" adding:"+min+" must be < "+that.length
+    		              +"   ex: "+that.position+" "+that.bytesLowBound
+    		              );
+    	
     	}
     }
-   
-	
-	@Override
-	public int openHighLevelAPIField(int loc) {		
-		int len = super.openHighLevelAPIField(loc);
-		limit = len + position;
-		return len;
-	}
-	
-	@Override
-	public int openLowLevelAPIField() {		
-		int len = super.openLowLevelAPIField();
-		limit = len + position;
-		return len;
-	}
 
 	private int fieldIdx(long fieldId) {
 		return (int)fieldId & 0xFFFF;
@@ -48,7 +36,8 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	protected int computePosition(long fieldId) {
 		assert(fieldId>=0) : "check field name, it does not match any found field";
 		//jump to end and index backwards to find data position
-		return readFromEndLastInt(fieldIdx(fieldId));		
+		return readFromEndLastInt(fieldIdx(fieldId));	
+
 	}
 	
 	protected int computePositionSecond(long fieldId) {
@@ -62,35 +51,35 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 	@Override
 	public int read(byte[] b) {
-		checkLimit(this,2);
+		//not checked because this read will only read available
 		return super.read(b);
 	}
 
 
 	@Override
 	public int read(byte[] b, int off, int len) {
-		checkLimit(this,2);//not len because read will read less
+		//not checked because this read will only read available
 		return super.read(b, off, len);
 	}
 
 
 	@Override
 	public void readFully(byte[] b) {
-		checkLimit(this,2);
+		//not checked because this read will only read available
 		super.readFully(b);
 	}
 
 
 	@Override
 	public void readFully(byte[] b, int off, int len) {
-		checkLimit(this,2);//not len because read will read less
+		//not checked because this read will only read available
 		super.readFully(b, off, len);
 	}
 
 
 	@Override
 	public int skipBytes(int n) {
-		checkLimit(this,n);
+		//not checked because this read will only read available
 		return super.skipBytes(n);
 	}
 
@@ -167,7 +156,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 	@Override
 	public int read() {
-		checkLimit(this,1);
+		//returns -1 if we have no data so no need to check.
 		return super.read();
 	}
 
@@ -195,7 +184,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 	@Override
 	public Object readObject() {
-		checkLimit(this,1);
+        //bounds are already checked here
 		return super.readObject();
 	}
 

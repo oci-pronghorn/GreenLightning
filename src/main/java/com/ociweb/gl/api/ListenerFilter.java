@@ -1,8 +1,22 @@
 package com.ociweb.gl.api;
 
-public interface ListenerFilter {
+import com.ociweb.gl.impl.stage.CallableMethod;
+import com.ociweb.gl.impl.stage.CallableRestRequestReader;
+import com.ociweb.gl.impl.stage.CallableStaticMethod;
+import com.ociweb.gl.impl.stage.CallableStaticRestRequestReader;
 
+public interface ListenerFilter extends RouteFilter<ListenerFilter> {
+
+
+	<T extends Behavior> ListenerFilter addSubscription(CharSequence topic, CallableStaticMethod<T> method);
+	
+	ListenerFilter addSubscription(CharSequence topic, CallableMethod method);
 		
+	
+	<T extends Behavior> ListenerFilter includeRoute(int routeId, CallableStaticRestRequestReader<T> callable);
+		
+	ListenerFilter includeRoute(int routeId, CallableRestRequestReader callable);
+
 	/**
 	 * Add subscription to this topic to this listener at startup.
 	 * @param topic
@@ -40,11 +54,8 @@ public interface ListenerFilter {
 	<E extends Enum<E>> ListenerFilter excludeStateChangeFrom(E ... states);
 
 	
-	ListenerFilter includeRoutes(int ... routeIds);
-	
-	ListenerFilter includeAllRoutes();
-	
 	int getId();	
 	
+	void includeHTTPClientId(int id);
 	
 }

@@ -1,5 +1,8 @@
 package com.ociweb.gl.impl.stage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -21,6 +24,7 @@ public class TrafficCopStage extends PronghornStage {
     private Pipe<TrafficOrderSchema> primaryIn; 
     private Pipe<TrafficAckSchema>[] ackIn;
     private Pipe<TrafficReleaseSchema>[] goOut;
+    private final static Logger logger = LoggerFactory.getLogger(TrafficCopStage.class);
     
     private int ackExpectedOn = -1;   
     private GraphManager graphManager;
@@ -30,6 +34,7 @@ public class TrafficCopStage extends PronghornStage {
     private int goPendingOnPipe = -1;
     private int goPendingOnPipeCount = 0;
     private BuilderImpl builder;
+    private boolean shutdownInProgress;
     
     public TrafficCopStage(GraphManager graphManager, long msAckTimeout, Pipe<TrafficOrderSchema> primaryIn, Pipe<TrafficAckSchema>[] ackIn,  Pipe<TrafficReleaseSchema>[] goOut, BuilderImpl builder) {
     	super(graphManager, join(ackIn, primaryIn), goOut);
@@ -39,28 +44,45 @@ public class TrafficCopStage extends PronghornStage {
         this.primaryIn = primaryIn;
         this.ackIn = ackIn;
         this.goOut = goOut;
+      
+        
         this.graphManager = graphManager;//for toString
         this.builder = builder;
         
         //force all commands to happen upon publish and release
         this.supportsBatchedPublish = false;
         this.supportsBatchedRelease = false;
-        GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 10_000, this);
+       // GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 10_000, this);
+		GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 4_800, this);
     }    
     
     public String toString() {
         String result = super.toString();
         
-        return result+ ( ((ackExpectedOn>=0)&&(ackExpectedOn<ackIn.length)&&(null!=ackIn[ackExpectedOn])) ? 
-        		" AckExpectedOn:"+ackExpectedOn+" "
-        		   +GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id)
+        final int localActEO = ackExpectedOn;//must hold since it can change while using
+        boolean needsAck = (localActEO>=0)&&(localActEO<ackIn.length)&&(null!=ackIn[localActEO]);
+		return result+ ( needsAck ? 
+        		" AckExpectedOn:"+localActEO+" "+GraphManager.getRingProducer(graphManager, ackIn[localActEO].id)
         		: "" );
     }
     
     
     @Override
     public void run() {
-    //	System.err.println("begin run");
+  
+    	if (shutdownInProgress) {
+    		int i = goOut.length;
+    		while (--i>=0) {
+    			if ((null!=goOut[i]) && (!Pipe.hasRoomForWrite(goOut[i]))) {
+    				return;
+    			}
+    		}
+    		//all outgoing pipes have room
+    		Pipe.publishEOF(goOut);
+    		requestShutdown();
+    		return;
+    	}
+    	
     	int maxIterations = 100;
         do {
             ////////////////////////////////////////////////
@@ -71,9 +93,14 @@ public class TrafficCopStage extends PronghornStage {
                 if (!PipeReader.tryReadFragment(ackIn[ackExpectedOn])) {
                     
                     if (System.currentTimeMillis() > ackExpectedTime) {
-                    	requestShutdown();
-                        throw new RuntimeException(" *** Expected to get ack back from "+GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id)+" within "+msAckTimeout+"ms \nExpected ack on pipe:"+ackIn[ackExpectedOn]);
+                    	shutdownInProgress = true;
+                    	logger.info(" *** Expected to get ack back from "+GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id)+" within "+msAckTimeout+"ms \nExpected ack on pipe:"+ackIn[ackExpectedOn]);
+                    
                     }
+                    
+                    //must watch for shutdown signal while we are also watching for next ack.
+                    detectShutdownInProgress();
+                    
                     return;//we are still waiting for requested operation to complete
                 } else {
                     PipeReader.releaseReadLock(ackIn[ackExpectedOn]);
@@ -114,7 +141,7 @@ public class TrafficCopStage extends PronghornStage {
             		} else {
             			//this may be shutting down or an unsupported message
             			assert(-1 == PipeReader.getMsgIdx(primaryIn)) : "Expected end of stream however got unsupported message: "+PipeReader.getMsgIdx(primaryIn);
-            			requestShutdown();
+            			shutdownInProgress = true;
             			PipeReader.releaseReadLock(primaryIn);  
             			 //System.err.println("exit 3");
             			return;//reached end of stream
@@ -138,7 +165,7 @@ public class TrafficCopStage extends PronghornStage {
 	            		
 	            	} else {
 	        			assert(-1 == PipeReader.getMsgIdx(primaryIn)) : "Expected end of stream however got unsupported message: "+PipeReader.getMsgIdx(primaryIn);
-	        			requestShutdown();
+	        			shutdownInProgress = true;
 	        			PipeReader.releaseReadLock(primaryIn);  
 	        			return;//reached end of stream
 	            	}
@@ -163,5 +190,15 @@ public class TrafficCopStage extends PronghornStage {
         } while(--maxIterations>=0);
         //System.err.println("exit 6");
     }
+
+	private void detectShutdownInProgress() {
+		if (Pipe.peekMsg(primaryIn, -1)) {
+			//shutdown in progress so give up waiting
+			Pipe.takeMsgIdx(primaryIn);
+			Pipe.confirmLowLevelRead(primaryIn, Pipe.EOF_SIZE);
+			Pipe.releaseReadLock(primaryIn);                    	
+			shutdownInProgress = true;
+		} 
+	}
 
 }
