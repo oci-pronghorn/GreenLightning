@@ -8,23 +8,9 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
 import com.ociweb.pronghorn.HTTPServer;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
-import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
-import com.ociweb.pronghorn.network.config.HTTPSpecification;
-import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
-import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.http.ModuleConfig;
-import com.ociweb.pronghorn.network.http.RouterStageConfig;
-import com.ociweb.pronghorn.network.module.FileReadModuleStage;
-import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeConfig;
-import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class GreenLightning {
@@ -83,7 +69,9 @@ public class GreenLightning {
 	    final int fileOutgoing = large ? 2048 : 1024;//makes big performance difference.
 	    final int fileChunkSize = large? 1<<14 : 1<<10;
 	    
-		HTTPServer.startupHTTPServer(large, GreenLightning.moduleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, Boolean.parseBoolean(isTLS) );
+		GraphManager gm = new GraphManager();
+		HTTPServer.startupHTTPServer(gm, large, 
+				GreenLightning.simpleModuleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, Boolean.parseBoolean(isTLS) );
         		
 		System.out.println("Press \"ENTER\" to exit...");
 		int value = -1;
@@ -112,18 +100,13 @@ public class GreenLightning {
 	}
 
 	
-    static ModuleConfig moduleConfig(String path, String resourceRoot, String rootFolder,
+    public static ModuleConfig simpleModuleConfig(String path, String resourceRoot, String rootFolder,
     		                         final int fileOutgoing, final int fileChunkSize) {
     	
     	
     	//GreenLightning.class.getClassLoader().getResourceAsStream(name)
     	
-    	
-    	
-    	final int moduleCount = 1;		
-    	final int fileServerIdx = 0;
-    	
-    	
+    		
     	File tempPathRoot = null;
 		if (null!=path) {
 			tempPathRoot = new File(path.replace("target/phogLite.jar!",""));
@@ -136,62 +119,13 @@ public class GreenLightning {
 		}
 		
 		final String resourcesRoot = resourceRoot;
-		final String resourcesDefault = rootFolder;
-		
+		final String resourcesDefault = rootFolder;		
 		final File pathRoot = tempPathRoot;
-		final int finalModuleCount = 1;
-		final int fileServerIndex = fileServerIdx;
 		
-		//using the basic no-fills API
-		ModuleConfig config = new ModuleConfig() {
-			
-		    final PipeConfig<ServerResponseSchema> fileServerOutgoingDataConfig = new PipeConfig<ServerResponseSchema>(ServerResponseSchema.instance, fileOutgoing, fileChunkSize);//from modules  to  supervisor
-
-			@Override
-			public int moduleCount() {
-				return finalModuleCount;
-			}        
-		 	
-			@Override
-			public Pipe<ServerResponseSchema>[] registerModule(int a,
-					GraphManager graphManager, RouterStageConfig routerConfig,
-					Pipe<HTTPRequestSchema>[] inputPipes) {
-				
-				Pipe<ServerResponseSchema>[] staticFileOutputs = null;
-				if (fileServerIndex == a) {
-					
-					//the file server is stateless therefore we can build 1 instance for every input pipe
-					int instances = inputPipes.length;
-					
-					staticFileOutputs = new Pipe[instances];
-					
-					int i = instances;
-					while (--i>=0) {
-						staticFileOutputs[i] = new Pipe<ServerResponseSchema>(fileServerOutgoingDataConfig); //TODO: old code which will be removed.
-						if (null != pathRoot) {
-							//file based site
-							FileReadModuleStage.newInstance(graphManager, inputPipes[i], staticFileOutputs[i], (HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>) ((HTTP1xRouterStageConfig)routerConfig).httpSpec, pathRoot);	
-						} else {
-							//jar resources based site
-							FileReadModuleStage.newInstance(graphManager, inputPipes[i], staticFileOutputs[i], ((HTTP1xRouterStageConfig)routerConfig).httpSpec, resourcesRoot, resourcesDefault);	
-						}
-					}
-					
-				}
-				
-				routerConfig.registerRoute(
-                        (CharSequence) ((fileServerIndex == a) ? "/${path}" : null)
-                        ); //NOTE: we did not request any headers here
-
-				if (fileServerIndex == a) {
-					return staticFileOutputs;
-				} else {
-					return null;
-				}				
-			}  
-			
-		 };
-		return config;
+		return HTTPServer.simpleFileServerConfig(
+				fileOutgoing, fileChunkSize, 
+				resourcesRoot, resourcesDefault, 
+				pathRoot);
 	}
 
 	
