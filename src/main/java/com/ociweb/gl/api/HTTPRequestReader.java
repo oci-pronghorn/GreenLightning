@@ -46,7 +46,10 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		this.verb = verb;
 	}
 
-	public HTTPVerbDefaults getVerb() { return this.verb; }
+	public HTTPVerbDefaults getVerb() {
+		return this.verb;
+	}
+	
 
 	public boolean isVerbGet() {
 		return HTTPVerbDefaults.GET == verb;
