@@ -29,7 +29,7 @@ import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
-import com.ociweb.gl.impl.stage.HTTPClientRequestStage;
+import com.ociweb.gl.impl.stage.HTTPClientRequestTrafficStage;
 import com.ociweb.gl.impl.stage.MessagePubSubStage;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
@@ -896,7 +896,7 @@ public class BuilderImpl implements Builder {
 			while (--r>=0) {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}
-			HTTPClientRequestStage requestStage = new HTTPClientRequestStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
+			HTTPClientRequestTrafficStage requestStage = new HTTPClientRequestTrafficStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
 						
 
 			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, 

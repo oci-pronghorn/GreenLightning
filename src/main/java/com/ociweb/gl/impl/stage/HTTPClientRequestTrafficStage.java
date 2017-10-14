@@ -10,10 +10,9 @@ import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
 import com.ociweb.pronghorn.network.ClientConnection;
 import com.ociweb.pronghorn.network.ClientCoordinator;
-import com.ociweb.pronghorn.network.http.HTTPClientUtil;
 import com.ociweb.pronghorn.network.http.HeaderUtil;
-import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
+import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeReader;
@@ -21,11 +20,10 @@ import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import com.ociweb.pronghorn.util.Appendables;
 
-public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
+public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 
-	public static final Logger logger = LoggerFactory.getLogger(HTTPClientRequestStage.class);
+	public static final Logger logger = LoggerFactory.getLogger(HTTPClientRequestTrafficStage.class);
 	
 	private final Pipe<ClientHTTPRequestSchema>[] input;
 	private final Pipe<NetPayloadSchema>[] output;
@@ -48,7 +46,7 @@ public class HTTPClientRequestStage extends AbstractTrafficOrderedStage {
 	 * @param output
 	 */
 	
-	public HTTPClientRequestStage(GraphManager graphManager, 
+	public HTTPClientRequestTrafficStage(GraphManager graphManager, 
 			BuilderImpl hardware,
 			ClientCoordinator ccm,
             Pipe<ClientHTTPRequestSchema>[] input,
