@@ -234,7 +234,7 @@
 					</execution>
 				</executions>
 				<configuration>
-					<archiveDirectory>${project.build.directory</archiveDirectory>
+					<archiveDirectory>${project.build.directory}</archiveDirectory>
 					<includes>
 						<include>**/*.jar</include>
 					</includes>
