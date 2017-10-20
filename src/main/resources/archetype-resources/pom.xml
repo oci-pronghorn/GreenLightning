@@ -6,7 +6,7 @@
 	<version>1.0-SNAPSHOT</version>
 
 	<properties>
-	    <keystore.path>.\src\main\resources\certificate\ocikeystore.jks</keystore.path>
+		<keystore.path>./src/main/resources/certificate/ocikeystore.jks</keystore.path>
 		<keystore.alias>OCI</keystore.alias>
 		<keystore.password>ocipassword</keystore.password>
 		<keystore.store.password>${keystore.password}</keystore.store.password>
@@ -154,28 +154,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			
-			<plugin>
-            	<groupId>org.apache.maven.plugins</groupId>
-            	<artifactId>maven-jarsigner-plugin</artifactId>
-            	<version>1.4</version>
-            	
-            		<executions>
-                      <execution>
-                      <id>make-assembly</id>
-                      <phase>package</phase>
-                      <goals>
-                      <goal>sign</goal>
-                      </goals>
-                     </execution>
-                    </executions>
-                  <configuration>
-                  <keystore>${keystore.path}</keystore>
-                  <alias>${keystore.alias}</alias>
-                  <storepass>${keystore.store.password}</storepass>
-                  <keypass>${keystore.key.password}</keypass>
-                  </configuration>
-             </plugin>
 
 			<plugin>
 				<artifactId>maven-assembly-plugin</artifactId>
@@ -241,7 +219,31 @@
 					</dependency>
 				</dependencies>
 			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-jarsigner-plugin</artifactId>
+				<version>1.4</version>
 
+				<executions>
+					<execution>
+						<id>sign</id>
+						<phase>install</phase>
+						<goals>
+							<goal>sign</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<archiveDirectory>${project.build.directory</archiveDirectory>
+					<includes>
+						<include>**/*.jar</include>
+					</includes>
+					<keystore>${keystore.path}</keystore>
+					<alias>${keystore.alias}</alias>
+					<storepass>${keystore.store.password}</storepass>
+					<keypass>${keystore.key.password}</keypass>
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 
