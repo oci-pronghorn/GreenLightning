@@ -502,18 +502,15 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                PipeReader.tryReadFragment(pipe) 
               ) {
         	foundWork=true;
-        	
+
             int msgIdx = PipeReader.getMsgIdx(pipe);
-            //logger.info("consumed message {}",msgIdx);
-            
+                        
             switch (msgIdx)  {
             	case MessagePubSub.MSG_CHANGESTATE_70:
             		
-            		//error because we have not yet put the previous change on all the pipes
-            		assert(newState==currentState) : "Attempting to process state change before all listeners have been sent the current state change ";
             		//error because the previous change has not been consumed from all the changes
             		assert(stateChangeInFlight == -1) : "Attempting to process state change before all listeners have consumed the in flight change";
-            		            		
+
             		newState = PipeReader.readInt(pipe, MessagePubSub.MSG_CHANGESTATE_70_FIELD_ORDINAL_7);
             		
             		if (currentState!=newState) {
@@ -688,7 +685,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
     
 	private boolean isNotBlockedByStateChange(Pipe<MessagePubSub> pipe) {
-		return (stateChangeInFlight == -1) || ( !PipeReader.peekMsg(pipe, MessagePubSub.MSG_CHANGESTATE_70));
+		return (stateChangeInFlight == -1) ||
+				( !PipeReader.peekMsg(pipe, MessagePubSub.MSG_CHANGESTATE_70));
 	}
 
 

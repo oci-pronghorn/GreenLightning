@@ -7,9 +7,8 @@ import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
+import com.ociweb.pronghorn.pipe.FragmentWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeReader;
-import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
@@ -90,7 +89,7 @@ public class TrafficCopStage extends PronghornStage {
             ////////////////////////////////////////////////
             if (ackExpectedOn>=0 && null!=ackIn[ackExpectedOn]) {                              
                 
-                if (!PipeReader.tryReadFragment(ackIn[ackExpectedOn])) {
+                if (!Pipe.hasContentToRead(ackIn[ackExpectedOn])) {
                     
                     if (System.currentTimeMillis() > ackExpectedTime) {
                     	shutdownInProgress = true;
@@ -103,7 +102,9 @@ public class TrafficCopStage extends PronghornStage {
                     
                     return;//we are still waiting for requested operation to complete
                 } else {
-                    PipeReader.releaseReadLock(ackIn[ackExpectedOn]);
+                	
+                	Pipe.skipNextFragment(ackIn[ackExpectedOn]);
+                	
                     ackExpectedOn = -1;//clear value we are no longer waiting
                 }
             }
@@ -113,36 +114,52 @@ public class TrafficCopStage extends PronghornStage {
             ////////////////////////////////////////////////////////
             
             if (-1==goPendingOnPipe) {
-            	if (!PipeReader.tryReadFragment(primaryIn)) {
+            	if (!Pipe.hasContentToRead(primaryIn)) {
             		return;//there is nothing todo
-            	} else {             		
-            		if (TrafficOrderSchema.MSG_GO_10 == PipeReader.getMsgIdx(primaryIn)) {
+            	} else {       
+            		
+            		int msgIdx = Pipe.takeMsgIdx(primaryIn);
+            		
+            		if (TrafficOrderSchema.MSG_GO_10 == msgIdx) {
             			
-            			goPendingOnPipe = ackExpectedOn = PipeReader.readInt(primaryIn, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11);
+            			goPendingOnPipe = ackExpectedOn = Pipe.takeInt(primaryIn);
             			assert(goPendingOnPipe < goOut.length) : "Go command is out of bounds "+goPendingOnPipe+" vs "+goOut.length;
             			assert(goPendingOnPipe >= 0) : "Go command pipe must be positive";
-            			goPendingOnPipeCount = PipeReader.readInt(primaryIn, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12);
+            			
+            			goPendingOnPipeCount = Pipe.takeInt(primaryIn);
             			//NOTE: since we might not send release right  away and we have released the input pipe the outgoing release
             			//      may be dropped upon clean shutdown.  This is OK since dropping work is what we want during a shutdown request.
-            			PipeReader.releaseReadLock(primaryIn); 
+            			
+            			Pipe.confirmLowLevelRead(primaryIn, Pipe.sizeOf(primaryIn, TrafficOrderSchema.MSG_GO_10));
+            			Pipe.releaseReadLock(primaryIn);
+            			
             			ackExpectedTime = msAckTimeout>0 ? msAckTimeout+System.currentTimeMillis() : Long.MAX_VALUE; 
             			
-            		} else if (TrafficOrderSchema.MSG_BLOCKCHANNEL_22 == PipeReader.getMsgIdx(primaryIn)) {	
-            	
-            			builder.blockChannelDuration(PipeReader.readLong(primaryIn,TrafficOrderSchema.MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13), primaryIn.id);
-            			PipeReader.releaseReadLock(primaryIn); 
+            		} else if (TrafficOrderSchema.MSG_BLOCKCHANNEL_22 == msgIdx) {	
+            	            			
+            			builder.blockChannelDuration(
+            					Pipe.takeLong(primaryIn), primaryIn.id);
             			
-            		} else if (TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23 == PipeReader.getMsgIdx(primaryIn)) {	
-                    	            			
-            			long fieldTimeMS = PipeReader.readLong(primaryIn,TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14);
+            			Pipe.confirmLowLevelRead(primaryIn, Pipe.sizeOf(primaryIn, TrafficOrderSchema.MSG_BLOCKCHANNEL_22));
+            			Pipe.releaseReadLock(primaryIn); 
+            			
+            		} else if (TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23 == msgIdx) {	
+            			
+            			long fieldTimeMS = Pipe.takeLong(primaryIn);
+            			
             			builder.blockChannelUntil(primaryIn.id, fieldTimeMS);
-            			PipeReader.releaseReadLock(primaryIn);
             			
+            			Pipe.confirmLowLevelRead(primaryIn, Pipe.sizeOf(primaryIn, TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23));
+            			Pipe.releaseReadLock(primaryIn); 
             		} else {
             			//this may be shutting down or an unsupported message
-            			assert(-1 == PipeReader.getMsgIdx(primaryIn)) : "Expected end of stream however got unsupported message: "+PipeReader.getMsgIdx(primaryIn);
+            			int endMsg =  Pipe.takeMsgIdx(primaryIn);
+            			assert(-1 == endMsg) : "Expected end of stream however got unsupported message: "+endMsg;
             			shutdownInProgress = true;
-            			PipeReader.releaseReadLock(primaryIn);  
+            			
+            			Pipe.confirmLowLevelRead(primaryIn, Pipe.EOF_SIZE);
+            			Pipe.releaseReadLock(primaryIn); 
+            			
             			 //System.err.println("exit 3");
             			return;//reached end of stream
             		}
@@ -153,20 +170,29 @@ public class TrafficCopStage extends PronghornStage {
             if (goPendingOnPipe != -1) {
 
 	            //check if following messages can be merged to the current release message, if its a release for the same pipe as the current active
-	            if (	 PipeReader.peekEquals(primaryIn, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11, goPendingOnPipe) && 
-	            		 PipeReader.peekMsg(primaryIn, TrafficOrderSchema.MSG_GO_10) &&
-	            		 PipeReader.tryReadFragment(primaryIn)) {
+	            if (	Pipe.peekMsg(primaryIn, TrafficOrderSchema.MSG_GO_10)
+	            		&& (Pipe.peekInt(primaryIn, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11) == goPendingOnPipe) 
+	            		&& Pipe.hasContentToRead(primaryIn)) {
 	            	
-	            	if (PipeReader.getMsgIdx(primaryIn)==TrafficOrderSchema.MSG_GO_10) {
+	            	final int msgIdx = Pipe.takeMsgIdx(primaryIn);
+	            	if (msgIdx==TrafficOrderSchema.MSG_GO_10) {
 	
-	            		assert(PipeReader.readInt(primaryIn, TrafficOrderSchema.MSG_GO_10_FIELD_PIPEIDX_11) == goPendingOnPipe);
-	            		goPendingOnPipeCount += PipeReader.readInt(primaryIn, TrafficOrderSchema.MSG_GO_10_FIELD_COUNT_12);
-	            		PipeReader.releaseReadLock(primaryIn);
+	            		final int pipeIdx = Pipe.takeInt(primaryIn);
+	            		final int count = Pipe.takeInt(primaryIn);
+	            		
+	            		assert(pipeIdx == goPendingOnPipe);
+	            		goPendingOnPipeCount += count;
+	            		
+	          			Pipe.confirmLowLevelRead(primaryIn, Pipe.sizeOf(primaryIn, TrafficOrderSchema.MSG_GO_10));
+            			Pipe.releaseReadLock(primaryIn);
 	            		
 	            	} else {
-	        			assert(-1 == PipeReader.getMsgIdx(primaryIn)) : "Expected end of stream however got unsupported message: "+PipeReader.getMsgIdx(primaryIn);
+	        			assert(-1 == msgIdx) : "Expected end of stream however got unsupported message: "+msgIdx;
 	        			shutdownInProgress = true;
-	        			PipeReader.releaseReadLock(primaryIn);  
+	        			
+            			Pipe.confirmLowLevelRead(primaryIn, Pipe.EOF_SIZE);
+            			Pipe.releaseReadLock(primaryIn); 
+            			 
 	        			return;//reached end of stream
 	            	}
 	            }
@@ -176,9 +202,11 @@ public class TrafficCopStage extends PronghornStage {
 	            /////////////////////////////////////////////////////////            
 	        	Pipe<TrafficReleaseSchema> releasePipe = goOut[goPendingOnPipe];
 	        	//can be null for event types which are not used in this particular runtime
-	            if (null!=releasePipe && PipeWriter.tryWriteFragment(releasePipe, TrafficReleaseSchema.MSG_RELEASE_20)) { 
-	            	PipeWriter.writeInt(releasePipe, TrafficReleaseSchema.MSG_RELEASE_20_FIELD_COUNT_22, goPendingOnPipeCount);                	
-	            	PipeWriter.publishWrites(releasePipe);
+	            if (null!=releasePipe 
+	            	&& Pipe.hasRoomForWrite(releasePipe)) { 
+	            	
+	            	FragmentWriter.writeI(releasePipe, TrafficReleaseSchema.MSG_RELEASE_20, goPendingOnPipeCount);
+
 	            	goPendingOnPipe = -1;
 	            } else {
 	            	 //System.err.println("exit 5");
