@@ -776,7 +776,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public final void setDefaultRate(long ns) {
-		defaultSleepRateNS = Math.max(ns, 4_800); //protect against too small 
+		defaultSleepRateNS = Math.max(ns, 2_400); //protect against too small 
 	}
 
 
@@ -998,6 +998,7 @@ public class BuilderImpl implements Builder {
 	    	}
 	    }
 	    if (durationMills>0) {
+	    	
 	    	//now pull the current time and wait until ms have passed
 			blockChannelUntil(pipeId, currentTimeMillis() + durationMills );
 	    }

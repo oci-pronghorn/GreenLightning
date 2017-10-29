@@ -527,6 +527,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				     reader.setParseDetails(headerToPositionTable, headerTrieParser, builder.httpSpec);
 
 				     reader.setStatusCode(statusId);
+				     
 				     reader.setConnectionId(ccId1);
 				     
 				     //logger.trace("data avail {} status {} ",reader.available(),statusId);

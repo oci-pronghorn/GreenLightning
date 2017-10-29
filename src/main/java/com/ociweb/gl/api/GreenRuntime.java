@@ -1,16 +1,13 @@
 package com.ociweb.gl.api;
 
+import static com.ociweb.gl.api.Builder.defaultTelemetryPort;
+
 import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
-
-import static com.ociweb.gl.api.Builder.defaultTelemetryPort;
+import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 
 public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	
@@ -100,31 +97,36 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
 	public static boolean testUntilShutdownRequested(GreenApp app, long timeoutMS) {
 		GreenRuntime runtime = new GreenRuntime();
-        NonThreadScheduler s = test(app, runtime);
+		
+		ScriptedNonThreadScheduler s = test(app, runtime);
         
-        long limit = System.currentTimeMillis() + timeoutMS;
+        long limit = System.nanoTime() + (timeoutMS*1_000_000L);
         boolean result = true;
         s.startup();
-    	
-                
-		while (!NonThreadScheduler.isShutdownRequested(s)) {
+    	                
+		while (!ScriptedNonThreadScheduler.isShutdownRequested(s)) {
+
 				s.run();
-				if (System.currentTimeMillis()>limit) {
+				if (System.nanoTime() > limit) {
 					result = false;
 					break;
 				}
 		}		
+
 		s.shutdown();
 		return result;
 	}
 	
 	
 	
-	private static NonThreadScheduler test(GreenApp app, GreenRuntime runtime) {
+	private static ScriptedNonThreadScheduler test(GreenApp app, GreenRuntime runtime) {
 		//force hardware to TestHardware regardless of where or what platform its run on.
         //this is done because this is the test() method and must behave the same everywhere.
         runtime.builder = new BuilderImpl(runtime.gm,runtime.args);
 
+        //lowered for tests, we want tests to run faster, tests probably run on bigger systems.
+        runtime.builder.setDefaultRate(900);
+        
     	app.declareConfiguration(runtime.builder);
         GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
 
@@ -139,9 +141,9 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	    }
 
 	      //exportGraphDotFile();
-
-		runtime.scheduler = new NonThreadScheduler(runtime.gm);
-		return (NonThreadScheduler) runtime.scheduler;
+	    boolean reverseOrder = false;
+		runtime.scheduler = new ScriptedNonThreadScheduler(runtime.gm, reverseOrder);
+		return (ScriptedNonThreadScheduler) runtime.scheduler;
 	}
     
     

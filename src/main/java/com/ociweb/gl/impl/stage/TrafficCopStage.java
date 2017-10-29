@@ -114,7 +114,9 @@ public class TrafficCopStage extends PronghornStage {
             ////////////////////////////////////////////////////////
             
             if (-1==goPendingOnPipe) {
-            	if (!Pipe.hasContentToRead(primaryIn)) {
+            	if ( (!Pipe.hasContentToRead(primaryIn)) ||
+            		 builder.isChannelBlocked (primaryIn.id )
+            	   ) {
             		return;//there is nothing todo
             	} else {       
             		
@@ -136,9 +138,8 @@ public class TrafficCopStage extends PronghornStage {
             			ackExpectedTime = msAckTimeout>0 ? msAckTimeout+System.currentTimeMillis() : Long.MAX_VALUE; 
             			
             		} else if (TrafficOrderSchema.MSG_BLOCKCHANNEL_22 == msgIdx) {	
-            	            			
-            			builder.blockChannelDuration(
-            					Pipe.takeLong(primaryIn), primaryIn.id);
+            	
+            			builder.blockChannelDuration( Pipe.takeLong(primaryIn), primaryIn.id);
             			
             			Pipe.confirmLowLevelRead(primaryIn, Pipe.sizeOf(primaryIn, TrafficOrderSchema.MSG_BLOCKCHANNEL_22));
             			Pipe.releaseReadLock(primaryIn); 

@@ -82,6 +82,7 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	public long connectionId() {
 		return connectionId;
 	}
+
 	
 	
 }

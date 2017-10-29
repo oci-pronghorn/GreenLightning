@@ -243,7 +243,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 		return true;
     }
 
-    protected boolean isChannelBlocked(int a) {
+    protected boolean isChannelBlocked(int a) {    	
         return hardware.isChannelBlocked( goPipe[a].id );
     }
     

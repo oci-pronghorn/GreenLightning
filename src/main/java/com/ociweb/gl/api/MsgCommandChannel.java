@@ -770,7 +770,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		if (token>=0) {
 			return publishOnPrivateTopic(token);
 		} else {
-			        
+			if (null==messagePubSub) {
+				throw new RuntimeException("Enable DYNAMIC_MESSAGING for this CommandChannel before publishing.");
+			}
+			
 	        if (PipeWriter.hasRoomForWrite(goPipe) && 
 	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 	    		
