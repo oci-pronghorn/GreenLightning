@@ -4,6 +4,7 @@ import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
+import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 
 public class PubSubTest {
 
@@ -11,22 +12,13 @@ public class PubSubTest {
 	@Test
 	public void somethingTest() {
 		
+		
 			StringBuilder a = new StringBuilder();
 			StringBuilder b = new StringBuilder();
 						
-		    GreenRuntime runtime = GreenRuntime.test(new WildExample(a,b));	    	
-	    	NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();    	
-
-	    	scheduler.startup();
-	    	
-	    	int iterations = 100;
-			while (--iterations >= 0) {
-				    		
-					scheduler.run();
-					
-			}
 			
-			scheduler.shutdown();
+			GreenRuntime.testUntilShutdownRequested(new WildExample(a,b),100);
+
 			
 			//add asserts here
 			//System.err.println("A:\n"+a);
