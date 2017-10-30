@@ -514,6 +514,11 @@ public class BuilderImpl implements Builder {
 	static final boolean debug = false;
 
 	public void shutdown() {
+		if (null!=ccm) {
+			ccm.shutdown();
+		}
+		
+		
 		//can be overridden by specific hardware impl if shutdown is supported.
 	}
 
