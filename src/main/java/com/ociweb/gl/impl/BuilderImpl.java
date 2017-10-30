@@ -780,8 +780,11 @@ public class BuilderImpl implements Builder {
 	}
 
 
-	public void buildStages(IntHashTable subscriptionPipeLookup2, GraphManager gm2) {
+	public void buildStages(MsgRuntime runtime) {
 
+		IntHashTable subscriptionPipeLookup2 = MsgRuntime.getSubPipeLookup(runtime); 
+		GraphManager gm2 = MsgRuntime.getGraphManager(runtime);
+		
 		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfTypeWithNoProducer(gm2, NetResponseSchema.instance);
 		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfTypeWithNoProducer(gm2, MessageSubscription.instance);
 		
@@ -794,7 +797,8 @@ public class BuilderImpl implements Builder {
 		int commandChannelCount = orderPipes.length;
 		int eventSchemas = 0;
 		
-		IDX_MSG = (IntHashTable.isEmpty(subscriptionPipeLookup2) && subscriptionPipes.length==0 && messagePubSub.length==0) ? -1 : eventSchemas++;
+		IDX_MSG = (IntHashTable.isEmpty(subscriptionPipeLookup2) 
+				    && subscriptionPipes.length==0 && messagePubSub.length==0) ? -1 : eventSchemas++;
 		IDX_NET = useNetClient(httpClientRequestPipes) ? eventSchemas++ : -1;
 						
         long timeout = 20_000; //20 seconds
@@ -836,7 +840,10 @@ public class BuilderImpl implements Builder {
 			}
 
 			if (hasConnections) {
-				TrafficCopStage trafficCopStage = new TrafficCopStage(gm, timeout, orderPipes[t], ackIn, goOut, this);
+				TrafficCopStage trafficCopStage = new TrafficCopStage(gm, 
+						timeout, orderPipes[t], 
+						ackIn, goOut, 
+						runtime, this);
 			} else {
 				PipeCleanerStage.newInstance(gm, orderPipes[t]);
 			}
@@ -854,7 +861,10 @@ public class BuilderImpl implements Builder {
 			logger.trace("saved some resources by not starting up the unused pub sub service.");
 		} else {
 			//logger.info("builder created pub sub");
-		 	createMessagePubSubStage(subscriptionPipeLookup2, ingressMessagePipes, messagePubSub, masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], subscriptionPipes);
+		 	createMessagePubSubStage(subscriptionPipeLookup2, 
+		 			ingressMessagePipes, messagePubSub, 
+		 			masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], 
+		 			subscriptionPipes);
 		}
 	}
 

@@ -862,5 +862,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class );
 		return pcm;
 	}
+
+	public static IntHashTable getSubPipeLookup(MsgRuntime runtime) {
+		return runtime.subscriptionPipeLookup;
+	}
     
 }

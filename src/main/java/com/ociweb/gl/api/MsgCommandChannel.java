@@ -12,10 +12,7 @@ import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
-import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
-import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
-import com.ociweb.pronghorn.network.http.AbstractRestStage;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -384,7 +381,21 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return aBool.compareAndSet(true, false);
     }
 
-
+    public boolean shutdown() {
+    	logger.trace("shutdown requested");    	
+        assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
+        try {
+            if (goHasRoom()) {
+            	MsgCommandChannel.shutdown(this);
+                return true;
+            } else {
+                return false;
+            }
+        } finally {
+            assert(exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
+        }
+    }
+    
     /**
      * Causes this channel to delay processing any actions until the specified
      * amount of time has elapsed.
@@ -1388,11 +1399,19 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 	
 	public static void publishBlockChannel(long durationNanos, MsgCommandChannel<?> gcc) {
-		TrafficOrderSchema.publishBlockChannel(gcc.goPipe, durationNanos);
+		PipeWriter.presumeWriteFragment(gcc.goPipe, TrafficOrderSchema.MSG_BLOCKCHANNEL_22);
+		PipeWriter.writeLong(gcc.goPipe,TrafficOrderSchema.MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13, durationNanos);
+		PipeWriter.publishWrites(gcc.goPipe);
 	}
 
 	public static void publishBlockChannelUntil(long timeMS, MsgCommandChannel<?> gcc) {
-		TrafficOrderSchema.publishBlockChannelUntil(gcc.goPipe, timeMS);
+		PipeWriter.presumeWriteFragment(gcc.goPipe, TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23);
+		PipeWriter.writeLong(gcc.goPipe,TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14, timeMS);
+		PipeWriter.publishWrites(gcc.goPipe);
+	}
+	
+	public static void shutdown(MsgCommandChannel<?> gcc) {
+		PipeWriter.publishEOF(gcc.goPipe);
 	}
 	
 	public String[] privateTopics() {
@@ -1420,6 +1439,5 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	public boolean isGoPipe(Pipe<TrafficOrderSchema> target) {
 		return target==goPipe;
 	}
-	
-	
+		
 }

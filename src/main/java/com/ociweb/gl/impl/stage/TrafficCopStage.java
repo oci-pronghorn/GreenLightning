@@ -3,6 +3,7 @@ package com.ociweb.gl.impl.stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -32,10 +33,16 @@ public class TrafficCopStage extends PronghornStage {
     
     private int goPendingOnPipe = -1;
     private int goPendingOnPipeCount = 0;
+    private MsgRuntime<?,?> runtime;
     private BuilderImpl builder;
     private boolean shutdownInProgress;
     
-    public TrafficCopStage(GraphManager graphManager, long msAckTimeout, Pipe<TrafficOrderSchema> primaryIn, Pipe<TrafficAckSchema>[] ackIn,  Pipe<TrafficReleaseSchema>[] goOut, BuilderImpl builder) {
+    public TrafficCopStage(GraphManager graphManager, long msAckTimeout, 
+    		               Pipe<TrafficOrderSchema> primaryIn, 
+    		               Pipe<TrafficAckSchema>[] ackIn,  
+    		               Pipe<TrafficReleaseSchema>[] goOut, 
+    		               MsgRuntime<?,?> runtime,
+    		               BuilderImpl builder) {
     	super(graphManager, join(ackIn, primaryIn), goOut);
     	
     	assert(ackIn.length == goOut.length);
@@ -47,6 +54,7 @@ public class TrafficCopStage extends PronghornStage {
         
         this.graphManager = graphManager;//for toString
         this.builder = builder;
+        this.runtime = runtime;
         
         //force all commands to happen upon publish and release
         this.supportsBatchedPublish = false;
@@ -79,6 +87,14 @@ public class TrafficCopStage extends PronghornStage {
     		//all outgoing pipes have room
     		Pipe.publishEOF(goOut);
     		requestShutdown();
+    		
+    		////////////////////
+    		//Traffic cops can be responsible for shutting down the system
+			//Upon getting -1 this will trigger the rest of the shutdown
+    		runtime.shutdownRuntime();
+			///////////////////
+			
+    		
     		return;
     	}
     	
@@ -153,6 +169,7 @@ public class TrafficCopStage extends PronghornStage {
             			Pipe.confirmLowLevelRead(primaryIn, Pipe.sizeOf(primaryIn, TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23));
             			Pipe.releaseReadLock(primaryIn); 
             		} else {
+        				
             			//this may be shutting down or an unsupported message
             			int endMsg =  Pipe.takeMsgIdx(primaryIn);
             			assert(-1 == endMsg) : "Expected end of stream however got unsupported message: "+endMsg;
