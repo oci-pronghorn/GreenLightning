@@ -1,4 +1,4 @@
-package com.ociweb.oe.greenlightning.api;
+package com.ociweb.oe.greenlightning.api.server;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponder;

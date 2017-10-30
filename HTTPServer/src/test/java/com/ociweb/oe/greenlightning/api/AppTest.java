@@ -24,17 +24,21 @@ public class AppTest {
 	private final int timeoutMS = 20_000;
 	
 	 @Test
-	    public void testApp() {
+	  public void testApp() {
 		 
    		    String host = "127.0.0.1";
 		    
+   		    final StringBuilder result = new StringBuilder();
+   		    final long timeoutMS = 10_000;
+			
+	   	    new Thread(()->{
+	   		    GreenRuntime.testUntilShutdownRequested(new HTTPServer(host, result), timeoutMS);
+	   		}).start();
+   		    
    		    simulateUser(host);
 		 
-   		    StringBuilder result = new StringBuilder();
 		 
-		    long timeoutMS = 10_000;
-			GreenRuntime.testUntilShutdownRequested(new HTTPServer(host, result), timeoutMS);
-
+		    
 			//////////////////
 			
 			System.err.println(result);
@@ -51,8 +55,7 @@ public class AppTest {
 	 
 
 		private void simulateUser(String host) {
-			new Thread(()->{
-
+	
 					TLSUtil.trustAllCerts(host);
 					
 					int countDown = 200;
@@ -78,19 +81,21 @@ public class AppTest {
 					hitURL("https://"+host+":8088/testPageD", "peanutbutter2", "payload2", "\u0000\u0011sent by responder");
 
 					hitURL("https://"+host+":8088/shutdown?key=shutdown", null, null,
-							"beginning of text file\n" + "ending of text file\n");
-										
-			   }).start();
+							"");
+			
 		}
 
 		private boolean hitURL(String urlString, String cookie, String payload, String body) {
 			try {
-				URL url = new URL(urlString);				
+				URL url = new URL(urlString);	
+				
+				
 				HttpURLConnection http = (HttpURLConnection)url.openConnection();
 				
 				if (null!=cookie) {
 					http.setRequestProperty("Cookie", cookie);
 				}
+				http.setReadTimeout(timeoutMS);
 				
 				if (null!=payload) {
 					
@@ -100,15 +105,11 @@ public class AppTest {
 					//System.out.println("writing the payload: "+payload);
 					out.write(payload.getBytes());
 					out.close();
-					
 				}
-
-				
-				http.setReadTimeout(timeoutMS);
 				http.connect();
 
 				assertEquals(200, http.getResponseCode());
-
+				
 				InputStream br;
 				if (200 <= http.getResponseCode() && http.getResponseCode() <= 299) {
 					br = http.getInputStream();
@@ -117,9 +118,9 @@ public class AppTest {
 				}
 				if (body != null) {
 					String result = readFullyAsString(br, "UTF-8");
-					assertEquals(body, result);
+					assertEquals(urlString, body, result);
 				}
-
+				
 				
 			} catch (MalformedURLException e) {			
 				e.printStackTrace();

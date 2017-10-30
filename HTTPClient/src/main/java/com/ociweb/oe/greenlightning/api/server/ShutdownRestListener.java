@@ -1,4 +1,4 @@
-package com.ociweb.oe.greenlightning.api;
+package com.ociweb.oe.greenlightning.api.server;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,7 +25,7 @@ public class ShutdownRestListener implements RestListener{
 	public boolean restRequest(HTTPRequestReader request) {
 		
 		if (request.isEqual(key, pass)) {
-			
+
 			if (!cmd.hasRoomFor(2)) {//reponse then shutdown
 				return false;
 			}

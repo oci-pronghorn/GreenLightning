@@ -10,20 +10,26 @@ public class HTTPClient implements GreenApp
 
     @Override
     public void declareConfiguration(Builder c) {
-    	c.useNetClient();
+    	c.useInsecureNetClient();
+    	//c.NetClient();
+    	
     	//c.enableTelemetry();
+    	
+    	
     }
 
     @Override
     public void declareBehavior(GreenRuntime runtime) {       
     	
     	HTTPGetBehaviorSingle temp = new HTTPGetBehaviorSingle(runtime);
-		runtime.addStartupListener(temp);
+		runtime.addStartupListener(temp).addSubscription("next");
 			   	
     	
-    	int responseId = runtime.addResponseListener(new HTTPResponse()).getId();    	
-    	runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, responseId));
+    //	int responseId = runtime.addResponseListener(new HTTPResponse()).getId();    	
+    //	runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, responseId));
     	    	
+    	
+    	runtime.addPubSubListener(new ShutdownBehavior(runtime)).addSubscription("shutdown");
     	
     }
           

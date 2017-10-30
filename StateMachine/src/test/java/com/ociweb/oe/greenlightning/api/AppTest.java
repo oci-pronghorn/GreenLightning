@@ -27,8 +27,10 @@ public class AppTest {
 
 		    CharSequence[] rows = Appendables.split(result, '\n');
 		    
+		    System.err.println(result.toString());
+		    
 		    assertTrue(cleanExit);
-		    assertEquals(17, rows.length);	
+		    assertEquals(result.toString(), 17, rows.length);	
 		    int i = 0;
 		    int iterations = 3;
 		    while (--iterations>=0) {
