@@ -72,12 +72,12 @@ public class TrafficCopStage extends PronghornStage {
         		" AckExpectedOn:"+localActEO+" "+GraphManager.getRingProducer(graphManager, ackIn[localActEO].id)
         		: "" );
     }
-    
-    
+
     @Override
     public void run() {
-  
+
     	if (shutdownInProgress) {
+
     		int i = goOut.length;
     		while (--i>=0) {
     			if ((null!=goOut[i]) && (!Pipe.hasRoomForWrite(goOut[i]))) {
@@ -137,7 +137,7 @@ public class TrafficCopStage extends PronghornStage {
             	} else {       
             		
             		int msgIdx = Pipe.takeMsgIdx(primaryIn);
-            		
+
             		if (TrafficOrderSchema.MSG_GO_10 == msgIdx) {
             			
             			goPendingOnPipe = ackExpectedOn = Pipe.takeInt(primaryIn);
@@ -171,14 +171,13 @@ public class TrafficCopStage extends PronghornStage {
             		} else {
         				
             			//this may be shutting down or an unsupported message
-            			int endMsg =  Pipe.takeMsgIdx(primaryIn);
+            			int endMsg =  msgIdx;
             			assert(-1 == endMsg) : "Expected end of stream however got unsupported message: "+endMsg;
             			shutdownInProgress = true;
             			
             			Pipe.confirmLowLevelRead(primaryIn, Pipe.EOF_SIZE);
             			Pipe.releaseReadLock(primaryIn); 
-            			
-            			 //System.err.println("exit 3");
+            			            			
             			return;//reached end of stream
             		}
             	}            	
@@ -207,7 +206,7 @@ public class TrafficCopStage extends PronghornStage {
 	            	} else {
 	        			assert(-1 == msgIdx) : "Expected end of stream however got unsupported message: "+msgIdx;
 	        			shutdownInProgress = true;
-	        			
+	        				        			
             			Pipe.confirmLowLevelRead(primaryIn, Pipe.EOF_SIZE);
             			Pipe.releaseReadLock(primaryIn); 
             			 
