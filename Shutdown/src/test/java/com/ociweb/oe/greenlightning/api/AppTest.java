@@ -5,9 +5,11 @@ import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
 
 import org.junit.Test;
 
@@ -39,13 +41,7 @@ public class AppTest {
 		new Thread(()->{
 
 				TLSUtil.trustAllCerts("127.0.0.1");
-				
-				try {
-					Thread.sleep(500);
-				} catch (InterruptedException e) {
-					fail();
-				}
-				
+
 				hitFirstURL();				
 				
 				hitSecondURL();			
@@ -53,10 +49,25 @@ public class AppTest {
 		   }).start();
 	}
 
+	public void waitForServer(URL url) throws IOException {
+		boolean waiting = true;				
+		while (waiting) {
+			try {
+				URLConnection con = url.openConnection();				
+				con.connect();
+			} catch (ConnectException ce) {
+				continue;
+			}
+			waiting = false;
+		}
+	}
+	
 	private void hitFirstURL() {
 		try {
 			URL url = new URL("https://127.0.0.1:8443/shutdown?key=2709843294721594");
-			
+						
+			waitForServer(url);
+						
 			HttpURLConnection http = (HttpURLConnection)url.openConnection();
 			http.setReadTimeout(timeoutMS);
 			assertEquals(200, http.getResponseCode());			

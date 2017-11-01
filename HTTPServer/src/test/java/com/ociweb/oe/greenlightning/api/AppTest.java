@@ -11,10 +11,18 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.network.TLSUtil;
 import com.ociweb.pronghorn.util.Appendables;
 
 /**
@@ -23,6 +31,7 @@ import com.ociweb.pronghorn.util.Appendables;
 public class AppTest { 
 
 	private final int timeoutMS = 20_000;
+	private final static Logger logger = LoggerFactory.getLogger(AppTest.class);
 	
 	 @Test
 	  public void testApp() {
@@ -66,7 +75,7 @@ public class AppTest {
 
 		private void simulateUser(String host) {
 	
-					TLSUtil.trustAllCerts(host);
+					trustAllCerts(host);
 					
 					int countDown = 400;
 					while (!hitURL("https://"+host+":8088/testPageB", null, null, "beginning of text file\n")) {
@@ -159,5 +168,33 @@ public class AppTest {
 			return baos;
 		}
 	 
-	 
+		public static void trustAllCerts(final String host) {
+			logger.warn("WARNING: this scope will now accept all certs on host: "+host+". This is for testing only!");
+			
+			try {
+			     SSLContext sc = SSLContext.getInstance("SSL");
+			     TrustManager[] trustAllCerts = new TrustManager[]{
+			    		 new X509TrustManager() {
+			    			 public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+			    				 return null;
+			    			 }
+			    			 public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+			    			 }
+			    			 public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+			    			 }
+			    		 }
+			     };
+			     sc.init(null, trustAllCerts, new java.security.SecureRandom());
+			     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+			     
+			     HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier() {
+			         public boolean verify(String hostname, SSLSession session) {
+			        	 return hostname.equals(host);
+			         }
+			     });
+			     
+			 } catch (Exception e) {
+			    throw new RuntimeException(e);
+			 }
+		}
 }
