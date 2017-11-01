@@ -11,10 +11,18 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.network.TLSUtil;
 
 /**
  * Unit test for simple App.
@@ -22,6 +30,7 @@ import com.ociweb.pronghorn.network.TLSUtil;
 public class AppTest { 
 
 	private final int timeoutMS = 4_000; //4 sec
+	private final static Logger logger = LoggerFactory.getLogger(AppTest.class);
 	
 	 @Test
 	    public void testApp()
@@ -40,7 +49,7 @@ public class AppTest {
 	private void simulateUser() {
 		new Thread(()->{
 
-				TLSUtil.trustAllCerts("127.0.0.1");
+				trustAllCerts("127.0.0.1");
 
 				hitFirstURL();				
 				
@@ -99,5 +108,34 @@ public class AppTest {
 		}
 	}
 
+	public static void trustAllCerts(final String host) {
+		logger.warn("WARNING: this scope will now accept all certs on host: "+host+". This is for testing only!");
+		
+		try {
+		     SSLContext sc = SSLContext.getInstance("SSL");
+		     TrustManager[] trustAllCerts = new TrustManager[]{
+		    		 new X509TrustManager() {
+		    			 public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+		    				 return null;
+		    			 }
+		    			 public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+		    			 }
+		    			 public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
+		    			 }
+		    		 }
+		     };
+		     sc.init(null, trustAllCerts, new java.security.SecureRandom());
+		     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+		     
+		     HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier() {
+		         public boolean verify(String hostname, SSLSession session) {
+		        	 return hostname.equals(host);
+		         }
+		     });
+		     
+		 } catch (Exception e) {
+		    throw new RuntimeException(e);
+		 }
+	}
 	
 }
