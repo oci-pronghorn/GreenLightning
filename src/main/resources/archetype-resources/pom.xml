@@ -160,7 +160,7 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>com.ociweb.GreenLightning</mainClass>
+							<mainClass>${package}.GreenLightning</mainClass>
 						</manifest>
 					</archive>
 					<descriptorRefs>
