@@ -46,8 +46,6 @@ public class AppTest {
 		    
 	   	    new Thread(()->{
 	   		    cleanExit.set(GreenRuntime.testUntilShutdownRequested(new HTTPServer(host, result), timeoutMS));
-	   		    //NOTE: not sure this timeout is working right.
-	   		    
 	   		    done.set(true);
 	   	    }).start();
    		    
