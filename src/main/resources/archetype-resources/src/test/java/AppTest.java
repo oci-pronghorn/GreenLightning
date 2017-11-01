@@ -7,6 +7,7 @@ import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
+import com.thing.Example;
 
 /**
  * Unit test for simple App.
@@ -17,21 +18,10 @@ public class AppTest {
 	 @Test
 	    public void testApp()
 	    {
-		    GreenRuntime runtime = GreenRuntime.test(new ${artifactId}());	    	
-	    	NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();    	
-
-	    	scheduler.startup();
-	    	
-	    	int iterations = 10;
-			while (--iterations >= 0) {
-				    		
-					scheduler.run();
-					
-					//test application here
-					
-			}
-			
-			scheduler.shutdown();
+		    int timeoutMS = 10000;
+		    GreenRuntime.testUntilShutdownRequested(new ${artifactId}(), timeoutMS);
+		    
+		    
 			
 	    }
 }
