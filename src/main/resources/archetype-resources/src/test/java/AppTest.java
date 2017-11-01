@@ -18,7 +18,7 @@ public class AppTest {
 	 @Test
 	    public void testApp()
 	    {
-		    int timeoutMS = 10000;
+		    int timeoutMS = 2000;
 		    GreenRuntime.testUntilShutdownRequested(new ${artifactId}(), timeoutMS);
 		    
 		    
