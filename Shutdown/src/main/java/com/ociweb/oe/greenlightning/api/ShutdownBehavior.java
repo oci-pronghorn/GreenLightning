@@ -13,14 +13,12 @@ public class ShutdownBehavior implements ShutdownListener, RestListener{
 	private final byte[] PASS1 = "2709843294721594".getBytes();
 	private final byte[] PASS2 = "A5E8F4D8C1B987EFCC00A".getBytes();
 	
-	private final GreenRuntime runtime;
-  
 	private boolean hasFirstKey;
 	private boolean hasSecondKey;
 	
     public ShutdownBehavior(GreenRuntime runtime) {
 		this.channel = runtime.newCommandChannel(NET_RESPONDER);
-		this.runtime = runtime;
+
 	}
 	    	
 	@Override
@@ -33,7 +31,7 @@ public class ShutdownBehavior implements ShutdownListener, RestListener{
 
 		if (request.isEqual(KEY, PASS1)) {
 			if (channel.publishHTTPResponse(request, 200)) {
-				runtime.shutdownRuntime();
+				while(!channel.shutdown()){}
 				hasFirstKey = true;
 				return true;
 			}

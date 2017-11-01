@@ -36,16 +36,16 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 	public boolean responseHTTP(HTTPResponseReader reader) {
 		
 		long duration = System.nanoTime()-reqTime;
-		Appendables.appendNearestTimeUnit(System.err, duration);
-		System.err.println(" latency\n");
+		Appendables.appendNearestTimeUnit(System.err, duration, " latency\n");
 		
-		System.out.println(" status:"+reader.statusCode());
-		System.out.println("   type:"+reader.contentType());
+	//	System.out.println(" status:"+reader.statusCode());
+	//	System.out.println("   type:"+reader.contentType());
 		
 		Payloadable payload = new Payloadable() {
 			@Override
 			public void read(ChannelReader reader) {
-				System.out.println(reader.readUTFOfLength(reader.available()));
+				String readUTFOfLength = reader.readUTFOfLength(reader.available());
+				//System.out.println(readUTFOfLength);
 			}
 		};
 		
@@ -57,7 +57,7 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 	}
 
 
-	int countDown = 15;
+	int countDown = 1025;
 	long reqTime = 0;
 
 	@Override

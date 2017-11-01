@@ -3,7 +3,7 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.PubSubMethodListener;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 
 public class CountBehavior implements PubSubMethodListener {
 
@@ -19,7 +19,7 @@ public class CountBehavior implements PubSubMethodListener {
 	}
 
 
-	public boolean triggerNextAndCount(CharSequence topic, BlobReader payload) {
+	public boolean triggerNextAndCount(CharSequence topic, ChannelReader payload) {
 		
 		if(count<6) {
 			
@@ -36,7 +36,7 @@ public class CountBehavior implements PubSubMethodListener {
 		return true;
 	}
 	
-	public boolean anotherMessage(CharSequence topic, BlobReader payload) {
+	public boolean anotherMessage(CharSequence topic, ChannelReader payload) {
 		//do nothing, just here for example
 		return true;
 	}

@@ -5,7 +5,7 @@ import java.util.Random;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -27,7 +27,7 @@ public class GenerateBehavior implements PubSubListener {
 
 
 	@Override
-	public boolean message(CharSequence topic, BlobReader payload) {
+	public boolean message(CharSequence topic, ChannelReader payload) {
 		
 		//Note if this behavior is subscribed to more than 1 topic we will need
 		//to branch here based on the value of topic.

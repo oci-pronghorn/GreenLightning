@@ -3,6 +3,7 @@ package com.ociweb.oe.greenlightning.api;
 
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.gl.api.Builder;
 
 public class HTTPClient implements GreenApp
@@ -15,7 +16,7 @@ public class HTTPClient implements GreenApp
     	
     	//c.enableTelemetry();
     	
-    	
+    	//ClientCoordinator.showHistogramResults = true;
     }
 
     @Override

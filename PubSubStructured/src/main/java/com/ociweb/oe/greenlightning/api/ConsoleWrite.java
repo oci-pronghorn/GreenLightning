@@ -1,7 +1,7 @@
 package com.ociweb.oe.greenlightning.api;
 
 import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.field.MessageConsumer;
@@ -19,7 +19,7 @@ public class ConsoleWrite implements PubSubListener {
 	}
 
 	@Override
-	public boolean message(CharSequence topic, BlobReader payload) {		
+	public boolean message(CharSequence topic, ChannelReader payload) {		
 		consumer.process(payload);
 		return true;
 	}

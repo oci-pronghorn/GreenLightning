@@ -45,7 +45,7 @@ public class HTTPServer implements GreenApp
 		//in production it is a bad idea to let clients turn off server.
 		shutdownRouteId = c.registerRoute("/shutdown?key=${key}");
 				
-		c.enableTelemetry();
+		//c.enableTelemetry();
 		
     }
 

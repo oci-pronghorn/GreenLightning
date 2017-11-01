@@ -3,7 +3,7 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 public class ThingBehavior implements PubSubListener {
@@ -30,7 +30,7 @@ public class ThingBehavior implements PubSubListener {
     
     
 	@Override
-	public boolean message(CharSequence topic, BlobReader payload) {
+	public boolean message(CharSequence topic, ChannelReader payload) {
 					
 		//
 		////NOTE: this one line will copy messages from payload if consumer returns true

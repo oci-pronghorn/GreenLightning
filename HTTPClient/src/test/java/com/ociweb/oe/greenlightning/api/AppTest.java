@@ -35,7 +35,6 @@ public class AppTest {
 	   	    
 	   	    //this test will hit the above server until it calls shutdown.
 		    GreenRuntime.testUntilShutdownRequested(new HTTPClient(), timeoutMS);
-		    		    
 		
 	 }
 
