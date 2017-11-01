@@ -7,7 +7,6 @@ import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
-import com.thing.Example;
 
 /**
  * Unit test for simple App.
