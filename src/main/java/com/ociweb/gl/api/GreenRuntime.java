@@ -8,6 +8,7 @@ import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
+import com.ociweb.pronghorn.util.math.ScriptedSchedule;
 
 public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	
@@ -108,12 +109,14 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
 				s.run();
 				if (System.nanoTime() > limit) {
+					System.err.println("exit due to timeout");
 					result = false;
 					break;
 				}
 		}		
 
 		s.shutdown();
+		
 		return result;
 	}
 	
@@ -125,7 +128,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
         runtime.builder = new BuilderImpl(runtime.gm,runtime.args);
 
         //lowered for tests, we want tests to run faster, tests probably run on bigger systems.
-        runtime.builder.setDefaultRate(900);
+        runtime.builder.setDefaultRate(10_000);
         
     	app.declareConfiguration(runtime.builder);
         GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
@@ -143,8 +146,78 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	      //exportGraphDotFile();
 	    boolean reverseOrder = false;
 		runtime.scheduler = new ScriptedNonThreadScheduler(runtime.gm, reverseOrder);
+		
+		/////////////
+		//new work investigating the skipping of calls
+		/////////////
+		
+		ScriptedNonThreadScheduler s = (ScriptedNonThreadScheduler)runtime.scheduler;
+		ScriptedSchedule schedule = s.schedule();
+		
+//		//[0, 1, 2, 3, 5, 6, 7, -1, 0, 1, 2, 4, 5, 6, 7, -1]
+//		System.err.println("testing list");
+//		System.err.println(Arrays.toString(schedule.script));
+//		
+//		for(int i = 0; i<s.stages.length; i++) {
+//			System.err.println(i+"  "+s.stages[i].getClass());
+//			
+//		}
+		
+		
+		//skip script is same length as the script
+		GraphManager gm = runtime.gm;
+		
+		//TODO: must store the run count to the next skip point
+		//      skip points are Producers or merge pipe points.
+		//      all others are zero, to take point
+		//high bit will be used to enable and 0 high for disable
+		int[] skipScript = ScriptedNonThreadScheduler.buildSkipScript(schedule, gm, s.stages, schedule.script);
+		
+//		System.err.println(Arrays.toString(skipScript));
+		
+		//if enabled
+		//if value is > 1
+		//if input pipes are empty
+		//     jump n
+		//else
+		//     count down value for each set of empty pipes
+		//     if we have zero at next >1 point enable else disable
+		
+//		
+//		for(int i = 0;i<schedule.script.length;i++) {
+//			if (schedule.script[i] == -1) {
+//				System.err.println("END");
+//			} else {
+//				System.err.println(s.stages[schedule.script[i]].getClass());
+//		
+//				int inC = GraphManager.getInputPipeCount(runtime.gm, s.stages[schedule.script[i]].stageId);
+//				System.err.print("    input: ");
+//				for(int j = 1; j<=inC; j++) {
+//					Pipe p = GraphManager.getInputPipe(runtime.gm, s.stages[schedule.script[i]].stageId, j);
+//					System.err.print(" "+p.id);					
+//				}
+//				System.err.println();
+//				
+//				System.err.print("    output: ");
+//				int outC = GraphManager.getOutputPipeCount(runtime.gm, s.stages[schedule.script[i]].stageId);
+//				for(int j = 1; j<=outC; j++) {
+//					Pipe p = GraphManager.getOutputPipe(runtime.gm, s.stages[schedule.script[i]].stageId, j);
+//					System.err.print(" "+p.id);					
+//				}
+//				System.err.println();
+//			}		
+//		}
+		
+		
+		////////////////
+		////////////////
+		/////////////
+		
+		
+		
 		return (ScriptedNonThreadScheduler) runtime.scheduler;
 	}
+
     
     
     

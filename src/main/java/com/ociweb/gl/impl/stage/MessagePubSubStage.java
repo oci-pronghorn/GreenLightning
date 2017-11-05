@@ -141,8 +141,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
        supportsBatchedPublish = false; //must have immediate publish
    	   supportsBatchedRelease = false; //quick release is desirable to lower latency
-   	   GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, 4_800, this);
-   	   		
+	
 	   topicConversionTrie = new TrieParser(256,1,false,true,false);		
 	   topicConversionTrie.setUTF8Value("/#", 1);  //   /%b     //from this point all wild card to end
 	   topicConversionTrie.setUTF8Value("+/", 2);  //   %b/     //single level wild card up to next /
@@ -153,7 +152,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   //TODO: need a better way to set when no subs are used except for startup only.
 	   tempSubject = RawDataSchema.instance.newPipe(2, 0==incomingSubsAndPubsPipe.length ? estimatedAvgTopicLength : incomingSubsAndPubsPipe[0].maxVarLen);
 	  
-	   GraphManager.addNota(gm, GraphManager.PRODUCER, GraphManager.PRODUCER, this);
     }
 
     

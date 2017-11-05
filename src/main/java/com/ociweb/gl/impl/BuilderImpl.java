@@ -548,7 +548,12 @@ public class BuilderImpl implements Builder {
 
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 				
-		final StageScheduler scheduler = StageScheduler.defaultScheduler(gm);
+		final StageScheduler scheduler = 
+				 runtime.builder.threadLimit>0 ?				
+		         StageScheduler.defaultScheduler(gm, 
+		        		 runtime.builder.threadLimit, 
+		        		 runtime.builder.threadLimitHard) :
+		         StageScheduler.defaultScheduler(gm);
 
 		Runtime.getRuntime().addShutdownHook(new Thread() {
 			public void run() {
@@ -669,7 +674,7 @@ public class BuilderImpl implements Builder {
 	@Override
 	public void limitThreads() {
 		this.threadLimit = idealThreadCount();
-		this.threadLimitHard = false;
+		this.threadLimitHard = true;
 	}
 
 	private int idealThreadCount() {
@@ -844,12 +849,15 @@ public class BuilderImpl implements Builder {
 		 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_NET);
 			}
 
-			if (hasConnections) {
+			if (true | hasConnections) {
 				TrafficCopStage trafficCopStage = new TrafficCopStage(gm, 
 						timeout, orderPipes[t], 
 						ackIn, goOut, 
 						runtime, this);
 			} else {
+				//this optimization can no longer be done due to the use of shutdown on command channel.
+				//    revisit this later...
+				//TODO: we can reintroduce this as long has we have a stage here which does shutdown on -1;
 				PipeCleanerStage.newInstance(gm, orderPipes[t]);
 			}
 		}

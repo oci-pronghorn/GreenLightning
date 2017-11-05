@@ -37,7 +37,7 @@ import com.ociweb.pronghorn.util.field.MessageConsumer;
  */
 public class MsgCommandChannel<B extends BuilderImpl> {
 
-	private final Logger logger = LoggerFactory.getLogger(MsgCommandChannel.class);
+	private final static Logger logger = LoggerFactory.getLogger(MsgCommandChannel.class);
 	
     private Pipe<TrafficOrderSchema> goPipe;
     
@@ -382,10 +382,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
     public boolean shutdown() {
-    	logger.trace("shutdown requested");    	
         assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
         try {
-            if (goHasRoom()) {
+            if (goHasRoom()) {            	
             	MsgCommandChannel.shutdown(this);
                 return true;
             } else {
@@ -1411,6 +1410,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 	
 	public static void shutdown(MsgCommandChannel<?> gcc) {
+		//logger.info("shutdown requested and sent to pipe "+gcc.goPipe);    	
 		PipeWriter.publishEOF(gcc.goPipe);
 	}
 	

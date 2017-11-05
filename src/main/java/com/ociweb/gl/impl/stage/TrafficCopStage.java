@@ -59,8 +59,7 @@ public class TrafficCopStage extends PronghornStage {
         //force all commands to happen upon publish and release
         this.supportsBatchedPublish = false;
         this.supportsBatchedRelease = false;
-       // GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 10_000, this);
-		GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 4_800, this);
+
     }    
     
     public String toString() {

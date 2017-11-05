@@ -302,6 +302,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	    		public void run() {
 	    			//all the software has now stopped so shutdown the hardware now.
 	    			builder.shutdown();
+	    			
 	    		}    		
 	    	};
 	    	
@@ -494,7 +495,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);           
 		
-		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, routerCount, serverConfig, encryptedIncomingGroup, -1);
+		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, routerCount, serverConfig, encryptedIncomingGroup);
 		               
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
@@ -503,7 +504,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			planIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);
 			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, 
 					                      serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
-					                      encryptedIncomingGroup, planIncomingGroup, acks, -1);
+					                      encryptedIncomingGroup, planIncomingGroup, acks);
 		} else {
 			planIncomingGroup = encryptedIncomingGroup;
 		}
@@ -614,16 +615,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		boolean catchAll = builder.routerConfig().routesCount()==0;
 		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, 
 				                     fromRouterToModules, errorResponsePipes, routerConfig,
-				                     serverCoord, -1, catchAll);
+				                     serverCoord, catchAll);
 		
 	
 		//NOTE: this array populated here must be equal or larger than the fromModules..
-		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup, (long) -1);
+		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup);
 		
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
 		
 		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, routerCount, 
-				                            fromModulesToOrderSuper, fromOrderedContent, -1);
+				                            fromModulesToOrderSuper, fromOrderedContent);
 	}
 	//////////////////
 	//end of server and other behavior
