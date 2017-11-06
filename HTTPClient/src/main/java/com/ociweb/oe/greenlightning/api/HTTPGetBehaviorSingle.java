@@ -30,13 +30,20 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 	    cmd.publishTopic("next");
 	}
 	
-	
+	long d = 0;
+	long c = 0;
 
 	@Override
 	public boolean responseHTTP(HTTPResponseReader reader) {
 		
 		long duration = System.nanoTime()-reqTime;
-		Appendables.appendNearestTimeUnit(System.err, duration, " latency\n");
+		
+		d+=duration;
+		c+=1;
+		
+		if(0==(0xFFF&c)) {//running average
+			Appendables.appendNearestTimeUnit(System.err, d/c, " latency\n");
+		}
 		
 	//	System.out.println(" status:"+reader.statusCode());
 	//	System.out.println("   type:"+reader.contentType());
@@ -57,7 +64,7 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 	}
 
 
-	int countDown = 1025;
+	int countDown = 40000;
 	long reqTime = 0;
 
 	@Override
