@@ -684,16 +684,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			try {
 				Thread.sleep(msRemaining-1);
 			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
 			}
 		}		
-		long now;
-		while ((now = builder.currentTimeMillis()) < trigger) {
-			Thread.yield();                	
-		}
+
+		long now = System.nanoTime();
+		
 		int iteration = timeIteration++;		
 		listener.timeEvent(trigger, iteration);
 		
-		long duration = builder.currentTimeMillis()-now;
+		long duration = (System.nanoTime()-now)/MS_to_NS;
 		
 		if (duration>timeRate) {
 			logger.warn("time pulse is scheduled at a rate of {}ms "

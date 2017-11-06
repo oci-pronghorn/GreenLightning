@@ -111,15 +111,14 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 		long remaningNanos = durationNanos%1_000_000;		
 			    
 	    if (remaningNanos>0) {
-	    	final long start = hardware.nanoTime();
-	    	final long limit = start+remaningNanos;
-	    	while (hardware.nanoTime()<limit) {
-	    		Thread.yield();
-	    		if (Thread.interrupted()) {
-	    			Thread.currentThread().interrupt();
-	    			return;
-	    		}
-	    	}
+	    	
+	    	try {
+				Thread.sleep(0L, (int)remaningNanos);
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+    			return;
+			}
+	    	
 	    }
 	    if (durationMills>0) {
 	    	//now pull the current time and wait until ms have passed	    	
