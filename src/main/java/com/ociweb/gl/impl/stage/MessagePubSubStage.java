@@ -152,6 +152,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   //TODO: need a better way to set when no subs are used except for startup only.
 	   tempSubject = RawDataSchema.instance.newPipe(2, 0==incomingSubsAndPubsPipe.length ? estimatedAvgTopicLength : incomingSubsAndPubsPipe[0].maxVarLen);
 	  
+	   GraphManager.addNota(gm, GraphManager.DOT_BACKGROUND, "gold2", this);
     }
 
     
