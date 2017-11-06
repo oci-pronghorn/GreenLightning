@@ -63,10 +63,7 @@ public class EgressMQTTStage extends PronghornStage {
 		
 		supportsBatchedRelease = false; //must have immediate release
 		supportsBatchedPublish = false; //also we want to minimize outgoing latency.
-		
-		//run often to move out the new publications
-		GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 1_200, this);
-		
+				
 	}
 
 	private boolean isMatching(CharSequence[] internalTopic, CharSequence[] externalTopic,
