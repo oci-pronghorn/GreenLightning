@@ -15,6 +15,7 @@ public class HTTPClient implements GreenApp
     	//c.NetClient();
     	
     	//c.enableTelemetry();
+    	//c.enableTelemetry("127.0.0.1",8099);
     	
     	//ClientCoordinator.showHistogramResults = true;
     }

@@ -21,7 +21,7 @@ public class AppTest {
 		    String host = "127.0.0.1";
 		    
 		    final StringBuilder result = new StringBuilder();
-		    final long timeoutMS = 10_000;
+		    final long timeoutMS = 10_000*60;
 		
 		    GreenRuntime.run(new HTTPServer(host, result));
 		 
