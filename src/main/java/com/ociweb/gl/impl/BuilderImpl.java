@@ -1011,7 +1011,17 @@ public class BuilderImpl implements Builder {
 			    
 	    if (remaningNanos>0) {
 	    	try {
+	    		long limit = System.nanoTime()+remaningNanos;
+	    		
 				Thread.sleep(0L, (int)remaningNanos);
+				
+				long dif;
+				while ((dif = (limit-System.nanoTime()))>0) {
+					if (dif>100) {
+						Thread.yield();
+					}
+				}
+				
 			} catch (InterruptedException e) {
 				Thread.currentThread().interrupt();
     			return;
