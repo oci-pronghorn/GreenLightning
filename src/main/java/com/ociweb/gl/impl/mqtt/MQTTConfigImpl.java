@@ -1,6 +1,7 @@
 package com.ociweb.gl.impl.mqtt;
 
 import com.ociweb.gl.api.*;
+import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.pipe.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -225,9 +226,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			final byte totalConnectionsInBits = 2; //only 4 brokers
 			final short maxPartialResponses = 1;
 			String user = null;
-			String pass = null; 
-			
-			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, isTLS, 
+			String pass = null;
+
+			TLSCertificates certs  = isTLS ? TLSCertificates.defaultCerts : null;
+			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, certs,
 					                              maxInFlight,
 					                              maximumLenghOfVariableLengthFields, 
 					                              clientRequest, clientResponse, rate, 

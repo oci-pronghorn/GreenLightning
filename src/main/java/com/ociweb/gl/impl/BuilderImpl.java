@@ -1,71 +1,35 @@
 package com.ociweb.gl.impl;
 
-import java.util.ArrayList;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ociweb.gl.api.Behavior;
-import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.ListenerTransducer;
-import com.ociweb.gl.api.MsgCommandChannel;
-import com.ociweb.gl.api.MsgRuntime;
-import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.PubSubMethodListener;
-import com.ociweb.gl.api.RestMethodListener;
-import com.ociweb.gl.api.TimeTrigger;
+import com.ociweb.gl.api.*;
 import com.ociweb.gl.api.transducer.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.transducer.PubSubListenerTransducer;
 import com.ociweb.gl.api.transducer.RestListenerTransducer;
 import com.ociweb.gl.api.transducer.StateChangeListenerTransducer;
 import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
-import com.ociweb.gl.impl.schema.IngressMessages;
-import com.ociweb.gl.impl.schema.MessagePubSub;
-import com.ociweb.gl.impl.schema.MessageSubscription;
-import com.ociweb.gl.impl.schema.TrafficAckSchema;
-import com.ociweb.gl.impl.schema.TrafficOrderSchema;
-import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
-import com.ociweb.gl.impl.stage.HTTPClientRequestTrafficStage;
-import com.ociweb.gl.impl.stage.MessagePubSubStage;
-import com.ociweb.gl.impl.stage.ReactiveListenerStage;
-import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
-import com.ociweb.gl.impl.stage.ReactiveOperators;
-import com.ociweb.gl.impl.stage.TrafficCopStage;
+import com.ociweb.gl.impl.schema.*;
+import com.ociweb.gl.impl.stage.*;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
-import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
-import com.ociweb.pronghorn.network.config.HTTPSpecification;
-import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.config.*;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
-import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
-import com.ociweb.pronghorn.network.schema.NetResponseSchema;
-import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
-import com.ociweb.pronghorn.pipe.MessageSchema;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeConfig;
-import com.ociweb.pronghorn.pipe.PipeConfigManager;
-import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.network.schema.*;
+import com.ociweb.pronghorn.pipe.*;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
-import com.ociweb.pronghorn.stage.scheduling.FixedThreadsScheduler;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
-import com.ociweb.pronghorn.stage.scheduling.ThreadPerStageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static com.ociweb.gl.api.MQTTBridge.defaultPort;
 import static com.ociweb.gl.api.MQTTBridge.tlsPort;
@@ -912,7 +876,8 @@ public class BuilderImpl implements Builder {
 					
 					
 			//BUILD GRAPH
-			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, isTLS);
+			TLSCertificates certs  = isTLS ? TLSCertificates.defaultCerts : null;
+			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, certs);
 		
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;

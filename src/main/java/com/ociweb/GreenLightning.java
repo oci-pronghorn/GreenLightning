@@ -1,17 +1,17 @@
 package com.ociweb;
 
+import com.ociweb.pronghorn.HTTPServer;
+import com.ociweb.pronghorn.network.NetGraphBuilder;
+import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.http.ModuleConfig;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.List;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ociweb.pronghorn.HTTPServer;
-import com.ociweb.pronghorn.network.NetGraphBuilder;
-import com.ociweb.pronghorn.network.http.ModuleConfig;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class GreenLightning {
 	//$ java -jar phogLite.jar --s ../src/main/resources/site
@@ -70,8 +70,9 @@ public class GreenLightning {
 	    final int fileChunkSize = large? 1<<14 : 1<<10;
 	    
 		GraphManager gm = new GraphManager();
+		TLSCertificates certs  = Boolean.parseBoolean(isTLS)  ? TLSCertificates.defaultCerts : null;
 		HTTPServer.startupHTTPServer(gm, large, 
-				GreenLightning.simpleModuleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, Boolean.parseBoolean(isTLS) );
+				GreenLightning.simpleModuleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, certs);
         		
 		System.out.println("Press \"ENTER\" to exit...");
 		int value = -1;

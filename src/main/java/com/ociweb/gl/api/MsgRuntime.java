@@ -1,20 +1,6 @@
 package com.ociweb.gl.api;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.concurrent.TimeUnit;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ociweb.gl.impl.BridgeConfigImpl;
-import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.ChildClassScanner;
-import com.ociweb.gl.impl.ChildClassScannerVisitor;
-import com.ociweb.gl.impl.RestListenerBase;
+import com.ociweb.gl.impl.*;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.EgressConverter;
@@ -24,9 +10,9 @@ import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
+import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
-import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
@@ -42,6 +28,15 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.concurrent.TimeUnit;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
@@ -484,7 +479,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 		ServerPipesConfig serverConfig = new ServerPipesConfig(builder.isLarge(), builder.isServerTLS());
 
-		ServerCoordinator serverCoord = new ServerCoordinator( builder.isServerTLS(),
+		TLSCertificates certs  = builder.isServerTLS() ? TLSCertificates.defaultCerts : null;
+		ServerCoordinator serverCoord = new ServerCoordinator( certs,
 															   (String) builder.bindHost(), builder.bindPort(), 
 				                                               serverConfig.maxConnectionBitsOnServer, 
 				                                               serverConfig.maxPartialResponsesServer, 
