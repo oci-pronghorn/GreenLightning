@@ -38,6 +38,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	//
 	private int flags;
 	private final boolean isTLS;
+	private final TLSCertificates certificates;
 	
 	private final short maxInFlight;
 	private final int maximumLenghOfVariableLengthFields;
@@ -58,9 +59,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
 			       BuilderImpl builder, long rate, 
 			       short maxInFlight, int maxMessageLength,
-			       boolean isTLS) {
+			       TLSCertificates certificates) {
 		
-		this.isTLS =isTLS;
+		this.isTLS = certificates != null;
+		this.certificates = certificates;
 		this.host = host;
 		this.port = port;
 		this.clientId = clientId;
@@ -228,8 +230,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			String user = null;
 			String pass = null;
 
-			TLSCertificates certs  = isTLS ? TLSCertificates.defaultCerts : null;
-			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, certs,
+			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, certificates,
 					                              maxInFlight,
 					                              maximumLenghOfVariableLengthFields, 
 					                              clientRequest, clientResponse, rate, 

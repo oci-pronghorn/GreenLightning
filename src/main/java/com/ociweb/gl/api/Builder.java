@@ -1,5 +1,7 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.TLSCertificates;
+
 /**
  * Base interface for an IoT device's hardware.
  * <p>
@@ -74,6 +76,8 @@ public interface Builder extends ArgumentProvider {
 	 * The default maximum messageLength is 4K
 	 */
 	MQTTBridge useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId);
+
+	MQTTBridge useMQTT(CharSequence host, int port, TLSCertificates certificates, CharSequence clientId);
 	
 	MQTTBridge useMQTT(CharSequence host, boolean isTLS, CharSequence clientId);
 	
