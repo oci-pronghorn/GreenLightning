@@ -1,28 +1,16 @@
 package com.ociweb.oe.greenlightning.api;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import java.io.IOException;
-import java.net.ConnectException;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
-
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
+import com.ociweb.gl.api.GreenRuntime;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.GreenRuntime;
+import java.io.IOException;
+import java.net.*;
+
+import static com.ociweb.pronghorn.network.TLSCertificateTrust.trustAllCerts;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * Unit test for simple App.
@@ -106,36 +94,6 @@ public class AppTest {
 			e.printStackTrace();
 			fail();
 		}
-	}
-
-	public static void trustAllCerts(final String host) {
-		logger.warn("WARNING: this scope will now accept all certs on host: "+host+". This is for testing only!");
-		
-		try {
-		     SSLContext sc = SSLContext.getInstance("SSL");
-		     TrustManager[] trustAllCerts = new TrustManager[]{
-		    		 new X509TrustManager() {
-		    			 public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-		    				 return null;
-		    			 }
-		    			 public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-		    			 }
-		    			 public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-		    			 }
-		    		 }
-		     };
-		     sc.init(null, trustAllCerts, new java.security.SecureRandom());
-		     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-		     
-		     HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier() {
-		         public boolean verify(String hostname, SSLSession session) {
-		        	 return hostname.equals(host);
-		         }
-		     });
-		     
-		 } catch (Exception e) {
-		    throw new RuntimeException(e);
-		 }
 	}
 	
 }

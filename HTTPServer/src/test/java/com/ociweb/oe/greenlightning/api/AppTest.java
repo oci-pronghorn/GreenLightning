@@ -1,29 +1,24 @@
 package com.ociweb.oe.greenlightning.api;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.util.Appendables;
+import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.ConnectException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-
-import org.junit.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.util.Appendables;
+import static com.ociweb.pronghorn.network.TLSCertificateTrust.trustAllCerts;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 /**
  * Unit test for simple App.
@@ -164,35 +159,5 @@ public class AppTest {
 				baos.write(buffer, 0, length);
 			}
 			return baos;
-		}
-	 
-		public static void trustAllCerts(final String host) {
-			logger.warn("WARNING: this scope will now accept all certs on host: "+host+". This is for testing only!");
-			
-			try {
-			     SSLContext sc = SSLContext.getInstance("SSL");
-			     TrustManager[] trustAllCerts = new TrustManager[]{
-			    		 new X509TrustManager() {
-			    			 public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-			    				 return null;
-			    			 }
-			    			 public void checkClientTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-			    			 }
-			    			 public void checkServerTrusted(java.security.cert.X509Certificate[] certs, String authType) {
-			    			 }
-			    		 }
-			     };
-			     sc.init(null, trustAllCerts, new java.security.SecureRandom());
-			     HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
-			     
-			     HttpsURLConnection.setDefaultHostnameVerifier(new HostnameVerifier() {
-			         public boolean verify(String hostname, SSLSession session) {
-			        	 return hostname.equals(host);
-			         }
-			     });
-			     
-			 } catch (Exception e) {
-			    throw new RuntimeException(e);
-			 }
 		}
 }
