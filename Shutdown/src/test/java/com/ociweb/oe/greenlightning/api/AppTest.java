@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.*;
 
-import static com.ociweb.pronghorn.network.TLSCertificateTrust.trustAllCerts;
+import static com.ociweb.pronghorn.network.TLSCertificateTrust.httpsURLConnectionTrustAllCerts;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -37,7 +37,7 @@ public class AppTest {
 	private void simulateUser() {
 		new Thread(()->{
 
-				trustAllCerts("127.0.0.1");
+				httpsURLConnectionTrustAllCerts("127.0.0.1");
 
 				hitFirstURL();				
 				

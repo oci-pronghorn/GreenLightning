@@ -16,7 +16,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.ociweb.pronghorn.network.TLSCertificateTrust.trustAllCerts;
+import static com.ociweb.pronghorn.network.TLSCertificateTrust.httpsURLConnectionTrustAllCerts;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
@@ -67,8 +67,8 @@ public class AppTest {
 	 
 
 		private void simulateUser(String host) {
-	
-					trustAllCerts(host);
+
+			httpsURLConnectionTrustAllCerts(host);
 					
 					int countDown = 400;
 					while (!hitURL("https://"+host+":8088/testPageB", null, null, "beginning of text file\n")) {
