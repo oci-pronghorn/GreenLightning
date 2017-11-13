@@ -95,6 +95,22 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
         test(app, runtime);
 		return runtime;
     }
+	
+	public static boolean testConcurrentUntilShutdownRequested(GreenApp app, long timeoutMS) {
+		
+		 long limit = System.nanoTime() + (timeoutMS*1_000_000L);
+		 
+		 MsgRuntime runtime = run(app);
+    	
+    	 while (!runtime.isShutdownRequested()) {
+    		if (System.nanoTime() > limit) {
+				System.err.println("exit due to timeout");
+				return false;
+    		}
+    		Thread.yield();
+    	 }
+    	 return true;
+	}
 
 	public static boolean testUntilShutdownRequested(GreenApp app, long timeoutMS) {
 		GreenRuntime runtime = new GreenRuntime();

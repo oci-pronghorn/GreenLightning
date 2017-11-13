@@ -153,6 +153,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   tempSubject = RawDataSchema.instance.newPipe(2, 0==incomingSubsAndPubsPipe.length ? estimatedAvgTopicLength : incomingSubsAndPubsPipe[0].maxVarLen);
 	  
 	   GraphManager.addNota(gm, GraphManager.DOT_BACKGROUND, "gold2", this);
+	   GraphManager.addNota(gm, GraphManager.ISOLATE, GraphManager.ISOLATE, this);
+	   
     }
 
     
@@ -336,6 +338,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	        	processPending();
 	            if (pendingPublishCount>0) {
 	            	foundWork = false;
+	            	System.err.println("aaaa");
 	            	//do not pick up new work until this is done or we may get out of order messages.
 	                return;//try again later
 	            } else {
@@ -486,12 +489,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         long[] targetMakrs = consumedMarks[a];
 
         
-//        logger.info("enter while {}, {}, {} ,{} ,{}",
+//        logger.info("enter while {}, {}, {} ,{} ,{}, {}, {}",
 //        		isPreviousConsumed(a),
 //        		PipeReader.hasContentToRead(pipe),
 //        		hasReleaseCountRemaining(a),
 //        		isChannelUnBlocked(a),
-//        		isNotBlockedByStateChange(pipe));
+//        		isNotBlockedByStateChange(pipe), a, pipe);
         
         
         while (isPreviousConsumed(a) && //warning this one has side effect and must come first.
@@ -882,6 +885,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             		
             PipeWriter.publishWrites(outPipe);
         } else {
+        	System.err.println("xxxxxxxxxxxxxxxxxxxxxxxxx stored for later");
         	pendingPublish[pendingPublishCount++] = pipeIdx;
         	pendingIngress = false;
         }

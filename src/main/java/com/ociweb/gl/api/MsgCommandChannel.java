@@ -13,6 +13,7 @@ import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -104,12 +105,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.parallelInstanceId = parallelInstanceId;
     }
 
-
-    
     public boolean hasRoomFor(int messageCount) {
 		return Pipe.hasRoomForWrite(goPipe, 
     			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(goPipe))*messageCount);
     }
+    
+    public boolean hasRoomForHTTP(int messageCount) {
+		return Pipe.hasRoomForWrite(httpRequest, 
+    			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(httpRequest))*messageCount);
+    }
+    
     
     public void ensureDynamicMessaging() {
     	if (null!=this.goPipe) {
@@ -557,8 +562,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the request was successfully submitted, and false otherwise.
      */
     public boolean httpPost(HTTPSession session, CharSequence route, CharSequence headers, Writable payload) {
-    	int routeId = builder.behaviorId((HTTPResponseListener)(HTTPResponseListener)listener);
-		
+    	return httpPost(session, route, headers, payload, builder.behaviorId((HTTPResponseListener)(HTTPResponseListener)listener));
+		   	
+    }
+
+	public boolean httpPost(HTTPSession session, CharSequence route, CharSequence headers, Writable payload,
+			int routeId) {
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
@@ -585,8 +594,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		    return true;
 		} 
 		return false;
-		   	
-    }
+	}
 
     /**
      * Subscribes the listener associated with this command channel to
@@ -1165,7 +1173,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	////////////////////////////////////
 	
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
-			                           int statusCode, boolean hasContinuation,
+			                           int statusCode, 
+			                           boolean hasContinuation,
 			                           HTTPContentType contentType,
 			                           Writable writable) {
 		
@@ -1249,13 +1258,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				//////////////////////////////////////////
 				//begin message 2 which contains the body
 				//////////////////////////////////////////
-				NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);	
 				
 				Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
 				Pipe.addLongValue(connectionId, pipe);
 				Pipe.addIntValue(sequenceNo, pipe);	
 				
-				outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
+				NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 				
 				int context;
 				if (hasContinuation) {
@@ -1282,8 +1290,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				////////////////////Write the header
 
 				DataOutputBlobWriter.openFieldAtPosition(outputStream, block1HeaderBlobPosition);
-				outputStream.writeUTF(headers);
-
+				
+				//HACK TODO: must formalize response building..
+				outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());
+				outputStream.append(" 200 OK\r\n");
+				outputStream.append(headers);
+				outputStream.append("Content-Length: "+len+"\r\n");
+				outputStream.append("\r\n");
+				
+				//outputStream.debugAsUTF8();
+				
 				int propperLength = DataOutputBlobWriter.length(outputStream);
 				Pipe.validateVarLength(outputStream.getPipe(), propperLength);
 				Pipe.setIntValue(propperLength, outputStream.getPipe(), block1PositionOfLen); //go back and set the right length.

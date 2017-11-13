@@ -87,8 +87,11 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		final int sizeOfHeaderId = 2;
 
 		int headerFieldIdx = readFromEndLastInt(offset);
-
-		if(headerFieldIdx > 0) {
+		
+	//TODO: this is expected to be empty??	
+	//	assert(headerFieldIdx<=length) : "index of "+headerFieldIdx+" is out of limit "+length;
+		
+		if(headerFieldIdx > 0 && headerFieldIdx<length) {
 			setPositionBytesFromStart(headerFieldIdx-sizeOfHeaderId);
 			return readShort();
 		}

@@ -61,6 +61,7 @@ public class TrafficCopStage extends PronghornStage {
         this.supportsBatchedRelease = false;
 
         GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "cadetblue2", this);
+        GraphManager.addNota(graphManager, GraphManager.TRIGGER, GraphManager.TRIGGER, this);
         
     }    
     

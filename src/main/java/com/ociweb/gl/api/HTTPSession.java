@@ -10,6 +10,10 @@ public class HTTPSession {
 	//cache
 	private long connectionId;
 	
+	public String toString() {
+		return host+":"+port;
+	}
+	
 	public HTTPSession(String host, int port, int sessionId) {
 		this.host = host;
 		this.hostBytes = host.getBytes();

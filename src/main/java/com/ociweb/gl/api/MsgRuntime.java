@@ -285,7 +285,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     public void shutdownRuntime(final int secondsTimeout) {
     	//only do if not already done.
-    	if (!ReactiveListenerStage.isShutdownRequested()) {
+    	if (!isShutdownRequested()) {
     	
 	    	if (null == scheduler || null == builder) {
 	    		System.exit(0);
@@ -313,6 +313,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	    	});
     	}
     }
+
+	public boolean isShutdownRequested() {
+		return ReactiveListenerStage.isShutdownRequested();
+	}
     
 
 	//////////

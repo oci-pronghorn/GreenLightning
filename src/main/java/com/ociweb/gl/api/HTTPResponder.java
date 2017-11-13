@@ -39,11 +39,11 @@ public class HTTPResponder {
 	    this.writable = new Writable() {
 			@Override
 			public void write(ChannelWriter writer) {
-				int size = Pipe.takeMsgIdx(pipe);												
+				int msg = Pipe.takeMsgIdx(pipe);												
 				DataInputBlobReader<RawDataSchema> dataStream = Pipe.inputStream(pipe);
 				dataStream.openLowLevelAPIField();
 				dataStream.readInto(writer,dataStream.available());
-				Pipe.confirmLowLevelRead(pipe, size);
+				Pipe.confirmLowLevelRead(pipe, Pipe.sizeOf(RawDataSchema.instance, msg));
 				Pipe.releaseReadLock(pipe);
 			}
 		};
@@ -68,10 +68,10 @@ public class HTTPResponder {
 			return true;
 		} else {
 			if (connectionId>=0 && sequenceCode>=0) {
-			
+			    //will not pick up new data, waiting for these to be consumed.
 				return false;
 			} else {
-				//wait for second call
+				//wait for a following call
 				
 				////example of what the writer does
 				//writer.writePackedLong(connectionId);
@@ -89,17 +89,20 @@ public class HTTPResponder {
 		
 		if (connectionId>=0 && sequenceCode>=0) {
 			
-			commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
-				                           hasContinuation, headers, writable);
-		    connectionId = -1;
-		    sequenceCode = -1;
-		    return true;
+			if (commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
+				                           hasContinuation, headers, writable)) {
+			    connectionId = -1;
+			    sequenceCode = -1;
+			    return true;
+			} else {
+				return false;
+			}
 		    
 		} else {
 		 
-			if (Pipe.hasContentToRead(pipe)) {
+			if (Pipe.contentRemaining(pipe)!=0) {
+				//can't store since we are waiting for the con and seq
 				return false;
-				
 			} else {
 			
 				//store data to write later.
@@ -117,8 +120,7 @@ public class HTTPResponder {
 
 	private void storeData(Writable writable) {
 		Pipe.addMsgIdx(pipe, RawDataSchema.MSG_CHUNKEDSTREAM_1);
-		DataOutputBlobWriter<RawDataSchema> outputStream = Pipe.outputStream(pipe);
-		DataOutputBlobWriter.openField(outputStream);				
+		DataOutputBlobWriter<RawDataSchema> outputStream = Pipe.openOutputStream(pipe);				
 		writable.write(outputStream);
 		DataOutputBlobWriter.closeLowLevelField(outputStream);
 		Pipe.confirmLowLevelWrite(pipe,Pipe.sizeOf(RawDataSchema.instance, RawDataSchema.MSG_CHUNKEDSTREAM_1));

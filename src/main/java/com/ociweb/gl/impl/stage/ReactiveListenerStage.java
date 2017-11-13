@@ -433,15 +433,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	      if (HTTPRequestSchema.MSG_RESTREQUEST_300==msgIdx) {
     	    	 
     	    	  long connectionId = Pipe.takeLong(p);
-    	    	  int sequenceNo = Pipe.takeInt(p);    	    	  
+    	    	  final int sequenceNo = Pipe.takeInt(p);    	    	  
 
     	    	  int routeVerb = Pipe.takeInt(p);
     	    	  int routeId = routeVerb>>>HTTPVerb.BITS;
     	    	  int verbId = HTTPVerb.MASK & routeVerb;
     	    	  
     	    	      	    	  
-    	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.inputStream(p);
-    	    	  reader.openLowLevelAPIField(); //NOTE: this will take meta then take len
+    	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.openInputStream(p);
     	        	    	    	  
  				  reader.setParseDetails( builder.routeExtractionParser(routeId),
  						                  builder.routeHeaderToPositionTable(routeId), 
@@ -462,6 +461,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  //both these values are required in order to ensure the right sequence order once processed.
     	    	  long sequenceCode = (((long)parallelIdx)<<32) | ((long)sequenceNo);
     	    	  
+    	    	  //System.err.println("Reader is given seuqence code of "+sequenceNo);
     	    	  reader.setConnectionId(connectionId, sequenceCode);
     	    	  
     	    	  //assign verbs as strings...
@@ -478,6 +478,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    		  
     	    	  } else {
     	    		  if (listener instanceof RestListener) {
+    	    			  
 		    	    	  if (!((RestListener)listener).restRequest(reader)) {
 			            		 Pipe.resetTail(p);
 			            		 return;//continue later and repeat this same value.
