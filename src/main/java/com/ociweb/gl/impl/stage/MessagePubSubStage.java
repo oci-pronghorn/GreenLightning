@@ -153,7 +153,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   tempSubject = RawDataSchema.instance.newPipe(2, 0==incomingSubsAndPubsPipe.length ? estimatedAvgTopicLength : incomingSubsAndPubsPipe[0].maxVarLen);
 	  
 	   GraphManager.addNota(gm, GraphManager.DOT_BACKGROUND, "gold2", this);
-	   GraphManager.addNota(gm, GraphManager.ISOLATE, GraphManager.ISOLATE, this);
+	   GraphManager.addNota(gm, GraphManager.ROUTER_HUB, GraphManager.ROUTER_HUB, this);
 	   
     }
 
