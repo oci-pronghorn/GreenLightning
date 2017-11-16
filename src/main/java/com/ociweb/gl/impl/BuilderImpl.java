@@ -95,7 +95,7 @@ public class BuilderImpl implements Builder {
 	private int bindPort = -1;
 	private boolean isLarge = false;
 	private boolean isTLSServer = true; 
-	private boolean isTLSClient = true; 
+	private TLSCertificates clientTLS;
 
 	private ClientCoordinator ccm;
 
@@ -178,7 +178,7 @@ public class BuilderImpl implements Builder {
 	}
 	
 	public final boolean isClientTLS() {
-		return isTLSClient;
+		return clientTLS != null;
 	}
 	
 	
@@ -414,17 +414,21 @@ public class BuilderImpl implements Builder {
 		return this;
 	}
 
+	@Override
 	public final Builder useNetClient() {
-		this.useNetClient = true;
-
-		return this;
+		return useNetClient(TLSCertificates.defaultCerts);
 	}
-	
-	public final Builder useInsecureNetClient() {
-		this.useNetClient = true;
-		this.isTLSClient = false;
 
-		return this;
+	@Override
+	public final Builder useInsecureNetClient() {
+		return useNetClient((TLSCertificates) null);
+	}
+
+	@Override
+	public Builder useNetClient(TLSCertificates certificates) {
+		this.useNetClient = true;
+		this.clientTLS = certificates;
+		return null;
 	}
 
 	public final Builder useNetServer() {
@@ -853,7 +857,6 @@ public class BuilderImpl implements Builder {
 			
 			int connectionsInBits=10;			
 			int maxPartialResponses=4;
-			boolean isTLS = isClientTLS();
 			int responseQueue = 10;
 			int responseSize = 1<<16;
 			int outputsCount = 1;
@@ -873,8 +876,7 @@ public class BuilderImpl implements Builder {
 					
 					
 			//BUILD GRAPH
-			TLSCertificates certs  = isTLS ? TLSCertificates.defaultCerts : null;
-			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, certs);
+			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, clientTLS);
 		
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;

@@ -1,5 +1,7 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.TLSCertificates;
+
 /**
  * Base interface for an IoT device's hardware.
  * <p>
@@ -92,6 +94,7 @@ public interface Builder extends ArgumentProvider {
 
 	
 	Builder useNetClient();
+	Builder useNetClient(TLSCertificates certificates);
 	Builder useInsecureNetClient();
 
 }
