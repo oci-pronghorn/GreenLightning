@@ -186,6 +186,8 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 				    	}				    	
 					}				    
 				    
+				    //TODO: this high level tryReadFragment is a hot spot.
+				    //      The traffic classes should be changed to low level usages.
 				    
 					//pull all known the values into the active counts array
 					if ((localActiveCounts[a] == -1) && PipeReader.tryReadFragment(goPipe[a])) {                    

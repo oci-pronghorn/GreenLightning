@@ -130,8 +130,6 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 					break;
 				}
 		}		
-
-		s.shutdown();
 		
 		return result;
 	}

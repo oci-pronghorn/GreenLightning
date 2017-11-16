@@ -179,6 +179,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         if (listener instanceof TimeListener) {
         	toStringDetails = toStringDetails+"TimeListener\n";
         	timeListener = (TimeListener)listener;
+        	//time listeners are producers by definition
+        	GraphManager.addNota(graphManager, GraphManager.PRODUCER, GraphManager.PRODUCER, this);
+        	
         } else {
         	timeListener = null;
         }   

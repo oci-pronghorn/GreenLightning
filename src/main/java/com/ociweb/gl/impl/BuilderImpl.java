@@ -31,9 +31,6 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.ociweb.gl.api.MQTTBridge.defaultPort;
-import static com.ociweb.gl.api.MQTTBridge.tlsPort;
-
 public class BuilderImpl implements Builder {
 
 	private static final int DEFAULT_MAX_MQTT_IN_FLIGHT = 10;
@@ -97,8 +94,8 @@ public class BuilderImpl implements Builder {
 	private String bindHost = null;
 	private int bindPort = -1;
 	private boolean isLarge = false;
-	private boolean isTLSServer = true; 
-	private boolean isTLSClient = true; 
+	private TLSCertificates serverTLS;
+	private TLSCertificates clientTLS;
 
 	private ClientCoordinator ccm;
 
@@ -177,15 +174,22 @@ public class BuilderImpl implements Builder {
 	}
 	
 	public final boolean isServerTLS() {
-		return isTLSServer;
+		return serverTLS != null;
+	}
+
+	public final TLSCertificates serverCerts() {
+		return serverTLS;
 	}
 	
 	public final boolean isClientTLS() {
-		return isTLSClient;
+		return clientTLS != null;
 	}
 	
 	
 	public final String bindHost() {
+		if (null==this.bindHost) {
+			this.bindHost = NetGraphBuilder.bindHost();
+		}
 		return bindHost;
 	}
 	
@@ -196,8 +200,7 @@ public class BuilderImpl implements Builder {
 	public final String defaultHostPath() {
 		return defaultHostPath;
 	}
-	
-	
+
 	public ClientCoordinator getClientCoordinator() {
 		return ccm;
 	}
@@ -211,7 +214,7 @@ public class BuilderImpl implements Builder {
     	this.useNetServer();
 
     	this.defaultHostPath = defaultPath;
-    	this.isTLSServer = isTLS;
+    	this.serverTLS = isTLS ? TLSCertificates.defaultCerts : null;
     	this.isLarge = isLarge;
     	this.bindHost = bindHost;
     	if (null==this.bindHost) {
@@ -222,6 +225,51 @@ public class BuilderImpl implements Builder {
     		throw new UnsupportedOperationException("invalid port "+bindPort);
     	}
     }
+
+	@Override
+	public HTTPServerConfig useServer(int bindPort) {
+		this.bindPort = bindPort;
+		if (bindPort<=0 || (bindPort>=(1<<16))) {
+			throw new UnsupportedOperationException("invalid port "+bindPort);
+		}
+		this.defaultHostPath = "";
+		this.serverTLS = null;
+		this.isLarge = false;
+		this.bindHost = null;
+		this.useNetServer();
+
+		return new HTTPServerConfig() {
+			@Override
+			public HTTPServerConfig setDefaultPath(String defaultPath) {
+				BuilderImpl.this.defaultHostPath = defaultPath;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setHost(String host) {
+				BuilderImpl.this.bindHost = host;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setTLS(TLSCertificates certificates) {
+				BuilderImpl.this.serverTLS = certificates;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setTLS() {
+				BuilderImpl.this.serverTLS = TLSCertificates.defaultCerts;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setIsLarge() {
+				BuilderImpl.this.isLarge = true;
+				return this;
+			}
+		};
+	}
  
 	public final void enableServer(boolean isTLS, int bindPort) {
 		enableServer(isTLS, bindPort, "");
@@ -417,17 +465,21 @@ public class BuilderImpl implements Builder {
 		return this;
 	}
 
+	@Override
 	public final Builder useNetClient() {
-		this.useNetClient = true;
-
-		return this;
+		return useNetClient(TLSCertificates.defaultCerts);
 	}
-	
-	public final Builder useInsecureNetClient() {
-		this.useNetClient = true;
-		this.isTLSClient = false;
 
-		return this;
+	@Override
+	public final Builder useInsecureNetClient() {
+		return useNetClient((TLSCertificates) null);
+	}
+
+	@Override
+	public Builder useNetClient(TLSCertificates certificates) {
+		this.useNetClient = true;
+		this.clientTLS = certificates;
+		return null;
 	}
 
 	public final Builder useNetServer() {
@@ -847,7 +899,8 @@ public class BuilderImpl implements Builder {
 
 	
 	protected void buildHTTPClientGraph(Pipe<NetResponseSchema>[] netResponsePipes,
-			Pipe<ClientHTTPRequestSchema>[] netRequestPipes, Pipe<TrafficReleaseSchema>[][] masterGoOut,
+			Pipe<ClientHTTPRequestSchema>[] netRequestPipes, 
+			Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn) {
 		////////
 		//create the network client stages
@@ -856,9 +909,7 @@ public class BuilderImpl implements Builder {
 			
 			int connectionsInBits=10;			
 			int maxPartialResponses=4;
-			boolean isTLS = isClientTLS();
 			int responseQueue = 10;
-			int responseSize = 1<<16;
 			int outputsCount = 1;
 			
 			
@@ -876,8 +927,7 @@ public class BuilderImpl implements Builder {
 					
 					
 			//BUILD GRAPH
-			TLSCertificates certs  = isTLS ? TLSCertificates.defaultCerts : null;
-			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, certs);
+			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, clientTLS);
 		
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;
@@ -888,7 +938,7 @@ public class BuilderImpl implements Builder {
 						
 
 			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, 
-					responseQueue, responseSize, clientRequests, netResponsePipes);
+												responseQueue, clientRequests, netResponsePipes);
 						
 		}
 	}
@@ -927,31 +977,17 @@ public class BuilderImpl implements Builder {
 	}
 	
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId) {		
-		return useMQTT(host, port, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
-	}
-
-	@Override
-	public MQTTBridge useMQTT(CharSequence host, int port, TLSCertificates certificates, CharSequence clientId) {
-		return useMQTT(host, port, certificates, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
-	}
-
-	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, boolean isTLS, CharSequence clientId) {
-		return useMQTT(host, isTLS ? tlsPort : defaultPort, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {
+		return useMQTT(host, port, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
 	}
 		
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight) {		
-		return useMQTT(host, port, isTLS, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);	
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight) {
+		return useMQTT(host, port, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);
 	}
 
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight, int maxMessageLength) {
-		return useMQTT(host, port, isTLS ? TLSCertificates.defaultCerts : null, clientId, maxInFlight, maxMessageLength);
-	}
-	
-	private MQTTConfigImpl useMQTT(CharSequence host, int port, TLSCertificates certificates, CharSequence clientId, int maxInFlight, int maxMessageLength) {
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {
 		if (maxInFlight>(1<<15)) {
 			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
 		}
@@ -966,7 +1002,7 @@ public class BuilderImpl implements Builder {
 		
 		return mqtt = new MQTTConfigImpl(host, port, clientId, 
 				                    this, rate, 
-				                    (short)maxInFlight, maxMessageLength, certificates);
+				                    (short)maxInFlight, maxMessageLength);
 	}
 	
 	@Override
