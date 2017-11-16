@@ -31,9 +31,6 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-import static com.ociweb.gl.api.MQTTBridge.defaultPort;
-import static com.ociweb.gl.api.MQTTBridge.tlsPort;
-
 public class BuilderImpl implements Builder {
 
 	private static final int DEFAULT_MAX_MQTT_IN_FLIGHT = 10;
@@ -927,31 +924,17 @@ public class BuilderImpl implements Builder {
 	}
 	
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId) {		
-		return useMQTT(host, port, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
-	}
-
-	@Override
-	public MQTTBridge useMQTT(CharSequence host, int port, TLSCertificates certificates, CharSequence clientId) {
-		return useMQTT(host, port, certificates, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
-	}
-
-	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, boolean isTLS, CharSequence clientId) {
-		return useMQTT(host, isTLS ? tlsPort : defaultPort, isTLS, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {
+		return useMQTT(host, port, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
 	}
 		
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight) {		
-		return useMQTT(host, port, isTLS, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);	
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight) {
+		return useMQTT(host, port, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);
 	}
 
 	@Override
-	public MQTTConfigImpl useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight, int maxMessageLength) {
-		return useMQTT(host, port, isTLS ? TLSCertificates.defaultCerts : null, clientId, maxInFlight, maxMessageLength);
-	}
-	
-	private MQTTConfigImpl useMQTT(CharSequence host, int port, TLSCertificates certificates, CharSequence clientId, int maxInFlight, int maxMessageLength) {
+	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {
 		if (maxInFlight>(1<<15)) {
 			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
 		}
@@ -966,7 +949,7 @@ public class BuilderImpl implements Builder {
 		
 		return mqtt = new MQTTConfigImpl(host, port, clientId, 
 				                    this, rate, 
-				                    (short)maxInFlight, maxMessageLength, certificates);
+				                    (short)maxInFlight, maxMessageLength);
 	}
 	
 	@Override

@@ -1,7 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.network.TLSCertificates;
-
 /**
  * Base interface for an IoT device's hardware.
  * <p>
@@ -75,23 +73,19 @@ public interface Builder extends ArgumentProvider {
 	 * The default in-flight messages is 10
 	 * The default maximum messageLength is 4K
 	 */
-	MQTTBridge useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId);
-
-	MQTTBridge useMQTT(CharSequence host, int port, TLSCertificates certificates, CharSequence clientId);
-	
-	MQTTBridge useMQTT(CharSequence host, boolean isTLS, CharSequence clientId);
+	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientId);
 	
 	/*
 	 * The maximum in-flight messages must be <= 32K
 	 * The maximum messageLength must be <= 256M
 	 */
-	MQTTBridge useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientIdint, int maxInFlight);
+	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientIdint, int maxInFlight);
 
 	/*
 	 * The maximum in-flight messages must be <= 32K
 	 * The maximum messageLength must be <= 256M
 	 */
-	MQTTBridge useMQTT(CharSequence host, int port, boolean isTLS, CharSequence clientId, int maxInFlight, int maxMessageLength);
+	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength);
 		
 	
 	void privateTopics(String ... topic);

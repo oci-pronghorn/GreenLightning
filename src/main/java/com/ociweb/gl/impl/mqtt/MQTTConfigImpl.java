@@ -37,11 +37,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private Writable lastWillPayload = null;
 	//
 	private int flags;
-	private final boolean isTLS;
-	private final TLSCertificates certificates;
+	private TLSCertificates certificates;
 	
 	private final short maxInFlight;
-	private final int maximumLenghOfVariableLengthFields;
+	private int maximumLenghOfVariableLengthFields;
 	//
 	private final BuilderImpl builder;
 	//
@@ -58,10 +57,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	
 	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
 			       BuilderImpl builder, long rate, 
-			       short maxInFlight, int maxMessageLength,
-			       TLSCertificates certificates) {
+			       short maxInFlight, int maxMessageLength) {
 		
-		this.isTLS = certificates != null;
 		this.certificates = certificates;
 		this.host = host;
 		this.port = port;
@@ -69,7 +66,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		this.builder = builder;
 		this.rate = rate;
 		this.maxInFlight = maxInFlight;
-		this.maximumLenghOfVariableLengthFields = isTLS? Math.max(maxMessageLength, 1<<15) : maxMessageLength;
+		this.maximumLenghOfVariableLengthFields = maxMessageLength;
 	}
 	
 	
@@ -147,6 +144,19 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			target = (~target)&bit;
 		}
 		return target;
+	}
+
+	public MQTTBridge useTLS() {
+		return useTLS(TLSCertificates.defaultCerts);
+	}
+
+	public MQTTBridge useTLS(TLSCertificates certificates) {
+		if (isImmutable) {
+			throw new UnsupportedOperationException("Mutations must happen earlier.");
+		}
+		this.certificates = certificates;
+		this.maximumLenghOfVariableLengthFields = Math.max(this.maximumLenghOfVariableLengthFields, 1<<15);
+		return this;
 	}
 	
 	public MQTTBridge authentication(CharSequence user, CharSequence pass) {
