@@ -52,14 +52,24 @@ public interface Builder extends ArgumentProvider {
 	
 	int defineRoute(CharSequence route, byte[] ... headers);
 	int registerRoute(CharSequence route, byte[] ... headers);
-      
-	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);	
+
+	HTTPServerConfig useServer(int bindPort);
+
+	@Deprecated
+	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
+	@Deprecated
 	void enableServer(boolean isTLS, int bindPort);
+	@Deprecated
 	void enableServer(int bindPort);
+	@Deprecated
 	void enableServer(int bindPort, String defaultPath);
+	@Deprecated
 	void enableServer(String host, int bindPort);
+	@Deprecated
 	void enableServer(String host, int bindPort, String defaultPath);
-	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath);	
+	@Deprecated
+	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath);
+	@Deprecated
 	void enableServer(boolean isTLS, int bindPort, String defaultPath);
 	
 	int defaultTelemetryPort = 8098;

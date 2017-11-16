@@ -94,7 +94,7 @@ public class BuilderImpl implements Builder {
 	private String bindHost = null;
 	private int bindPort = -1;
 	private boolean isLarge = false;
-	private boolean isTLSServer = true; 
+	private TLSCertificates serverTLS;
 	private TLSCertificates clientTLS;
 
 	private ClientCoordinator ccm;
@@ -174,7 +174,11 @@ public class BuilderImpl implements Builder {
 	}
 	
 	public final boolean isServerTLS() {
-		return isTLSServer;
+		return serverTLS != null;
+	}
+
+	public final TLSCertificates serverCerts() {
+		return serverTLS;
 	}
 	
 	public final boolean isClientTLS() {
@@ -183,6 +187,9 @@ public class BuilderImpl implements Builder {
 	
 	
 	public final String bindHost() {
+		if (null==this.bindHost) {
+			this.bindHost = NetGraphBuilder.bindHost();
+		}
 		return bindHost;
 	}
 	
@@ -193,8 +200,7 @@ public class BuilderImpl implements Builder {
 	public final String defaultHostPath() {
 		return defaultHostPath;
 	}
-	
-	
+
 	public ClientCoordinator getClientCoordinator() {
 		return ccm;
 	}
@@ -208,7 +214,7 @@ public class BuilderImpl implements Builder {
     	this.useNetServer();
 
     	this.defaultHostPath = defaultPath;
-    	this.isTLSServer = isTLS;
+    	this.serverTLS = isTLS ? TLSCertificates.defaultCerts : null;
     	this.isLarge = isLarge;
     	this.bindHost = bindHost;
     	if (null==this.bindHost) {
@@ -219,6 +225,51 @@ public class BuilderImpl implements Builder {
     		throw new UnsupportedOperationException("invalid port "+bindPort);
     	}
     }
+
+	@Override
+	public HTTPServerConfig useServer(int bindPort) {
+		this.bindPort = bindPort;
+		if (bindPort<=0 || (bindPort>=(1<<16))) {
+			throw new UnsupportedOperationException("invalid port "+bindPort);
+		}
+		this.defaultHostPath = "";
+		this.serverTLS = null;
+		this.isLarge = false;
+		this.bindHost = null;
+		this.useNetServer();
+
+		return new HTTPServerConfig() {
+			@Override
+			public HTTPServerConfig setDefaultPath(String defaultPath) {
+				BuilderImpl.this.defaultHostPath = defaultPath;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setHost(String host) {
+				BuilderImpl.this.bindHost = host;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setTLS(TLSCertificates certificates) {
+				BuilderImpl.this.serverTLS = certificates;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setTLS() {
+				BuilderImpl.this.serverTLS = TLSCertificates.defaultCerts;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setIsLarge() {
+				BuilderImpl.this.isLarge = true;
+				return this;
+			}
+		};
+	}
  
 	public final void enableServer(boolean isTLS, int bindPort) {
 		enableServer(isTLS, bindPort, "");
