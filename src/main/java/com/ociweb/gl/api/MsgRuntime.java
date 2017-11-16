@@ -10,7 +10,6 @@ import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
-import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
@@ -483,9 +482,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 		ServerPipesConfig serverConfig = new ServerPipesConfig(builder.isLarge(), builder.isServerTLS());
 
-		TLSCertificates certs  = builder.isServerTLS() ? TLSCertificates.defaultCerts : null;
-		ServerCoordinator serverCoord = new ServerCoordinator( certs,
-															   (String) builder.bindHost(), builder.bindPort(), 
+		ServerCoordinator serverCoord = new ServerCoordinator( builder.serverCerts(),
+															   builder.bindHost(), builder.bindPort(),
 				                                               serverConfig.maxConnectionBitsOnServer, 
 				                                               serverConfig.maxPartialResponsesServer, 
 				                                               builder.parallelism(),

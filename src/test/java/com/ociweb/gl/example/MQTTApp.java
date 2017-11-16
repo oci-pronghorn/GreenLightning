@@ -1,20 +1,10 @@
 package com.ociweb.gl.example;
 
-import java.util.Date;
-
-import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.MQTTBridge;
-import com.ociweb.gl.api.MsgCommandChannel;
-import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.TimeListener;
-import com.ociweb.gl.api.Writable;
-import com.ociweb.gl.api.MQTTQoS;
+import com.ociweb.gl.api.*;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 
-import static com.ociweb.gl.api.MQTTBridge.defaultPort;
+import java.util.Date;
 
 public class MQTTApp implements GreenApp {
 
@@ -30,7 +20,7 @@ public class MQTTApp implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 
-		mqttConfig = builder.useMQTT("127.0.0.1", defaultPort, false, "my name")
+		mqttConfig = builder.useMQTT("127.0.0.1", MQTTBridge.defaultPort, "my name")
 							.cleanSession(true)
 							.transmissionOoS(MQTTQoS.exactlyOnce)
 							.subscriptionQoS(MQTTQoS.exactlyOnce) //TODO: do tests for will and retain
