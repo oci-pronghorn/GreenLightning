@@ -1,25 +1,28 @@
 package com.ociweb.gl.impl.mqtt;
 
 import com.ociweb.gl.api.*;
-import com.ociweb.pronghorn.network.TLSCertificates;
-import com.ociweb.pronghorn.pipe.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ociweb.gl.impl.BridgeConfigImpl;
+import com.ociweb.gl.impl.BridgeConfigStage;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.EgressMQTTStage;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.IngressMQTTStage;
+import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.mqtt.MQTTEncoder;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
+import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.stage.test.PipeNoOp;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTTConfigSubscription> implements MQTTBridge {
 
@@ -44,7 +47,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	//
 	private final BuilderImpl builder;
 	//
-	private boolean isImmutable;
+	private BridgeConfigStage configStage = BridgeConfigStage.Construction;
 	
 	private Pipe<MQTTClientRequestSchema> clientRequest;
 	private Pipe<MQTTClientResponseSchema> clientResponse;
@@ -59,7 +62,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			       BuilderImpl builder, long rate, 
 			       short maxInFlight, int maxMessageLength) {
 		
-		this.certificates = certificates;
 		this.host = host;
 		this.port = port;
 		this.clientId = clientId;
@@ -68,8 +70,11 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		this.maxInFlight = maxInFlight;
 		this.maximumLenghOfVariableLengthFields = maxMessageLength;
 	}
-	
-	
+
+	public void beginDeclarations() {
+		configStage = BridgeConfigStage.DeclareConnections;
+	}
+
     private static Pipe<MQTTClientRequestSchema> newClientRequestPipe(PipeConfig<MQTTClientRequestSchema> config) {
     	return new Pipe<MQTTClientRequestSchema>(config) {
 			@SuppressWarnings("unchecked")
@@ -113,9 +118,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 	
 	public MQTTBridge keepAliveSeconds(int seconds) {
-		if (isImmutable) {
-			throw new UnsupportedOperationException("Mutations must happen earlier.");
-		}
+		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 		keepAliveSeconds = seconds;
 		return this;
 	}
@@ -130,9 +133,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	 * @param clean
 	 */
 	public MQTTBridge cleanSession(boolean clean) {
-		if (isImmutable) {
-			throw new UnsupportedOperationException("Mutations must happen earlier.");
-		}
+		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 		flags = setBitByBoolean(flags, clean, MQTTEncoder.CONNECT_FLAG_CLEAN_SESSION_1);
 		return this;
 	}
@@ -151,9 +152,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	public MQTTBridge useTLS(TLSCertificates certificates) {
-		if (isImmutable) {
-			throw new UnsupportedOperationException("Mutations must happen earlier.");
-		}
+		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 		assert(null != certificates);
 		this.certificates = certificates;
 		this.maximumLenghOfVariableLengthFields = Math.max(this.maximumLenghOfVariableLengthFields, 1<<15);
@@ -165,9 +164,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	public MQTTBridge authentication(CharSequence user, CharSequence pass, TLSCertificates certificates) {
-		if (isImmutable) {
-			throw new UnsupportedOperationException("Mutations must happen earlier.");
-		}
+		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 		flags |= MQTTEncoder.CONNECT_FLAG_USERNAME_7;
 		flags |= MQTTEncoder.CONNECT_FLAG_PASSWORD_6;
 
@@ -201,9 +198,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 
 	@Override
 	public MQTTBridge lastWill(CharSequence topic, boolean retain, MQTTQoS qos, Writable payload) {
-		if (isImmutable) {
-			throw new UnsupportedOperationException("Mutations must happen earlier.");
-		}
+		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 		assert(null!=topic);
 
 		flags |= MQTTEncoder.CONNECT_FLAG_WILL_FLAG_2;
@@ -226,7 +221,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	private void ensureConnected() {
-		if (isImmutable) {
+		if (configStage == BridgeConfigStage.DeclareBehavior) {
 			return;
 		} else {
 			//No need for this pipe to be large since we can only get one at a time from the MessagePubSub feeding EngressMQTTStage
@@ -257,8 +252,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			//send the broker details
 			publishBrokerConfig(clientRequest);
 			//send the connect msg
-			publishConnect(clientRequest);			
-			isImmutable = true;
+			publishConnect(clientRequest);
+			configStage = BridgeConfigStage.DeclareBehavior;
 		}
 	}
 	
@@ -387,6 +382,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	public void finish(MsgRuntime<?,?> msgRuntime) {
+		configStage = BridgeConfigStage.Finalized;
 		assert(internalTopicsXmit.length == externalTopicsXmit.length);
 		assert(internalTopicsXmit.length == convertersXmit.length);
 		
