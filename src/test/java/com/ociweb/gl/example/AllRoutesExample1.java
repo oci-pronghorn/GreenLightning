@@ -1,12 +1,6 @@
 package com.ociweb.gl.example;
 
-import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenAppParallel;
-import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.api.*;
 
 public class AllRoutesExample1 implements GreenAppParallel {
 
@@ -16,7 +10,7 @@ public class AllRoutesExample1 implements GreenAppParallel {
 	
 	@Override
 	public void declareConfiguration(Builder builder) {
-		builder.enableServer(false,false,"localhost",8082); //127.0.0.1
+		builder.useHTTP1xServer(8082).setHost("localhost").useInsecureServer(); //127.0.0.1
 		builder.parallelism(2);
 		builder.enableTelemetry();
 	}

@@ -1,10 +1,6 @@
 package com.ociweb.gl.example;
 
-import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.MsgRuntime;
-import com.ociweb.gl.api.TimeTrigger;
+import com.ociweb.gl.api.*;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
 public class SimpleApp implements GreenApp {
@@ -36,8 +32,10 @@ public class SimpleApp implements GreenApp {
 		builder.setTimerPulseRate(TimeTrigger.OnTheSecond);
 					
 		String bindHost = "127.0.0.1";
-		builder.enableServer(isTLS, isLarge, bindHost, port);
-		
+		HTTPServerConfig httpServerConfig = builder.useHTTP1xServer(port).setHost(bindHost);
+		if (!isTLS) httpServerConfig.useInsecureServer();
+		if (isLarge) httpServerConfig.setIsLarge();
+
 		ADD_ID2 = builder.registerRoute("/add/^{a}/^{b}");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
 		ADD_ID1 = builder.registerRoute("/groovyadd/^{a}/^{b}",HTTPHeaderDefaults.COOKIE.rootBytes());
 		
