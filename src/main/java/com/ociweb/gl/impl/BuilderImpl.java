@@ -46,7 +46,8 @@ public class BuilderImpl implements Builder {
 
 	protected long timeTriggerRate;
 	protected long timeTriggerStart;
-		
+
+	private boolean immutable = false;
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
@@ -143,9 +144,9 @@ public class BuilderImpl implements Builder {
 	
 	    
     public final ReactiveOperators operators;
-	
-	
-    public void registerHTTPClientId(int routeId, int pipeIdx) {
+
+
+	public void registerHTTPClientId(int routeId, int pipeIdx) {
 		boolean addedItem = IntHashTable.setItem(netPipeLookup, routeId, pipeIdx);
         if (!addedItem) {
         	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"
@@ -210,7 +211,6 @@ public class BuilderImpl implements Builder {
 	}
 	
     public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath) {
-    	
     	this.useNetServer();
 
     	this.defaultHostPath = defaultPath;
@@ -227,13 +227,15 @@ public class BuilderImpl implements Builder {
     }
 
 	@Override
-	public HTTPServerConfig useServer(int bindPort) {
+	public HTTPServerConfig useHTTP1xServer
+			(int bindPort) {
+		assert(!immutable);
 		this.bindPort = bindPort;
 		if (bindPort<=0 || (bindPort>=(1<<16))) {
 			throw new UnsupportedOperationException("invalid port "+bindPort);
 		}
 		this.defaultHostPath = "";
-		this.serverTLS = null;
+		this.serverTLS = TLSCertificates.defaultCerts;
 		this.isLarge = false;
 		this.bindHost = null;
 		this.useNetServer();
@@ -241,30 +243,35 @@ public class BuilderImpl implements Builder {
 		return new HTTPServerConfig() {
 			@Override
 			public HTTPServerConfig setDefaultPath(String defaultPath) {
+				assert(!immutable);
 				BuilderImpl.this.defaultHostPath = defaultPath;
 				return this;
 			}
 
 			@Override
 			public HTTPServerConfig setHost(String host) {
+				assert(!immutable);
 				BuilderImpl.this.bindHost = host;
 				return this;
 			}
 
 			@Override
 			public HTTPServerConfig setTLS(TLSCertificates certificates) {
+				assert(!immutable);
 				BuilderImpl.this.serverTLS = certificates;
 				return this;
 			}
 
 			@Override
-			public HTTPServerConfig setTLS() {
-				BuilderImpl.this.serverTLS = TLSCertificates.defaultCerts;
+			public HTTPServerConfig useInsecureServer() {
+				assert(!immutable);
+				BuilderImpl.this.serverTLS = null;
 				return this;
 			}
 
 			@Override
 			public HTTPServerConfig setIsLarge() {
+				assert(!immutable);
 				BuilderImpl.this.isLarge = true;
 				return this;
 			}
@@ -398,7 +405,7 @@ public class BuilderImpl implements Builder {
 
 	////////////////////////////////
 	
-	public BuilderImpl(GraphManager gm, String[] args) {	
+	public BuilderImpl(GraphManager gm, String[] args) {
 		
 		this.operators = ReactiveListenerStage.reactiveOperators();
 		
@@ -1054,7 +1061,7 @@ public class BuilderImpl implements Builder {
 		return schema;
 	}
 
-
-
-
+	public void finish() {
+		this.immutable = true;
+	}
 }

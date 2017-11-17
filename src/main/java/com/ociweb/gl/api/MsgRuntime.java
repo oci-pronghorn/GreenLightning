@@ -452,7 +452,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//server and other behavior
 	//////////////////
 	public void declareBehavior(MsgApp app) {
-		
+		builder.finish();
 		if (builder.isUseNetServer()) {
 		    buildGraphForServer(app);
 		} else {            	

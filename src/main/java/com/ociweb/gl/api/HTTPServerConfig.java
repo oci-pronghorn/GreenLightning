@@ -6,6 +6,6 @@ public interface HTTPServerConfig {
 	HTTPServerConfig setDefaultPath(String defaultPath);
 	HTTPServerConfig setHost(String host);
 	HTTPServerConfig setTLS(TLSCertificates certificates);
-	HTTPServerConfig setTLS();
+	HTTPServerConfig useInsecureServer();
 	HTTPServerConfig setIsLarge();
 }

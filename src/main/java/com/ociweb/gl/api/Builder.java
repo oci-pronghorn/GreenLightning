@@ -53,7 +53,7 @@ public interface Builder extends ArgumentProvider {
 	int defineRoute(CharSequence route, byte[] ... headers);
 	int registerRoute(CharSequence route, byte[] ... headers);
 
-	HTTPServerConfig useServer(int bindPort);
+	HTTPServerConfig useHTTP1xServer(int bindPort);
 
 	@Deprecated
 	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
