@@ -34,7 +34,7 @@ public class HTTPServer implements GreenApp
     @Override
     public void declareConfiguration(Builder c) {
         
-		c.enableServer(host, 8088);
+		c.useHTTP1xServer(8088).setHost(host);
 		
 		emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
 		smallResponseRouteId = c.registerRoute("/testpageB");
