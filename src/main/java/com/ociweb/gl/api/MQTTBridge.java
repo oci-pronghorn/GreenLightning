@@ -13,8 +13,8 @@ public interface MQTTBridge extends BridgeConfig<MQTTConfigTransmission, MQTTCon
 	MQTTBridge cleanSession(boolean clean);
 	MQTTBridge useTLS();
 	MQTTBridge useTLS(TLSCertificates certificates);
-	// TODO force TLS with authentication
 	MQTTBridge authentication(CharSequence user, CharSequence pass);
+	MQTTBridge authentication(CharSequence user, CharSequence pass, TLSCertificates certificates);
 	MQTTBridge lastWill(CharSequence topic, boolean retain, MQTTQoS qos, Writable payload);
 	MQTTBridge connectionFeedbackTopic(CharSequence connectFeedbackTopic);
 	MQTTBridge subscriptionQoS(MQTTQoS qos);

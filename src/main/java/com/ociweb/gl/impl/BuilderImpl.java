@@ -47,7 +47,7 @@ public class BuilderImpl implements Builder {
 	protected long timeTriggerRate;
 	protected long timeTriggerStart;
 
-	private boolean immutable = false;
+	private boolean isImmutable = false;
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
@@ -188,9 +188,6 @@ public class BuilderImpl implements Builder {
 	
 	
 	public final String bindHost() {
-		if (null==this.bindHost) {
-			this.bindHost = NetGraphBuilder.bindHost();
-		}
 		return bindHost;
 	}
 	
@@ -229,7 +226,9 @@ public class BuilderImpl implements Builder {
 	@Override
 	public HTTPServerConfig useHTTP1xServer
 			(int bindPort) {
-		assert(!immutable);
+		if (isImmutable) {
+			throw new UnsupportedOperationException("Mutations must happen earlier.");
+		}
 		this.bindPort = bindPort;
 		if (bindPort<=0 || (bindPort>=(1<<16))) {
 			throw new UnsupportedOperationException("invalid port "+bindPort);
@@ -243,35 +242,47 @@ public class BuilderImpl implements Builder {
 		return new HTTPServerConfig() {
 			@Override
 			public HTTPServerConfig setDefaultPath(String defaultPath) {
-				assert(!immutable);
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
+				assert(null != defaultPath);
 				BuilderImpl.this.defaultHostPath = defaultPath;
 				return this;
 			}
 
 			@Override
 			public HTTPServerConfig setHost(String host) {
-				assert(!immutable);
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
 				BuilderImpl.this.bindHost = host;
 				return this;
 			}
 
 			@Override
 			public HTTPServerConfig setTLS(TLSCertificates certificates) {
-				assert(!immutable);
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
+				assert(null != certificates);
 				BuilderImpl.this.serverTLS = certificates;
 				return this;
 			}
 
 			@Override
 			public HTTPServerConfig useInsecureServer() {
-				assert(!immutable);
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
 				BuilderImpl.this.serverTLS = null;
 				return this;
 			}
 
 			@Override
 			public HTTPServerConfig setIsLarge() {
-				assert(!immutable);
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
 				BuilderImpl.this.isLarge = true;
 				return this;
 			}
@@ -1061,7 +1072,10 @@ public class BuilderImpl implements Builder {
 		return schema;
 	}
 
-	public void finish() {
-		this.immutable = true;
+	public void finalizeDeclareConnections() {
+		if (bindPort != -1 && null == this.bindHost) {
+			this.bindHost = NetGraphBuilder.bindHost();
+		}
+		this.isImmutable = true;
 	}
 }

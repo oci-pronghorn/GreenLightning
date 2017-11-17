@@ -154,24 +154,30 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
+		assert(null != certificates);
 		this.certificates = certificates;
 		this.maximumLenghOfVariableLengthFields = Math.max(this.maximumLenghOfVariableLengthFields, 1<<15);
 		return this;
 	}
 	
 	public MQTTBridge authentication(CharSequence user, CharSequence pass) {
+		return this.authentication(user, pass, TLSCertificates.defaultCerts);
+	}
+
+	public MQTTBridge authentication(CharSequence user, CharSequence pass, TLSCertificates certificates) {
 		if (isImmutable) {
 			throw new UnsupportedOperationException("Mutations must happen earlier.");
 		}
 		flags |= MQTTEncoder.CONNECT_FLAG_USERNAME_7;
-		flags |= MQTTEncoder.CONNECT_FLAG_PASSWORD_6;		
-				
+		flags |= MQTTEncoder.CONNECT_FLAG_PASSWORD_6;
+
 		this.user = user;
 		this.pass = pass;
-		
+
 		assert(null != user);
 		assert(null != pass);
-		
+		assert(null != certificates);
+
 		return this;
 	}
 
