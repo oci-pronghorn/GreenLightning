@@ -60,18 +60,8 @@ public interface Builder extends ArgumentProvider {
 	@Deprecated
 	void enableServer(boolean isTLS, int bindPort);
 	@Deprecated
-	void enableServer(int bindPort);
-	@Deprecated
-	void enableServer(int bindPort, String defaultPath);
-	@Deprecated
 	void enableServer(String host, int bindPort);
-	@Deprecated
-	void enableServer(String host, int bindPort, String defaultPath);
-	@Deprecated
-	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath);
-	@Deprecated
-	void enableServer(boolean isTLS, int bindPort, String defaultPath);
-	
+
 	int defaultTelemetryPort = 8098;
 	String enableTelemetry();
 	String enableTelemetry(int port);

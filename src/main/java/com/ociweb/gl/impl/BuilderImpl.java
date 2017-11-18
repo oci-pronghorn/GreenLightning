@@ -203,25 +203,19 @@ public class BuilderImpl implements Builder {
 		return ccm;
 	}
 	
+	@Deprecated
 	public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
-		enableServer(isTLS, isLarge, bindHost, bindPort, "");
+		HTTPServerConfig conf = useHTTP1xServer(bindPort)
+		.setHost(bindHost)
+		.setDefaultPath("")
+		.setIsLarge();
+		
+		if (!isTLS) {
+			conf.useInsecureServer();
+		}
 	}
 	
-    public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort, String defaultPath) {
-    	this.useNetServer();
 
-    	this.defaultHostPath = defaultPath;
-    	this.serverTLS = isTLS ? TLSCertificates.defaultCerts : null;
-    	this.isLarge = isLarge;
-    	this.bindHost = bindHost;
-    	if (null==this.bindHost) {
-    		this.bindHost = NetGraphBuilder.bindHost();
-    	}
-    	this.bindPort = bindPort;
-    	if (bindPort<=0 || (bindPort>=(1<<16))) {
-    		throw new UnsupportedOperationException("invalid port "+bindPort);
-    	}
-    }
 
 	@Override
 	public HTTPServerConfig useHTTP1xServer
@@ -289,29 +283,28 @@ public class BuilderImpl implements Builder {
 		};
 	}
  
+	@Deprecated
 	public final void enableServer(boolean isTLS, int bindPort) {
-		enableServer(isTLS, bindPort, "");
+		HTTPServerConfig conf = useHTTP1xServer(bindPort)
+		.setHost(NetGraphBuilder.bindHost())
+		.setDefaultPath("")
+		.setIsLarge();
+		
+		if (!isTLS) {
+			conf.useInsecureServer();
+		}
 	}
-	
-    public final void enableServer(boolean isTLS, int bindPort, String defaultPath) {
-    	enableServer(isTLS,false,NetGraphBuilder.bindHost(),bindPort,defaultPath);
-    }
     
-	public final void enableServer(int bindPort) {
-		enableServer(bindPort, "");
-	}
-	
+
+	@Deprecated
 	public final void enableServer(String host, int bindPort) {
-		enableServer(host, bindPort, "");
+		HTTPServerConfig conf = useHTTP1xServer(bindPort)
+		.setHost(null==host?NetGraphBuilder.bindHost():host)
+		.setDefaultPath("")
+		.setIsLarge();
+	
 	}
-    
-    public final void enableServer(int bindPort, String defaultPath) {
-    	enableServer(true,false,NetGraphBuilder.bindHost(),bindPort);
-    }
-    
-    public final void enableServer(String host, int bindPort, String defaultPath) {
-    	enableServer(true,false,null==host?NetGraphBuilder.bindHost():host,bindPort);
-    }
+ 
     
     public String getArgumentValue(String longName, String shortName, String defaultValue) {
     	return MsgRuntime.getOptArg(longName, shortName, args, defaultValue);
