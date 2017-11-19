@@ -460,7 +460,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			app.declareBehavior(this);
 			
 			if (app instanceof MsgAppParallel) {
-				int parallelism = builder.parallelism();
+				int parallelism = builder.parallelismTracks();
 				//since server was not started and did not create each parallel instance this will need to be done here
 	   
 				for(int i = 0;i<parallelism;i++) { //do not use this loop, we will loop inside server setup..
@@ -481,18 +481,26 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	
 	private void buildGraphForServer(MsgApp app) {
 
-		ServerPipesConfig serverConfig = new ServerPipesConfig(builder.isLarge(), builder.isServerTLS());
+		ServerPipesConfig serverConfig = new ServerPipesConfig(
+		   builder.isServerTLS(), 
+		   builder.getMaxConnectionBits(), 
+		   builder.parallelismTracks(),
+		   builder.getEncryptionUnitsPerTrack(),		   
+		   builder.getConcurrentChannelsPerEncryptUnit(),
+		   builder.getDecryptionUnitsPerTrack(), 
+		   builder.getConcurrentChannelsPerDecryptUnit());
 
 		ServerCoordinator serverCoord = new ServerCoordinator( builder.serverCerts(),
 															   builder.bindHost(), builder.bindPort(),
 				                                               serverConfig.maxConnectionBitsOnServer, 
-				                                               serverConfig.maxPartialResponsesServer, 
-				                                               builder.parallelism(),
+				                                               serverConfig.maxConcurrentInputs, 
+				                                               serverConfig.maxConcurrentOutputs, 
+				                                               builder.parallelismTracks(),
 				                                               "Server",builder.defaultHostPath());
 		
-		final int routerCount = builder.parallelism();
+		final int routerCount = builder.parallelismTracks();
 		
-		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);           
+		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
 		
 		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, routerCount, serverConfig, encryptedIncomingGroup);
 		               
@@ -500,7 +508,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe[] planIncomingGroup;
 		
 		if (builder.isServerTLS()) {
-			planIncomingGroup = Pipe.buildPipes(serverConfig.maxPartialResponsesServer, serverConfig.incomingDataConfig);
+			planIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);
 			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, 
 					                      serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
 					                      encryptedIncomingGroup, planIncomingGroup, acks);
@@ -525,16 +533,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//////////////////////////
 
 		if (app instanceof MsgAppParallel) {
-			int p = builder.parallelism();
+			int p = builder.parallelismTracks();
 			
 			for (int i = 0; i < p; i++) {
 				constructingParallelInstance(i);
 				((MsgAppParallel)app).declareParallelBehavior(this);  //this creates all the modules for this parallel instance								
 			}	
 		} else {
-			if (builder.parallelism()>1) {
+			if (builder.parallelismTracks()>1) {
 				throw new UnsupportedOperationException(
-						"Remove call to parallelism("+builder.parallelism()+") OR make the application implement GreenAppParallel or something extending it.");
+						"Remove call to parallelism("+builder.parallelismTracks()+") OR make the application implement GreenAppParallel or something extending it.");
 			}
 		}
 

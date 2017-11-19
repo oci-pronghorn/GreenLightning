@@ -66,7 +66,7 @@ public class BuilderImpl implements Builder {
 	public final PipeConfigManager pcm = new PipeConfigManager();
 
 	public Enum<?> beginningState;
-    private int parallelism = 1;//default is one
+    private int parallelismTracks = 1;//default is one
     
     private static final int maxBehaviorBits = 15;
     private final IntHashTable netPipeLookup;
@@ -83,7 +83,7 @@ public class BuilderImpl implements Builder {
 	/////////////////
 	/////////////////
     
-    private long defaultSleepRateNS = 2000;// should normally be between 900 and 20_000; 
+    private long defaultSleepRateNS = 2_000;// should normally be between 900 and 20_000; 
     
 	private final int shutdownTimeoutInSeconds = 1;
 
@@ -94,7 +94,13 @@ public class BuilderImpl implements Builder {
 	private String defaultHostPath = "";
 	private String bindHost = null;
 	private int bindPort = -1;
-	private boolean isLarge = false;
+	private int maxConnectionBits = 12;//default of 4K
+	private int encryptionUnitsPerTrack = 1; //default of 1 per track or none without TLS
+	private int decryptionUnitsPerTrack = 1; //default of 1 per track or none without TLS
+
+	private int concurrentChannelsPerEncryptUnit = 1; //default 1, for low memory usage
+	private int concurrentChannelsPerDecryptUnit = 1; //default 1, for low memory usage
+	
 	private TLSCertificates serverTLS;
 	private TLSCertificates clientTLS;
 
@@ -169,10 +175,27 @@ public class BuilderImpl implements Builder {
 	public void releasePubSubTraffic(int count, MsgCommandChannel<?> gcc) {
 		MsgCommandChannel.publishGo(count, IDX_MSG, gcc);
 	}
-	
-	public final boolean isLarge() {
-		return isLarge;
+
+	public final int getMaxConnectionBits() {
+		return maxConnectionBits;
 	}
+
+	public final int getEncryptionUnitsPerTrack() {
+		return encryptionUnitsPerTrack;
+	}
+	
+	public final int getDecryptionUnitsPerTrack() {
+		return decryptionUnitsPerTrack;
+	}
+		
+	public final int getConcurrentChannelsPerEncryptUnit() {
+		return concurrentChannelsPerEncryptUnit;
+	}
+	
+	public final int getConcurrentChannelsPerDecryptUnit() {
+		return concurrentChannelsPerDecryptUnit;
+	}
+	
 	
 	public final boolean isServerTLS() {
 		return serverTLS != null;
@@ -203,19 +226,6 @@ public class BuilderImpl implements Builder {
 		return ccm;
 	}
 	
-	@Deprecated
-	public final void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort) {
-		HTTPServerConfig conf = useHTTP1xServer(bindPort)
-		.setHost(bindHost)
-		.setDefaultPath("")
-		.setIsLarge();
-		
-		if (!isTLS) {
-			conf.useInsecureServer();
-		}
-	}
-	
-
 
 	@Override
 	public HTTPServerConfig useHTTP1xServer
@@ -229,8 +239,9 @@ public class BuilderImpl implements Builder {
 		}
 		this.defaultHostPath = "";
 		this.serverTLS = TLSCertificates.defaultCerts;
-		this.isLarge = false;
+		
 		this.bindHost = null;
+		this.maxConnectionBits = 12;
 		this.useNetServer();
 
 		return new HTTPServerConfig() {
@@ -273,13 +284,52 @@ public class BuilderImpl implements Builder {
 			}
 
 			@Override
-			public HTTPServerConfig setIsLarge() {
+			public HTTPServerConfig setMaxConnectionBits(int bits) {
 				if (isImmutable) {
 					throw new UnsupportedOperationException("Mutations must happen earlier.");
 				}
-				BuilderImpl.this.isLarge = true;
+				BuilderImpl.this.maxConnectionBits = bits;
 				return this;
 			}
+
+			@Override
+			public HTTPServerConfig setEncryptionUnitsPerTrack(int value) {
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
+				BuilderImpl.this.encryptionUnitsPerTrack = value;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setDecryptionUnitsPerTrack(int value) {
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
+				BuilderImpl.this.decryptionUnitsPerTrack = value;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setConcurrentChannelsPerEncryptUnit(int value) {
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
+				BuilderImpl.this.concurrentChannelsPerEncryptUnit = value;
+				return this;
+			}
+
+			@Override
+			public HTTPServerConfig setConcurrentChannelsPerDecryptUnit(int value) {
+				if (isImmutable) {
+					throw new UnsupportedOperationException("Mutations must happen earlier.");
+				}
+				BuilderImpl.this.concurrentChannelsPerDecryptUnit = value;
+				return this;
+			}
+			
+	
+			
 		};
 	}
  
@@ -287,8 +337,7 @@ public class BuilderImpl implements Builder {
 	public final void enableServer(boolean isTLS, int bindPort) {
 		HTTPServerConfig conf = useHTTP1xServer(bindPort)
 		.setHost(NetGraphBuilder.bindHost())
-		.setDefaultPath("")
-		.setIsLarge();
+		.setDefaultPath("");
 		
 		if (!isTLS) {
 			conf.useInsecureServer();
@@ -300,8 +349,7 @@ public class BuilderImpl implements Builder {
 	public final void enableServer(String host, int bindPort) {
 		HTTPServerConfig conf = useHTTP1xServer(bindPort)
 		.setHost(null==host?NetGraphBuilder.bindHost():host)
-		.setDefaultPath("")
-		.setIsLarge();
+		.setDefaultPath("");
 	
 	}
  
@@ -336,7 +384,7 @@ public class BuilderImpl implements Builder {
 	private void lazyCreatePipeLookupMatrix() {
 		if (null==collectedHTTPRequstPipes) {
 			
-			int parallelism = parallelism();
+			int parallelism = parallelismTracks();
 			int routesCount = routerConfig().routesCount();
 			
 			assert(parallelism>=1);
@@ -370,7 +418,7 @@ public class BuilderImpl implements Builder {
 	public final void recordPipeMapping(Pipe<ServerResponseSchema> netResponse, int parallelInstanceId) {
 		
 		if (null == collectedServerResponsePipes) {
-			int parallelism = parallelism();
+			int parallelism = parallelismTracks();
 			collectedServerResponsePipes =  (ArrayList<Pipe<ServerResponseSchema>>[]) new ArrayList[parallelism];
 			
 			int p = parallelism;
@@ -708,13 +756,13 @@ public class BuilderImpl implements Builder {
 		return Runtime.getRuntime().availableProcessors()*4;
 	}
 
-	public final int parallelism() {
-		return parallelism;
+	public final int parallelismTracks() {
+		return parallelismTracks;
 	}
 
 	@Override
 	public final void parallelism(int parallel) {
-		parallelism = parallel;
+		parallelismTracks = parallel;
 	}
 
 	
@@ -813,7 +861,8 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public final void setDefaultRate(long ns) {
-		defaultSleepRateNS = Math.max(ns, 2_000); //protect against too small 
+		//new Exception("setting new rate "+ns).printStackTrace();
+		defaultSleepRateNS = Math.max(ns, 2000); //protect against too small 
 	}
 
 

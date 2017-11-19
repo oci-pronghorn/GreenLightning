@@ -207,7 +207,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				   //int parallelInstanceId = hardware.ac
 				   if (-1 == parallelInstanceId) {
 					   //we have only a single instance of this object so we must have 1 pipe for each parallel track
-					   int p = builder.parallelism();
+					   int p = builder.parallelismTracks();
 					   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[p];
 					   while (--p>=0) {
 						   netResponse[p] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), p);
@@ -517,12 +517,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		    	            
             return true;
         } else {
-        	if (!PipeWriter.hasRoomForWrite(goPipe)) {
-        		logger.warn("go pipe is not large enough and backed up for http Get: {}",goPipe);
-        	}
-        	if (!PipeWriter.hasRoomForWrite(httpRequest)) {
-        		logger.warn("http request pipe is not large enough and backed up for http Get: {}",httpRequest);
-        	}
+        	boolean debug = false;
+            if (debug) {
+	        	if (!PipeWriter.hasRoomForWrite(goPipe)) {
+	        		logger.warn("go pipe is not large enough and backed up for http Get: {}",goPipe);
+	        	}
+	        	if (!PipeWriter.hasRoomForWrite(httpRequest)) {
+	        		logger.warn("http request pipe is not large enough and backed up for http Get: {}",httpRequest);
+	        	}
+            }
         }
         return false;
 	}

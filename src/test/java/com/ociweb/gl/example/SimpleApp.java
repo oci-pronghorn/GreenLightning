@@ -11,18 +11,17 @@ public class SimpleApp implements GreenApp {
 	public int SIMPLE_ADD_ID1;
 	
 	private final int port;
-	private final boolean isLarge;
+
 	private final boolean isTLS;
 	private MathUnit singleInstance;	
 	
-	public SimpleApp(int port, boolean isLarge, boolean isTLS) {
+	public SimpleApp(int port, boolean isTLS) {
 		this.port = port;
-		this.isLarge = isLarge;
 		this.isTLS = isTLS;
 	}
 	
     public static void main( String[] args ) {
-    	GreenRuntime.run(new SimpleApp(8081,true,false));
+    	GreenRuntime.run(new SimpleApp(8081,false));
     }
 	
     
@@ -34,8 +33,7 @@ public class SimpleApp implements GreenApp {
 		String bindHost = "127.0.0.1";
 		HTTPServerConfig httpServerConfig = builder.useHTTP1xServer(port).setHost(bindHost);
 		if (!isTLS) httpServerConfig.useInsecureServer();
-		if (isLarge) httpServerConfig.setIsLarge();
-
+	
 		ADD_ID2 = builder.registerRoute("/add/^{a}/^{b}");//, HTTPHeaderKeyDefaults.CONTENT_TYPE, HTTPHeaderKeyDefaults.UPGRADE);
 		ADD_ID1 = builder.registerRoute("/groovyadd/^{a}/^{b}",HTTPHeaderDefaults.COOKIE.rootBytes());
 		

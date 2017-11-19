@@ -56,8 +56,6 @@ public interface Builder extends ArgumentProvider {
 	HTTPServerConfig useHTTP1xServer(int bindPort);
 
 	@Deprecated
-	void enableServer(boolean isTLS, boolean isLarge, String bindHost, int bindPort);
-	@Deprecated
 	void enableServer(boolean isTLS, int bindPort);
 	@Deprecated
 	void enableServer(String host, int bindPort);

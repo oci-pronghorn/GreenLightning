@@ -68,10 +68,11 @@ public class GreenLightning {
 	   	
 	    final int fileOutgoing = large ? 2048 : 1024;//makes big performance difference.
 	    final int fileChunkSize = large? 1<<14 : 1<<10;
+	    int processors = large ? 8 : -1;
 	    
 		GraphManager gm = new GraphManager();
 		TLSCertificates certs  = Boolean.parseBoolean(isTLS)  ? TLSCertificates.defaultCerts : null;
-		HTTPServer.startupHTTPServer(gm, large, 
+		HTTPServer.startupHTTPServer(gm, processors, 
 				GreenLightning.simpleModuleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, certs);
         		
 		System.out.println("Press \"ENTER\" to exit...");

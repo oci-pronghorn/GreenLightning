@@ -37,25 +37,10 @@ public class ServerTest {
 		SSLUtilities.trustAllHostnames();
     	SSLUtilities.trustAllHttpsCertificates();
     	
-    	SimpleApp app = new SimpleApp(port, false, isTLS);
-    	GreenRuntime runtime = GreenRuntime.test((GreenApp)app);
-    	final NonThreadScheduler scheduler = (NonThreadScheduler)runtime.getScheduler();
+    	SimpleApp app = new SimpleApp(port, isTLS);
     	
-    	final AtomicBoolean isLive = new AtomicBoolean(true);
-    	   	
-    	
-    	Thread thread = new Thread(new Runnable(){    		
-    		public void run() {
-    						scheduler.startup();
-				    		while (isLive.get()) {    		
-				    			scheduler.run();
-				    			Thread.yield();
-				    		}
-    		}
-    	});
-
-    	thread.start();
-    	    
+    	final GreenRuntime runtime = GreenRuntime.run((GreenApp)app);
+    	    	    
     	try { //must wait just a little to make sure server is running before test.
 			Thread.sleep(100);
 		} catch (InterruptedException e1) {
@@ -89,33 +74,7 @@ public class ServerTest {
 			fail();
 		}
     	
-    	
-    	
-//    	try {
-//
-//    		URL testCall = new URL("http"+(isTLS?"s":"")+"://127.0.0.1:"+port+"/simpleadd/2/8");
-//		
-//			URLConnection connection = testCall.openConnection();
-//			
-//			connection.connect();
-//			InputStream stream = connection.getInputStream();
-//			StringBuilder builder = new StringBuilder();
-//			int value;
-//			while ((value = stream.read()) != -1) {
-//				builder.append((char)value);
-//			}
-//			stream.close();
-//			
-//			String response = builder.toString();
-//			assertTrue(response, response.startsWith("{\"x\":2,\"y\":8,\"groovySum\":10"));
-//			//System.out.println(builder);
-//			
-//    	} catch (Exception e) {
-//    		e.printStackTrace();
-//			fail();
-//		}
-    	
-    	isLive.set(false);
+    
     	assertEquals("Oreo", app.getLastCookie());
 
     	
