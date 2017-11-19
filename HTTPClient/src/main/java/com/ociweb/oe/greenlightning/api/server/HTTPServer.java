@@ -4,7 +4,7 @@ package com.ociweb.oe.greenlightning.api.server;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.gl.api.HTTPServerConfig;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -41,7 +41,10 @@ public class HTTPServer implements GreenApp
     	//TODO: why is this sever scheduled in an odd way disconnected??
     	
     	c.enableTelemetry("127.0.0.1",8098);
-		c.enableServer(false, false, host, 8088);
+    	
+    	HTTPServerConfig conf = c.useHTTP1xServer(8088)
+    			.setHost(host)
+    			.useInsecureServer();
 		
 		//emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
 		smallResponseRouteId = c.registerRoute("/testpageB");
