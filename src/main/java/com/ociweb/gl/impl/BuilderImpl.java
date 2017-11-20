@@ -658,6 +658,11 @@ public class BuilderImpl implements Builder {
 	public TelemetryConfig enableTelemetry(int port) {
 		return enableTelemetry(null, port);
 	}
+
+	@Override
+	public TelemetryConfig enableTelemetry(String host) {
+		return enableTelemetry(host, TelemetryConfig.defaultTelemetryPort);
+	}
 	
 	@Override
 	public TelemetryConfig enableTelemetry(String host, int port) {
@@ -934,6 +939,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	public void finalizeDeclareConnections() {
+		// two of these are recalculating the same local host address when host is null
 		if (server != null) {
 			server.finalizeDeclareConnections();
 		}

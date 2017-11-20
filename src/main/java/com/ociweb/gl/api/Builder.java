@@ -62,6 +62,7 @@ public interface Builder extends ArgumentProvider {
 
 	TelemetryConfig enableTelemetry();
 	TelemetryConfig enableTelemetry(int port);
+	TelemetryConfig enableTelemetry(String host);
 	TelemetryConfig enableTelemetry(String host, int port);
 	
 	void setDefaultRate(long ns);
