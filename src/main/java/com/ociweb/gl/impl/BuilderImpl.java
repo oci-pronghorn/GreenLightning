@@ -160,6 +160,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public HTTPServerConfig useHTTP1xServer(int bindPort) {
+		if (server != null) throw new RuntimeException("Server already enabled");
 		this.server = new HTTPServerConfigImpl(bindPort);
 		server.beginDeclarations();
 		return server;
@@ -369,6 +370,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public HTTPClientConfigImpl useNetClient(TLSCertificates certificates) {
+		if (client != null) throw new RuntimeException("Client already enabled");
 		this.client = new HTTPClientConfigImpl(certificates);
 		this.client.beginDeclarations();
 		return client;
@@ -649,18 +651,21 @@ public class BuilderImpl implements Builder {
 	
 	@Override
 	public TelemetryConfig enableTelemetry() {
+		if (telemetry != null) throw new RuntimeException("Telemetry already enabled");
 		this.telemetry = new TelemetryConfigImpl(null, TelemetryConfig.defaultTelemetryPort);
 		return this.telemetry;
 	}
 	
 	@Override
 	public TelemetryConfig enableTelemetry(int port) {
+		if (telemetry != null) throw new RuntimeException("Telemetry already enabled");
 		this.telemetry = new TelemetryConfigImpl(null, port);
 		return this.telemetry;
 	}
 	
 	@Override
 	public TelemetryConfig enableTelemetry(String host, int port) {
+		if (telemetry != null) throw new RuntimeException("Telemetry already enabled");
 		this.telemetry = new TelemetryConfigImpl(host, port);
 		return this.telemetry;
 	}
