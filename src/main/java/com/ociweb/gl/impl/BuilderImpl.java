@@ -651,22 +651,19 @@ public class BuilderImpl implements Builder {
 	
 	@Override
 	public TelemetryConfig enableTelemetry() {
-		if (telemetry != null) throw new RuntimeException("Telemetry already enabled");
-		this.telemetry = new TelemetryConfigImpl(null, TelemetryConfig.defaultTelemetryPort);
-		return this.telemetry;
+		return enableTelemetry(null, TelemetryConfig.defaultTelemetryPort);
 	}
 	
 	@Override
 	public TelemetryConfig enableTelemetry(int port) {
-		if (telemetry != null) throw new RuntimeException("Telemetry already enabled");
-		this.telemetry = new TelemetryConfigImpl(null, port);
-		return this.telemetry;
+		return enableTelemetry(null, port);
 	}
 	
 	@Override
 	public TelemetryConfig enableTelemetry(String host, int port) {
 		if (telemetry != null) throw new RuntimeException("Telemetry already enabled");
 		this.telemetry = new TelemetryConfigImpl(host, port);
+		this.telemetry.beginDeclarations();
 		return this.telemetry;
 	}
 
