@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-import static com.ociweb.gl.api.Builder.defaultTelemetryPort;
+import static com.ociweb.gl.api.TelemetryConfig.defaultTelemetryPort;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -78,8 +78,9 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
 	    runtime.logStageScheduleRates();
 
-		if ( runtime.builder.isTelemetryEnabled()) {
-			   runtime.telemetryHost = runtime.gm.enableTelemetry(runtime.builder.telemetryHost(),runtime.builder.telmetryPort());
+		TelemetryConfig telemetryConfig = runtime.builder.getTelemetryConfig();
+		if (telemetryConfig != null) {
+			runtime.telemetryHost = runtime.gm.enableTelemetry(telemetryConfig.getHost(), telemetryConfig.getPort());
 		}
 		   //exportGraphDotFile();
 
@@ -157,7 +158,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
 	    runtime.logStageScheduleRates();
 
-	    if ( runtime.builder.isTelemetryEnabled()) {
+	    if ( runtime.builder.getTelemetryConfig() != null) {
 		   runtime.gm.enableTelemetry(defaultTelemetryPort);
 	    }
 

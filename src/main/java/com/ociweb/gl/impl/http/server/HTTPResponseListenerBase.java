@@ -1,4 +1,4 @@
-package com.ociweb.gl.impl;
+package com.ociweb.gl.impl.http.server;
 
 import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.pronghorn.network.config.HTTPContentType;

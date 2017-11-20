@@ -1,8 +1,6 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.HTTPResponseListenerBase;
-import com.ociweb.gl.impl.PayloadReader;
-import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 
 /**
  * Functional interface for HTTP responses returned from outgoing

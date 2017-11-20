@@ -1,6 +1,6 @@
 package com.ociweb.gl.example;
 
-import static com.ociweb.gl.api.Builder.defaultTelemetryPort;
+import static com.ociweb.gl.api.TelemetryConfig.defaultTelemetryPort;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -8,15 +8,11 @@ import static org.junit.Assert.fail;
 import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.Ignore;
-import org.junit.Test;
 
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.MsgRuntime;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
 
 public class ServerTest {
 	

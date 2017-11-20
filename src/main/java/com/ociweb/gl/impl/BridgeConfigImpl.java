@@ -15,6 +15,6 @@ public abstract class BridgeConfigImpl<T,S> implements BridgeConfig<T,S> {
 		return addTransmission(msgRuntime, topic,topic);
 	}
 
-	public abstract void finish(MsgRuntime<?,?> msgRuntime);
+	public abstract void finalizeDeclareConnections(MsgRuntime<?,?> msgRuntime);
 	
 }

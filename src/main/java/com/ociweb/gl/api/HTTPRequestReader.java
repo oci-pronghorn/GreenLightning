@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.HTTPPayloadReader;
+import com.ociweb.gl.impl.http.server.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;

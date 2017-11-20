@@ -57,7 +57,7 @@ public class TwitterConfigImpl extends BridgeConfigImpl<TwitterConfigTransmissio
 	}
 
 	@Override
-	public void finish(MsgRuntime<?, ?> msgRuntime) {
+	public void finalizeDeclareConnections(MsgRuntime<?, ?> msgRuntime) {
 		// TODO build Ingress and Egress stages
 		
 	}

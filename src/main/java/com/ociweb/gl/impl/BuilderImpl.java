@@ -5,9 +5,14 @@ import com.ociweb.gl.api.transducer.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.transducer.PubSubListenerTransducer;
 import com.ociweb.gl.api.transducer.RestListenerTransducer;
 import com.ociweb.gl.api.transducer.StateChangeListenerTransducer;
+import com.ociweb.gl.impl.http.client.HTTPClientConfigImpl;
+import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
+import com.ociweb.gl.impl.http.server.HTTPServerConfigImpl;
 import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
 import com.ociweb.gl.impl.schema.*;
 import com.ociweb.gl.impl.stage.*;
+import com.ociweb.gl.api.TelemetryConfig;
+import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
@@ -33,21 +38,15 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class BuilderImpl implements Builder {
 
-	private static final int DEFAULT_MAX_MQTT_IN_FLIGHT = 10;
-	private static final int DEFAULT_MAX__MQTT_MESSAGE = 1<<12;
 	//NB: The Green Lightning maximum header size 64K is defined here HTTP1xRouterStage.MAX_HEADER
 	protected static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
 	//  This has a large impact on memory usage but also on performance volume
 	protected static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<8;
 	protected static final int MINIMUM_TLS_BLOB_SIZE = 1<<15;
-	
-	protected boolean useNetClient;
-	protected boolean useNetServer;
 
 	protected long timeTriggerRate;
 	protected long timeTriggerStart;
 
-	private boolean isImmutable = false;
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
@@ -89,33 +88,12 @@ public class BuilderImpl implements Builder {
 
 	protected ReentrantLock devicePinConfigurationLock = new ReentrantLock();
 
-	protected MQTTConfigImpl mqtt = null;
-		
-	private String defaultHostPath = "";
-	private String bindHost = null;
-	private int bindPort = -1;
-	private int maxConnectionBits = 12;//default of 4K
-	private int encryptionUnitsPerTrack = 1; //default of 1 per track or none without TLS
-	private int decryptionUnitsPerTrack = 1; //default of 1 per track or none without TLS
-
-	private int concurrentChannelsPerEncryptUnit = 1; //default 1, for low memory usage
-	private int concurrentChannelsPerDecryptUnit = 1; //default 1, for low memory usage
-	
-	private TLSCertificates serverTLS;
-	private TLSCertificates clientTLS;
-
+	private MQTTConfigImpl mqtt = null;
+	private HTTPServerConfigImpl server = null;
+	private TelemetryConfigImpl telemetry = null;
+	private HTTPClientConfigImpl client = null;
 	private ClientCoordinator ccm;
 
-	
-	private boolean isTelemetryEnabled = false;
-	private String telemetryHost = null;
-	private int telemetryPort = defaultTelemetryPort;
-	
-	
-	//TODO: set these vales when we turn on the client usage??
-	private int connectionsInBit = 3; 
-	private int maxPartialResponse = 10;
-	
 	protected int IDX_MSG = -1;
 	protected int IDX_NET = -1;
 	//TODO: why is responder missing?
@@ -176,161 +154,19 @@ public class BuilderImpl implements Builder {
 		MsgCommandChannel.publishGo(count, IDX_MSG, gcc);
 	}
 
-	public final int getMaxConnectionBits() {
-		return maxConnectionBits;
-	}
-
-	public final int getEncryptionUnitsPerTrack() {
-		return encryptionUnitsPerTrack;
-	}
-	
-	public final int getDecryptionUnitsPerTrack() {
-		return decryptionUnitsPerTrack;
-	}
-		
-	public final int getConcurrentChannelsPerEncryptUnit() {
-		return concurrentChannelsPerEncryptUnit;
-	}
-	
-	public final int getConcurrentChannelsPerDecryptUnit() {
-		return concurrentChannelsPerDecryptUnit;
-	}
-	
-	
-	public final boolean isServerTLS() {
-		return serverTLS != null;
-	}
-
-	public final TLSCertificates serverCerts() {
-		return serverTLS;
-	}
-	
-	public final boolean isClientTLS() {
-		return clientTLS != null;
-	}
-	
-	
-	public final String bindHost() {
-		return bindHost;
-	}
-	
-	public final int bindPort() {
-		return bindPort;
-	}
-	
-	public final String defaultHostPath() {
-		return defaultHostPath;
-	}
-
 	public ClientCoordinator getClientCoordinator() {
 		return ccm;
 	}
-	
 
 	@Override
-	public HTTPServerConfig useHTTP1xServer
-			(int bindPort) {
-		if (isImmutable) {
-			throw new UnsupportedOperationException("Mutations must happen earlier.");
-		}
-		this.bindPort = bindPort;
-		if (bindPort<=0 || (bindPort>=(1<<16))) {
-			throw new UnsupportedOperationException("invalid port "+bindPort);
-		}
-		this.defaultHostPath = "";
-		this.serverTLS = TLSCertificates.defaultCerts;
-		
-		this.bindHost = null;
-		this.maxConnectionBits = 12;
-		this.useNetServer();
+	public HTTPServerConfig useHTTP1xServer(int bindPort) {
+		this.server = new HTTPServerConfigImpl(bindPort);
+		server.beginDeclarations();
+		return server;
+	}
 
-		return new HTTPServerConfig() {
-			@Override
-			public HTTPServerConfig setDefaultPath(String defaultPath) {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				assert(null != defaultPath);
-				BuilderImpl.this.defaultHostPath = defaultPath;
-				return this;
-			}
-
-			@Override
-			public HTTPServerConfig setHost(String host) {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				BuilderImpl.this.bindHost = host;
-				return this;
-			}
-
-			@Override
-			public HTTPServerConfig setTLS(TLSCertificates certificates) {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				assert(null != certificates);
-				BuilderImpl.this.serverTLS = certificates;
-				return this;
-			}
-
-			@Override
-			public HTTPServerConfig useInsecureServer() {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				BuilderImpl.this.serverTLS = null;
-				return this;
-			}
-
-			@Override
-			public HTTPServerConfig setMaxConnectionBits(int bits) {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				BuilderImpl.this.maxConnectionBits = bits;
-				return this;
-			}
-
-			@Override
-			public HTTPServerConfig setEncryptionUnitsPerTrack(int value) {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				BuilderImpl.this.encryptionUnitsPerTrack = value;
-				return this;
-			}
-
-			@Override
-			public HTTPServerConfig setDecryptionUnitsPerTrack(int value) {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				BuilderImpl.this.decryptionUnitsPerTrack = value;
-				return this;
-			}
-
-			@Override
-			public HTTPServerConfig setConcurrentChannelsPerEncryptUnit(int value) {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				BuilderImpl.this.concurrentChannelsPerEncryptUnit = value;
-				return this;
-			}
-
-			@Override
-			public HTTPServerConfig setConcurrentChannelsPerDecryptUnit(int value) {
-				if (isImmutable) {
-					throw new UnsupportedOperationException("Mutations must happen earlier.");
-				}
-				BuilderImpl.this.concurrentChannelsPerDecryptUnit = value;
-				return this;
-			}
-			
-	
-			
-		};
+	public final HTTPServerConfig getHTTPServerConfig() {
+		return this.server;
 	}
  
 	@Deprecated
@@ -338,19 +174,16 @@ public class BuilderImpl implements Builder {
 		HTTPServerConfig conf = useHTTP1xServer(bindPort)
 		.setHost(NetGraphBuilder.bindHost())
 		.setDefaultPath("");
-		
 		if (!isTLS) {
 			conf.useInsecureServer();
 		}
 	}
-    
 
 	@Deprecated
 	public final void enableServer(String host, int bindPort) {
 		HTTPServerConfig conf = useHTTP1xServer(bindPort)
 		.setHost(null==host?NetGraphBuilder.bindHost():host)
 		.setDefaultPath("");
-	
 	}
  
     
@@ -525,35 +358,26 @@ public class BuilderImpl implements Builder {
 	}
 
 	@Override
-	public final Builder useNetClient() {
+	public final HTTPClientConfig useNetClient() {
 		return useNetClient(TLSCertificates.defaultCerts);
 	}
 
 	@Override
-	public final Builder useInsecureNetClient() {
+	public final HTTPClientConfig useInsecureNetClient() {
 		return useNetClient((TLSCertificates) null);
 	}
 
 	@Override
-	public Builder useNetClient(TLSCertificates certificates) {
-		this.useNetClient = true;
-		this.clientTLS = certificates;
-		return null;
+	public HTTPClientConfigImpl useNetClient(TLSCertificates certificates) {
+		this.client = new HTTPClientConfigImpl(certificates);
+		this.client.beginDeclarations();
+		return client;
 	}
 
-	public final Builder useNetServer() {
-		this.useNetServer = true;
-		return this;
+	public final HTTPClientConfig getHTTPClientConfig() {
+		return this.client;
 	}
 
-	public final boolean isUseNetServer() {
-		return this.useNetServer;
-	}
-
-	public final boolean isUseNetClient() {
-		return this.useNetClient;
-	}
-	
 	public final long getTriggerRate() {
 		return timeTriggerRate;
 	}
@@ -822,37 +646,27 @@ public class BuilderImpl implements Builder {
 		};
 		return pipe;
 	}
+	
+	@Override
+	public TelemetryConfig enableTelemetry() {
+		this.telemetry = new TelemetryConfigImpl(null, TelemetryConfig.defaultTelemetryPort);
+		return this.telemetry;
+	}
+	
+	@Override
+	public TelemetryConfig enableTelemetry(int port) {
+		this.telemetry = new TelemetryConfigImpl(null, port);
+		return this.telemetry;
+	}
+	
+	@Override
+	public TelemetryConfig enableTelemetry(String host, int port) {
+		this.telemetry = new TelemetryConfigImpl(host, port);
+		return this.telemetry;
+	}
 
-	public final boolean isTelemetryEnabled() {
-		return isTelemetryEnabled;
-	}
-
-	public int telmetryPort() {
-		return telemetryPort;
-	}
-	
-	public String telemetryHost() {
-		return telemetryHost;
-	}
-	
-	@Override
-	public String enableTelemetry() {
-		isTelemetryEnabled = true;
-		return telemetryHost = NetGraphBuilder.bindHost();
-	}
-	
-	@Override
-	public String enableTelemetry(int port) {
-		isTelemetryEnabled = true;
-		telemetryPort = port;
-		return telemetryHost = NetGraphBuilder.bindHost();
-	}
-	
-	@Override
-	public void enableTelemetry(String host, int port) {
-		isTelemetryEnabled = true;
-		telemetryPort = port;
-		telemetryHost = host;
+	public TelemetryConfig getTelemetryConfig() {
+		return this.telemetry;
 	}
 	
 	public final long getDefaultSleepRateNS() {
@@ -987,7 +801,7 @@ public class BuilderImpl implements Builder {
 					
 					
 			//BUILD GRAPH
-			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, clientTLS);
+			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, this.client.getCertificates());
 		
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;
@@ -1038,12 +852,12 @@ public class BuilderImpl implements Builder {
 	
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId) {
-		return useMQTT(host, port, clientId, DEFAULT_MAX_MQTT_IN_FLIGHT, DEFAULT_MAX__MQTT_MESSAGE);
+		return useMQTT(host, port, clientId, MQTTConfigImpl.DEFAULT_MAX_MQTT_IN_FLIGHT, MQTTConfigImpl.DEFAULT_MAX__MQTT_MESSAGE);
 	}
 		
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight) {
-		return useMQTT(host, port, clientId, maxInFlight, DEFAULT_MAX__MQTT_MESSAGE);
+		return useMQTT(host, port, clientId, maxInFlight, MQTTConfigImpl.DEFAULT_MAX__MQTT_MESSAGE);
 	}
 
 	@Override
@@ -1118,9 +932,14 @@ public class BuilderImpl implements Builder {
 	}
 
 	public void finalizeDeclareConnections() {
-		if (bindPort != -1 && null == this.bindHost) {
-			this.bindHost = NetGraphBuilder.bindHost();
+		if (server != null) {
+			server.finalizeDeclareConnections();
 		}
-		this.isImmutable = true;
+		if (client != null) {
+			client.finalizeDeclareConnections();
+		}
+		if (telemetry != null) {
+			telemetry.finalizeDeclareConnections();
+		}
 	}
 }

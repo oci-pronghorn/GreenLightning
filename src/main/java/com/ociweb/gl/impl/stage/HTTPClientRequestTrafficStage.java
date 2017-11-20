@@ -59,7 +59,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		this.input = input;
 		this.output = output;
 		this.ccm = ccm;
-		this.isTLS = hardware.isServerTLS();
+		this.isTLS = hardware.getHTTPClientConfig().isTLS();
 		
 		GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "lavenderblush", this);
 	}

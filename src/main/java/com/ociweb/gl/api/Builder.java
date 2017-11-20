@@ -60,10 +60,9 @@ public interface Builder extends ArgumentProvider {
 	@Deprecated
 	void enableServer(String host, int bindPort);
 
-	int defaultTelemetryPort = 8098;
-	String enableTelemetry();
-	String enableTelemetry(int port);
-	void enableTelemetry(String host, int port);
+	TelemetryConfig enableTelemetry();
+	TelemetryConfig enableTelemetry(int port);
+	TelemetryConfig enableTelemetry(String host, int port);
 	
 	void setDefaultRate(long ns);
 	
@@ -90,9 +89,9 @@ public interface Builder extends ArgumentProvider {
 	
 	void privateTopics(String ... topic);
 
-	
-	Builder useNetClient();
-	Builder useNetClient(TLSCertificates certificates);
-	Builder useInsecureNetClient();
+
+	HTTPClientConfig useNetClient();
+	HTTPClientConfig useNetClient(TLSCertificates certificates);
+	HTTPClientConfig useInsecureNetClient();
 
 }

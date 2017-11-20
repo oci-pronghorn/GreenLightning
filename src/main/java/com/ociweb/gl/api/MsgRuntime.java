@@ -452,9 +452,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//server and other behavior
 	//////////////////
 	public void declareBehavior(MsgApp app) {
-		builder.finalizeDeclareConnections();
 
-		if (builder.isUseNetServer()) {
+		if (builder.getHTTPServerConfig() != null) {
 		    buildGraphForServer(app);
 		} else {            	
 			app.declareBehavior(this);
@@ -472,31 +471,33 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		constructingParallelInstancesEnding();
 		
 		//Init bridges
-		
+
+		builder.finalizeDeclareConnections();
 		int b = bridges.length;
 		while (--b>=0) {
-			((BridgeConfigImpl)bridges[b]).finish(this);
+			((BridgeConfigImpl)bridges[b]).finalizeDeclareConnections(this);
 		}
 	}
 	
 	private void buildGraphForServer(MsgApp app) {
 
+		HTTPServerConfig config = builder.getHTTPServerConfig();
 		ServerPipesConfig serverConfig = new ServerPipesConfig(
-		   builder.isServerTLS(), 
-		   builder.getMaxConnectionBits(), 
-		   builder.parallelismTracks(),
-		   builder.getEncryptionUnitsPerTrack(),		   
-		   builder.getConcurrentChannelsPerEncryptUnit(),
-		   builder.getDecryptionUnitsPerTrack(), 
-		   builder.getConcurrentChannelsPerDecryptUnit());
+				config.isTLS(),
+				config.getMaxConnectionBits(),
+		   		builder.parallelismTracks(),
+				config.getEncryptionUnitsPerTrack(),
+				config.getConcurrentChannelsPerEncryptUnit(),
+				config.getDecryptionUnitsPerTrack(),
+				config.getConcurrentChannelsPerDecryptUnit());
 
-		ServerCoordinator serverCoord = new ServerCoordinator( builder.serverCerts(),
-															   builder.bindHost(), builder.bindPort(),
-				                                               serverConfig.maxConnectionBitsOnServer, 
-				                                               serverConfig.maxConcurrentInputs, 
-				                                               serverConfig.maxConcurrentOutputs, 
-				                                               builder.parallelismTracks(),
-				                                               "Server",builder.defaultHostPath());
+		ServerCoordinator serverCoord = new ServerCoordinator( config.getCertificates(),
+				config.bindHost(), config.bindPort(),
+				serverConfig.maxConnectionBitsOnServer,
+				serverConfig.maxConcurrentInputs,
+				serverConfig.maxConcurrentOutputs,
+				builder.parallelismTracks(),
+				"Server",config.defaultHostPath());
 		
 		final int routerCount = builder.parallelismTracks();
 		
@@ -507,7 +508,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
 		
-		if (builder.isServerTLS()) {
+		if (config.isTLS()) {
 			planIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);
 			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, 
 					                      serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,

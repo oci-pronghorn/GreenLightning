@@ -13,4 +13,24 @@ public interface HTTPServerConfig {
 	HTTPServerConfig setConcurrentChannelsPerEncryptUnit(int value);
 	HTTPServerConfig setConcurrentChannelsPerDecryptUnit(int value);
 
+	int getMaxConnectionBits();
+
+	int getEncryptionUnitsPerTrack();
+
+	int getDecryptionUnitsPerTrack();
+
+	int getConcurrentChannelsPerEncryptUnit();
+
+	int getConcurrentChannelsPerDecryptUnit();
+
+	boolean isTLS();
+
+	TLSCertificates getCertificates();
+
+	String bindHost();
+
+	int bindPort();
+
+	String defaultHostPath();
 }
+

@@ -27,7 +27,10 @@ import org.slf4j.LoggerFactory;
 public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTTConfigSubscription> implements MQTTBridge {
 
 	private final static Logger logger = LoggerFactory.getLogger(MQTTConfigImpl.class);
-	
+	// MQTT
+	public static final int DEFAULT_MAX_MQTT_IN_FLIGHT = 10;
+	public static final int DEFAULT_MAX__MQTT_MESSAGE = 1<<12;
+
 	private final CharSequence host;
 	private final int port;
 	private final CharSequence clientId;
@@ -381,7 +384,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		return newArray;
 	}
 
-	public void finish(MsgRuntime<?,?> msgRuntime) {
+	public void finalizeDeclareConnections(MsgRuntime<?,?> msgRuntime) {
 		configStage = BridgeConfigStage.Finalized;
 		assert(internalTopicsXmit.length == externalTopicsXmit.length);
 		assert(internalTopicsXmit.length == convertersXmit.length);

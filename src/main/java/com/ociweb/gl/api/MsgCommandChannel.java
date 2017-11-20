@@ -484,7 +484,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     //Connection/Session Object   (Host, Port, SessionId) - this object will cache connnection ID for performance.
        
 	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers, int routeId) {
-		assert(builder.isUseNetClient());
+		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		//TODO: add back channel to pick up the connectionId once it is established?
@@ -531,7 +531,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 	public boolean httpClose(HTTPSession session) {
-		assert(builder.isUseNetClient());
+		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104)) {
