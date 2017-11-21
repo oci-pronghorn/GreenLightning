@@ -15,7 +15,6 @@ public interface HTTPResponseListenerBase {
     /**
      * Invoked when an HTTP response is received by this listener.
      * 
-     * @param reader {@link PayloadReader} for the response body.
      */
 	boolean responseHTTP(HTTPResponseReader reader);
 

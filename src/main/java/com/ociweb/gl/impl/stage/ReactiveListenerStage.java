@@ -870,12 +870,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
 	
-	@Override
-	public void includeHTTPClientId(int id) {
-		assert(id >= 0) : "Id must be zero or greater but less than "+MAX_HTTP_CLIENT_ID;
-		assert(id < MAX_HTTP_CLIENT_ID) : "Id must be less than or equal to "+MAX_HTTP_CLIENT_ID;		
-		builder.registerHTTPClientId(MAX_HTTP_CLIENT_ID&id, httpClientPipeId);
-	}
+//	@Override
+//	public void includeHTTPClientId(int id) {
+//		assert(id >= 0) : "Id must be zero or greater but less than "+MAX_HTTP_CLIENT_ID;
+//		assert(id < MAX_HTTP_CLIENT_ID) : "Id must be less than or equal to "+MAX_HTTP_CLIENT_ID;		
+//		builder.registerHTTPClientId(MAX_HTTP_CLIENT_ID&id, httpClientPipeId);
+//	}
 
 	@SuppressWarnings("unchecked")
 	public final ListenerFilter addSubscription(CharSequence topic, 

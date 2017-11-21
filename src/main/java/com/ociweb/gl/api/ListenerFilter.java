@@ -53,9 +53,9 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 	 */
 	<E extends Enum<E>> ListenerFilter excludeStateChangeFrom(E ... states);
 
+	@Deprecated
+	int getId();//TODO: remove?  not sure this should be used...	
 	
-	int getId();	
-	
-	void includeHTTPClientId(int id);
-	
+	//<E extends Enum<E>> ListenerFilter includeHTTPSession(HTTPSession ... httpSessions);
+		
 }

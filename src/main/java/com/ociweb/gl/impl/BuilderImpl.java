@@ -11,7 +11,6 @@ import com.ociweb.gl.impl.http.server.HTTPServerConfigImpl;
 import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
 import com.ociweb.gl.impl.schema.*;
 import com.ociweb.gl.impl.stage.*;
-import com.ociweb.gl.api.TelemetryConfig;
 import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
@@ -779,7 +778,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	
-	protected void buildHTTPClientGraph(Pipe<NetResponseSchema>[] netResponsePipes,
+	public void buildHTTPClientGraph(Pipe<NetResponseSchema>[] netResponsePipes,
 			Pipe<ClientHTTPRequestSchema>[] netRequestPipes, 
 			Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn) {
@@ -788,8 +787,11 @@ public class BuilderImpl implements Builder {
 		////////
 		if (useNetClient(netRequestPipes)) {
 			
-			int connectionsInBits=10;			
-			int maxPartialResponses=4;
+			int netResponseBlob = 1<<16;
+			int maxPartialResponses = Math.max(2,HTTPSession.getSessionCount());	
+			int connectionsInBits = (int)Math.ceil(Math.log(maxPartialResponses)/Math.log(2));
+
+			int netResponseCount = 8;
 			int responseQueue = 10;
 			int outputsCount = 1;
 			
@@ -806,7 +808,6 @@ public class BuilderImpl implements Builder {
 
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					
-					
 			//BUILD GRAPH
 			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, this.client.getCertificates());
 		
@@ -816,10 +817,24 @@ public class BuilderImpl implements Builder {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}
 			HTTPClientRequestTrafficStage requestStage = new HTTPClientRequestTrafficStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
-						
 
-			NetGraphBuilder.buildHTTPClientGraph(gm, maxPartialResponses, ccm, 
-												responseQueue, clientRequests, netResponsePipes);
+
+			int releaseCount = 1024;
+			int writeBufferMultiplier = 20;
+			int responseUnwrapCount = 2;
+			int clientWrapperCount = 2;
+			int clientWriters = 1;
+			
+			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
+												responseQueue, clientRequests, 
+												netResponsePipes,
+												netResponseBlob,
+												netResponseCount,
+												releaseCount,
+												writeBufferMultiplier,
+												responseUnwrapCount,
+												clientWrapperCount,
+												clientWriters);
 						
 		}
 	}
