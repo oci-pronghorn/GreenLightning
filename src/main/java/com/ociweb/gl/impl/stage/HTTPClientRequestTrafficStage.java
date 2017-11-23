@@ -62,6 +62,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		this.isTLS = hardware.getHTTPClientConfig().isTLS();
 		
 		GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "lavenderblush", this);
+		GraphManager.addNota(graphManager, GraphManager.LOAD_MERGE, GraphManager.LOAD_MERGE, this);
+		
 	}
 	
 	
