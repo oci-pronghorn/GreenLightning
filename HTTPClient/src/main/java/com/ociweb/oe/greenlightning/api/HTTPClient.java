@@ -1,10 +1,10 @@
 package com.ociweb.oe.greenlightning.api;
 
 
+import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.network.ClientCoordinator;
-import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.HTTPSession;
 
 public class HTTPClient implements GreenApp
 {
@@ -26,9 +26,9 @@ public class HTTPClient implements GreenApp
     	HTTPGetBehaviorSingle temp = new HTTPGetBehaviorSingle(runtime);
 		runtime.addStartupListener(temp).addSubscription("next");
 			   	
-    	
-    //	int responseId = runtime.addResponseListener(new HTTPResponse()).getId();    	
-    //	runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, responseId));
+		//HTTPSession session = new HTTPSession("127.0.0.1",8088,0);
+    	//runtime.addResponseListener(new HTTPResponse()).includeHTTPSession(session);    	
+    	//runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, session));
     	    	
     	
     	runtime.addPubSubListener(new ShutdownBehavior(runtime)).addSubscription("shutdown");

@@ -9,17 +9,17 @@ public class HTTPGetBehaviorChained implements StartupListener {
 	
 	private GreenCommandChannel cmd;
 	private int responseId;
-    private HTTPSession session = new HTTPSession("127.0.0.1",8088,0);
+    private HTTPSession session;
 	
-	public HTTPGetBehaviorChained(GreenRuntime runtime, int responseId) {
+	public HTTPGetBehaviorChained(GreenRuntime runtime, HTTPSession session) {
 		this.cmd = runtime.newCommandChannel(NET_REQUESTER);
-		this.responseId = responseId;
+		this.session = session;
 	}
 
 	@Override
 	public void startup() {
 		
-		cmd.httpGet(session, "/testPageB", responseId);
+		cmd.httpGet(session, "/testPageB");
 		
 	}
 
