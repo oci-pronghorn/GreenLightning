@@ -442,48 +442,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
     }
     
-    /**
-     * Submits an HTTP GET request asynchronously.
-     *
-     * The response to this HTTP GET will be sent to any HTTPResponseListeners
-     * associated with the listener for this command channel.
-     *
-     * @param session Root domain/port to submit the request to (e.g., google.com)
-     * @param path Route on the domain to submit the request to (e.g., /api/hello)
-     *
-     * @return True if the request was successfully submitted, and false otherwise.
-     */
-    public boolean httpGet(HTTPSession session, CharSequence path) {
-    	return httpGet(session,path,(HTTPResponseListener)listener);
-
-    }
-
-    /**
-     * Submits an HTTP GET request asynchronously.
-     *
-     * @param host Root domain to submit the request to (e.g., google.com)
-     * @param port Port to submit the request to.
-     * @param route Route on the domain to submit the request to (e.g., /api/hello)
-     * @param listener {@link HTTPResponseListener} that will handle the response.
-     *
-     * @return True if the request was successfully submitted, and false otherwise.
-     */
-    private boolean httpGet(HTTPSession session, CharSequence route, HTTPResponseListener listener) {
-    	
-    	return httpGet(session, route,
-    				   builder.behaviorId((HTTPResponseListener)listener)
-    			      ); 	
-    	
-    }
-    
-    public boolean httpGet(HTTPSession session, CharSequence route, int routeId) {
-    	return httpGet(session,route,"",routeId);
-    }
     
     //TODO: once we know the command channel add support for FAST calls.
     //Connection/Session Object   (Host, Port, SessionId) - this object will cache connnection ID for performance.
-       
-	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers, int routeId) {
+    
+    public boolean httpGet(HTTPSession session, CharSequence route) {
+    	return httpGet(session,route,"");
+    }
+    
+	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers) {
+		
+		int routeId = session.uniqueId;
 		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
@@ -500,7 +469,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) 
 			&& PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
-                	    
+           
 			int pipeId = builder.lookupHTTPClientPipe(routeId);
 						
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, pipeId);
@@ -553,24 +522,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return httpPost(session, route, "", payload);
 	}
 	
-    /**
-     * Submits an HTTP POST request asynchronously.
-     *
-     * The response to this HTTP POST will be sent to any HTTPResponseListeners
-     * associated with the listener for this command channel.
-     *
-     * @param session Root domain/port to submit the request to (e.g., google.com)
-     * @param route Route on the domain to submit the request to (e.g., /api/hello)
-     *
-     * @return True if the request was successfully submitted, and false otherwise.
-     */
-    public boolean httpPost(HTTPSession session, CharSequence route, CharSequence headers, Writable payload) {
-    	return httpPost(session, route, headers, payload, builder.behaviorId((HTTPResponseListener)(HTTPResponseListener)listener));
-		   	
-    }
-
-	public boolean httpPost(HTTPSession session, CharSequence route, CharSequence headers, Writable payload,
-			int routeId) {
+    
+	public boolean httpPost(HTTPSession session, CharSequence route, CharSequence headers, Writable payload) {
+		
+		int routeId = session.uniqueId;
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (PipeWriter.hasRoomForWrite(goPipe) && PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {

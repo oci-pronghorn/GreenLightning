@@ -10,7 +10,8 @@ public class HTTPSession {
 	public final byte[] hostBytes;
 	public final int port;
 	public final int sessionId;
-	
+	public final int uniqueId;
+		
 	//cache
 	private long connectionId;
 	
@@ -19,7 +20,7 @@ public class HTTPSession {
 	}
 	
 	public HTTPSession(String host, int port, int sessionId) {
-		sessionCounter.incrementAndGet();
+		this.uniqueId = sessionCounter.incrementAndGet();
 		this.host = host;
 		this.hostBytes = host.getBytes();
 		this.port = port;
@@ -27,7 +28,7 @@ public class HTTPSession {
 	}
 	
 	public HTTPSession(String host, int port) {
-		sessionCounter.incrementAndGet();
+		this.uniqueId = sessionCounter.incrementAndGet();
 		this.host = host;
 		this.hostBytes = host.getBytes();
 		this.port = port;

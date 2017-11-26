@@ -66,8 +66,6 @@ public class BuilderImpl implements Builder {
 	public Enum<?> beginningState;
     private int parallelismTracks = 1;//default is one
     
-    private static final int maxBehaviorBits = 15;
-    private final IntHashTable netPipeLookup;
         
 	private static final int BehaviorMask = 1<<31;//high bit on
 	
@@ -128,8 +126,15 @@ public class BuilderImpl implements Builder {
 	    
     public final ReactiveOperators operators;
 
+    private IntHashTable netPipeLookup = new IntHashTable(7);//Initial default size
 
 	public void registerHTTPClientId(int routeId, int pipeIdx) {
+				
+		if ( (IntHashTable.count(netPipeLookup)<<1) >= IntHashTable.size(netPipeLookup) ) {
+			//must grow first since we are adding many entries
+			netPipeLookup = IntHashTable.doubleSize(netPipeLookup);			
+		}
+				
 		boolean addedItem = IntHashTable.setItem(netPipeLookup, routeId, pipeIdx);
         if (!addedItem) {
         	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"
@@ -140,6 +145,9 @@ public class BuilderImpl implements Builder {
     public int lookupHTTPClientPipe(int routeId) {
     	return IntHashTable.getItem(netPipeLookup, routeId);
     }
+    
+    
+    
     
 	public int pubSubIndex() {
 		return IDX_MSG;
@@ -326,7 +334,6 @@ public class BuilderImpl implements Builder {
 		int maxMQTTMessageSize = 1024;
 		this.pcm.addConfig(new PipeConfig(IngressMessages.instance, maxMQTTMessagesQueue, maxMQTTMessageSize));
 		
-		this.netPipeLookup = new IntHashTable(maxBehaviorBits);
 	}
 
 	public final <E extends Enum<E>> boolean isValidState(E state) {

@@ -66,7 +66,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 	private PipeConfig<HTTPRequestSchema> fileRequestConfig;// = builder.restPipeConfig.grow2x();
 
-    protected int netResponsePipeIdx = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
+    private int netResponsePipeIdxCounter = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
+    protected int netResponsePipeIdx = -1;
+       
     protected int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
     protected final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
     
@@ -349,17 +351,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return pipesCount;
 	}
 
-
+    
 	protected void populateGreenPipes(Behavior listener, int pipesCount, Pipe<?>[] inputPipes) {
 		
 		//if this listener is an HTTP listener then add its behavior id for this pipe
 		if (this.builder.isListeningToHTTPResponse(listener)) {        	
         	inputPipes[--pipesCount] = buildNetResponsePipe();
             
-        	int behaviorId = builder.behaviorId(listener);
-        	int pipeIdx = netResponsePipeIdx++;
+        	netResponsePipeIdx = netResponsePipeIdxCounter++;
      
-			builder.registerHTTPClientId(behaviorId, pipeIdx);
+			builder.registerHTTPClientId(builder.behaviorId(listener), netResponsePipeIdx);
             
         }
         
@@ -767,17 +768,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	int pipesCount = addGreenPipesCount(listener, 0);
         Pipe<?>[] inputPipes = new Pipe<?>[pipesCount];
         
-        final int httpClientPipeId = netResponsePipeIdx; //must be grabbed first
-        
         populateGreenPipes(listener, pipesCount, inputPipes);                
-
-        if (httpClientPipeId != netResponsePipeIdx) {
-
-        	//add any custom routes?
-        	//builder.registerHTTPClientId(routeId, httpClientPipeId);
-        	
-        }
-        
+ 
         
         //////////////////////
         //////////////////////

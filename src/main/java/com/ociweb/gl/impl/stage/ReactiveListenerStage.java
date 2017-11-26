@@ -14,6 +14,7 @@ import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
+import com.ociweb.gl.api.HTTPSession;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
@@ -1095,6 +1096,21 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		ccmwp.init(pipe);
 		ChildClassScanner.visitUsedByClass(listener, ccmwp, MsgCommandChannel.class);		
 		return ccmwp.features();
+	}
+
+	
+	@Override
+	public <E extends Enum<E>> ListenerFilter includeHTTPSession(HTTPSession... httpSessions) {
+		
+		int j = httpSessions.length;
+		while(--j >= 0) {
+			//register listener will set these values before we use include
+		    int pipeIdx = builder.lookupHTTPClientPipe(System.identityHashCode(listener));
+		    //we added one more uniqueId to the same pipeIdx given this listeners id
+		    builder.registerHTTPClientId(httpSessions[j].uniqueId, pipeIdx);   
+		}
+		
+		return this;
 	}
     
     
