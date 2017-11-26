@@ -64,7 +64,7 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 	}
 
 
-	int countDown = 40000;
+	int countDown = 4000;
 	long reqTime = 0;
 
 	@Override
