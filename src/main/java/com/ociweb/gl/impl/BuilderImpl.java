@@ -32,6 +32,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -104,7 +106,8 @@ public class BuilderImpl implements Builder {
 	//private topics have their own private pipe and can not be "imitated" by public messages
 	//WARNING: private topics do not obey traffic cops and allow for immediate communications.
 	///////
-	private String[] privateTopics = null;
+	//private String[] privateTopics = null;
+
 	
     ////////////////////////////
     ///gather and store the server module pipes
@@ -186,14 +189,6 @@ public class BuilderImpl implements Builder {
 			conf.useInsecureServer();
 		}
 	}
-
-	@Deprecated
-	public final void enableServer(String host, int bindPort) {
-		HTTPServerConfig conf = useHTTP1xServer(bindPort)
-		.setHost(null==host?NetGraphBuilder.bindHost():host)
-		.setDefaultPath("");
-	}
- 
     
     public String getArgumentValue(String longName, String shortName, String defaultValue) {
     	return MsgRuntime.getOptArg(longName, shortName, args, defaultValue);
@@ -398,7 +393,9 @@ public class BuilderImpl implements Builder {
     		                		ArrayList<ReactiveManagerPipeConsumer> consumers, int parallelInstance) {
     	assert(null!=listener);
     	
-    	return (R) new ReactiveListenerStage(gm, listener, inputPipes, outputPipes, consumers, this, parallelInstance);
+    	return (R) new ReactiveListenerStage(gm, listener, 
+    			                             inputPipes, outputPipes, 
+    			                             consumers, this, parallelInstance);
     }
 
 	public <G extends MsgCommandChannel> G newCommandChannel(
@@ -911,10 +908,61 @@ public class BuilderImpl implements Builder {
 		return mqtt;
 	}
 	
-	@Override
-	public void privateTopics(String... topic) {
-		privateTopics=topic;
+	///////////////////////////////////
+	//fields supporting private topics
+	///////////////////////////////////
+	private final TrieParser privateTopicSource = new TrieParser();
+	private final TrieParser privateTopicTarget = new TrieParser();		
+	private final List<List<PrivateTopic>> privateSourceTopics = new ArrayList<List<PrivateTopic>>();
+	private final List<List<PrivateTopic>> privateTargetTopics = new ArrayList<List<PrivateTopic>>();
+	private final TrieParserReader reader = new TrieParserReader();
+	///////////////////////////////////		
+	
+	public List<PrivateTopic> getPrivateTopicsFromSource(String source) {
+		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
+		if (sourceId<0) {
+			return Collections.EMPTY_LIST;
+		} else {
+			return privateSourceTopics.get(sourceId);
+		}
 	}
+	
+	public List<PrivateTopic> getPrivateTopicsFromTarget(String target) {
+		int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, target);
+		if (targetId<0) {
+			return Collections.EMPTY_LIST;
+		} else {
+			return privateTargetTopics.get(targetId);
+		}
+	}	
+	
+	@Override
+	public void definePrivateTopic(String source, String target, String topic) {
+		
+		List<PrivateTopic> localSourceTopics = null;
+		long sourceId = TrieParserReader.query(reader, privateTopicSource, source);
+		if (sourceId<0) {
+			localSourceTopics = new ArrayList<PrivateTopic>();
+			privateTopicSource.setUTF8Value(source, privateSourceTopics.size());
+			privateSourceTopics.add(localSourceTopics);
+		}
+		
+		List<PrivateTopic> localTargetTopics = null;
+		long targetId = TrieParserReader.query(reader, privateTopicTarget, target);
+		if (targetId<0) {
+			localTargetTopics = new ArrayList<PrivateTopic>();
+			privateTopicTarget.setUTF8Value(target, privateTargetTopics.size());
+			privateTargetTopics.add(localTargetTopics);
+		}
+		
+		PrivateTopic obj = new PrivateTopic(source, target, topic);
+		localSourceTopics.add(obj);
+		localTargetTopics.add(obj);
+		
+	}
+	
+	//////////////////////////////////
+	
 
 	@Override
 	public String[] args() {

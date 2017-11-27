@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
@@ -199,7 +200,41 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     public L registerListener(Behavior listener) {
     	return (L) registerListenerImpl(listener);
     }
-  
+    
+/////    
+    
+    public final L addRestListener(String id, RestListener listener) {
+    	return (L) registerListenerImpl(id, listener);
+    }
+        
+    public final L addResponseListener(String id, HTTPResponseListener listener) {
+    	return (L) registerListenerImpl(id, listener);
+    }
+    
+    public final L addStartupListener(String id, StartupListener listener) {
+        return (L) registerListenerImpl(id, listener);
+    }
+	    
+    public final L addShutdownListener(String id, ShutdownListener listener) {
+        return (L) registerListenerImpl(id, listener);
+    }	
+    
+    public final L addTimePulseListener(String id, TimeListener listener) {
+        return (L) registerListenerImpl(id, listener);
+    }
+    
+    public final L addPubSubListener(String id, PubSubListener listener) {
+        return (L) registerListenerImpl(id, listener);
+    }
+
+    public final <E extends Enum<E>> L addStateChangeListener(String id, StateChangeListener<E> listener) {
+        return (L) registerListenerImpl(id, listener);
+    }
+      
+    public L registerListener(String id, Behavior listener) {
+    	return (L) registerListenerImpl(listener);
+    }
+    
    
     public long fieldId(int routeId, byte[] fieldName) {
     	return builder.fieldId(routeId, fieldName);
@@ -751,6 +786,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
         
     private ListenerFilter registerListenerImpl(final Behavior listener) {
+    	return registerListenerImpl(null, listener);
+    }
+    
+    private ListenerFilter registerListenerImpl(final String id, final Behavior listener) {
     	
     	////////////
     	//OUTPUT
@@ -782,6 +821,22 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			inputPipes = autoWireTransducers(listener, inputPipes, consumers);
 		}       
         
+		if (null!=id) {
+			
+			List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(id);
+			int i = sourceTopics.size();
+			while (--i>=0) {
+				outputPipes = PronghornStage.join(outputPipes, sourceTopics.get(i).getPipe());				
+			}
+						
+			List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(id);
+			int j = targetTopics.size();
+			while (--j>=0) {
+				inputPipes = PronghornStage.join(inputPipes, targetTopics.get(i).getPipe());
+			}
+						
+		}
+		
         ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
         		                                inputPipes, outputPipes, consumers,
         		                                parallelInstanceUnderActiveConstruction);

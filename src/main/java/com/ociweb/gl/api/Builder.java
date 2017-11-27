@@ -57,8 +57,6 @@ public interface Builder extends ArgumentProvider {
 
 	@Deprecated
 	void enableServer(boolean isTLS, int bindPort);
-	@Deprecated
-	void enableServer(String host, int bindPort);
 
 	TelemetryConfig enableTelemetry();
 	TelemetryConfig enableTelemetry(int port);
@@ -88,7 +86,7 @@ public interface Builder extends ArgumentProvider {
 	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength);
 		
 	
-	void privateTopics(String ... topic);
+	void definePrivateTopic(String source, String target, String topic);
 
 
 	HTTPClientConfig useNetClient();
