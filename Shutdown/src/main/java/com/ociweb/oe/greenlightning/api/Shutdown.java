@@ -3,6 +3,8 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPServerConfig;
+import com.ociweb.pronghorn.network.NetGraphBuilder;
 
 
 public class Shutdown implements GreenApp
@@ -18,7 +20,11 @@ public class Shutdown implements GreenApp
 	
     @Override    
     public void declareConfiguration(Builder c) {
-    	c.enableServer(host, 8443);    	
+    	
+    	HTTPServerConfig conf = c.useHTTP1xServer(8443)
+    			.setHost(null==host?NetGraphBuilder.bindHost():host)
+    			.setDefaultPath("");
+    	    	
     	c.defineRoute("/shutdown?key=${key}");
     }
   
