@@ -832,7 +832,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(id);
 			int j = targetTopics.size();
 			while (--j>=0) {
-				inputPipes = PronghornStage.join(inputPipes, targetTopics.get(i).getPipe());
+				inputPipes = PronghornStage.join(inputPipes, targetTopics.get(j).getPipe());
 			}
 						
 		}

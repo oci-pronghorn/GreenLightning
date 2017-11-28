@@ -33,6 +33,7 @@ import com.ociweb.gl.impl.PubSubListenerBase;
 import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.RestMethodListenerBase;
 import com.ociweb.gl.impl.StartupListenerBase;
+import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
@@ -53,9 +54,10 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage implements ListenerFilter {
 
-    private static final int SIZE_OF_MSG_STATECHANGE = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_STATECHANGED_71);
+    private static final int SIZE_OF_PRIVATE_MSG_PUB = Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1);
+	private static final int SIZE_OF_MSG_STATECHANGE = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_STATECHANGED_71);
 	private static final int SIZE_OF_MSG_PUBLISH = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_PUBLISH_103);
-	protected final Object              listener;
+	protected final Behavior            listener;
     protected final TimeListener        timeListener;
     
     protected final Pipe<?>[]           inputPipes;
@@ -90,6 +92,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	private TrieParserReader methodReader;
 	private CallableStaticMethod[] methods;
 	//////////////////
+	
+	//for supporting private topics..
+	private String[] topics = new String[0]; //TODO: MUST PUBLISH...
+	
 	
 	//////////////////
 	//only used for direct rest response dispatch upon route arrival
@@ -210,6 +216,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     public static ReactiveOperators reactiveOperators() {
 		return new ReactiveOperators()
+				                .addOperator(PubSubMethodListenerBase.class, 
+				                	 MessagePrivate.instance,
+				               		 new ReactiveOperator() {
+									@Override
+									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
+										r.consumePrivateMessage(target, input);										
+									}        		                	 
+				                })
         		                 .addOperator(PubSubMethodListenerBase.class, 
         		                		 MessageSubscription.instance,
         		                		 new ReactiveOperator() {
@@ -596,6 +610,27 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	
 	}
 
+	final void consumePrivateMessage(Object listener, Pipe<MessagePrivate> p) {
+		
+		final String topic = topics[p.id];
+		
+		while (Pipe.hasContentToRead(p)) {
+					
+				Pipe.markTail(p);
+				
+	            final int msgIdx = Pipe.takeMsgIdx(p);             		            
+	            assert(MessagePrivate.MSG_PUBLISH_1 == msgIdx);
+	            	            
+	            if (! ((PubSubListenerBase)listener).message(topic, Pipe.openInputStream(p))) {
+            		Pipe.resetTail(p);
+            		return;//continue later and repeat this same value.
+            	}
+	            
+	            Pipe.confirmLowLevelRead(p, SIZE_OF_PRIVATE_MSG_PUB);
+	            Pipe.releaseReadLock(p);
+		}
+		
+	}
 	
 	final void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {
 
@@ -1104,10 +1139,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		int j = httpSessions.length;
 		while(--j >= 0) {
+			
+			//TODO: big issue with lambdas inside the parallel code geting mixed !!!!
+			
 			//register listener will set these values before we use include
-		    int pipeIdx = builder.lookupHTTPClientPipe(System.identityHashCode(listener));
+		    int pipeIdx = builder.lookupHTTPClientPipe(builder.behaviorId(listener));
 		    //we added one more uniqueId to the same pipeIdx given this listeners id
 		    builder.registerHTTPClientId(httpSessions[j].uniqueId, pipeIdx);   
+		    logger.trace("register session {} with pipe {}",httpSessions[j].uniqueId,pipeIdx);
 		}
 		
 		return this;

@@ -450,15 +450,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	return httpGet(session,route,"");
     }
     
+    //TODO: update the httpRequest to use the low level API.
+    
 	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers) {
-		
+	
 		int routeId = session.uniqueId;
 		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
-		
-		//TODO: add back channel to pick up the connectionId once it is established?
-		//      TODO: switch to other call and add this block to all http methods....
-		
+
+		//////////////////////
+		//get the cached connection ID so we need not deal with the host again
+		/////////////////////
 		if (session.getConnectionId()<0) {
 			long id = builder.getClientCoordinator().lookup(
 					    session.host, session.port, session.sessionId);
@@ -466,35 +468,48 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		    	session.setConnectionId(id);
 		    }
 		}
-		
-		if (PipeWriter.hasRoomForWrite(goPipe) 
-			&& PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
-           
-			int pipeId = builder.lookupHTTPClientPipe(routeId);
-						
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, pipeId);
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10, session.sessionId);
+
+		if (PipeWriter.hasRoomForWrite(goPipe)) {
+			int pipeId = builder.lookupHTTPClientPipe(routeId); //TODO; cache this in session??
 			
-    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1, session.port);
-    		PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, session.hostBytes);
-    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, route);
-			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, headers);
-    		    		
-    		PipeWriter.publishWrites(httpRequest);
-                		
-    		publishGo(1, builder.netIndex(), this);
-    		    	            
-            return true;
-        } else {
-        	boolean debug = false;
-            if (debug) {
-	        	if (!PipeWriter.hasRoomForWrite(goPipe)) {
-	        		logger.warn("go pipe is not large enough and backed up for http Get: {}",goPipe);
-	        	}
-	        	if (!PipeWriter.hasRoomForWrite(httpRequest)) {
-	        		logger.warn("http request pipe is not large enough and backed up for http Get: {}",httpRequest);
-	        	}
-            }
+			if (session.getConnectionId()<0) {
+		
+				if (PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
+	           		
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, pipeId);
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10, session.sessionId);
+					
+		    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1, session.port);
+		    		PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, session.hostBytes);
+		    		
+		    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, route);
+					PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, headers);
+					PipeWriter.publishWrites(httpRequest);
+					
+					publishGo(1, builder.netIndex(), this);
+					
+					return true;
+				}
+			} else {
+				if (PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200)) {
+	           		
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_DESTINATION_11, pipeId);
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_SESSION_10, session.sessionId);
+					
+		    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PORT_1, session.port);
+		    		PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HOST_2, session.hostBytes);
+		    		PipeWriter.writeLong(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20, session.getConnectionId());
+		    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PATH_3, route);
+					PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HEADERS_7, headers);
+					PipeWriter.publishWrites(httpRequest);
+					
+					publishGo(1, builder.netIndex(), this);
+					
+					return true;
+				}
+				
+			}
+			
         }
         return false;
 	}

@@ -13,7 +13,7 @@ public class HTTPSession {
 	public final int uniqueId;
 		
 	//cache
-	private long connectionId;
+	private long connectionId=-1;
 	
 	public String toString() {
 		return host+":"+port;

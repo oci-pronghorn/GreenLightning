@@ -28,13 +28,20 @@ public class ReactiveOperators {
 	}
 	
 	public ReactiveOperator getOperator(Pipe p) {
+		
 		int i = schemas.size();
 		while (--i>=0) {
 			if (Pipe.isForSchema(p, schemas.get(i))) {
 				return operators.get(i);
 			}
 		}
-		throw new UnsupportedOperationException("can not find operator for pipe "+p);
+		
+		StringBuilder text = new StringBuilder();
+		i = schemas.size();
+		while (--i>=0) {
+			text.append(schemas.get(i).getClass().getSimpleName()).append(",");
+		}
+		throw new UnsupportedOperationException("can not find operator by schema for pipe "+p+"\n in schemas "+text);
 	}
 
 	//creates inputs for this Transducer or Behavior

@@ -19,10 +19,8 @@ public class SchemaValidationTest {
     public void messagePubSubFROMTest() {
     	if ("arm".equals(System.getProperty("os.arch"))) {
     		assertTrue(true);
-    	}
-    	
-    	else {
-        assertTrue(FROMValidation.checkSchema("/MessagePubSub.xml", MessagePubSub.class));
+    	} else {
+    		assertTrue(FROMValidation.checkSchema("/MessagePubSub.xml", MessagePubSub.class));
      }
     }
 
@@ -30,10 +28,8 @@ public class SchemaValidationTest {
     public void messagePrivateTest() {
     	if ("arm".equals(System.getProperty("os.arch"))) {
     		assertTrue(true);
-    	}
-    	
-    	else {
-        assertTrue(FROMValidation.checkSchema("/MessagePrivate.xml", MessagePrivate.class));
+    	} else {
+    		assertTrue(FROMValidation.checkSchema("/MessagePrivate.xml", MessagePrivate.class));
         }
     }
     
@@ -41,10 +37,8 @@ public class SchemaValidationTest {
     public void messageSubscriptionFROMTest() {
     	if ("arm".equals(System.getProperty("os.arch"))) {
     		assertTrue(true);
-    	}
-    	
-    	else {
-        assertTrue(FROMValidation.checkSchema("/MessageSubscriber.xml", MessageSubscription.class));
+    	} else {
+    		assertTrue(FROMValidation.checkSchema("/MessageSubscriber.xml", MessageSubscription.class));
         }
     }
 
@@ -52,10 +46,8 @@ public class SchemaValidationTest {
     public void trafficAckFROMTest() {
     	if ("arm".equals(System.getProperty("os.arch"))) {
     		assertTrue(true);
-    	}
-    	
-    	else {
-        assertTrue(FROMValidation.checkSchema("/TrafficAckSchema.xml", TrafficAckSchema.class));
+    	} else {
+    		assertTrue(FROMValidation.checkSchema("/TrafficAckSchema.xml", TrafficAckSchema.class));
         }
     }
     
@@ -63,10 +55,8 @@ public class SchemaValidationTest {
     public void trafficOrderFROMTest() {
     	if ("arm".equals(System.getProperty("os.arch"))) {
     		assertTrue(true);
-    	}
-    	
-    	else {
-        assertTrue(FROMValidation.checkSchema("/TrafficOrderSchema.xml", TrafficOrderSchema.class));
+    	} else {
+    		assertTrue(FROMValidation.checkSchema("/TrafficOrderSchema.xml", TrafficOrderSchema.class));
         }
     }
         
@@ -74,10 +64,8 @@ public class SchemaValidationTest {
     public void trafficReleaseFROMTest() {
     	if ("arm".equals(System.getProperty("os.arch"))) {
     		assertTrue(true);
-    	}
-    	
-    	else {
-        assertTrue(FROMValidation.checkSchema("/TrafficReleaseSchema.xml", TrafficReleaseSchema.class));
+    	} else {
+    		assertTrue(FROMValidation.checkSchema("/TrafficReleaseSchema.xml", TrafficReleaseSchema.class));
         }
     }
     
@@ -85,10 +73,8 @@ public class SchemaValidationTest {
 	public void ingestMessagesFROMTest() {
 		if ("arm".equals(System.getProperty("os.arch"))) {
     		assertTrue(true);
-    	}
-    	
-    	else {
-	    assertTrue(FROMValidation.checkSchema("/IngressMessages.xml", IngressMessages.class));
+    	} else {
+    		assertTrue(FROMValidation.checkSchema("/IngressMessages.xml", IngressMessages.class));
 	    }
 	}
     
