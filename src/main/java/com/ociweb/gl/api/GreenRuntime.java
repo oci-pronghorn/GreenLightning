@@ -121,7 +121,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		GreenRuntime runtime = new GreenRuntime();
 		
 		ScriptedNonThreadScheduler s = test(app, runtime);
-        
+ 
         long limit = System.nanoTime() + (timeoutMS*1_000_000L);
         boolean result = true;
         s.startup();

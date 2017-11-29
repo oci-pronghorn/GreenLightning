@@ -22,6 +22,7 @@ import com.ociweb.pronghorn.network.schema.*;
 import com.ociweb.pronghorn.pipe.*;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
+import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
@@ -81,7 +82,7 @@ public class BuilderImpl implements Builder {
 	/////////////////
 	/////////////////
     
-    private long defaultSleepRateNS = 2_000;// should normally be between 900 and 20_000; 
+    private long defaultSleepRateNS = 2000;// should normally be between 900 and 20_000; 
     
 	private final int shutdownTimeoutInSeconds = 1;
 
@@ -146,6 +147,7 @@ public class BuilderImpl implements Builder {
     }
     
     public int lookupHTTPClientPipe(int routeId) {
+    	assert(IntHashTable.hasItem(netPipeLookup, routeId)) : "id is undefined "+routeId;
     	return IntHashTable.getItem(netPipeLookup, routeId);
     }
     
@@ -791,7 +793,6 @@ public class BuilderImpl implements Builder {
 		////////
 		if (useNetClient(netRequestPipes)) {
 			
-			int netResponseBlob = 1<<16;
 			int maxPartialResponses = Math.max(2,HTTPSession.getSessionCount());	
 			int connectionsInBits = (int)Math.ceil(Math.log(maxPartialResponses)/Math.log(2));
 
@@ -832,7 +833,6 @@ public class BuilderImpl implements Builder {
 			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
 												responseQueue, clientRequests, 
 												netResponsePipes,
-												netResponseBlob,
 												netResponseCount,
 												releaseCount,
 												writeBufferMultiplier,
@@ -916,6 +916,9 @@ public class BuilderImpl implements Builder {
 	private final List<List<PrivateTopic>> privateSourceTopics = new ArrayList<List<PrivateTopic>>();
 	private final List<List<PrivateTopic>> privateTargetTopics = new ArrayList<List<PrivateTopic>>();
 	private final TrieParserReader reader = new TrieParserReader();
+    private final List<String> dynamicTopicPublishers = new ArrayList<String>();
+	private final List<String> dynamicTopicSubscribers = new ArrayList<String>();
+	//TODO: MUST HAVE ARRAY OF TOPICS TO LOOK UP BY PIPE?
 	///////////////////////////////////		
 	
 	public List<PrivateTopic> getPrivateTopicsFromSource(String source) {
@@ -937,28 +940,106 @@ public class BuilderImpl implements Builder {
 	}	
 	
 	@Override
-	public void definePrivateTopic(String source, String target, String topic) {
+	public void definePrivateTopic(String topic, String source, String ... targets) {
+		
+		definePrivateTopic(10, 10000, topic, source, targets);
+		
+	}
+	
+	@Override
+	public void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String ... targets) {
+		
+		if (targets.length<=1) {
+			throw new UnsupportedOperationException("only call this with multiple targets");
+		}
+		
+		
+		PrivateTopic sourcePT = new PrivateTopic(topic, queueLength, maxMessageSize);
 		
 		List<PrivateTopic> localSourceTopics = null;
-		long sourceId = TrieParserReader.query(reader, privateTopicSource, source);
+		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
 		if (sourceId<0) {
 			localSourceTopics = new ArrayList<PrivateTopic>();
 			privateTopicSource.setUTF8Value(source, privateSourceTopics.size());
 			privateSourceTopics.add(localSourceTopics);
+		} else {
+			localSourceTopics = privateSourceTopics.get(sourceId);
+		}
+		localSourceTopics.add(sourcePT);
+		
+		
+		Pipe<MessagePrivate> src = sourcePT.getPipe();
+		PipeConfig<MessagePrivate> trgtConfig = src.config().grow2x();
+		int t = targets.length;
+		Pipe[] trgts = new Pipe[t];
+		PrivateTopic[] trgtTopics = new PrivateTopic[t];
+		while (--t>=0) {
+			
+			trgtTopics[t] = new PrivateTopic(topic, trgtConfig);
+			trgts[t] = trgtTopics[t].getPipe();
+
+			List<PrivateTopic> localTargetTopics = null;
+			int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, targets[t]);
+			if (targetId<0) {
+				localTargetTopics = new ArrayList<PrivateTopic>();
+				privateTopicTarget.setUTF8Value( targets[t], privateTargetTopics.size());
+				privateTargetTopics.add(localTargetTopics);
+			} else {
+				localTargetTopics = privateTargetTopics.get(targetId); 
+			}
+			
+			localTargetTopics.add(trgtTopics[t]);
 		}
 		
+		
+		ReplicatorStage.newInstance(gm, src, trgts);
+		
+	}
+	
+	@Override
+	public void definePrivateTopic(String topic, String source, String target) {
+		definePrivateTopic(10, 10000, topic, source, target);
+	}
+	
+	@Override
+	public void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String target) {
+		
+		PrivateTopic obj = new PrivateTopic(topic, queueLength, maxMessageSize);
+		
+		List<PrivateTopic> localSourceTopics = null;
+		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
+		if (sourceId<0) {
+			localSourceTopics = new ArrayList<PrivateTopic>();
+			privateTopicSource.setUTF8Value(source, privateSourceTopics.size());
+			privateSourceTopics.add(localSourceTopics);
+		} else {
+			localSourceTopics = privateSourceTopics.get(sourceId);
+		}
+		localSourceTopics.add(obj);
+		
 		List<PrivateTopic> localTargetTopics = null;
-		long targetId = TrieParserReader.query(reader, privateTopicTarget, target);
+		int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, target);
 		if (targetId<0) {
 			localTargetTopics = new ArrayList<PrivateTopic>();
 			privateTopicTarget.setUTF8Value(target, privateTargetTopics.size());
 			privateTargetTopics.add(localTargetTopics);
+		} else {
+			localTargetTopics = privateTargetTopics.get(targetId); 
 		}
-		
-		PrivateTopic obj = new PrivateTopic(source, target, topic);
-		localSourceTopics.add(obj);
 		localTargetTopics.add(obj);
 		
+		
+		
+	}
+
+	@Override
+	public void enableDynamicTopicPublish(String id) {
+		dynamicTopicPublishers.add(id);
+	}
+
+	@Override
+	public void enableDynamicTopicSubscription(String id) {
+		dynamicTopicSubscribers.add(id);
 	}
 	
 	//////////////////////////////////
@@ -1020,4 +1101,5 @@ public class BuilderImpl implements Builder {
 			telemetry.finalizeDeclareConnections();
 		}
 	}
+
 }

@@ -29,6 +29,7 @@ import com.ociweb.gl.impl.ChildClassScanner;
 import com.ociweb.gl.impl.ChildClassScannerVisitor;
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.PayloadReader;
+import com.ociweb.gl.impl.PrivateTopic;
 import com.ociweb.gl.impl.PubSubListenerBase;
 import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.RestMethodListenerBase;
@@ -93,8 +94,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	private CallableStaticMethod[] methods;
 	//////////////////
 	
-	//for supporting private topics..
-	private String[] topics = new String[0]; //TODO: MUST PUBLISH...
+	private PrivateTopic[] topics = new PrivateTopic[0]; //TODO: MUST PUBLISH...
 	
 	
 	//////////////////
@@ -220,15 +220,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				                	 MessagePrivate.instance,
 				               		 new ReactiveOperator() {
 									@Override
-									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
-										r.consumePrivateMessage(target, input);										
+									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
+										r.consumePrivateMessage(index, target, input);										
 									}        		                	 
 				                })
         		                 .addOperator(PubSubMethodListenerBase.class, 
         		                		 MessageSubscription.instance,
         		                		 new ReactiveOperator() {
 									@Override
-									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
+									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
 										r.consumePubSubMessage(target, input);										
 									}        		                	 
         		                 })
@@ -236,7 +236,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         		                		 NetResponseSchema.instance,
         		                		 new ReactiveOperator() {
  									@Override
- 									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
+ 									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
  										r.consumeNetResponse(target, input);										
  									}        		                	 
          		                 })
@@ -244,7 +244,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         		                		 HTTPRequestSchema.instance,
         		                		 new ReactiveOperator() {
  									@Override
- 									public void apply(Object target, Pipe input, ReactiveListenerStage r) {
+ 									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
  										r.consumeRestRequest(target, input);										
  									}        		                	 
          		                 });
@@ -610,9 +610,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	
 	}
 
-	final void consumePrivateMessage(Object listener, Pipe<MessagePrivate> p) {
+	final void consumePrivateMessage(int index, Object listener, Pipe<MessagePrivate> p) {
 		
-		final String topic = topics[p.id];
+		final PrivateTopic topic = topics[index];
 		
 		while (Pipe.hasContentToRead(p)) {
 					
@@ -620,11 +620,25 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				
 	            final int msgIdx = Pipe.takeMsgIdx(p);             		            
 	            assert(MessagePrivate.MSG_PUBLISH_1 == msgIdx);
-	            	            
-	            if (! ((PubSubListenerBase)listener).message(topic, Pipe.openInputStream(p))) {
-            		Pipe.resetTail(p);
-            		return;//continue later and repeat this same value.
-            	}
+	            
+	            int dispatch = -1; //TODO: move all these topic lookups to be done once and stored under index..
+	            
+                if (((null==methodReader) 
+                	|| ((dispatch=(int)TrieParserReader.query(methodReader, methodLookup, topic.topic))<0))
+                	&& ((listener instanceof PubSubListenerBase))) {
+                	
+                	if (! ((PubSubListenerBase)listener).message(topic.topic, Pipe.openInputStream(p))) {
+                		Pipe.resetTail(p);
+	            		return;//continue later and repeat this same value.
+                	}
+                	
+                } else {
+                	if (! methods[dispatch].method(listener, topic.topic, Pipe.openInputStream(p))) {
+                		Pipe.resetTail(p);
+                		return;//continue later and repeat this same value.	                    		
+                	}
+                }
+	           
 	            
 	            Pipe.confirmLowLevelRead(p, SIZE_OF_PRIVATE_MSG_PUB);
 	            Pipe.releaseReadLock(p);

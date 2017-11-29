@@ -85,8 +85,17 @@ public interface Builder extends ArgumentProvider {
 	 */
 	MQTTBridge useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength);
 		
+	//this will disable normal pub sub usages unless flagged.
+	void definePrivateTopic(String topic, String source, String target);
+	void definePrivateTopic(String topic, String source, String ... targets);
 	
-	void definePrivateTopic(String source, String target, String topic);
+	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String target);
+	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String ... targets);
+	
+	
+	void enableDynamicTopicPublish(String id);//without this any private topic above will not support dynamic routing
+	void enableDynamicTopicSubscription(String id);
+	
 
 
 	HTTPClientConfig useNetClient();

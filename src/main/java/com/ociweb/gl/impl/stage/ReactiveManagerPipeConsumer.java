@@ -25,7 +25,7 @@ public class ReactiveManagerPipeConsumer {
 	public void process(ReactiveListenerStage r) {
 		int i = inputs.length;
 		while (--i>=0) {
-			operators[i].apply(obj, inputs[i], r);
+			operators[i].apply(i, obj, inputs[i], r);
 		}
 	}
 
