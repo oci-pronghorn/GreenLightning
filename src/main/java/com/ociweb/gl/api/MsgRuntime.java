@@ -839,7 +839,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
         ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
         		                                inputPipes, outputPipes, consumers,
-        		                                parallelInstanceUnderActiveConstruction);
+        		                                parallelInstanceUnderActiveConstruction,id);
 
         
         if (listener instanceof RestListenerBase) {

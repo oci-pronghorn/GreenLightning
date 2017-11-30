@@ -3,6 +3,7 @@ package com.ociweb.gl.impl.stage;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -46,6 +47,7 @@ import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
@@ -94,8 +96,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	private CallableStaticMethod[] methods;
 	//////////////////
 	
-	private PrivateTopic[] topics = new PrivateTopic[0]; //TODO: MUST PUBLISH...
+	private final PrivateTopic[] receivePrivateTopics;
 	
+	public final PublishPrivateTopics publishPrivateTopics;
+
 	
 	//////////////////
 	//only used for direct rest response dispatch upon route arrival
@@ -158,7 +162,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     public ReactiveListenerStage(GraphManager graphManager, Behavior listener, 
     		                     Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, 
     		                     ArrayList<ReactiveManagerPipeConsumer> consumers, 
-    		                     H builder, int parallelInstance) {
+    		                     H builder, int parallelInstance, String nameId) {
         
         super(graphManager, consumerJoin(inputPipes, consumers.iterator()), outputPipes);
         this.listener = listener;
@@ -172,6 +176,63 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         this.states = builder.getStates();
         this.graphManager = graphManager;
 
+        //only create private topics for named behaviors
+        if (null!=nameId) {
+        	List<PrivateTopic> listOut = builder.getPrivateTopicsFromTarget(nameId);
+        	//only lookup topics if the builder knows of some
+        	if (!listOut.isEmpty()) {
+		        int i = inputPipes.length;
+		        this.receivePrivateTopics = new PrivateTopic[i];
+		        while (--i>=0) {
+		        	if ( Pipe.isForSchema(inputPipes[i], MessagePrivate.instance) ) {
+		        		
+		        		int j = listOut.size();
+		        		while(--j>=0) {
+		        			if ( listOut.get(j).getPipe() == inputPipes[i] ) {
+		        				this.receivePrivateTopics[j] = listOut.get(j);
+		        				break;//done		        				
+		        			}
+		        		}
+		        		assert (j>=0) : "error: did not find matching pipe for private topic";
+		        	}		        	
+		        }
+        	} else {
+        		this.receivePrivateTopics = null;
+        	}
+	        ////////////////
+        	
+	        List<PrivateTopic> listIn = builder.getPrivateTopicsFromSource(nameId);
+	        if (!listIn.isEmpty()) {
+		        	        	
+	        	TrieParser privateTopicsPublishTrie;
+	        	Pipe[] privateTopicPublishPipes;
+	        	TrieParserReader privateTopicsTrieReader;
+	        	
+	        	
+	        	int i = listIn.size();
+		        privateTopicsPublishTrie = new TrieParser(i,1,false,false,false);//a topic is case-sensitive
+		        privateTopicPublishPipes = new Pipe[i];
+		        while (--i >= 0) {
+		        	PrivateTopic topic = listIn.get(i);
+		        	privateTopicPublishPipes[i] = topic.getPipe();
+		        	privateTopicsPublishTrie.setUTF8Value(topic.topic, i);//to matching pipe index	
+		        }
+		        privateTopicsTrieReader = new TrieParserReader(0,true);
+		        
+		        this.publishPrivateTopics =
+			        new PublishPrivateTopics(privateTopicsPublishTrie,
+							        		privateTopicPublishPipes,
+							        		privateTopicsTrieReader);
+		        
+	        } else {
+	        	this.publishPrivateTopics = null;
+	        }
+	        
+        } else {
+        	this.receivePrivateTopics = null;
+        	this.publishPrivateTopics = null;
+        }
+        
         int totalCount = totalLiveReactors.incrementAndGet();
         assert(totalCount>=0);
         
@@ -612,7 +673,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	final void consumePrivateMessage(int index, Object listener, Pipe<MessagePrivate> p) {
 		
-		final PrivateTopic topic = topics[index];
+		final PrivateTopic topic = receivePrivateTopics[index];
 		
 		while (Pipe.hasContentToRead(p)) {
 					
@@ -1139,7 +1200,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
 	//used for looking up the features used by this TrafficOrder goPipe
-	private GatherAllFeatures ccmwp = new GatherAllFeatures();
+	private GatherAllFeaturesAndSetReactor ccmwp 
+	                 = new GatherAllFeaturesAndSetReactor(this);
 
 	public int getFeatures(Pipe<TrafficOrderSchema> pipe) {
 		ccmwp.init(pipe);

@@ -12,6 +12,7 @@ import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
+import com.ociweb.gl.impl.stage.PublishPrivateTopics;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
@@ -28,8 +29,6 @@ import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
-import com.ociweb.pronghorn.util.TrieParser;
-import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 /**
@@ -53,7 +52,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     private int lastResponseWriterFinished = 1;//starting in the "end" state
     
     private String[] exclusiveTopics =  new String[0];//TODO: make empty
-
     
     protected AtomicBoolean aBool = new AtomicBoolean(false);   
 
@@ -75,15 +73,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	protected Pipe<?>[] optionalOutputPipes;
 	public int initFeatures; //this can be modified up to the moment that we build the pipes.
 	
-	///////////
-	///////////
-	private String[] privateTopics = null;
-	private Pipe<MessagePrivate>[] privateTopicPipes = null;
-	private TrieParser privateTopicsTrie = null;
-	private TrieParserReader privateTopicsTrieReader = null;
+	private PublishPrivateTopics publishPrivateTopics;	
+
 	protected PipeConfigManager pcm;
-	//////////
-    //////////
 	private final int parallelInstanceId;
 	
     public MsgCommandChannel(GraphManager gm, B hardware,
@@ -296,8 +288,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		length+=optionalOutputPipes.length;
     	}
     	
-    	if (null!=privateTopicPipes) {
-    		length+=privateTopicPipes.length;
+    	if (null!=publishPrivateTopics) {
+    		length+=publishPrivateTopics.count();
     	}
   
     	int idx = 0;
@@ -324,9 +316,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		idx+=optionalOutputPipes.length;
     	}
     	
-    	if (null!=privateTopicPipes) {
-    		System.arraycopy(privateTopicPipes, 0, results, idx, privateTopicPipes.length);
-    		idx+=privateTopicPipes.length;
+    	if (null!=publishPrivateTopics) {
+    		publishPrivateTopics.copyPipes(results, idx);
+    		idx+=publishPrivateTopics.count();
     	}
     	
     	if (null != goPipe) {//last
@@ -715,9 +707,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
 
-        int token =  null==privateTopicsTrieReader ? -1 :
-        		     (int)TrieParserReader.query(privateTopicsTrieReader,
-                							privateTopicsTrie, topic);
+        int token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic);
 		
 		if (token>=0) {
 			return publishOnPrivateTopic(token, writable);
@@ -754,9 +744,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean publishTopic(CharSequence topic, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
-        int token = null==privateTopicsTrieReader ? -1 :
-        	          (int)TrieParserReader.query(privateTopicsTrieReader,
-                privateTopicsTrie, topic);
+		int token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic);
 
 		if (token>=0) {
 			return publishOnPrivateTopic(token);
@@ -789,11 +777,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
  
-        int token = null==privateTopicsTrieReader ? -1 :
-        		    (int)TrieParserReader.query(privateTopicsTrieReader,
-        		                                   privateTopicsTrie, 
-        		                                   topic, 0, topic.length, Integer.MAX_VALUE);
-        
+        int token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic, 0, topic.length);
+		 
         if (token>=0) {
         	return publishOnPrivateTopic(token, writable);
         } else {
@@ -823,11 +808,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public boolean publishTopic(byte[] topic) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
  
-        int token = null==privateTopicsTrieReader ? -1 :
-        		    (int)TrieParserReader.query(privateTopicsTrieReader,
-        		                                   privateTopicsTrie, 
-        		                                   topic, 0, topic.length, Integer.MAX_VALUE);
-        
+		int token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic, 0, topic.length);
+
         if (token>=0) {
         	return publishOnPrivateTopic(token);
         } else {
@@ -854,7 +836,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
 	private boolean publishOnPrivateTopic(int token, Writable writable) {
 		//this is a private topic            
-		Pipe<MessagePrivate> output = privateTopicPipes[token];
+		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
 		if (PipeWriter.tryWriteFragment(output, MessagePrivate.MSG_PUBLISH_1)) {
 					
 			DataOutputBlobWriter<MessagePrivate> writer = PipeWriter.outputStream(output);
@@ -872,7 +854,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
 	private boolean publishOnPrivateTopic(int token) {
 		//this is a private topic            
-		Pipe<MessagePrivate> output = privateTopicPipes[token];
+		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
 		if (PipeWriter.tryWriteFragment(output, MessagePrivate.MSG_PUBLISH_1)) {
 			
 			PipeWriter.writeSpecialBytesPosAndLen(output, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3, -1, 0);
@@ -981,7 +963,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
 	private int tokenForPrivateTopic(TopicWritable topic) {
-		if (null==privateTopicsTrieReader) {
+		if (null==publishPrivateTopics) {
 			return -1;
 		}
 		if (null==tempTopicPipe) {
@@ -997,9 +979,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		Pipe.publishWrites(tempTopicPipe);			
         
 		Pipe.takeMsgIdx(tempTopicPipe);
-		int token = (int)TrieParserReader.query(privateTopicsTrieReader,
-                							    privateTopicsTrie, 
-                							    tempTopicPipe, -1);
+		
+		int token = publishPrivateTopics.getToken(tempTopicPipe);
+				
 		Pipe.confirmLowLevelRead(tempTopicPipe, size);
 		Pipe.releaseReadLock(tempTopicPipe);
 		return token;
@@ -1402,31 +1384,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		//logger.info("shutdown requested and sent to pipe "+gcc.goPipe);    	
 		PipeWriter.publishEOF(gcc.goPipe);
 	}
-	
-	public String[] privateTopics() {
-		return privateTopics;
-	}
-	
-	public void privateTopics(String... topic) {
-		privateTopics = topic;
-		///
-		int i = topic.length;
-		privateTopicPipes = new Pipe[i];
-		PipeConfig<MessagePrivate> config = pcm.getConfig(MessagePrivate.class);
-		while (--i >= 0) {
-			 privateTopicPipes[i] = new Pipe(config);
-		}
-		///
-		int j= topic.length;
-		privateTopicsTrie = new TrieParser(j,1,false,false,false);//a topic is case-sensitive
-		while (--j>=0) {
-			privateTopicsTrie.setUTF8Value(topic[j], j);//to matching pipe index
-		}
-		privateTopicsTrieReader = new TrieParserReader(0,true);
-	}
 
+	public void setPrivateTopics(PublishPrivateTopics publishPrivateTopics) {
+		this.publishPrivateTopics = publishPrivateTopics;
+	}
+	
 	public boolean isGoPipe(Pipe<TrafficOrderSchema> target) {
 		return target==goPipe;
 	}
+
 		
 }

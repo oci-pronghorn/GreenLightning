@@ -392,12 +392,13 @@ public class BuilderImpl implements Builder {
 
     public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Behavior listener, 
     		                		Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, 
-    		                		ArrayList<ReactiveManagerPipeConsumer> consumers, int parallelInstance) {
+    		                		ArrayList<ReactiveManagerPipeConsumer> consumers,
+    		                		int parallelInstance, String nameId) {
     	assert(null!=listener);
     	
     	return (R) new ReactiveListenerStage(gm, listener, 
     			                             inputPipes, outputPipes, 
-    			                             consumers, this, parallelInstance);
+    			                             consumers, this, parallelInstance, nameId);
     }
 
 	public <G extends MsgCommandChannel> G newCommandChannel(
@@ -871,9 +872,7 @@ public class BuilderImpl implements Builder {
 		PronghornStage producer = gm2.getRingProducer(gm,orderPipe.id);
 		assert(producer instanceof ReactiveListenerStage) : "TrafficOrderSchema must only come from Reactor stages but was "+producer.getClass().getSimpleName();
 		
-		ReactiveListenerStage reactor =  (ReactiveListenerStage)producer;			
-		int features = reactor.getFeatures(orderPipe);
-		return features;
+		return ((ReactiveListenerStage)producer).getFeatures(orderPipe);
 	}
 	
 	@Override
