@@ -241,8 +241,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 
 			final byte totalConnectionsInBits = 2; //only 4 brokers
 			final short maxPartialResponses = 1;
-			String user = null;
-			String pass = null;
 
 			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, certificates,
 					                              maxInFlight,
