@@ -20,7 +20,7 @@
       </includes>
     </fileSet>
     <fileSet filtered="false" packaged="false">
-      <directory>src/main/resources/certificate</directory>
+      <directory>certificates</directory>
       <includes>
         <include>**/*.*	</include>
       </includes>
