@@ -532,7 +532,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				serverConfig.maxConnectionBitsOnServer,
 				serverConfig.maxConcurrentInputs,
 				serverConfig.maxConcurrentOutputs,
-				builder.parallelismTracks(),
+				builder.parallelismTracks(), false,
 				"Server",config.defaultHostPath());
 		
 		final int routerCount = builder.parallelismTracks();
