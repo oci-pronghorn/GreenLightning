@@ -163,7 +163,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 	
 	public MQTTBridge authentication(CharSequence user, CharSequence pass) {
-		return this.authentication(user, pass, TLSCertificates.defaultCerts);
+		return this.authentication(user, pass, null==this.certificates ? TLSCertificates.defaultCerts: this.certificates);
 	}
 
 	public MQTTBridge authentication(CharSequence user, CharSequence pass, TLSCertificates certificates) {
@@ -174,8 +174,8 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		this.user = user;
 		this.pass = pass;
 
-		assert(null != user);
-		assert(null != pass);
+		//assert(null != user);
+		//assert(null != pass);
 		assert(null != certificates);
 
 		return this;
