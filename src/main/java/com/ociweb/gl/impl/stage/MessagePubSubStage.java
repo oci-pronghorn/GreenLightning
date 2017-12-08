@@ -338,7 +338,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	        	processPending();
 	            if (pendingPublishCount>0) {
 	            	foundWork = false;
-	            	System.err.println("aaaa");
 	            	//do not pick up new work until this is done or we may get out of order messages.
 	                return;//try again later
 	            } else {
