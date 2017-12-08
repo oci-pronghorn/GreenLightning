@@ -16,11 +16,10 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 
 	
 	private final GreenCommandChannel cmd;
-	private HTTPSession session = new HTTPSession(
-			//"javanut.com",80,0);
-			"127.0.0.1",8088,0);
+	private HTTPSession session;
 	 
-	public HTTPGetBehaviorSingle(GreenRuntime runtime) {
+	public HTTPGetBehaviorSingle(GreenRuntime runtime, HTTPSession session) {
+		this.session = session;
 		cmd = runtime.newCommandChannel(NET_REQUESTER | DYNAMIC_MESSAGING);
 	}
 

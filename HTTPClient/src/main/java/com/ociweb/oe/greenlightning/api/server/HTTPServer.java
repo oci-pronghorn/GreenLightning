@@ -34,17 +34,13 @@ public class HTTPServer implements GreenApp
     @Override
     public void declareConfiguration(Builder c) {
         
-    	//TODO: produers must come first even when combining arrays....
-    	
     	c.limitThreads(2);//limiting the threads
     	
-    	//TODO: why is this sever scheduled in an odd way disconnected??
-    	
-    	c.enableTelemetry("127.0.0.1",8098);
-    	
     	HTTPServerConfig conf = c.useHTTP1xServer(8088)
-    			.setHost(host)
-    			.useInsecureServer();
+    			.setHost(host);
+    			
+    			//.useInsecureServer();
+    			
 		
 		//emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
 		smallResponseRouteId = c.registerRoute("/testpageB");
