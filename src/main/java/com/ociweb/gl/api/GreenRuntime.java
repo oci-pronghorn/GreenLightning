@@ -8,7 +8,6 @@ import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
-import com.ociweb.pronghorn.util.math.ScriptedSchedule;
 
 public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	
@@ -84,8 +83,10 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		}
 		   //exportGraphDotFile();
 
+		//runtime.scheduler = StageScheduler.threadPerStage(runtime.gm);//hack test.				
 		runtime.scheduler = runtime.builder.createScheduler(runtime);
-	    runtime.scheduler.startup();
+	    
+		runtime.scheduler.startup();
 
 		return runtime;
     }

@@ -161,9 +161,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private boolean isPreviousConsumed(int incomingPipeId) {
         	
     	long[] marks = consumedMarks[incomingPipeId];
-    	int totalUnconsumed = 0;
-    	
-    	totalUnconsumed = countUnconsumed(marks, totalUnconsumed);
+    	int totalUnconsumed = countUnconsumed(marks, 0);
 
     	int totalConsumers = marks.length;
     	if ( (totalConsumers-totalUnconsumed) < requiredConsumes[incomingPipeId]  ) {
@@ -204,7 +202,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     	if (pendingAck[incomingPipeId]) {   
    			PipeReader.releaseReadLock( incomingSubsAndPubsPipe[incomingPipeId]); 
    		    		
-            decReleaseCount(incomingPipeId);    		
+            decReleaseCount(incomingPipeId);  		
     		
             pendingAck[incomingPipeId] = false;
     		
@@ -337,7 +335,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	        if (pendingPublishCount>0) { //must do these first.
 	        	processPending();
 	            if (pendingPublishCount>0) {
-	            	foundWork = false;
 	            	//do not pick up new work until this is done or we may get out of order messages.
 	                return;//try again later
 	            } else {
@@ -429,27 +426,22 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		int limit = pendingPublishCount;
 		pendingPublishCount = 0;//set to zero to collect the new failed values
 		foundWork=true;
-		switch(pendingDeliveryType) {
-			case Message:
-		    	{
-		    		if (pendingIngress) {		    			
-		    			allPendingIngressMessages(limit, pendingPublish, ingressMessagePipes[pendingReleaseCountIdx]);
-		    		} else {
-		            	allPendingNormalMessages(limit, pendingPublish, consumedMarks[pendingReleaseCountIdx], incomingSubsAndPubsPipe[pendingReleaseCountIdx]);
-		    		}
-		    	}
-				break;
-			case State:
-		    	{
-		    		assert(!pendingIngress);
-		        	allPendingStateChanges(limit, pendingPublish, consumedMarks[pendingReleaseCountIdx], currentState, newState);
-
-		    		if (0 == pendingPublishCount) {
-		    			currentState = newState;
-		    		}
-		    	}
-				break;
+		
+		if (PubType.Message == pendingDeliveryType) {
+			if (pendingIngress) {		    			
+				allPendingIngressMessages(limit, pendingPublish, ingressMessagePipes[pendingReleaseCountIdx]);
+			} else {
+				allPendingNormalMessages(limit, pendingPublish, consumedMarks[pendingReleaseCountIdx], incomingSubsAndPubsPipe[pendingReleaseCountIdx]);
+			}
+		} else if (PubType.State == pendingDeliveryType) {
+			assert(!pendingIngress);
+			allPendingStateChanges(limit, pendingPublish, consumedMarks[pendingReleaseCountIdx], currentState, newState);
+			
+			if (0 == pendingPublishCount) {
+				currentState = newState;
+			}		
 		}
+
 	}
 
 
@@ -489,11 +481,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
         
 //        logger.info("enter while {}, {}, {} ,{} ,{}, {}, {}",
-//        		isPreviousConsumed(a),
+//        		isPreviousConsumed(a), //true
 //        		PipeReader.hasContentToRead(pipe),
 //        		hasReleaseCountRemaining(a),
-//        		isChannelUnBlocked(a),
-//        		isNotBlockedByStateChange(pipe), a, pipe);
+//        		isChannelUnBlocked(a), //true
+//        		isNotBlockedByStateChange(pipe), //true
+//        		a, pipe);
         
         
         while (isPreviousConsumed(a) && //warning this one has side effect and must come first.

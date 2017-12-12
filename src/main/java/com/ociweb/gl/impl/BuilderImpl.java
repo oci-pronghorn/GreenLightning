@@ -147,7 +147,6 @@ public class BuilderImpl implements Builder {
     }
     
     public int lookupHTTPClientPipe(int routeId) {
-    	assert(IntHashTable.hasItem(netPipeLookup, routeId)) : "id is undefined "+routeId;
     	return IntHashTable.getItem(netPipeLookup, routeId);
     }
     

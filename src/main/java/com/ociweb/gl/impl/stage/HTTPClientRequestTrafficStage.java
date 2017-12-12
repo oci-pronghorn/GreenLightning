@@ -31,8 +31,6 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	private final Pipe<NetPayloadSchema>[] output;
 	private final ClientCoordinator ccm;
     
-	private final boolean isTLS;
-    
 	private int activeOutIdx = 0;
 			
 	private static final String implementationVersion = PronghornStage.class.getPackage().getImplementationVersion()==null?"unknown":PronghornStage.class.getPackage().getImplementationVersion();
@@ -61,7 +59,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		this.input = input;
 		this.output = output;
 		this.ccm = ccm;
-		this.isTLS = hardware.getHTTPClientConfig().isTLS();
+		
+		assert(ccm.isTLS == hardware.getHTTPClientConfig().isTLS());
 		
 		GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "lavenderblush", this);
 		GraphManager.addNota(graphManager, GraphManager.LOAD_MERGE, GraphManager.LOAD_MERGE, this);
@@ -75,16 +74,92 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	}
 	
 	
+//	protected boolean processMessagesForPipe(int activePipe) {
+//		
+//		
+//	    Pipe<ClientHTTPRequestSchema> requestPipe = input[activePipe];
+//	    	  
+//	    boolean didWork = false;
+//
+//	    		    
+/////	    logger.info("send for active pipe {} has content to read {} ",activePipe,Pipe.hasContentToRead(requestPipe));
+//	    
+//	    
+//        if (Pipe.hasContentToRead(requestPipe)) {
+//
+//        	long now = System.currentTimeMillis();
+//        	//This check is required when TLS is in use.
+//        	if (isConnectionReadyForUse(requestPipe) ){
+//	        	didWork = true;	        
+//	        	
+//	               	//Need peek to know if this will block.
+//	 	        		        	
+//	            final int msgIdx = Pipe.takeMsgIdx(requestPipe);
+//	            
+//	            //logger.info("send for active pipe {} with msg {}",activePipe,msgIdx);
+//	            
+//	            if (ClientHTTPRequestSchema.MSG_FASTHTTPGET_200 == msgIdx) {
+//	            	activeConnection.setLastUsedTime(now);
+//					HTTPClientUtil.publishGet(requestPipe, activeConnection, output[activeConnection.requestPipeLineIdx()], now, stageId);
+//	            } else  if (ClientHTTPRequestSchema.MSG_HTTPGET_100 == msgIdx) {
+//	            	HTTPClientUtil.processGetLogic(now, requestPipe, activeConnection, output[activeConnection.requestPipeLineIdx()], stageId);
+//	            } else  if (ClientHTTPRequestSchema.MSG_HTTPPOST_101 == msgIdx) {
+//	            	HTTPClientUtil.processPostLogic(now, requestPipe, activeConnection, output[activeConnection.requestPipeLineIdx()], stageId);	            	
+//	            } else  if (ClientHTTPRequestSchema.MSG_CLOSE_104 == msgIdx) {
+//	            	HTTPClientUtil.cleanCloseConnection(activeConnection, output[activeConnection.requestPipeLineIdx()]);
+//	            } else  if (-1 == msgIdx) {
+//	            	//logger.info("Received shutdown message");								
+//					processShutdownLogic(requestPipe);
+//					return false;
+//	            } else {
+//	            	throw new UnsupportedOperationException("Unexpected Message Idx");
+//	            }		
+//				
+//				Pipe.confirmLowLevelRead(requestPipe, Pipe.sizeOf(ClientHTTPRequestSchema.instance, msgIdx));
+//				Pipe.releaseReadLock(requestPipe);	
+//
+//      
+//	        }	
+//        	
+//        }
+//        
+//        
+//	return didWork;
+//}
+	
 	@Override
 	protected void processMessagesForPipe(int activePipe) {
 		
 		    Pipe<ClientHTTPRequestSchema> requestPipe = input[activePipe];
 
-	        while (PipeReader.hasContentToRead(requestPipe) && hasReleaseCountRemaining(activePipe) 
+//		    System.err.println(PipeReader.hasContentToRead(requestPipe) 
+//	        		+" && "+hasReleaseCountRemaining(activePipe) 
+//	        		+" && "+isChannelUnBlocked(activePipe)	                
+//	        		+" && "+hasOpenConnection(requestPipe, output, ccm));
+		    
+		    if (PipeReader.hasContentToRead(requestPipe) 
+	        	&& hasReleaseCountRemaining(activePipe) 
+	            && isChannelUnBlocked(activePipe)	                
+	            && !hasOpenConnection(requestPipe, output, ccm)
+	            && PipeReader.tryReadFragment(requestPipe)) {
+		    	//special case for connection which was closed, must abandon old data
+		    	//and allow trafic cop get back ack and not hang the system.
+				
+				PipeReader.releaseReadLock(requestPipe);
+
+				//only do now after we know its not blocked and was completed
+				decReleaseCount(activePipe);
+				return;
+		    }
+		    
+		    
+	        while (PipeReader.hasContentToRead(requestPipe) 
+	        		&& hasReleaseCountRemaining(activePipe) 
 	                && isChannelUnBlocked(activePipe)	                
 	                && hasOpenConnection(requestPipe, output, ccm)
 	                && PipeReader.tryReadFragment(requestPipe) ){
 	  	    
+	        	
 	        	
 	        	//Need peek to know if this will block.
 	        	
@@ -147,10 +222,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 					                }
 			                	}
 	            		break;
-	            			case ClientHTTPRequestSchema.MSG_HTTPPOST_101:
-	            				
+	            			case ClientHTTPRequestSchema.MSG_HTTPPOST_101:	            				
 				                {
-				                					                	
 				            		final byte[] hostBack = Pipe.blob(requestPipe);
 				            		final int hostPos = PipeReader.readBytesPosition(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2);
 				            		final int hostLen = PipeReader.readBytesLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2);
@@ -202,12 +275,12 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 											
 											HeaderUtil.writeHeaderMiddle(activeWriter, implementationVersion);
 											PipeReader.readBytes(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7, activeWriter);
-											HeaderUtil.writeHeaderEnding(activeWriter, true, (long) 0);  
+
+											long postLength = PipeReader.readBytesLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5);
+											HeaderUtil.writeHeaderEnding(activeWriter, true, postLength);  
 											
+											//TODO: How is chunking supported, that code is not here yet but length must be -1 I think.
 											
-											
-											//TODO: must write lenghth in header before we write the payload.
-											//un-tested  post payload here, TODO: need to add support for chunking and length??
 											PipeReader.readBytes(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5, activeWriter);
 											
 						                	DataOutputBlobWriter.closeHighLevelField(activeWriter, NetPayloadSchema.MSG_PLAIN_210_FIELD_PAYLOAD_204);
@@ -273,7 +346,9 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		
 		clientConnection.incRequestsSent();//count of messages can only be done here.
 		Pipe<NetPayloadSchema> outputPipe = output[outIdx];
-						
+							
+		//TODO: this must be converted to the low level API urgent...
+		
 		PipeWriter.presumeWriteFragment(outputPipe, NetPayloadSchema.MSG_PLAIN_210);
     	
 			PipeWriter.writeLong(outputPipe, NetPayloadSchema.MSG_PLAIN_210_FIELD_CONNECTIONID_201, connectionId);
@@ -347,6 +422,15 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 			}
 			
 		} else {
+						
+			logger.info("Confirm that the port {} is open on the serer side",port);
+			if (ccm.isTLS) {
+				
+				
+				
+				logger.info("Confirm that the client trusts all or has the right certs. Trust all is a very bad idea except for testing and development.");
+			}
+			
 			//this happens often when the profiler is running due to contention for sockets.
 			
 			//"Has no room" for the new connection so we request that the oldest connection is closed.
