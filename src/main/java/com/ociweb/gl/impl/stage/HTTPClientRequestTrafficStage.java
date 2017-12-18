@@ -136,32 +136,14 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 //	        		+" && "+hasReleaseCountRemaining(activePipe) 
 //	        		+" && "+isChannelUnBlocked(activePipe)	                
 //	        		+" && "+hasOpenConnection(requestPipe, output, ccm));
-		    
-		    if (PipeReader.hasContentToRead(requestPipe) 
-	        	&& hasReleaseCountRemaining(activePipe) 
-	            && isChannelUnBlocked(activePipe)	                
-	            && !hasOpenConnection(requestPipe, output, ccm)
-	            && PipeReader.tryReadFragment(requestPipe)) {
-		    	//special case for connection which was closed, must abandon old data
-		    	//and allow trafic cop get back ack and not hang the system.
-				
-				PipeReader.releaseReadLock(requestPipe);
 
-				//only do now after we know its not blocked and was completed
-				decReleaseCount(activePipe);
-				return;
-		    }
-		    
 		    
 	        while (PipeReader.hasContentToRead(requestPipe) 
 	        		&& hasReleaseCountRemaining(activePipe) 
 	                && isChannelUnBlocked(activePipe)	                
-	                && hasOpenConnection(requestPipe, output, ccm)
+	                && hasOpenConnection(requestPipe, output, ccm, activePipe)
 	                && PipeReader.tryReadFragment(requestPipe) ){
 	  	    
-	        	
-	        	
-	        	//Need peek to know if this will block.
 	        	
 	            int msgIdx = PipeReader.getMsgIdx(requestPipe);
 	            
@@ -388,31 +370,43 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 
 	private PipeUTF8MutableCharSquence mCharSequence = new PipeUTF8MutableCharSquence();
 	
-	//has side effect fo storing the active connectino as a member so it neeed not be looked up again later.
+	//has side effect of storing the active connection as a member so it need not be looked up again later.
 	public boolean hasOpenConnection(Pipe<ClientHTTPRequestSchema> requestPipe, 
-											Pipe<NetPayloadSchema>[] output, ClientCoordinator ccm) {
+											Pipe<NetPayloadSchema>[] output, ClientCoordinator ccm, int activePipe) {
 		
 		if (PipeReader.peekMsg(requestPipe, -1)) {
 			return com.ociweb.pronghorn.network.http.HTTPClientRequestStage.hasRoomForEOF(output);
 		}
 		
-		int hostMeta =  PipeReader.peekDataMeta(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
-		int hostLen =  PipeReader.peekDataLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
+		final int msgIdx = PipeReader.peekInt(requestPipe, 0);
 		
+		//these fields are assumed to be the same for all mesage types.
+		int hostMeta = PipeReader.peekDataMeta(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
+		int hostLen = PipeReader.peekDataLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
 		int port = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1);
 		int userId = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10);		
-						
-		PipeUTF8MutableCharSquence mCharSeq = mCharSequence.setToField(requestPipe, hostMeta, hostLen);
+
+		PipeUTF8MutableCharSquence mCharSeq = mCharSequence.setToField(requestPipe, hostMeta, hostLen);				
+		long connectionId;
+		
+		if (ClientHTTPRequestSchema.MSG_FASTHTTPGET_200 == msgIdx) {
+			
+			connectionId = PipeReader.peekLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20);
+			assert(connectionId == ccm.lookup(mCharSeq, port, userId));
+			
+		} else {			
+			connectionId = ccm.lookup(mCharSeq, port, userId);			
+		}
+		
 		ClientConnection activeConnection = ClientCoordinator.openConnection(
-				ccm, mCharSeq, port, userId, output,	
-		        ccm.lookup(mCharSeq, port, userId));
+				ccm, mCharSeq, port, userId, output, connectionId);
 				
 		
 		if (null != activeConnection) {
 			
 			if (ccm.isTLS) {
 				
-				//If this connection needs to complete a hanshake first then do that and do not send the request content yet.
+				//If this connection needs to complete a handshake first then do that and do not send the request content yet.
 				HandshakeStatus handshakeStatus = activeConnection.getEngine().getHandshakeStatus();
 				if (HandshakeStatus.FINISHED!=handshakeStatus && HandshakeStatus.NOT_HANDSHAKING!=handshakeStatus) {
 					activeConnection = null;
@@ -421,40 +415,29 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	
 			}
 			
-		} else {
-						
-			logger.info("Confirm that the port {} is open on the serer side",port);
-			if (ccm.isTLS) {
+			if (activeConnection.isDisconnecting()) {
+				if (ccm.isTLS) {
+					logger.info("Double check the client side certificates");
+				} else {
+					logger.info("Double check the server port to ensure it is open");
+				}
 				
-				
-				
-				logger.info("Confirm that the client trusts all or has the right certs. Trust all is a very bad idea except for testing and development.");
+				if (PipeReader.tryReadFragment(requestPipe)) {
+			    	//special case for connection which was closed, must abandon old data
+			    	//and allow trafic cop get back ack and not hang the system.			    	
+					PipeReader.releaseReadLock(requestPipe);
+					decReleaseCount(activePipe);
+				}
+				return false;
 			}
-			
-			//this happens often when the profiler is running due to contention for sockets.
-			
-			//"Has no room" for the new connection so we request that the oldest connection is closed.
-			
-			//instead of doing this (which does not work) we will just wait by returning false.
-//			ClientConnection connectionToKill = (ClientConnection)ccm.get( -connectionId, 0);
-//			if (null!=connectionToKill) {
-//				Pipe<NetPayloadSchema> pipe = output[connectionToKill.requestPipeLineIdx()];
-//				if (PipeWriter.hasRoomForWrite(pipe)) {
-//					//close the least used connection
-//					cleanCloseConnection(connectionToKill, pipe);				
-//				}
-//			}
-		
+						
+		} else {
+			//not yet open, this is not an error just an attempt to try again soon.
 			return false;
 		}
 		
-		
-		int outIdx = activeConnection.requestPipeLineIdx(); //this should be done AFTER any handshake logic
-		Pipe<NetPayloadSchema> pipe = output[outIdx];
-		if (!PipeWriter.hasRoomForWrite(pipe)) {
-			return false;
-		}
-		return true;
+		//this should be done AFTER any handshake logic
+		return PipeWriter.hasRoomForWrite(output[activeConnection.requestPipeLineIdx()]);
 	}
 
 
