@@ -455,7 +455,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		/////////////////////
 		if (session.getConnectionId()<0) {
 			long id = builder.getClientCoordinator().lookup(
-					    session.host, session.port, session.sessionId);
+					    session.hostBytes, 0, session.hostBytes.length, Integer.MAX_VALUE,
+					    session.port, session.sessionId);
 		    if (id>=0) {
 		    	session.setConnectionId(id);
 		    }

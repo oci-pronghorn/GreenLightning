@@ -277,14 +277,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     public static ReactiveOperators reactiveOperators() {
 		return new ReactiveOperators()
-				                .addOperator(PubSubMethodListenerBase.class, 
-				                	 MessagePrivate.instance,
-				               		 new ReactiveOperator() {
-									@Override
-									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
-										r.consumePrivateMessage(index, target, input);										
-									}        		                	 
-				                })
+//				                .addOperator(PubSubMethodListenerBase.class, 
+//				                	 MessagePrivate.instance,
+//				               		 new ReactiveOperator() {
+//									@Override
+//									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
+//										r.consumePrivateMessage(index, target, input);										
+//									}        		                	 
+//				                })
         		                 .addOperator(PubSubMethodListenerBase.class, 
         		                		 MessageSubscription.instance,
         		                		 new ReactiveOperator() {
@@ -579,7 +579,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     
 	final void consumeNetResponse(Object listener, Pipe<NetResponseSchema> p) {
-		 
+
     	 while (Pipe.hasContentToRead(p)) {                
              
        		 Pipe.markTail(p);
