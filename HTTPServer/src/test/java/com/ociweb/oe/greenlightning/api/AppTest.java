@@ -25,6 +25,7 @@ import static org.junit.Assert.fail;
  */
 public class AppTest { 
 
+	private static int port = 8089;
 	private final int timeoutMS = 20_000;
 	private final static Logger logger = LoggerFactory.getLogger(AppTest.class);
 	
@@ -40,7 +41,7 @@ public class AppTest {
    		    AtomicBoolean cleanExit = new AtomicBoolean(false);
 		    
 	   	    new Thread(()->{
-	   		    cleanExit.set(GreenRuntime.testUntilShutdownRequested(new HTTPServer(host, result), timeoutMS));
+	   		    cleanExit.set(GreenRuntime.testUntilShutdownRequested(new HTTPServer(host, port, result), timeoutMS));
 	   		    done.set(true);
 	   	    }).start();
    		    
@@ -71,7 +72,7 @@ public class AppTest {
 			httpsURLConnectionTrustAllCerts(host);
 					
 					int countDown = 400;
-					while (!hitURL("https://"+host+":8088/testPageB", null, null, "beginning of text file\n")) {
+					while (!hitURL("https://"+host+":"+port+"/testPageB", null, null, "beginning of text file\n")) {
 						if (--countDown<=0) {
 							fail("Server was not running");
 							break;
@@ -83,16 +84,16 @@ public class AppTest {
 						}
 					}
 					
-					hitURL("https://"+host+":8088/testPageA?arg=42", "oreo", null,
+					hitURL("https://"+host+":"+port+"/testPageA?arg=42", "oreo", null,
 							"");
 							
-					hitURL("https://"+host+":8088/testPageC", "peanutbutter", "payload",
+					hitURL("https://"+host+":"+port+"/testPageC", "peanutbutter", "payload",
 							"beginning of text file\n" + "ending of text file\n");
 
 					// The binary data encoded in the payload below is due to the binary 2-byte-counted UTF write (utfWrite) performed by RestBehaviorHandoffResponder
-					hitURL("https://"+host+":8088/testPageD", "peanutbutter2", "payload2", "\u0000\u0011sent by responder");
+					hitURL("https://"+host+":"+port+"/testPageD", "peanutbutter2", "payload2", "\u0000\u0011sent by responder");
 
-					hitURL("https://"+host+":8088/shutdown?key=shutdown", null, null,
+					hitURL("https://"+host+":"+port+"/shutdown?key=shutdown", null, null,
 							"");
 			
 		}

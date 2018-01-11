@@ -20,21 +20,24 @@ public class HTTPServer implements GreenApp
 		
 	private AppendableProxy console;
 	private final String host;
+	private final int port;
 	
-	public HTTPServer(String host, Appendable console) {
+	public HTTPServer(String host, int port, Appendable console) {
 		this.host = host;
 		this.console = Appendables.proxy(console);
+		this.port = port;
 	}
 	
-	public HTTPServer(Appendable console) {
+	public HTTPServer(int port, Appendable console) {
 		this.host = null;
 		this.console = Appendables.proxy(console);
+		this.port = port;
 	}
 	
     @Override
     public void declareConfiguration(Builder c) {
         
-		c.useHTTP1xServer(8088).setHost(host);
+		c.useHTTP1xServer(port).setHost(host);
 		
 		emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
 		smallResponseRouteId = c.registerRoute("/testpageB");
