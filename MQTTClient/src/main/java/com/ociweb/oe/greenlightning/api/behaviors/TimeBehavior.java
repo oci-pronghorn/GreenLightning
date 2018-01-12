@@ -12,6 +12,7 @@ public class TimeBehavior implements TimeListener {
 	private int droppedCount = 0;
     private final GreenCommandChannel cmdChnl;
 	private final String publishTopic;
+	private long total = 0;
 
 	public TimeBehavior(GreenRuntime runtime, String publishTopic) {
 		cmdChnl = runtime.newCommandChannel(DYNAMIC_MESSAGING);
@@ -30,7 +31,7 @@ public class TimeBehavior implements TimeListener {
 			// Send out the payload with thre MQTT topic "topic/egress"
 			boolean ok = cmdChnl.publishTopic(publishTopic, writable, WaitFor.None);
 			if (ok) {
-				//System.err.println("sent "+d);
+				System.err.println("sent "+d+" total "+(++total));
 			}
 			else {
 				droppedCount++;
