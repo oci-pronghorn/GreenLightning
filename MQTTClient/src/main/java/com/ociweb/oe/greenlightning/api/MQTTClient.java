@@ -4,6 +4,7 @@ import com.ociweb.gl.api.*;
 import com.ociweb.oe.greenlightning.api.behaviors.EgressBehavior;
 import com.ociweb.oe.greenlightning.api.behaviors.IngressBehavior;
 import com.ociweb.oe.greenlightning.api.behaviors.TimeBehavior;
+import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 
 public class MQTTClient implements GreenApp {
 	private MQTTBridge mqttConfig;
@@ -15,20 +16,34 @@ public class MQTTClient implements GreenApp {
 
 	@Override
 	public void declareConfiguration(Builder builder) {
-		final String brokerHost = "127.0.0.1";
+		
+		//TODO: the base is wrong for a script since they do not match total...
+		
+		ScriptedNonThreadScheduler.debug = false;
+		
+		//without low latency this PCT does not work..
+		ScriptedNonThreadScheduler.lowLatencyEnforced = false;
+		
+		
+		//final String brokerHost = "127.0.0.1"; //1883
 		//final String brokerHost = "172.16.10.28"; // Nathan's PC
 		//final String brokerHost = "thejoveexpress.local"; // Raspberry Pi0
+		
+		final String brokerHost = "test.mosquitto.org";
+		final int port = 1883;//8883;
+		
 		// Create a single mqtt client
-		mqttConfig = builder.useMQTT(brokerHost, MQTTBridge.tlsPort, "MQTTClientTest",200) //default of 10 in flight
-							.useTLS()
+		mqttConfig = builder.useMQTT(brokerHost, port, "MQTTClientTest",200) //default of 10 in flight
+							
+			//	.useTLS()
 							.cleanSession(true)
 							.keepAliveSeconds(10)
-							.lastWill("last/will", false, MQTTQoS.atMostOnce, blobWriter -> {blobWriter.writeBoolean(true);});
+							.lastWill("last/will", false, MQTTQoS.atLeastOnce, blobWriter -> {blobWriter.writeBoolean(true);});
 
 		// Timer rate
-		builder.setTimerPulseRate(300); 
+		builder.setTimerPulseRate(1000); //once per second
 		
-		//builder.enableTelemetry();
+		builder.enableTelemetry(8099);
 	}
 
 	@Override
