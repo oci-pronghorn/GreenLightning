@@ -37,6 +37,16 @@ public class TrafficCopStage extends PronghornStage {
     private BuilderImpl builder;
     private boolean shutdownInProgress;
     
+    public static TrafficCopStage newInstance(GraphManager graphManager, long msAckTimeout, 
+								            Pipe<TrafficOrderSchema> primaryIn, 
+								            Pipe<TrafficAckSchema>[] ackIn,  
+								            Pipe<TrafficReleaseSchema>[] goOut, 
+								            MsgRuntime<?,?> runtime,
+								            BuilderImpl builder) {
+    
+    	return new TrafficCopStage(graphManager, msAckTimeout, primaryIn, ackIn, goOut, runtime, builder);	
+    }
+    
     public TrafficCopStage(GraphManager graphManager, long msAckTimeout, 
     		               Pipe<TrafficOrderSchema> primaryIn, 
     		               Pipe<TrafficAckSchema>[] ackIn,  

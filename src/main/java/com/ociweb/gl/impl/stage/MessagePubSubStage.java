@@ -9,6 +9,7 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.WaitFor;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.IngressMessages;
@@ -113,20 +114,22 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
      * @param outgoingMessagePipes
      */
     
-    public MessagePubSubStage(GraphManager gm, IntHashTable subscriptionPipeLookup, BuilderImpl hardware, 
+    public MessagePubSubStage(GraphManager gm,
+    						  MsgRuntime<?,?> runtime,
+    						  IntHashTable subscriptionPipeLookup, BuilderImpl hardware, 
     						  Pipe<IngressMessages>[] ingressMessagePipes,
+    						  
     		                  Pipe<MessagePubSub>[] incomingSubsAndPubsPipe,
-                              Pipe<TrafficReleaseSchema>[] goPipe,
-                              Pipe<TrafficAckSchema>[] ackPipe, 
+                              Pipe<TrafficReleaseSchema>[] goPipe, //NOTE: can be null for no cop
+                              Pipe<TrafficAckSchema>[] ackPipe,  //NOTE: can be null for no cop
+                              
                               Pipe<MessageSubscription>[] outgoingMessagePipes) {
-       super(gm, hardware, join(ingressMessagePipes,incomingSubsAndPubsPipe), goPipe, ackPipe, outgoingMessagePipes);
+       super(gm, runtime, hardware, join(ingressMessagePipes,incomingSubsAndPubsPipe), goPipe, ackPipe, outgoingMessagePipes);
 
        this.ingressMessagePipes = ingressMessagePipes;
        this.incomingSubsAndPubsPipe = incomingSubsAndPubsPipe;
        this.outgoingMessagePipes = outgoingMessagePipes;
        assert(noNulls(incomingSubsAndPubsPipe));
-       assert(noNulls(goPipe)) : "Go Pipe must not contain nulls";
-       assert(noNulls(ackPipe));
        assert(goPipe.length == ackPipe.length) : "should be one ack pipe for every go pipe";
         
        assert(goPipe.length == incomingSubsAndPubsPipe.length) : "Publish/Subscribe should be one pub sub pipe for every go "+goPipe.length+" vs "+incomingSubsAndPubsPipe.length;

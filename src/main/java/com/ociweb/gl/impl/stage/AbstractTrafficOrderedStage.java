@@ -7,6 +7,7 @@ import java.util.Arrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
@@ -21,6 +22,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 
 	private final int MAX_DEVICES = 127; //do not know of any hardware yet with more connections than this.
 
+	private final Pipe<?>[] etcAndDataPipe;
 	private final Pipe<TrafficReleaseSchema>[] goPipe;
 	private final Pipe<TrafficAckSchema>[] ackPipe;
 
@@ -40,6 +42,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
     private Number rate;
     private long releaseWindow = 2; //stay here if work will be available in this many ms.
     
+    private final MsgRuntime<?,?> runtime;
 	private static final Logger logger = LoggerFactory.getLogger(AbstractTrafficOrderedStage.class);
 
 	//////////////////////////////////////////
@@ -56,24 +59,23 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	 * It supports time based blocks (in ms) specific to each connection.  This way no other commands are
 	 * send to that connection until the time expires.  This is across all pipes.
 	 * 
-	 * 
-	 * @param graphManager
-	 * @param hardware
-	 * @param goPipe
-	 * @param ackPipe
 	 */
 	public AbstractTrafficOrderedStage(GraphManager graphManager, 
+			MsgRuntime<?,?> runtime,
 			BuilderImpl hardware,
 			Pipe<?>[] output,
 			Pipe<TrafficReleaseSchema>[] goPipe,
-			Pipe<TrafficAckSchema>[] ackPipe, Pipe<?> ... otherResponse ) {
+			Pipe<TrafficAckSchema>[] ackPipe,
+			
+			Pipe<?> ... otherResponse ) {
 
 		super(graphManager, join(goPipe, output), join(ackPipe, otherResponse));
-
-	    assert(noNulls(goPipe)) : "Go Pipe must not contain nulls";
-	    assert(noNulls(ackPipe)) : "Ack Pipe must not contain nulls";
 	       
+		assert(output.length >= goPipe.length);
+		
+		this.runtime = runtime;
 		this.hardware = hardware;
+		this.etcAndDataPipe = output;//the last few pipes align with goPipe
 		this.ackPipe = ackPipe;
 		this.goPipe = goPipe;
 		this.hitPoints = goPipe.length;
@@ -190,7 +192,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 				    //      The traffic classes should be changed to low level usages.
 				    
 					//pull all known the values into the active counts array
-					if ((localActiveCounts[a] == -1) && PipeReader.tryReadFragment(goPipe[a])) {                    
+					if (localActiveCounts[a] == -1 ) {                    
 						readNextCount(a);
 					} 
 				
@@ -198,21 +200,27 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 					int startCount = localActiveCounts[a];
 					//NOTE: this lock does not prevent other ordered stages from making progress, just this one since it holds the required resource
 
-					//This method must be called at all times to poll I2C
+					//This method must be called at all times to poll as needed.
 					processMessagesForPipe(a);											
 
 					//send any acks that are outstanding, we did all the work
 					if (startCount>0 || 0==localActiveCounts[a]) {
 						//there was some work to be done
 						if (0==localActiveCounts[a]) {
-						    //logger.debug("send ack back to {}",a);					    
-						    if (PipeWriter.tryWriteFragment(ackPipe[a], TrafficAckSchema.MSG_DONE_10)) {
-								publishWrites(ackPipe[a]);
+						    //logger.debug("send ack back to {}",a);
+							Pipe<TrafficAckSchema> pipe = ackPipe[a];
+							
+							if (null != pipe) {
+							    if (PipeWriter.tryWriteFragment(pipe, TrafficAckSchema.MSG_DONE_10)) {
+									publishWrites(pipe);
+									localActiveCounts[a] = -1;
+									foundWork = true; //keep running may find something else 
+								}
+							} else {
 								localActiveCounts[a] = -1;
 								foundWork = true; //keep running may find something else 
-							} else {//this will try again later since we did not clear it to -1
-								//logger.debug("unable to send ack back to caller, check pipe lenghts. {} {}",a,ackPipe[a]);
 							}
+						    
 						} else {							
 							if (localActiveCounts[a]==startCount) {
 								//we did none of the work
@@ -251,11 +259,11 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
     }
 
     protected boolean isChannelBlocked(int a) {    	
-        return hardware.isChannelBlocked( goPipe[a].id );
+        return (null!=goPipe[a]) && hardware.isChannelBlocked( goPipe[a].id );
     }
     
     protected boolean isChannelUnBlocked(int a) {
-        return !hardware.isChannelBlocked( goPipe[a].id );
+        return (null==goPipe[a]) || (!hardware.isChannelBlocked( goPipe[a].id ));
     }
 
     protected int goPipeId(int a) {
@@ -266,20 +274,44 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 
 	private void readNextCount(final int a) {
 		Pipe<TrafficReleaseSchema> localPipe = goPipe[a];
-		assert(PipeReader.isNewMessage(localPipe)) : "This test should only have one simple message made up of one fragment";
-		
-		int msgIdx = PipeReader.getMsgIdx(localPipe);
-		if(TrafficReleaseSchema.MSG_RELEASE_20 == msgIdx){
-			assert(-1==activeCounts[a]);
-			activeCounts[a] = PipeReader.readInt(localPipe, TrafficReleaseSchema.MSG_RELEASE_20_FIELD_COUNT_22);
-		}else{
-			assert(msgIdx == -1);
-			if (--hitPoints == 0) {
-				requestShutdown();
+		if (null != localPipe) {
+			
+			if (PipeReader.tryReadFragment(localPipe)) { 
+			
+				assert(PipeReader.isNewMessage(localPipe)) : "This test should only have one simple message made up of one fragment";
+				
+				int msgIdx = PipeReader.getMsgIdx(localPipe);
+				if(TrafficReleaseSchema.MSG_RELEASE_20 == msgIdx){
+					assert(-1==activeCounts[a]);
+					activeCounts[a] = PipeReader.readInt(localPipe, TrafficReleaseSchema.MSG_RELEASE_20_FIELD_COUNT_22);
+				} else {
+					assert(msgIdx == -1);
+					if (--hitPoints == 0) {
+						requestShutdown();
+					}
+				}
+				PipeReader.releaseReadLock(localPipe);
+			}
+		} else {
+			//local pipe is null so we must review the input
+			//if there is data we mark it as 1 to be done.
+			Pipe<?> pipe = etcAndDataPipe[a+etcAndDataPipe.length-goPipe.length];
+			if (Pipe.contentRemaining( pipe )>0) {
+				
+				//detect any request to begin the shutdown process
+				if (PipeReader.peekMsg(pipe, -1)) {					
+					
+					PipeReader.tryReadFragment(pipe);
+					PipeReader.releaseReadLock(pipe);
+					
+					runtime.shutdownRuntime();
+				} else {
+					activeCounts[a] = 1; //NOTE: only do 1 at a time
+				}
 			}
 		}
-		PipeReader.releaseReadLock(localPipe);
-
+		
+		
 	}
 
 	protected void decReleaseCount(int a) {

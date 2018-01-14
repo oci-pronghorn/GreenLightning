@@ -5,6 +5,7 @@ import javax.net.ssl.SSLEngineResult.HandshakeStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
@@ -46,16 +47,20 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	 * @param output
 	 */
 	
-	public HTTPClientRequestTrafficStage(GraphManager graphManager, 
+	public HTTPClientRequestTrafficStage(
+			GraphManager graphManager, 
+			MsgRuntime<?,?> runtime,
 			BuilderImpl hardware,
 			ClientCoordinator ccm,
+			
             Pipe<ClientHTTPRequestSchema>[] input,
             Pipe<TrafficReleaseSchema>[] goPipe,
             Pipe<TrafficAckSchema>[] ackPipe,
+            
             Pipe<NetPayloadSchema>[] output
             ) {
 		
-		super(graphManager, hardware, input, goPipe, ackPipe, output);
+		super(graphManager, runtime, hardware, input, goPipe, ackPipe, output);
 		this.input = input;
 		this.output = output;
 		this.ccm = ccm;

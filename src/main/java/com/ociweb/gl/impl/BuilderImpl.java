@@ -437,7 +437,9 @@ public class BuilderImpl implements Builder {
 		return (netRequestPipes.length!=0);
 	}
 
-	protected final void createMessagePubSubStage(IntHashTable subscriptionPipeLookup,
+	protected final void createMessagePubSubStage(
+			MsgRuntime<?,?> runtime,
+			IntHashTable subscriptionPipeLookup,
 			Pipe<IngressMessages>[] ingressMessagePipes,
 			Pipe<MessagePubSub>[] messagePubSub,
 			Pipe<TrafficReleaseSchema>[] masterMsggoOut, 
@@ -445,7 +447,7 @@ public class BuilderImpl implements Builder {
 			Pipe<MessageSubscription>[] subscriptionPipes) {
 
 
-		new MessagePubSubStage(this.gm, subscriptionPipeLookup, this, 
+		new MessagePubSubStage(this.gm, runtime, subscriptionPipeLookup, this, 
 				                ingressMessagePipes, messagePubSub, 
 				                masterMsggoOut, masterMsgackIn, subscriptionPipes);
 
@@ -695,15 +697,15 @@ public class BuilderImpl implements Builder {
 	public void buildStages(MsgRuntime runtime) {
 
 		IntHashTable subscriptionPipeLookup2 = MsgRuntime.getSubPipeLookup(runtime); 
-		GraphManager gm2 = MsgRuntime.getGraphManager(runtime);
+		GraphManager gm = MsgRuntime.getGraphManager(runtime);
 		
-		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfTypeWithNoProducer(gm2, NetResponseSchema.instance);
-		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfTypeWithNoProducer(gm2, MessageSubscription.instance);
+		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfTypeWithNoProducer(gm, NetResponseSchema.instance);
+		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfTypeWithNoProducer(gm, MessageSubscription.instance);
 		
-		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm2, TrafficOrderSchema.instance);
-		Pipe<ClientHTTPRequestSchema>[] httpClientRequestPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm2, ClientHTTPRequestSchema.instance);			
-		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfTypeWithNoConsumer(gm2, MessagePubSub.instance);
-		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfTypeWithNoConsumer(gm2, IngressMessages.instance);
+		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, TrafficOrderSchema.instance);
+		Pipe<ClientHTTPRequestSchema>[] httpClientRequestPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, ClientHTTPRequestSchema.instance);			
+		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfTypeWithNoConsumer(gm, MessagePubSub.instance);
+		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, IngressMessages.instance);
 		
 		
 		int commandChannelCount = orderPipes.length;
@@ -733,40 +735,43 @@ public class BuilderImpl implements Builder {
 				
 		while (--t>=0) {
 		
-			int features = getFeatures(gm2, orderPipes[t]);
-			
 			Pipe<TrafficReleaseSchema>[] goOut = new Pipe[eventSchemas];
 			Pipe<TrafficAckSchema>[] ackIn = new Pipe[eventSchemas];
 			
-			boolean isDynamicMessaging = (features&Behavior.DYNAMIC_MESSAGING) != 0;
-			boolean isNetRequester     = (features&Behavior.NET_REQUESTER) != 0;
+			//only setup the go and in pipes if the cop is used.
+			if (null != orderPipes[t]) {
+				int features = getFeatures(gm, orderPipes[t]);
+				boolean hasConnections = false;
+				if ((features&Behavior.DYNAMIC_MESSAGING) != 0) {
+					hasConnections = true;		 		
+			 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_MSG);
+				}
+				if ((features&Behavior.NET_REQUESTER) != 0) {
+					hasConnections = true;		 		
+			 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_NET);
+				}
+				TrafficCopStage.newInstance(gm, 
+											timeout, orderPipes[t], 
+											ackIn, goOut, 
+											runtime, this);
+			}
 
-			boolean hasConnections = false;
-			if (isDynamicMessaging) {
-				hasConnections = true;		 		
-		 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_MSG);
-			}
-			if (isNetRequester) {
-				hasConnections = true;		 		
-		 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_NET);
-			}
-
-			if (true | hasConnections) {
-				TrafficCopStage trafficCopStage = new TrafficCopStage(gm, 
-						timeout, orderPipes[t], 
-						ackIn, goOut, 
-						runtime, this);
-			} else {
-				//this optimization can no longer be done due to the use of shutdown on command channel.
-				//    revisit this later...
-				//TODO: we can reintroduce this as long has we have a stage here which does shutdown on -1;
-				PipeCleanerStage.newInstance(gm, orderPipes[t]);
-			}
+//			if (true | hasConnections) {
+//				TrafficCopStage trafficCopStage = new TrafficCopStage(gm, 
+//						timeout, orderPipes[t], 
+//						ackIn, goOut, 
+//						runtime, this);
+//			} else {
+//				//this optimization can no longer be done due to the use of shutdown on command channel.
+//				//    revisit this later...
+//				//TODO: we can reintroduce this as long has we have a stage here which does shutdown on -1;
+//				PipeCleanerStage.newInstance(gm, orderPipes[t]);
+//			}
 		}
 				
 		initChannelBlocker(maxGoPipeId);
 		
-		buildHTTPClientGraph(httpClientResponsePipes, httpClientRequestPipes, masterGoOut, masterAckIn);
+		buildHTTPClientGraph(runtime, httpClientResponsePipes, httpClientRequestPipes, masterGoOut, masterAckIn);
 		
 		/////////
 		//always create the pub sub and state management stage?
@@ -776,7 +781,7 @@ public class BuilderImpl implements Builder {
 			logger.trace("saved some resources by not starting up the unused pub sub service.");
 		} else {
 			//logger.info("builder created pub sub");
-		 	createMessagePubSubStage(subscriptionPipeLookup2, 
+		 	createMessagePubSubStage(runtime, subscriptionPipeLookup2, 
 		 			ingressMessagePipes, messagePubSub, 
 		 			masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], 
 		 			subscriptionPipes);
@@ -784,7 +789,9 @@ public class BuilderImpl implements Builder {
 	}
 
 	
-	public void buildHTTPClientGraph(Pipe<NetResponseSchema>[] netResponsePipes,
+	public void buildHTTPClientGraph(
+			MsgRuntime<?,?> runtime,
+			Pipe<NetResponseSchema>[] netResponsePipes,
 			Pipe<ClientHTTPRequestSchema>[] netRequestPipes, 
 			Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn) {
@@ -821,7 +828,7 @@ public class BuilderImpl implements Builder {
 			while (--r>=0) {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}
-			HTTPClientRequestTrafficStage requestStage = new HTTPClientRequestTrafficStage(gm, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
+			HTTPClientRequestTrafficStage requestStage = new HTTPClientRequestTrafficStage(gm, runtime, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
 
 
 			int releaseCount = 1024;
@@ -867,8 +874,8 @@ public class BuilderImpl implements Builder {
 	}
 
 	
-	protected int getFeatures(GraphManager gm2, Pipe<TrafficOrderSchema> orderPipe) {
-		PronghornStage producer = gm2.getRingProducer(gm,orderPipe.id);
+	protected int getFeatures(GraphManager gm, Pipe<TrafficOrderSchema> orderPipe) {
+		PronghornStage producer = GraphManager.getRingProducer(gm, orderPipe.id);
 		assert(producer instanceof ReactiveListenerStage) : "TrafficOrderSchema must only come from Reactor stages but was "+producer.getClass().getSimpleName();
 		
 		return ((ReactiveListenerStage)producer).getFeatures(orderPipe);

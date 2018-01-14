@@ -471,7 +471,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     		//shutdown in progress logic
     		int i = outputPipes.length;    		
     		while (--i>=0) {
-    			if (!Pipe.hasRoomForWrite(outputPipes[i], Pipe.EOF_SIZE)) {
+    			if ((null!=outputPipes[i]) && !Pipe.hasRoomForWrite(outputPipes[i], Pipe.EOF_SIZE)) {
     				return;//must wait for pipe to empty
     			}
     		}		
