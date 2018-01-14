@@ -115,14 +115,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     
     public void ensureDynamicMessaging() {
-    	if (!isInit) {
+    	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureDynamicMessaging method must be called in define behavior.");
     	}
     	this.initFeatures |= DYNAMIC_MESSAGING;
     }
     
     public void ensureDynamicMessaging(int queueLength, int maxMessageSize) {
-    	if (!isInit) {
+    	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureDynamicMessaging method must be called in define behavior.");
     	}
     	growCommandCountRoom(queueLength);
@@ -143,14 +143,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
     
     public void ensureHTTPClientRequesting() {
-    	if (!isInit) {
+    	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
     	}
     	this.initFeatures |= NET_REQUESTER;
     }
     
     public void ensureHTTPClientRequesting(int queueLength, int maxMessageSize) {
-    	if (!isInit) {
+    	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
     	}
     	growCommandCountRoom(queueLength);
@@ -161,14 +161,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
    
     public void ensureHTTPServerResponse() {
-    	if (!isInit) {
+    	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPServerResponse method must be called in define behavior.");
     	}
     	this.initFeatures |= NET_RESPONDER;
     }
     
     public void ensureHTTPServerResponse(int queueLength, int maxMessageSize) {
-    	if (!isInit) {
+    	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPServerResponse method must be called in define behavior.");
     	}
     	growCommandCountRoom(queueLength);
@@ -180,7 +180,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     
     protected void growCommandCountRoom(int count) {
-    	if (!isInit) {
+    	if (isInit) {
     		throw new UnsupportedOperationException("Too late, growCommandCountRoom method must be called in define behavior.");
     	}
     	
@@ -194,6 +194,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	private void buildAllPipes() {
 		   
 		   if (!isInit) {
+			   
 			   isInit = true;
 			   this.messagePubSub = ((this.initFeatures & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
 			   this.httpRequest   = ((this.initFeatures & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
@@ -294,8 +295,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		length+=netResponse.length;
     	}
     	
-    	if (isInit) {//last count for go pipe
+    	boolean hasGoSpace = false;
+    	if (length>0) {//last count for go pipe
     		length++;
+    		hasGoSpace = true;
     	}
     	
     	length += exclusivePubSub.length;
@@ -337,7 +340,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		idx+=publishPrivateTopics.count();
     	}
     	
-    	if (isInit) {//last pipe for go, may be null
+    	if (hasGoSpace) {//last pipe for go, may be null
     		results[idx++] = goPipe;
     	}
     	
