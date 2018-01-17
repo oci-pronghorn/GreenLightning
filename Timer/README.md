@@ -14,35 +14,6 @@ The following sketch will demonstrate two simple uses of the addTimeListener() m
 
 Demo code: 
 
-
-```java
-package com.ociweb.oe.foglight.api;
-
-
-//import static com.ociweb.iot.grove.GroveTwig.*;
-
-import com.ociweb.iot.maker.*;
-import static com.ociweb.iot.maker.Port.*;
-
-public class Timer implements FogApp
-{
-	
-
-    @Override
-    public void declareConnections(Hardware c) {
-    	c.setTimerPulseRate(1); //the rate at which time is checked in milliseconds
-        
-    }
-
-    @Override
-    public void declareBehavior(FogRuntime runtime) {
-    	
-    	runtime.addTimePulseListener(new firstTimeBehavior(runtime));
-    	//runtime.addTimeListener(new secondTimeBehavior(runtime));
-    	
-    }
-}
-```
-
+#### ERROR:  could not read file ./src/main/java/com/ociweb/oe/foglight/api/Timer.java
 
 The first demo in this code uses the addTimeListener() method to print out the string "clock" at the top of every minute, regardless of when the program was started. The second demo uses the addTimeListener() method to print out the string "clock" at an interval of one minute since the start of the program. You can change the interval length by changing timeInterval .

@@ -20,11 +20,11 @@ Demo code:
 
 Behavior class:
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/TimeBehavior.java"
+.include "./src/main/java/com/ociweb/oe/foglight/api/behaviors/TimeBehavior.java"
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/IngressBehavior.java"
+.include "./src/main/java/com/ociweb/oe/foglight/api/behaviors/IngressBehavior.java"
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/EgressBehavior.java"
+.include "./src/main/java/com/ociweb/oe/foglight/api/behaviors/EgressBehavior.java"
 
 
 This class is a simple demonstration of MQTT (Message Queue Telemetry Transport). A lightweight messaging protocal, it was inititially designed for constrained devices and low-bandwidth, high-latency or unreliable networks. This demo uses Mosquitto as a message broker, which means that the messages that are published will go through Mosquitto, which will send them to and subsrcibers of the topic. 
