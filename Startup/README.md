@@ -14,7 +14,46 @@ The following sketch will demonstrate a simple use of the addStartupListener met
 
 Demo code: 
 
-#### ERROR:  could not read file ./src/main/java/com/ociweb/oe/foglight/api/Startup.java
+
+```java
+package com.ociweb.oe.greenlightning.api;
+
+
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
+
+public class Startup implements GreenApp
+{
+	
+	private final AppendableProxy console;
+	
+	public Startup(Appendable console) {
+		this.console = Appendables.proxy(console);
+	}
+	
+	
+    @Override
+    public void declareConfiguration(Builder c) {
+
+    }
+
+    @Override
+    public void declareBehavior(GreenRuntime runtime) {
+
+    	runtime.addStartupListener(()->{
+    		console.append("Hello, this message will display once at start\n");
+    		//now we shutdown the app
+    		runtime.shutdownRuntime();
+    	});
+    	
+    	
+    }
+}
+```
+
 
 When executed, the above code will send the string ```"Hello, this message will display once at start"`` as soon as the program begins running. NOTE: while it was not performed here, 
 if a transducer uses a startup method, then the startup listener of the transducer will execute before the startup method in the behavior class. Also, if multiple transducers use startup a method, do not worry about an order, it will be done automatically.

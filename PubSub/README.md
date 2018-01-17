@@ -14,6 +14,51 @@ The following sketch will demonstrate a simple use of the ```addPubSubListener()
 
 Demo code: 
 
-#### ERROR:  could not read file ./src/main/java/com/ociweb/oe/foglight/api/PubSub.java
+
+```java
+package com.ociweb.oe.greenlightning.api;
+
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
+
+
+public class PubSub implements GreenApp
+{
+	private final AppendableProxy target;
+	private final int seed;
+	
+	public PubSub(Appendable target, int seed) {
+		this.target = Appendables.proxy(target);
+		this.seed = seed;
+	}
+	
+    @Override
+    public void declareConfiguration(Builder c) {
+        //no connections are needed
+    }
+
+    @Override
+    public void declareBehavior(GreenRuntime runtime) {
+
+    	runtime.addStartupListener(new KickoffBehavior(runtime, target));
+    	
+    	runtime.addPubSubListener(new GenerateBehavior(runtime, "Count", target, seed))
+    	                     .addSubscription("Next");
+    	
+    	CountBehavior counter = new CountBehavior(runtime, "Next");
+		runtime.registerListener(counter)
+		           			.addSubscription("Count", counter::triggerNextAndCount)
+		           			.addSubscription("AnExample", counter::anotherMessage);
+    	
+    	
+    	
+    }
+          
+}
+```
+
 
 The above code will generate seven random, lucky numbers. The first ```addPubSubListener()``` will generate a random number and add it to ArrayList ```luckyNums```. Once that has occured, it will publish a message uner the topic of "Gen", which the second PubSubListener is subscribed to, meaning that it is always listening for any publication under that topic. The second PubSubListener will simply print out the newest lucky number, then publish a message under the topic of "Print", which the first PubSubListener is subscribed to, restarting the process for a total of seven rounds.

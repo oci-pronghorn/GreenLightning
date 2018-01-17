@@ -14,6 +14,6 @@ The following sketch will demonstrate a simple use of the ```addPubSubListener()
  
 Demo code: 
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/PubSub.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/PubSub.java"
 
 The above code will generate seven random, lucky numbers. The first ```addPubSubListener()``` will generate a random number and add it to ArrayList ```luckyNums```. Once that has occured, it will publish a message uner the topic of "Gen", which the second PubSubListener is subscribed to, meaning that it is always listening for any publication under that topic. The second PubSubListener will simply print out the newest lucky number, then publish a message under the topic of "Print", which the first PubSubListener is subscribed to, restarting the process for a total of seven rounds.

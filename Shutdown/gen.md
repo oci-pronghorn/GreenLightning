@@ -14,10 +14,10 @@ The following sketch will demonstrate a basic demo for using a ```Shutdown()```.
  
 Demo code:
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/Shutdown.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/Shutdown.java"
 
 Behavior class:
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/ShutdownBehavior.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/ShutdownBehavior.java"
 
 This class is a simple demonstration of how to use the ```Shutdown()```. This demonstration uses allows for shutdown of a device

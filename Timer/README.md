@@ -14,6 +14,35 @@ The following sketch will demonstrate two simple uses of the addTimeListener() m
 
 Demo code: 
 
-#### ERROR:  could not read file ./src/main/java/com/ociweb/oe/foglight/api/Timer.java
+
+```java
+package com.ociweb.oe.greenlightning.api;
+
+import com.ociweb.gl.api.*;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
+
+public class Timer implements GreenApp
+{
+	private final AppendableProxy console;
+	private final int rate;
+		
+	public Timer(Appendable console, int rate) {
+		this.console = Appendables.proxy(console);
+		this.rate = rate;
+	}
+	
+    @Override
+    public void declareConfiguration(Builder config) {
+    	config.setTimerPulseRate(rate); //the rate at which time is checked in milliseconds 
+    }
+
+    @Override
+    public void declareBehavior(GreenRuntime runtime) {
+    	runtime.addTimePulseListener(new TimeBehavior(runtime, console));
+    }
+}
+```
+
 
 The first demo in this code uses the addTimeListener() method to print out the string "clock" at the top of every minute, regardless of when the program was started. The second demo uses the addTimeListener() method to print out the string "clock" at an interval of one minute since the start of the program. You can change the interval length by changing timeInterval .
