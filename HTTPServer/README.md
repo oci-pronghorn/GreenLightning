@@ -13,54 +13,88 @@
 Demo code:
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
 
-import com.ociweb.iot.maker.FogApp;
-import com.ociweb.iot.maker.FogRuntime;
-import com.ociweb.iot.maker.Hardware;
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
-public class HTTPServer implements FogApp
+public class HTTPServer implements GreenApp
 {
-	byte[] cookieHeader = HTTPHeaderDefaults.COOKIE.rootBytes();
+	private byte[] cookieHeader = HTTPHeaderDefaults.COOKIE.rootBytes();
 	
-	int emptyResponseRouteId;
-	int smallResponseRouteId;
-	int largeResponseRouteId;
-	int fileServerId;
+	private int emptyResponseRouteId;
+	private int smallResponseRouteId;
+	private int largeResponseRouteId;
+	private int splitResponseRouteId;
+	private int shutdownRouteId;
+		
+	private AppendableProxy console;
+	private final String host;
+	private final int port;
 	
+	public HTTPServer(String host, int port, Appendable console) {
+		this.host = host;
+		this.console = Appendables.proxy(console);
+		this.port = port;
+	}
 	
-	byte[] myArgName = "myarg".getBytes();
+	public HTTPServer(int port, Appendable console) {
+		this.host = null;
+		this.console = Appendables.proxy(console);
+		this.port = port;
+	}
 	
     @Override
-    public void declareConnections(Hardware c) {
+    public void declareConfiguration(Builder c) {
         
-		c.enableServer(false, 8088);    	
+		c.useHTTP1xServer(port).setHost(host);
+		
 		emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
 		smallResponseRouteId = c.registerRoute("/testpageB");
 		largeResponseRouteId = c.registerRoute("/testpageC", cookieHeader);
-		fileServerId         = c.registerRoute("/file${path}");
+		splitResponseRouteId = c.registerRoute("/testpageD");
+		
+		//only do in test mode... 
+		//in production it is a bad idea to let clients turn off server.
+		shutdownRouteId = c.registerRoute("/shutdown?key=${key}");
+				
 		c.enableTelemetry();
 		
     }
 
 
     @Override
-    public void declareBehavior(FogRuntime runtime) {
-        runtime.addRestListener(new RestBehaviorEmptyResponse(runtime, myArgName))
+    public void declareBehavior(GreenRuntime runtime) {
+    	
+        runtime.addRestListener(new RestBehaviorEmptyResponse(runtime, "myarg", console))
                  .includeRoutes(emptyResponseRouteId);
         
-        runtime.addRestListener(new RestBehaviorSmallResponse(runtime))
+        runtime.addRestListener(new RestBehaviorSmallResponse(runtime, console))
         		.includeRoutes(smallResponseRouteId);
         
-        runtime.addRestListener(new RestBehaviorLargeResponse(runtime))
+        runtime.addRestListener(new RestBehaviorLargeResponse(runtime, console))
         		 .includeRoutes(largeResponseRouteId);
         
-        //NOTE .includeAllRoutes() can be used to write a behavior taking all routes
+        runtime.addRestListener(new RestBehaviorHandoff(runtime, "responder"))
+        		 .includeRoutes(splitResponseRouteId);
         
-        //NOTE when using the above no routes need to be registered and if they are
-        //     all other routes will return a 404
+        runtime.addPubSubListener(new RestBehaviorHandoffResponder(runtime, console))
+		         .addSubscription("responder");
+        
+
+
+        
+        //splitResponseRouteId
+        
+        runtime.addRestListener(new ShutdownRestListener(runtime))
+                  .includeRoutes(shutdownRouteId);
+        
+        //NOTE .includeAllRoutes() can be used to write a behavior taking all routes
 
     }
    
@@ -70,60 +104,50 @@ public class HTTPServer implements FogApp
 Behavior class:
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.Headable;
-import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.api.RestListener;
-import com.ociweb.iot.maker.FogCommandChannel;
-import com.ociweb.iot.maker.FogRuntime;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
-import com.ociweb.pronghorn.pipe.BlobReader;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class RestBehaviorEmptyResponse implements RestListener {
 
-	final byte[] cookieHeader = HTTPHeaderDefaults.COOKIE.rootBytes();
-	final byte[] fieldName;
-	private final FogCommandChannel cmd;
+	private final int cookieHeader = HTTPHeaderDefaults.COOKIE.ordinal();
+	private final byte[] fieldName;
+	private final GreenCommandChannel cmd;
+	private final AppendableProxy console;
 	
-	public RestBehaviorEmptyResponse(FogRuntime runtime, byte[] myArgName) {
-		this.fieldName = myArgName;		
+	public RestBehaviorEmptyResponse(GreenRuntime runtime, String myArgName, AppendableProxy console) {
+		this.fieldName = myArgName.getBytes();		
 		this.cmd = runtime.newCommandChannel(NET_RESPONDER);
+		this.console = console;
 	}
-	
-	Payloadable reader = new Payloadable() {
-		
-		@Override
-		public void read(BlobReader reader) {
-			
-			System.out.println("POST: "+reader.readUTFOfLength(reader.available()));
-			
-		}			
-	};
-
-	private Headable headReader = new Headable() {
-
-		@Override
-		public void read(BlobReader reader) { 
-			
-			System.out.println("COOKIE: "+reader.readUTFOfLength(reader.available()));
-						
-		}
-		
-	};
-
 
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
 	    int argInt = request.getInt(fieldName);
-	    System.out.println("Arg Int: "+argInt);
-		
-		request.openHeaderData(cookieHeader, headReader);
+	    Appendables.appendValue(console, "Arg Int: ", argInt, "\n");
+	    		
+		request.openHeaderData(cookieHeader, (id,reader)-> {
+			
+			console.append("COOKIE: ");
+			reader.readUTF(console).append('\n');
+					
+		});
 		
 		if (request.isVerbPost()) {
-			request.openPayloadData(reader );
+			request.openPayloadData((reader)->{
+				
+				console.append("POST: ");
+				reader.readUTFOfLength(reader.available(), console);
+				console.append('\n');
+									
+			});
 		}
 		
 		//no body just a 200 ok response.
@@ -136,70 +160,58 @@ public class RestBehaviorEmptyResponse implements RestListener {
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.Writable;
-import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.api.RestListener;
-import com.ociweb.iot.maker.FogCommandChannel;
-import com.ociweb.iot.maker.FogRuntime;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.util.AppendableProxy;
 
 public class RestBehaviorLargeResponse implements RestListener {
 
-	private final FogCommandChannel cmd;
+	private final int cookieHeader = HTTPHeaderDefaults.COOKIE.ordinal();
+	private final GreenCommandChannel cmd;
 	private int partNeeded = 0;
+	private final AppendableProxy console;
 	
-	public RestBehaviorLargeResponse(FogRuntime runtime) {	
+	public RestBehaviorLargeResponse(GreenRuntime runtime, AppendableProxy console) {	
 		this.cmd = runtime.newCommandChannel(NET_RESPONDER);
+		this.console = console;
 	}
-	
-	Payloadable reader = new Payloadable() {
-		
-		@Override
-		public void read(BlobReader reader) {
-			
-			System.out.println("POST: "+reader.readUTFOfLength(reader.available()));
-			
-		}			
-	};
-
-
-	Writable writableA = new Writable() {
-		
-		@Override
-		public void write(BlobWriter writer) {
-			writer.writeUTF8Text("beginning of text file\n");//23 in length
-		}
-		
-	};
-	
-	Writable writableB = new Writable() {
-		
-		@Override
-		public void write(BlobWriter writer) {
-			writer.writeUTF8Text("ending of text file\n");//20 in length
-		}
-		
-	};
 	
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
 		if (request.isVerbPost()) {
-			request.openPayloadData(reader);
+			request.openPayloadData((reader)->{
+				
+				console.append("POST: ");
+				//TODO: why is this payload pointing to the cookie??
+				//reader.readUTF(console);
+				reader.readUTFOfLength(reader.available(),console);
+				console.append('\n');
+				
+			});
 		}
+		
+		request.openHeaderData(cookieHeader, (id,reader)-> {
+			
+			console.append("COOKIE: ");
+			reader.readUTF(console).append('\n');
+					
+		});
 		
 		if (0 == partNeeded) {
 			boolean okA = cmd.publishHTTPResponse(request, 200, 
-									request.getRequestContext(),
+									true,
 					                HTTPContentTypeDefaults.TXT,
-					                writableA);
+					                (writer)->{
+					                	writer.writeUTF8Text("beginning of text file\n");
+					                });
 			if (!okA) {
 				return false;
 			} 
@@ -208,12 +220,14 @@ public class RestBehaviorLargeResponse implements RestListener {
 		//////
 		//NB: this block is here for demo reasons however one could
 		//    publish a topic back to this behavior to complete the
-		//    continuaton at a future time
+		//    continuation at a future time
 		//////
 	
 		boolean okB = cmd.publishHTTPResponseContinuation(request,
-						 		request.getRequestContext() | HTTPFieldReader.END_OF_RESPONSE,
-						 		writableB);
+						 		false,
+						 		(writer)-> {
+						 			writer.writeUTF8Text("ending of text file\n");
+						 		});
 		if (okB) {
 			partNeeded = 0;
 			return true;
@@ -228,69 +242,45 @@ public class RestBehaviorLargeResponse implements RestListener {
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.Writable;
-import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.api.RestListener;
-import com.ociweb.iot.maker.FogCommandChannel;
-import com.ociweb.iot.maker.FogRuntime;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.pipe.BlobWriter;
+import com.ociweb.pronghorn.util.AppendableProxy;
 
 public class RestBehaviorSmallResponse implements RestListener {
 
-	private final FogCommandChannel cmd;
+	private final GreenCommandChannel cmd;
+	private final AppendableProxy console;
 	
-	public RestBehaviorSmallResponse(FogRuntime runtime) {	
+	public RestBehaviorSmallResponse(GreenRuntime runtime, AppendableProxy console) {	
 		this.cmd = runtime.newCommandChannel(NET_RESPONDER);
+		this.console = console;
 	}
-	
-	Payloadable reader = new Payloadable() {
-		
-		@Override
-		public void read(BlobReader reader) {
-			
-			System.out.println("POST: "+reader.readUTFOfLength(reader.available()));
-			
-		}			
-	};
-
-
-	Writable writableA = new Writable() {
-		
-		@Override
-		public void write(BlobWriter writer) {
-			writer.writeUTF8Text("beginning of text file\n");
-		}
-		
-	};
-	
-	Writable writableB = new Writable() {
-		
-		@Override
-		public void write(BlobWriter writer) {
-			writer.writeUTF8Text("this is some text\n");
-		}
-		
-	};
 	
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
 		if (request.isVerbPost()) {
-			request.openPayloadData(reader );
+			request.openPayloadData((reader)->{
+				
+				console.append("POST: ");
+				reader.readUTFOfLength(reader.available(),console);
+								
+			});
 		}
 
 		//if this can not be published then we will get the request again later to be reattempted.
 		return cmd.publishHTTPResponse(request, 200, 
-								request.getRequestContext() | HTTPFieldReader.END_OF_RESPONSE,
+								false,
 				                HTTPContentTypeDefaults.TXT,
-				                writableA);
+				                (writer)-> {
+				                	writer.writeUTF8Text("beginning of text file\n");
+				                });
 
 	}
 

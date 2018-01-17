@@ -14,6 +14,6 @@ The following sketch will demonstrate two simple uses of the addTimeListener() m
  
 Demo code: 
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/Timer.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/Timer.java"
 
 The first demo in this code uses the addTimeListener() method to print out the string "clock" at the top of every minute, regardless of when the program was started. The second demo uses the addTimeListener() method to print out the string "clock" at an interval of one minute since the start of the program. You can change the interval length by changing timeInterval .

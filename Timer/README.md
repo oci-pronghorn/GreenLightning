@@ -16,30 +16,30 @@ Demo code:
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.*;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
-//import static com.ociweb.iot.grove.GroveTwig.*;
-
-import com.ociweb.iot.maker.*;
-import static com.ociweb.iot.maker.Port.*;
-
-public class Timer implements FogApp
+public class Timer implements GreenApp
 {
+	private final AppendableProxy console;
+	private final int rate;
+		
+	public Timer(Appendable console, int rate) {
+		this.console = Appendables.proxy(console);
+		this.rate = rate;
+	}
 	
-
     @Override
-    public void declareConnections(Hardware c) {
-    	c.setTimerPulseRate(1); //the rate at which time is checked in milliseconds
-        
+    public void declareConfiguration(Builder config) {
+    	config.setTimerPulseRate(rate); //the rate at which time is checked in milliseconds 
     }
 
     @Override
-    public void declareBehavior(FogRuntime runtime) {
-    	
-    	runtime.addTimePulseListener(new firstTimeBehavior(runtime));
-    	//runtime.addTimeListener(new secondTimeBehavior(runtime));
-    	
+    public void declareBehavior(GreenRuntime runtime) {
+    	runtime.addTimePulseListener(new TimeBehavior(runtime, console));
     }
 }
 ```

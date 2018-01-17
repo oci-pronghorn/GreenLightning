@@ -17,30 +17,22 @@ Main Class
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
-import static com.ociweb.iot.grove.GroveTwig.*;
-
-import com.ociweb.iot.maker.*;
-import com.ociweb.oe.foglight.api.StateMachine.StopLight;
-
-import static com.ociweb.iot.maker.Port.*;
-
-import com.ociweb.gl.api.StateChangeListener;
-
-public class StateMachine implements FogApp
+public class StateMachine implements GreenApp
 {
 
-	static String cGreen = "Green";
-	static String cYellow = "Yellow";
-	static String cRed = "Red";
-	
 	public enum StopLight{
 		
-		Go(cGreen), 
-		Caution(cYellow), 
-		Stop(cRed);
+		Go("Green"), 
+		Caution("Yellow"), 
+		Stop("Red");
 		
 		private String color;
 		
@@ -52,23 +44,32 @@ public class StateMachine implements FogApp
 			return color;
 		}
 	}
-
+	
+	private final AppendableProxy console;
+	private final int rate;
+	
+	public StateMachine(Appendable console, int rate) {
+		this.console = Appendables.proxy(console);
+		this.rate = rate;
+	}
 	
     @Override
-    public void declareConnections(Hardware c) {
+    public void declareConfiguration(Builder c) {
     	
     	c.startStateMachineWith(StopLight.Stop);
-    	c.setTimerPulseRate(1);
+    	c.setTimerPulseRate(rate);
     }
 
-   
-	@SuppressWarnings("unchecked")
 	@Override
-    public void declareBehavior(FogRuntime runtime) {
-
+    public void declareBehavior(GreenRuntime runtime) {
         
-        runtime.addTimePulseListener(new TimingBehavior(runtime));
-		runtime.addStateChangeListener(new StateChangeBehavior());
+        runtime.addTimePulseListener(new TimingBehavior(runtime, console));
+		runtime.addStateChangeListener(new StateChangeBehavior(console))
+		                     .includeStateChangeTo(StopLight.Go);
+		runtime.addStateChangeListener(new StateChangeBehavior(console))
+		                     .includeStateChangeTo(StopLight.Stop);
+				
+		
     }
           
 }
@@ -79,21 +80,26 @@ Behavior classes
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
 import com.ociweb.gl.api.StateChangeListener;
-import com.ociweb.iot.maker.FogCommandChannel;
-import com.ociweb.iot.maker.FogRuntime;
-import com.ociweb.oe.foglight.api.StateMachine.StopLight;
+import com.ociweb.oe.greenlightning.api.StateMachine.StopLight;
+import com.ociweb.pronghorn.util.AppendableProxy;
 
-public class StateChangeBehavior implements StateChangeListener {
+public class StateChangeBehavior implements StateChangeListener<StopLight> {
 
+	private final AppendableProxy console;
+	
+	public StateChangeBehavior(AppendableProxy console) {
+		this.console = console;
+	}
 
 	@Override
-	public boolean stateChange(Enum oldState, Enum newState) {
+	public boolean stateChange(StopLight oldState, StopLight newState) {
+				
+		console.append("                        It is time to ").append(newState.name()).append('\n');
 		
-		System.out.println("The light has chnaged to " + ((StopLight) newState).getColor());
-		return true;
+		return true; //if we need to 'delay' the state change false can be returned.
 	}
 
 }
@@ -102,44 +108,54 @@ public class StateChangeBehavior implements StateChangeListener {
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.TimeListener;
-import com.ociweb.iot.maker.FogCommandChannel;
-import com.ociweb.iot.maker.FogRuntime;
-import com.ociweb.oe.foglight.api.StateMachine.StopLight;
+import com.ociweb.oe.greenlightning.api.StateMachine.StopLight;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class TimingBehavior implements TimeListener {
-	private static long startTime;
-	private static boolean haveStartTime = false;
-	private static final long fullTime = 15_000; //time from one red light to the next in milliseconds
-    final FogCommandChannel channel;
 
-	public TimingBehavior(FogRuntime runtime) {
-		channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+	private static final long fullCycle = 20; //from one red light to the next in iterations
+    
+	private final GreenCommandChannel channel;
+	private final AppendableProxy console;
+	private final GreenRuntime runtime;
 
+	public TimingBehavior(GreenRuntime runtime, AppendableProxy console) {
+		this.channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		this.console = console;
+		this.runtime = runtime;
 	}
-
 
 	@Override
 	public void timeEvent(long time, int iteration) {
-		
-		if((time-startTime)%fullTime == 5_000) {
-			System.out.print("Go! ");
-			channel.changeStateTo(StopLight.Go);
+
+		if(iteration%fullCycle == 0) {
+			changeState(time, StopLight.Go);
 		}
-		else if((time-startTime)%fullTime == 10_000) {
-			System.out.print("Caution. ");
-			channel.changeStateTo(StopLight.Caution);
+		else if(iteration%fullCycle == 8) {
+			changeState(time, StopLight.Caution);
 		}
-		else if((time-startTime)%fullTime == 0) {
-			System.out.print("Stop! ");
-			channel.changeStateTo(StopLight.Stop);
+		else if(iteration%fullCycle == 11) {
+			changeState(time, StopLight.Stop);
 		}
 		
-		if(!haveStartTime) {
-			startTime = time;
-			haveStartTime = true;
+		if (iteration == (fullCycle*3)) {
+			runtime.shutdownRuntime(7);
+		}
+
+	}
+
+	private void changeState(long time, StopLight target) {
+		if (channel.changeStateTo(target)) {
+			console.append(target.getColor()).append(" ");
+			Appendables.appendEpochTime(console, time).append('\n');
+		} else {
+			console.append("unable to send state change, to busy");
 		}
 	}
 

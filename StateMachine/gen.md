@@ -15,13 +15,13 @@ The following sketch will demonstrate a simple use of the ```StateChangeListener
 Demo code:
 Main Class
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/StateMachine.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/StateMachine.java"
 
 Behavior classes
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/StateChangeBehavior.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/StateChangeBehavior.java"
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/TimingBehavior.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/TimingBehavior.java"
 
 
 

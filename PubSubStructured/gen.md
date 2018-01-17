@@ -14,15 +14,15 @@ The following sketch will demonstrate a basic demo for using a PubSub Structured
  
 Demo code:
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/PubSubStructured.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/PubSubStructured.java"
 
 Behavior class:
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/KickoffBehavior.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/KickoffBehavior.java"
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/DecrementValueBehavior.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/DecrementValueBehavior.java"
 
-.include "./src/main/java/com/ociweb/oe/foglight/api/ThingBehavior.java"
+.include "./src/main/java/com/ociweb/oe/greenlightning/api/ThingBehavior.java"
 
 
 This class is a simple demonstration of PubSub Structured. While similar to the normal PubSub, PubSub Structured is meant for larger messages instead of just simpler ones. 

@@ -16,26 +16,40 @@ Demo code:
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
 
-import com.ociweb.iot.maker.FogApp;
-import com.ociweb.iot.maker.FogRuntime;
-import com.ociweb.iot.maker.Hardware;
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
-public class Startup implements FogApp
+public class Startup implements GreenApp
 {
+	
+	private final AppendableProxy console;
+	
+	public Startup(Appendable console) {
+		this.console = Appendables.proxy(console);
+	}
+	
+	
     @Override
-    public void declareConnections(Hardware c) {
-    //No connections are needed
+    public void declareConfiguration(Builder c) {
+
     }
 
     @Override
-    public void declareBehavior(FogRuntime runtime) {
+    public void declareBehavior(GreenRuntime runtime) {
 
     	runtime.addStartupListener(()->{
-    		System.out.println("Hello, this message will display once at start");
+    		console.append("Hello, this message will display once at start\n");
+    		//now we shutdown the app
+    		runtime.shutdownRuntime();
     	});
+    	
+    	
     }
 }
 ```

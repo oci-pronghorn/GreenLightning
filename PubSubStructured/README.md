@@ -16,30 +16,50 @@ Demo code:
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.iot.maker.FogApp;
-import com.ociweb.iot.maker.FogRuntime;
-import com.ociweb.iot.maker.Hardware;
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.util.AppendableProxy;
+import com.ociweb.pronghorn.util.Appendables;
 
-public class PubSubStructured implements FogApp
+public class PubSubStructured implements GreenApp
 {
-    static int COUNT_DOWN_FIELD = 1;
+    static int VALUE_FIELD = 1;
     static int SENDER_FIELD = 2;
-
+    
+    private AppendableProxy console;
+    private AppendableProxy console2;
+    
+    public PubSubStructured(Appendable console, Appendable console2) {
+    	this.console = Appendables.proxy(console);
+    	this.console2 = Appendables.proxy(console2);
+    }
+    
     @Override
-    public void declareConnections(Hardware c) {
+    public void declareConfiguration(Builder c) {
     }
 
     @Override
-    public void declareBehavior(FogRuntime runtime) {
-        // On startup kick off behavior will send the first message containing the first "topicOne" value
-        runtime.addStartupListener(new KickoffBehavior(runtime, "topicOne", 100));
-        // DecrementValueBehavior 1 will process "topicOne" and send to "topicTwo"
-        runtime.addPubSubListener(new DecrementValueBehavior(runtime, "topicTwo", 1)).addSubscription("topicOne");
-        // DecrementValueBehavior 2 will process "topicTwo" and send to "topicOne"
-        runtime.addPubSubListener(new DecrementValueBehavior(runtime, "topicOne", 1)).addSubscription("topicTwo");
-        // The prcocess loop will end when value reaches 0 and a shutdown command is issued
+    public void declareBehavior(GreenRuntime runtime) {
+
+        runtime.addStartupListener(new KickoffBehavior(runtime, "topicOne"));
+
+        runtime.addPubSubListener(new IncrementValueBehavior(runtime, "topicTwo", console))
+                                                  .addSubscription("topicOne");
+
+        runtime.addPubSubListener(new IncrementValueBehavior(runtime, "topicOne", console))
+                                                  .addSubscription("topicTwo");
+
+        runtime.addPubSubListener(new FilterValueBehavior(runtime, "filteredValues"))
+                                                  .addSubscription("topicOne")
+                                                  .addSubscription("topicTwo");
+                
+        runtime.addPubSubListener(new ConsoleWrite(console2))
+        										  .addSubscription("filteredValues");
+        
+    
     }
 }
 ```
@@ -49,21 +69,19 @@ Behavior class:
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.StartupListener;
-import com.ociweb.iot.maker.FogCommandChannel;
-import com.ociweb.iot.maker.FogRuntime;
 
 public class KickoffBehavior implements StartupListener {
-	private final FogCommandChannel cmd;
+	private final GreenCommandChannel cmd;
 	private final CharSequence publishTopic;
-	private final long countDownFrom;
 
-	KickoffBehavior(FogRuntime runtime, CharSequence publishTopic, long countDownFrom) {
-		cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+	KickoffBehavior(GreenRuntime runtime, CharSequence publishTopic) {
+		this.cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		this.publishTopic = publishTopic;
-		this.countDownFrom = countDownFrom;
 	}
 
 	@Override
@@ -71,126 +89,50 @@ public class KickoffBehavior implements StartupListener {
 		// Send the initial value on startup
 		cmd.presumePublishStructuredTopic(publishTopic, writer -> {
 			writer.writeUTF8(PubSubStructured.SENDER_FIELD, "from kickoff behavior");
-			writer.writeLong(PubSubStructured.COUNT_DOWN_FIELD, countDownFrom);
+			writer.writeLong(PubSubStructured.VALUE_FIELD, 1);
 		});
 	}
 }
 ```
 
 
-
-```java
-package com.ociweb.oe.foglight.api;
-
-import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.iot.maker.FogCommandChannel;
-import com.ociweb.iot.maker.FogRuntime;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.util.field.MessageConsumer;
-
-public class DecrementValueBehavior implements PubSubListener {
-	private final FogCommandChannel channel;
-    private final MessageConsumer consumer;
-    private final CharSequence publishTopic;
-    private final FogRuntime runtime;
-    private final long decrementBy;
-
-	private long lastValue;
-		
-    DecrementValueBehavior(FogRuntime runtime, CharSequence publishTopic, long decrementBy) {
-    	this.channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
-
-    	// Process each field in order. Return false to stop processing.
-		this.consumer = new MessageConsumer()
-				            .integerProcessor(PubSubStructured.COUNT_DOWN_FIELD, value -> {
-								lastValue = (int) value;
-								return true;
-							});
-		
-		this.publishTopic = publishTopic;
-		this.runtime = runtime;
-		this.decrementBy = decrementBy;
-	}
-
-	@Override
-	public boolean message(CharSequence topic, BlobReader payload) {
-		//
-		////NOTE: this one line will copy messages from payload if consumer returns true
-		////      when the message is copied its topic is changed to the first argument string
-		//
-		//cmd.copyStructuredTopic(publishTopic, payload, consumer);
-		//
-		// consumer.process returns the process chain return value
-		if (consumer.process(payload)) {
-			if (lastValue>0) {
-				// If not zero, republish the message
-				System.out.println(lastValue);
-				return channel.publishStructuredTopic(publishTopic, writer -> {
-					writer.writeLong(PubSubStructured.COUNT_DOWN_FIELD, lastValue-decrementBy);
-					writer.writeUTF8(PubSubStructured.SENDER_FIELD, "from thing one behavior");
-				});
-			} else {
-				// When zero, shutdown the system
-				runtime.shutdownRuntime();
-				return true;
-			} 
-		} else {
-			return false;
-		}
-	}
-}
-```
-
+#### ERROR:  could not read file ./src/main/java/com/ociweb/oe/greenlightning/api/DecrementValueBehavior.java
 
 
 ```java
-package com.ociweb.oe.foglight.api;
+package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.PubSubStructuredWritable;
-import com.ociweb.iot.maker.FogCommandChannel;
-import com.ociweb.iot.maker.FogRuntime;
-import com.ociweb.pronghorn.pipe.BlobReader;
-import com.ociweb.pronghorn.util.field.IntegerFieldProcessor;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.util.field.MessageConsumer;
-import com.ociweb.pronghorn.util.field.StructuredBlobWriter;
 
 public class ThingBehavior implements PubSubListener {
 
-	private final FogCommandChannel cmd;
+	private final GreenCommandChannel cmd;
     private final MessageConsumer consumer;
     private int lastValue;
     private final CharSequence publishTopic;
-    private final FogRuntime runtime;
+    private final GreenRuntime runtime;
 		
-    public ThingBehavior(FogRuntime runtime, CharSequence topic) {
+    public ThingBehavior(GreenRuntime runtime, CharSequence topic) {
     	this.cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 
 		this.consumer = new MessageConsumer()
-				            .integerProcessor(PubSubStructured.COUNT_DOWN_FIELD, processor);
+				            .integerProcessor(PubSubStructured.VALUE_FIELD, 
+				            		(value)->{
+				            			lastValue = (int)value;
+				            			return true;
+				            	});
 		
 		this.publishTopic = topic;
 		this.runtime = runtime;
 	}
     
-    private final PubSubStructuredWritable writable = new PubSubStructuredWritable() {
-    	@Override
-    	public void write(StructuredBlobWriter writer) {
-    		writer.writeLong(PubSubStructured.COUNT_DOWN_FIELD, lastValue-1);
-    		writer.writeUTF8(PubSubStructured.SENDER_FIELD, "from thing one behavior");
-    	}			
-    };
-
-    private final IntegerFieldProcessor processor = new IntegerFieldProcessor() {			
-    	@Override
-    	public boolean process(long value) {
-    		lastValue = (int)value;
-    		return true;
-    	}
-    };
     
 	@Override
-	public boolean message(CharSequence topic, BlobReader payload) {
+	public boolean message(CharSequence topic, ChannelReader payload) {
 					
 		//
 		////NOTE: this one line will copy messages from payload if consumer returns true
@@ -202,7 +144,10 @@ public class ThingBehavior implements PubSubListener {
 		if (consumer.process(payload)) {
 			if (lastValue>0) {
 				System.out.println(lastValue);
-				return cmd.publishStructuredTopic(publishTopic, writable);
+				return cmd.publishStructuredTopic(publishTopic, (writer)->{
+					writer.writeLong(PubSubStructured.VALUE_FIELD, lastValue-1);
+		    		writer.writeUTF8(PubSubStructured.SENDER_FIELD, "from thing one behavior");					
+				});
 			} else {
 				runtime.shutdownRuntime();
 				return true;
