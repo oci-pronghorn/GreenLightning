@@ -48,7 +48,6 @@
     <connection>scm:git:git://github.com/oci-pronghorn/GreenLightning.git</connection>
     <url>https://github.com/oci-pronghorn/GreenLightning</url>
     <developerConnection>scm:git:ssh://git@github.com/oci-pronghorn/GreenLightning.git</developerConnection>
-    <tag>GreenLightning-0.0.6</tag>
   </scm>
     
   <distributionManagement>
