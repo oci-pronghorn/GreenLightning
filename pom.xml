@@ -1,7 +1,7 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ociweb</groupId>
-    <version>0.0.6</version>
+    <version>0.0.6-SNAPSHOT</version>
     <name>GreenLightning</name>
     <artifactId>GreenLightning</artifactId>
 
@@ -19,6 +19,20 @@
 	    </java.secure.socket.extension.classes>
 	    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
    </properties>
+     
+    <profiles>
+        <profile>
+	        <id>disable-java8-doclint</id>
+	        <activation>
+	            <jdk>[1.8,)</jdk>
+	        </activation>
+	        <properties>
+	            <additionalparam>-Xdoclint:none</additionalparam>
+	        </properties>
+	    </profile>
+    </profiles>
+   
+   
    
     <dependencies>
         <dependency>
@@ -48,7 +62,6 @@
     <connection>scm:git:git://github.com/oci-pronghorn/GreenLightning.git</connection>
     <url>https://github.com/oci-pronghorn/GreenLightning</url>
     <developerConnection>scm:git:ssh://git@github.com/oci-pronghorn/GreenLightning.git</developerConnection>
-    <tag>GreenLightning-0.0.6</tag>
   </scm>
     
   <distributionManagement>
@@ -57,19 +70,6 @@
       <url>dav:https://repository-pronghorn.forge.cloudbees.com/release</url>
     </repository>
   </distributionManagement>
-  
-    <profiles>
-        <profile>
-	        <id>disable-java8-doclint</id>
-	        <activation>
-	            <jdk>[1.8,)</jdk>
-	        </activation>
-	        <properties>
-	            <additionalparam>-Xdoclint:none</additionalparam>
-	        </properties>
-	    </profile>
-	    
-    </profiles>
 
   <repositories>
     
@@ -148,11 +148,11 @@
                    <version>3.2</version>
                    <configuration>
                      
-                       <!--   compilerArguments>
-                           <profile>compact1</profile>
-                       </compilerArguments -->  <!-- add second build to confirm this -->
-                       <source>1.7</source>
-                       <target>1.7</target>
+		          	<fork>true</fork>
+		            <source>1.7</source>
+		            <target>1.7</target>
+		            <testSource>1.8</testSource>
+		            <testTarget>1.8</testTarget>
                
                    </configuration>
           </plugin>

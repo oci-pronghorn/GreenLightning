@@ -498,6 +498,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
 	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers) {
 	
+		assert(headers==null || 0==headers.length() || headers.toString().endsWith("\r\n")) : "Invalid header values, must be absent, zero length or present. When present each header must end with \\r\\n";
+		
 		int routeId = session.uniqueId;
 		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
