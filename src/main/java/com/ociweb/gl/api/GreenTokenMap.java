@@ -28,8 +28,12 @@ public class GreenTokenMap {
 		return new GreenReader(tp, extractions);
 	}
 		
+	public int getSize() {
+		return tp.getLimit();
+	}
+	
 	public GreenTokenMap add(long id, CharSequence template) {
-		tp.setUTF8Value(template, id);
+		tp.setUTF8Value(template, id); 
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());		
 		return this;
 	}

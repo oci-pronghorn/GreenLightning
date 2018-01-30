@@ -33,7 +33,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 		return (((int)fieldId)>>16) & 0xFF;
 	}
 
-	protected int computePosition(long fieldId) {
+	public int computePosition(long fieldId) {
 		assert(fieldId>=0) : "check field name, it does not match any found field";
 		//jump to end and index backwards to find data position
 		return readFromEndLastInt(fieldIdx(fieldId));	

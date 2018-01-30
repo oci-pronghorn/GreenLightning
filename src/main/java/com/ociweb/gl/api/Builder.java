@@ -42,7 +42,7 @@ public interface Builder extends ArgumentProvider {
      */
     Builder setTimerPulseRate(TimeTrigger trigger);
 
-
+    void enforceLowLatency(boolean enforce);
     
     void limitThreads(int threadLimit);
     
@@ -54,9 +54,6 @@ public interface Builder extends ArgumentProvider {
 	int registerRoute(CharSequence route, byte[] ... headers);
 
 	HTTPServerConfig useHTTP1xServer(int bindPort);
-
-	@Deprecated
-	void enableServer(boolean isTLS, int bindPort);
 
 	TelemetryConfig enableTelemetry();
 	TelemetryConfig enableTelemetry(int port);

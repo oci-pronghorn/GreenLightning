@@ -135,7 +135,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
        assert(goPipe.length == incomingSubsAndPubsPipe.length) : "Publish/Subscribe should be one pub sub pipe for every go "+goPipe.length+" vs "+incomingSubsAndPubsPipe.length;
        
        //can never have more subscribers than ALL, add 1 for the leading counter and 1 for the -1 stop
-       this.subscriberListSize = outgoingMessagePipes.length+2;
+       this.subscriberListSize = outgoingMessagePipes.length+4;
        
        this.totalSubscriberLists = 0;
        this.subscriptionPipeLookup = subscriptionPipeLookup;
@@ -847,7 +847,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             PipeWriter.publishWrites(outPipe);
         } else {
         	//add this one back to the list so we can send again later
-            pendingPublish[pendingPublishCount++] = pipeIdx;
+          	pendingPublish[pendingPublishCount++] = pipeIdx; //TODO: why does this value never go down??
             pendingIngress = false;
         }
     }
