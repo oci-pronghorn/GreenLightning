@@ -1,56 +1,25 @@
 # GreenLightning
-Fast small footprint HTTP server in Java
+GreenLightning is a performant light-weight microservice framework that can execute garbage-free and lock-free in a Java compact-1 JVM. HTTP and MQTT are built in with easy and security-first APIs.
 
+The framework is based on a declarative event driven actor model. Your resulting code ends up being smaller in complexity and easier to maintain. Operational logic such as thread synchronization, exception handling, and null object conditions are not only removed from the business logic, but is handled by the framework.
 
-This is early days for the project but we have enough here to prove out the core design. 
-Please consider sponsoring continued work on this BSD open source project. 
+In other words you can easily write multithreaded asynchronous logic without having to schedule a single task or lock a single block of memory!
 
-Drop a note to info@ociweb.com if you would like to set up a meeting to talk about Green Lightning.  
-What features are most important to you?
+Another stand-out feature of GreenLightning is live fine-grained telemetry/operational information published via the built in web-server. You can collect instantaneous metrics such as CPU% on a class level and data throughput without a specialized build and deployment. The information is available in production.
 
+Starter Project Instructions:
+https://github.com/oci-pronghorn/GreenLighter
 
-When running tests with a small 30 byte file I was able to to hit the following numbers
-for unencrypted http calls on a 4 core box.  
-
-The test makes 16K simultaneous (in flight) requests of 32 connections. Many more permutations are left to still be tested.
-
-Green Lightning:   1,000K RPS (saturated 1Gb connection)  (in large mode)
-
-Green Lightning:   500K RPS (in small mode mode between 60-160MB of memory)
-
-NGINX:             260K RPS
-
-Netty:             160K RPS
-
-
-The build server:
-https://pronghorn.ci.cloudbees.com/job/GreenLightning/
+Sample Projects:
+https://github.com/oci-pronghorn/GreenLightning-API
+https://github.com/oci-pronghorn/GreenLightning-Examples
 
 The code on GitHub:
 https://github.com/oci-pronghorn/GreenLightning
 
-To build a jar just run `mvn install` then run the `go.sh`
-shell file to start up the demo web page
-review `go.sh` to see how it is called.
+The build server:
+https://pronghorn.ci.cloudbees.com/job/GreenLightning/
 
-[Alternate build options](./README-alternate-deploy.md)
+Performance Comparisons:
+https://github.com/oci-pronghorn/GreenLoader
 
-
-## Options
-
---t is for turning on or off TLS (https) support, keys are built in cant change yet
-
---s is the folder holding the static site pages,  these can not be changed while its running
-     note if this points to the index.html file it will be used as the default for the domain. 
-     
---l is for running in large mode where it allocates many GB for performance
-    with -l False  (the small mode) it is still much more performant than any other 
-    server I could find.
-    
---h what host to run this on (eg ip) if not provided it will guess from network settings.
-
---p what port to run on the default is 8080 even when TLS is turned on.
-
-
-When running small mode on a compact 1 JVM the app will only use about 60MB.
-When running small mode on a normal JVM the app will use about 160MB.
