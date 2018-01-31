@@ -1,5 +1,5 @@
 # GreenLightning
-GreenLightning is a performant light-weight microservice framework that can execute garbage-free and lock-free in a Java compact-1 JVM. HTTP and MQTT are built in with easy and security-first APIs.
+GreenLightning is a performant light-weight microservice runtime that can execute garbage-free and lock-free in a Java compact-1 JVM. HTTP and MQTT are built in with easy and security-first APIs.
 
 The framework is based on a declarative event driven actor model. Your resulting code ends up being smaller in complexity and easier to maintain. Operational logic such as thread synchronization, exception handling, and null object conditions are not only removed from the business logic, but is handled by the framework.
 
