@@ -9,11 +9,11 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 public class PublishPrivateTopics {
 	
 	private TrieParser privateTopicsPublishTrie;
-	private Pipe[] privateTopicPublishPipes;
+	private Pipe<MessagePrivate>[] privateTopicPublishPipes;
 	private TrieParserReader privateTopicsTrieReader;
 
 	public PublishPrivateTopics(TrieParser privateTopicsPublishTrie,
-								Pipe[] privateTopicPublishPipes,
+								Pipe<MessagePrivate>[] privateTopicPublishPipes,
 								TrieParserReader privateTopicsTrieReader
 			) {
 		
@@ -27,8 +27,18 @@ public class PublishPrivateTopics {
 		return privateTopicPublishPipes.length;
 	}
 
-	public void copyPipes(Pipe[] results, int idx) {
+	public void copyPipes(Pipe<?>[] results, int idx) {
+		assert(checkPipes(results));
+		
  		System.arraycopy(privateTopicPublishPipes, 0, results, idx, privateTopicPublishPipes.length);
+	}
+
+	private boolean checkPipes(Pipe<?>[] results) {
+		int i = results.length;
+		while (--i>=0) {
+			assert(Pipe.isForSchema(results[i], MessagePrivate.instance)) : "bad pipe of "+Pipe.schemaName(results[i]);
+		}
+		return true;
 	}
 
 	public Pipe<MessagePrivate> getPipe(int index) {

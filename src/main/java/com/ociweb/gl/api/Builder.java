@@ -85,10 +85,9 @@ public interface Builder extends ArgumentProvider {
 	//this will disable normal pub sub usages unless flagged.
 	void definePrivateTopic(String topic, String source, String target);
 	void definePrivateTopic(String topic, String source, String ... targets);
-	
 	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String target);
 	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String ... targets);
-	
+	void usePrivateTopicsExclusively();
 	
 	void enableDynamicTopicPublish(String id);//without this any private topic above will not support dynamic routing
 	void enableDynamicTopicSubscription(String id);

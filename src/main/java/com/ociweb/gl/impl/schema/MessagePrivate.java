@@ -22,6 +22,7 @@ public class MessagePrivate extends MessageSchema<MessagePrivate> {
 
 		protected MessagePrivate() { 
 		    super(FROM);
+		    
 		}
 
 		public static final MessagePrivate instance = new MessagePrivate();

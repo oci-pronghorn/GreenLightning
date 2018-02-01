@@ -232,7 +232,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
       
     public L registerListener(String id, Behavior listener) {
-    	return (L) registerListenerImpl(listener);
+    	return (L) registerListenerImpl(id, listener);
     }
     
    
@@ -376,7 +376,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         	pipesCount++; //these are calls to URL responses        	
         }
         
-        if (this.builder.isListeningToSubscription(listener)) {
+        if ( (!this.builder.isAllPrivateTopics())
+        	&& this.builder.isListeningToSubscription(listener)) {
         	pipesCount++;
         }
         
@@ -399,7 +400,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
             
         }
         
-        if (this.builder.isListeningToSubscription(listener)) {   
+        if ((!this.builder.isAllPrivateTopics())
+        	&& this.builder.isListeningToSubscription(listener)) {   
             inputPipes[--pipesCount]=buildPublishPipe(listener);
         }
 
@@ -440,25 +442,34 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
      * @param listener
      */
 	public Pipe<MessageSubscription> buildPublishPipe(Object listener) {
-		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();		
-		return attachListenerIndexToMessageSubscriptionPipe(listener, subscriptionPipe);
-	}
-	
-	public Pipe<MessageSubscription> buildPublishPipe(int listenerHash) {
-		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();	
-		if (!IntHashTable.setItem(subscriptionPipeLookup, listenerHash, subscriptionPipeIdx++)) {
-			throw new RuntimeException("HashCode must be unique");
+		
+		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
+		if (builder.isAllPrivateTopics()) {
+			throw new RuntimeException("oops");
 		}
-		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
-		return subscriptionPipe;
-	}
-
-	private Pipe<MessageSubscription> attachListenerIndexToMessageSubscriptionPipe(Object listener,
-			Pipe<MessageSubscription> subscriptionPipe) {
+		
+		
+		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();		
 		//store this value for lookup later
 		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
 		if (!IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++)) {
 			throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
+		}
+		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+		return subscriptionPipe;
+	}
+	
+	public Pipe<MessageSubscription> buildPublishPipe(int listenerHash) {
+		
+		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
+		if (builder.isAllPrivateTopics()) {
+			throw new RuntimeException("oops");
+		}
+		
+		
+		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();	
+		if (!IntHashTable.setItem(subscriptionPipeLookup, listenerHash, subscriptionPipeIdx++)) {
+			throw new RuntimeException("HashCode must be unique");
 		}
 		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
 		return subscriptionPipe;
@@ -837,10 +848,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 						
 		}
 		
-        ReactiveListenerStage reactiveListener = builder.createReactiveListener(gm, listener, 
+        ReactiveListenerStage<?> reactiveListener = builder.createReactiveListener(gm, listener, 
         		                                inputPipes, outputPipes, consumers,
         		                                parallelInstanceUnderActiveConstruction,id);
 
+        //finds all the command channels which make use of private topics.
+        reactiveListener.regPrivateTopics();
         
         if (listener instanceof RestListenerBase) {
 			GraphManager.addNota(gm, GraphManager.DOT_RANK_NAME, "ModuleStage", reactiveListener);

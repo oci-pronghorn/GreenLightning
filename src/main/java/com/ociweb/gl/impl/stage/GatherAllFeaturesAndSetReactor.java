@@ -1,12 +1,16 @@
 package com.ociweb.gl.impl.stage;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.impl.ChildClassScannerVisitor;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 
 class GatherAllFeaturesAndSetReactor implements ChildClassScannerVisitor<MsgCommandChannel> {
-
+//TODO: mere this with other walkers for a single deep scan and faster startup.
+	private static final Logger logger = LoggerFactory.getLogger(GatherAllFeaturesAndSetReactor.class);
 	private final ReactiveListenerStage<?> reactiveListenerStage;
 	
 	public GatherAllFeaturesAndSetReactor(ReactiveListenerStage<?> reactiveListenerStage) {
@@ -21,11 +25,7 @@ class GatherAllFeaturesAndSetReactor implements ChildClassScannerVisitor<MsgComm
 		   this.features = 0;
 	   }
 	   
-	   public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
-		   
-		   //TODO: get the object for lookup and set it
-		    cmdChnl.setPrivateTopics(reactiveListenerStage.publishPrivateTopics);
-		   
+	   public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {	
 			if (cmdChnl.isGoPipe(target)) {
 				features |= cmdChnl.initFeatures;
 			}

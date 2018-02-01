@@ -353,12 +353,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	//      this will add a new API where a constant can be used instead of a topic string...
     	//      in many cases this change will double the throughput or do even better.
     	
-    	return new Pipe<MessagePubSub>(config) {
-			@Override
-			protected DataOutputBlobWriter<MessagePubSub> createNewBlobWriter() {
-				return new PubSubWriter(this);
-			}    		
-    	};
+    	if (builder.isAllPrivateTopics()) {
+    		return null;
+    	} else {
+	    	return new Pipe<MessagePubSub>(config) {
+				@Override
+				protected DataOutputBlobWriter<MessagePubSub> createNewBlobWriter() {
+					return new PubSubWriter(this);
+				}    		
+	    	};
+    	}
     }
     
     private static <B extends BuilderImpl> Pipe<ClientHTTPRequestSchema> newNetRequestPipe(PipeConfig<ClientHTTPRequestSchema> config, B builder) {
@@ -808,7 +812,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			return publishOnPrivateTopic(token);
 		} else {
 			if (null==messagePubSub) {
-				throw new RuntimeException("Enable DYNAMIC_MESSAGING for this CommandChannel before publishing.");
+				if (builder.isAllPrivateTopics()) {
+					throw new RuntimeException("Discovered non private topic '"+topic+"' but exclusive use of private topics was set on.");
+				} else {
+					throw new RuntimeException("Enable DYNAMIC_MESSAGING for this CommandChannel before publishing.");
+				}
 			}
 			
 	        if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) && 

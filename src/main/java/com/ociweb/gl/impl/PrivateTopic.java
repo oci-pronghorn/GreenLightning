@@ -14,6 +14,7 @@ public class PrivateTopic {
 	public PrivateTopic(String topic, int messageCount, int messageSize) {
 		this.topic = topic;
 		this.config = new PipeConfig<MessagePrivate>(MessagePrivate.instance, messageCount, messageSize);		
+		this.config.hideLabels(); //private topics can clutter if they show all the details.
 	}
 	
 	public PrivateTopic(String topic, PipeConfig<MessagePrivate> config) {

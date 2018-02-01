@@ -179,33 +179,38 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         //only create private topics for named behaviors
         if (null!=nameId) {
         	List<PrivateTopic> listOut = builder.getPrivateTopicsFromTarget(nameId);
+     
         	//only lookup topics if the builder knows of some
         	if (!listOut.isEmpty()) {
+        		
 		        int i = inputPipes.length;
 		        this.receivePrivateTopics = new PrivateTopic[i];
 		        while (--i>=0) {
+		   
 		        	if ( Pipe.isForSchema(inputPipes[i], MessagePrivate.instance) ) {
 		        		
 		        		int j = listOut.size();
 		        		while(--j>=0) {
 		        			if ( listOut.get(j).getPipe() == inputPipes[i] ) {
-		        				this.receivePrivateTopics[j] = listOut.get(j);
+		        				this.receivePrivateTopics[i] = listOut.get(j);
 		        				break;//done		        				
 		        			}
 		        		}
 		        		assert (j>=0) : "error: did not find matching pipe for private topic";
 		        	}		        	
 		        }
+		        
         	} else {
         		this.receivePrivateTopics = null;
         	}
 	        ////////////////
         	
 	        List<PrivateTopic> listIn = builder.getPrivateTopicsFromSource(nameId);
+	  
 	        if (!listIn.isEmpty()) {
 		        	        	
 	        	TrieParser privateTopicsPublishTrie;
-	        	Pipe[] privateTopicPublishPipes;
+	        	Pipe<MessagePrivate>[] privateTopicPublishPipes;
 	        	TrieParserReader privateTopicsTrieReader;
 	        	
 	        	
@@ -214,6 +219,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		        privateTopicPublishPipes = new Pipe[i];
 		        while (--i >= 0) {
 		        	PrivateTopic topic = listIn.get(i);
+		        	//logger.info("set private topic for use {} {}",i,topic.topic);
 		        	privateTopicPublishPipes[i] = topic.getPipe();
 		        	privateTopicsPublishTrie.setUTF8Value(topic.topic, i);//to matching pipe index	
 		        }
@@ -277,14 +283,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     public static ReactiveOperators reactiveOperators() {
 		return new ReactiveOperators()
-//				                .addOperator(PubSubMethodListenerBase.class, 
-//				                	 MessagePrivate.instance,
-//				               		 new ReactiveOperator() {
-//									@Override
-//									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
-//										r.consumePrivateMessage(index, target, input);										
-//									}        		                	 
-//				                })
+				                .addOperator(PubSubMethodListenerBase.class, 
+				                	 MessagePrivate.instance,
+				               		 new ReactiveOperator() {
+									@Override
+									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
+										r.consumePrivateMessage(index, target, input);										
+									}        		                	 
+				                 })
         		                 .addOperator(PubSubMethodListenerBase.class, 
         		                		 MessageSubscription.instance,
         		                		 new ReactiveOperator() {
@@ -674,6 +680,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	final void consumePrivateMessage(int index, Object listener, Pipe<MessagePrivate> p) {
 		
 		final PrivateTopic topic = receivePrivateTopics[index];
+		assert (null!=topic);
+		assert (null!=listener);
 		
 		while (Pipe.hasContentToRead(p)) {
 					
@@ -1200,15 +1208,21 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
 	//used for looking up the features used by this TrafficOrder goPipe
-	private GatherAllFeaturesAndSetReactor ccmwp 
-	                 = new GatherAllFeaturesAndSetReactor(this);
-
+	private GatherAllFeaturesAndSetReactor ccmwp = new GatherAllFeaturesAndSetReactor(this);
+    private PrivateTopicReg privateTopicReg = new PrivateTopicReg(this);
+	
 	public int getFeatures(Pipe<TrafficOrderSchema> pipe) {
+		//logger.info("getFeatuers was called, should visit all command channels");
 		ccmwp.init(pipe);
 		ChildClassScanner.visitUsedByClass(listener, ccmwp, MsgCommandChannel.class);		
 		return ccmwp.features();
 	}
 
+	public void regPrivateTopics() {
+		//logger.info("regPrivateTopics was called, should visit all command channels");
+		ChildClassScanner.visitUsedByClass(listener, privateTopicReg, MsgCommandChannel.class);		
+	}
+	
 	
 	@Override
 	public <E extends Enum<E>> ListenerFilter includeHTTPSession(HTTPSession... httpSessions) {

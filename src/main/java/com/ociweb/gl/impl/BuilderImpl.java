@@ -87,6 +87,7 @@ public class BuilderImpl implements Builder {
 	protected long timeTriggerRate;
 	protected long timeTriggerStart;
 
+	
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
@@ -94,9 +95,10 @@ public class BuilderImpl implements Builder {
 	
 	private int threadLimit = -1;
 	private boolean threadLimitHard = false;
+	private boolean hasPrivateTopicsChecked = false;
+	private boolean isAllPrivateTopics = false;
 
 	private static final int DEFAULT_LENGTH = 16;
-	private static final int DEFAULT_PAYLOAD_SIZE = 128;
 
 	protected static final long MS_TO_NS = 1_000_000;
 
@@ -106,8 +108,6 @@ public class BuilderImpl implements Builder {
 
 	public Enum<?> beginningState;
     private int parallelismTracks = 1;//default is one
-    
-        
 	private static final int BehaviorMask = 1<<31;//high bit on
 	
 
@@ -120,7 +120,7 @@ public class BuilderImpl implements Builder {
 	/////////////////
 	/////////////////
     
-    private long defaultSleepRateNS = 2000;// should normally be between 900 and 20_000; 
+    private long defaultSleepRateNS = 5_000;// should normally be between 900 and 20_000; 
     
 	private final int shutdownTimeoutInSeconds = 1;
 
@@ -134,7 +134,6 @@ public class BuilderImpl implements Builder {
 
 	protected int IDX_MSG = -1;
 	protected int IDX_NET = -1;
-	//TODO: why is responder missing?
 	   
     ///////
 	//These topics are enforced so that they only go from one producer to a single consumer
@@ -154,7 +153,6 @@ public class BuilderImpl implements Builder {
     private ArrayList<Pipe<HTTPRequestSchema>>[][] collectedHTTPRequstPipes;
 	private ArrayList<Pipe<ServerResponseSchema>>[] collectedServerResponsePipes;
 	
-
 	
 	//////////////////////////////
 	//support for REST modules and routing
@@ -165,6 +163,17 @@ public class BuilderImpl implements Builder {
 	             routerConfig;	//////////////////////////////
 	//////////////////////////////
 	
+	public void usePrivateTopicsExclusively() {
+		if (hasPrivateTopicsChecked) {
+			throw new UnsupportedOperationException("Must set in declare configuration section before startup");
+		}
+		isAllPrivateTopics = true;
+	}
+	
+	public boolean isAllPrivateTopics() {
+		hasPrivateTopicsChecked = true;
+		return isAllPrivateTopics;
+	}
 	    
     public final ReactiveOperators operators;
 
@@ -740,8 +749,10 @@ public class BuilderImpl implements Builder {
 		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfTypeWithNoConsumer(gm, MessagePubSub.instance);
 		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, IngressMessages.instance);
 		
-		
+		//TODO: no longer right now that we have no cops..
 		int commandChannelCount = orderPipes.length;
+		
+		
 		int eventSchemas = 0;
 		
 		IDX_MSG = (IntHashTable.isEmpty(subscriptionPipeLookup2) 
@@ -752,7 +763,6 @@ public class BuilderImpl implements Builder {
 		
 		int maxGoPipeId = 0;
 					
-		int t = commandChannelCount;
 								
 		Pipe<TrafficReleaseSchema>[][] masterGoOut = new Pipe[eventSchemas][0];
 		Pipe<TrafficAckSchema>[][]     masterAckIn = new Pipe[eventSchemas][0];
@@ -766,14 +776,16 @@ public class BuilderImpl implements Builder {
 			masterAckIn[IDX_NET] = new Pipe[httpClientResponsePipes.length];
 		}		
 				
-		while (--t>=0) {
+		int copGoAck = commandChannelCount;
+		//logger.info("command channel count to be checked {}",copGoAck);
+		while (--copGoAck>=0) {
 		
 			Pipe<TrafficReleaseSchema>[] goOut = new Pipe[eventSchemas];
 			Pipe<TrafficAckSchema>[] ackIn = new Pipe[eventSchemas];
 			
 			//only setup the go and in pipes if the cop is used.
-			if (null != orderPipes[t]) {
-				int features = getFeatures(gm, orderPipes[t]);
+			if (null != orderPipes[copGoAck]) {
+				int features = getFeatures(gm, orderPipes[copGoAck]);
 				boolean hasConnections = false;
 				if ((features&Behavior.DYNAMIC_MESSAGING) != 0) {
 					hasConnections = true;		 		
@@ -784,9 +796,11 @@ public class BuilderImpl implements Builder {
 			 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_NET);
 				}
 				TrafficCopStage.newInstance(gm, 
-											timeout, orderPipes[t], 
+											timeout, orderPipes[copGoAck], 
 											ackIn, goOut, 
 											runtime, this);
+			} else {
+				logger.info("oops get features skipped since no cops but needed for private topics");
 			}
 
 //			if (true | hasConnections) {
@@ -813,11 +827,15 @@ public class BuilderImpl implements Builder {
 		if (IDX_MSG<0) {
 			logger.trace("saved some resources by not starting up the unused pub sub service.");
 		} else {
-			//logger.info("builder created pub sub");
-		 	createMessagePubSubStage(runtime, subscriptionPipeLookup2, 
-		 			ingressMessagePipes, messagePubSub, 
-		 			masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], 
-		 			subscriptionPipes);
+			
+			if (!isAllPrivateTopics) {
+			
+				//logger.info("builder created pub sub");
+			 	createMessagePubSubStage(runtime, subscriptionPipeLookup2, 
+			 			ingressMessagePipes, messagePubSub, 
+			 			masterGoOut[IDX_MSG], masterAckIn[IDX_MSG], 
+			 			subscriptionPipes);
+			}
 		}
 	}
 
@@ -887,11 +905,13 @@ public class BuilderImpl implements Builder {
 	protected int populateGoAckPipes(int maxGoPipeId, Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn, Pipe<TrafficReleaseSchema>[] goOut, Pipe<TrafficAckSchema>[] ackIn,
 			int p) {
-		addToLastNonNull(masterGoOut[p], goOut[p] = new Pipe<TrafficReleaseSchema>(this.pcm.getConfig(TrafficReleaseSchema.class)));
 		
-		maxGoPipeId = Math.max(maxGoPipeId, goOut[p].id);				
+		if (p>=0) {
+			addToLastNonNull(masterGoOut[p], goOut[p] = new Pipe<TrafficReleaseSchema>(this.pcm.getConfig(TrafficReleaseSchema.class)));
+			maxGoPipeId = Math.max(maxGoPipeId, goOut[p].id);				
+			addToLastNonNull(masterAckIn[p], ackIn[p] = new Pipe<TrafficAckSchema>(this.pcm.getConfig(TrafficAckSchema.class)));
+		}
 		
-		addToLastNonNull(masterAckIn[p], ackIn[p] = new Pipe<TrafficAckSchema>(this.pcm.getConfig(TrafficAckSchema.class)));
 		return maxGoPipeId;
 	}
 	
@@ -961,20 +981,14 @@ public class BuilderImpl implements Builder {
 	
 	public List<PrivateTopic> getPrivateTopicsFromSource(String source) {
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
-		if (sourceId<0) {
-			return Collections.EMPTY_LIST;
-		} else {
-			return privateSourceTopics.get(sourceId);
-		}
+		List<PrivateTopic> result = (sourceId<0) ? Collections.EMPTY_LIST : privateSourceTopics.get(sourceId);		
+		return result;
 	}
 	
 	public List<PrivateTopic> getPrivateTopicsFromTarget(String target) {
 		int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, target);
-		if (targetId<0) {
-			return Collections.EMPTY_LIST;
-		} else {
-			return privateTargetTopics.get(targetId);
-		}
+		List<PrivateTopic> result = (targetId<0) ? Collections.EMPTY_LIST: privateTargetTopics.get(targetId);
+		return result;
 	}	
 	
 	@Override
@@ -990,14 +1004,13 @@ public class BuilderImpl implements Builder {
 		if (targets.length<=1) {
 			throw new UnsupportedOperationException("only call this with multiple targets");
 		}
-		
-		
+				
 		PrivateTopic sourcePT = new PrivateTopic(topic, queueLength, maxMessageSize);
 		
 		List<PrivateTopic> localSourceTopics = null;
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
 		if (sourceId<0) {
-			localSourceTopics = new ArrayList<PrivateTopic>();
+			localSourceTopics = new ArrayList<PrivateTopic>();			
 			privateTopicSource.setUTF8Value(source, privateSourceTopics.size());
 			privateSourceTopics.add(localSourceTopics);
 		} else {
@@ -1048,6 +1061,7 @@ public class BuilderImpl implements Builder {
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
 		if (sourceId<0) {
 			localSourceTopics = new ArrayList<PrivateTopic>();
+			//logger.info("record source '{}'",source);
 			privateTopicSource.setUTF8Value(source, privateSourceTopics.size());
 			privateSourceTopics.add(localSourceTopics);
 		} else {
@@ -1059,6 +1073,7 @@ public class BuilderImpl implements Builder {
 		int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, target);
 		if (targetId<0) {
 			localTargetTopics = new ArrayList<PrivateTopic>();
+			//logger.info("record target '{}'",target);
 			privateTopicTarget.setUTF8Value(target, privateTargetTopics.size());
 			privateTargetTopics.add(localTargetTopics);
 		} else {

@@ -1,5 +1,6 @@
 package com.ociweb.gl.pubsub;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
@@ -9,7 +10,7 @@ import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 public class PubSubTest {
 
 	
-	@Test
+	@Ignore
 	public void somethingTest() {
 		
 		
