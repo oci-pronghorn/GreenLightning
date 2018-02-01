@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb</groupId>
   <artifactId>GreenLighter</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.1</version>
   <name>GreenLighter</name>
   <url>http://maven.apache.org</url>
   
@@ -14,7 +14,7 @@
     <connection>scm:git:git://github.com/oci-pronghorn/GreenLighter.git</connection>
     <url>https://github.com/oci-pronghorn/GreenLighter</url>
     <developerConnection>scm:git:ssh://git@github.com/oci-pronghorn/GreenLighter.git</developerConnection>
-    <tag>HEAD</tag>
+    <tag>GreenLighter-0.0.1</tag>
   </scm>
   
   <distributionManagement>
