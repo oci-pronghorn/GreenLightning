@@ -12,6 +12,7 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 	
 	ListenerFilter addSubscription(CharSequence topic, CallableMethod method);
 		
+	ListenerFilter isolate();
 	
 	<T extends Behavior> ListenerFilter includeRoute(int routeId, CallableStaticRestRequestReader<T> callable);
 		

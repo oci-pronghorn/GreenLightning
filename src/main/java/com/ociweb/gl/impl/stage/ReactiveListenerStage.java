@@ -688,7 +688,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				Pipe.markTail(p);
 				
 	            final int msgIdx = Pipe.takeMsgIdx(p);             		            
-	            assert(MessagePrivate.MSG_PUBLISH_1 == msgIdx);
+	            assert(MessagePrivate.MSG_PUBLISH_1 == msgIdx) : "message id "+msgIdx;
+	            
+	           // if (-1 == msgIdx) {
+	           // 	Pipe.confirmLowLevelRead(p, Pipe.EOF_SIZE);
+	           // 	Pipe.releaseReadLock(p);
+	           // 	return;
+	           // }
+	            
 	            
 	            int dispatch = -1; //TODO: move all these topic lookups to be done once and stored under index..
 	            
@@ -1239,6 +1246,17 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		    logger.trace("register session {} with pipe {}",httpSessions[j].uniqueId,pipeIdx);
 		}
 		
+		return this;
+	}
+
+	@Override
+	public ListenerFilter isolate() {
+		
+		GraphManager.addNota(graphManager, 
+				GraphManager.ISOLATE, 
+				GraphManager.ISOLATE, 
+				stageId);
+	
 		return this;
 	}
     

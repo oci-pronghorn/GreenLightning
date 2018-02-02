@@ -47,8 +47,12 @@ public class EgressMQTTStage extends PronghornStage {
 		return array;
 	}
 
-	public EgressMQTTStage(GraphManager graphManager, Pipe<MessageSubscription> input, Pipe<MQTTClientRequestSchema> output,
-							CharSequence[] internalTopic,	CharSequence[] externalTopic, EgressConverter[] converter,
+	//TODO: must add private topics to this component at some point...
+	
+	public EgressMQTTStage(GraphManager graphManager, 
+			               Pipe<MessageSubscription> input, 
+			               Pipe<MQTTClientRequestSchema> output,
+						   CharSequence[] internalTopic,	CharSequence[] externalTopic, EgressConverter[] converter,
 							int[] fieldQOS, int[] fieldRetain) {
 		super(graphManager, input, output);
 		this.input = input;
