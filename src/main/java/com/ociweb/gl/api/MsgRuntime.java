@@ -25,6 +25,7 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
+import com.ociweb.pronghorn.stage.scheduling.ScriptedFixedThreadsScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import org.slf4j.Logger;
@@ -127,6 +128,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	}
     }
     
+    
+    public boolean setEnsureLowLatency(boolean value) {
+    	
+    	if (scheduler instanceof ScriptedFixedThreadsScheduler) {
+    		((ScriptedFixedThreadsScheduler)scheduler).setEnsureLowLatency(value);
+    		return true;
+    	} else {
+    		logger.info("low latency switching is not supported for this scheduler");
+    		return false;
+    	}
+    	
+    }
     
 	public MsgRuntime(String[] args) {
 		 this.gm = new GraphManager();

@@ -42,8 +42,6 @@ public interface Builder extends ArgumentProvider {
      */
     Builder setTimerPulseRate(TimeTrigger trigger);
 
-    void enforceLowLatency(boolean enforce);
-    
     void limitThreads(int threadLimit);
     
     void limitThreads();

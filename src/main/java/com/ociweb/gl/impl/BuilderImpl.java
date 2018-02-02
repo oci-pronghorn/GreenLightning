@@ -615,11 +615,6 @@ public class BuilderImpl implements Builder {
 		this.threadLimit = threadLimit;
 		this.threadLimitHard = true;
 	}
-
-	@Override
-	public void enforceLowLatency(boolean enforce){ 
-		ScriptedNonThreadScheduler.lowLatencyEnforced = enforce;
-	}
 	
 	@Override
 	public void limitThreads() {
