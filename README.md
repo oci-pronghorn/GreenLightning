@@ -1,4 +1,4 @@
-﻿# GreenLighter (A Maven Archetype for GreenLightning projects)
+# GreenLighter (A Maven Archetype for GreenLightning projects)
 
 ## What you will need before you start:
 #### [Java 8](https://docs.oracle.com/javase/8/docs/technotes/guides/install/install_overview.html) 
@@ -21,7 +21,7 @@
 #### Create a new directory outside of the GreenLighter project directory for your new IoT project.
 Now, ```cd``` into the directory for your to be created IoT project, and enter:
 ```
-mvn archetype:generate -DarchetypeGroupId=com.ociweb -DarchetypeArtifactId=GreenLighter -DarchetypeVersion=0.0.1-SNAPSHOT
+mvn archetype:generate -DarchetypeGroupId=com.ociweb -DarchetypeArtifactId=GreenLighter -DarchetypeVersion=0.1.0-SNAPSHOT
 ```
 The terminal now asks for:
 
