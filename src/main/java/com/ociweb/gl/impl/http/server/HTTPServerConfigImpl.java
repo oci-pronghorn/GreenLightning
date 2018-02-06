@@ -62,6 +62,7 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	}
 
 	public final String bindHost() {
+		assert(null!=bindHost) : "finalizeDeclareConnections() must be called before this can be used.";
 		return bindHost;
 	}
 
@@ -141,6 +142,9 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	public void finalizeDeclareConnections() {
 		if (null == this.bindHost) {
 			this.bindHost = NetGraphBuilder.bindHost();
+			if (null == this.bindHost) {
+				this.bindHost = "127.0.0.1";
+			}
 		}
 		this.configStage = BridgeConfigStage.DeclareBehavior;
 	}
