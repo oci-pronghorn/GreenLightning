@@ -11,10 +11,12 @@ public class PrivateTopic {
 	
 	private final PipeConfig<MessagePrivate> config;
 	
-	public PrivateTopic(String topic, int messageCount, int messageSize) {
+	public PrivateTopic(String topic, int messageCount, int messageSize, boolean hideLabels) {
 		this.topic = topic;
 		this.config = new PipeConfig<MessagePrivate>(MessagePrivate.instance, messageCount, messageSize);		
-		this.config.hideLabels(); //private topics can clutter if they show all the details.
+		if (hideLabels) {
+			this.config.hideLabels(); //private topics can clutter if they show all the details.
+		}
 	}
 	
 	public PrivateTopic(String topic, PipeConfig<MessagePrivate> config) {

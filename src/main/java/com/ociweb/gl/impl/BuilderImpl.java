@@ -44,6 +44,7 @@ import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.gl.impl.stage.ReactiveOperators;
 import com.ociweb.gl.impl.stage.TrafficCopStage;
 import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
+import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
@@ -645,6 +646,14 @@ public class BuilderImpl implements Builder {
 		
 	@Override
 	public final int registerRoute(CharSequence route, byte[] ... headers) {
+		return defineRoute(route, headers);
+	}
+	
+	@Override
+	public final int defineRoute(CharSequence route, JSONExtractorCompleted extractor, byte[] ... headers) {
+		
+		//TODO: need to record this extractor??
+		
 		if (route.length()==0) {
 			throw new UnsupportedOperationException("path must be of length one or more and start with /");
 		}
@@ -1000,7 +1009,8 @@ public class BuilderImpl implements Builder {
 			throw new UnsupportedOperationException("only call this with multiple targets");
 		}
 				
-		PrivateTopic sourcePT = new PrivateTopic(topic, queueLength, maxMessageSize);
+		boolean hideTopics = false;
+		PrivateTopic sourcePT = new PrivateTopic(topic, queueLength, maxMessageSize, hideTopics);
 		
 		List<PrivateTopic> localSourceTopics = null;
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
@@ -1050,7 +1060,8 @@ public class BuilderImpl implements Builder {
 	@Override
 	public void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String target) {
 		
-		PrivateTopic obj = new PrivateTopic(topic, queueLength, maxMessageSize);
+		boolean hideTopics = false;
+		PrivateTopic obj = new PrivateTopic(topic, queueLength, maxMessageSize, hideTopics);
 		
 		List<PrivateTopic> localSourceTopics = null;
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);

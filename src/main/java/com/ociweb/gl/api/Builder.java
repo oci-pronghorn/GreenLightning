@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.TLSCertificates;
 
 /**
@@ -47,10 +48,13 @@ public interface Builder extends ArgumentProvider {
     void limitThreads();
 
 	void parallelism(int parallel);
-	
+		
 	int defineRoute(CharSequence route, byte[] ... headers);
+	int defineRoute(CharSequence route, JSONExtractorCompleted extractor, byte[] ... headers);
+		
+	@Deprecated //use defineRoute instead
 	int registerRoute(CharSequence route, byte[] ... headers);
-
+	
 	HTTPServerConfig useHTTP1xServer(int bindPort);
 
 	TelemetryConfig enableTelemetry();
