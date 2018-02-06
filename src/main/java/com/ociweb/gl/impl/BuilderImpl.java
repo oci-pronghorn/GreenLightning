@@ -860,16 +860,17 @@ public class BuilderImpl implements Builder {
 			int responseQueue = 10;
 			int outputsCount = 1;
 			
-			
-			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
-				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+masterAckIn[IDX_NET].length);
-			}
-			if (masterGoOut[IDX_NET].length != netRequestPipes.length) {
-				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+netRequestPipes.length);
-			}
-			
-			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
-			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
+
+			//TODO: delete this block if this works, these checks where here before we removed cops.
+//			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
+//				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+masterAckIn[IDX_NET].length);
+//			}
+//			if (masterGoOut[IDX_NET].length != netRequestPipes.length) {
+//				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+netRequestPipes.length);
+//			}
+//			
+//			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
+//			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
 
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					
