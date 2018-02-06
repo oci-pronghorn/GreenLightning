@@ -19,11 +19,8 @@ public class MQTTClient implements GreenApp {
 		
 		//TODO: the base is wrong for a script since they do not match total...
 		
-		ScriptedNonThreadScheduler.debug = false;
-		
-		//without low latency this PCT does not work..
-		ScriptedNonThreadScheduler.lowLatencyEnforced = false;
-		
+		ScriptedNonThreadScheduler.debugStageOrder = false;
+	
 		
 		//final String brokerHost = "127.0.0.1"; //1883
 		//final String brokerHost = "172.16.10.28"; // Nathan's PC
