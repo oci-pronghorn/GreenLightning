@@ -651,16 +651,14 @@ public class BuilderImpl implements Builder {
 	
 	@Override
 	public final int defineRoute(CharSequence route, JSONExtractorCompleted extractor, byte[] ... headers) {
-		
-		//TODO: need to record this extractor??
-		
+	
 		if (route.length()==0) {
 			throw new UnsupportedOperationException("path must be of length one or more and start with /");
 		}
 		if (route.charAt(0)!='/') {
 			throw new UnsupportedOperationException("path must start with /");
 		}
-		return routerConfig().registerRoute(route, headers);
+		return routerConfig().registerRoute(route, extractor, headers);
 	}
 	
 	@Override

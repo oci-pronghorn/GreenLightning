@@ -1,7 +1,5 @@
 package com.ociweb.gl.impl.schema;
 
-import java.nio.ByteBuffer;
-
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.MessageSchema;
@@ -9,7 +7,6 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeReader;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 public class MessagePubSub extends MessageSchema<MessagePubSub> {
-
 
 
 	public final static FieldReferenceOffsetManager FROM = new FieldReferenceOffsetManager(
