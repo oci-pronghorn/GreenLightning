@@ -4,9 +4,11 @@ import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobReader<S> {
+
+	private static final int INDEX_BASE_OFFSET_FOR_PAYLOAD_POSITION = 1;
+
 
 	public PayloadReader(Pipe<S> pipe) {
         super(pipe);
@@ -26,7 +28,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
     }
 
 	private int fieldIdx(long fieldId) {
-		return (int)fieldId & 0xFFFF;
+		return INDEX_BASE_OFFSET_FOR_PAYLOAD_POSITION+((int)fieldId & 0xFFFF);
 	}
 
 	protected int fieldType(long fieldId) {

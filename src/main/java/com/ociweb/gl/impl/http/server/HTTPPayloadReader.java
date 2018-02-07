@@ -18,7 +18,7 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader<S> implements HeaderReader {
 
 	protected IntHashTable headerHash; //look up index of the header we want from its header id
-	protected int paraIndexCount; //how may fields to skip over before starting
+	protected int paraIndexCount = 0; //how may fields to skip over before starting
 	protected TrieParser headerTrieParser; //look up header id from the header string bytes
 	protected TrieParserReader reader = new TrieParserReader(0, true);
 	protected HTTPSpecification<
@@ -27,7 +27,9 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 			? extends Enum<? extends HTTPVerb>,
 			? extends Enum<? extends HTTPHeader>> httpSpec;
 
-	protected int payloadIndexOffset;
+	protected int payloadIndexOffset; //TODO: IS THIS NO LONGER NEEDED??
+	
+	private static final int PAYLOAD_INDEX_LOCATION = 1;
 	
 	private static final Logger logger = LoggerFactory.getLogger(HTTPPayloadReader.class);
 	
@@ -140,7 +142,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		
 		if (hasRemainingBytes()) {		
 					
-			setPositionBytesFromStart(readFromEndLastInt(payloadIndexOffset));
+			setPositionBytesFromStart(readFromEndLastInt(PAYLOAD_INDEX_LOCATION));
 			reader.read(this);//even when we have zero length...
 			return true;
 		} else {
