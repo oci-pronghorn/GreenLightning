@@ -799,6 +799,53 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
 
+	public boolean publishTopic(CharSequence topic, FailableWritable writable) {
+    	return publishTopic(topic, writable, WaitFor.All);
+	}
+
+	public boolean publishTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
+		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
+		assert(writable != null);
+
+		int token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic);
+
+		if (token>=0) {
+			return publishOnPrivateTopic(token, writable);
+		} else {
+			if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) && PipeWriter.hasRoomForWrite(messagePubSub)) {
+				PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
+
+				DataOutputBlobWriter.openField(pw);
+				FailableWrite result = writable.write(pw);
+				boolean returnValue = true;
+				switch (result) {
+					case Success:
+						break;
+					case Cancel:
+						messagePubSub.closeBlobFieldWrite();
+						return true;
+					case Retry:
+						returnValue = false;
+						break;
+				}
+
+				PipeWriter.presumeWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103);
+				PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
+				PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);
+
+				DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+
+				PipeWriter.publishWrites(messagePubSub);
+
+				publishGo(1, builder.pubSubIndex(), this);
+
+				return returnValue;
+			} else {
+				return false;
+			}
+		}
+	}
+
     public boolean publishTopic(CharSequence topic) {
     	return publishTopic(topic, WaitFor.All);
     }
@@ -913,6 +960,36 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			PipeWriter.publishWrites(output);
 
 			return true;
+		} else {
+			return false;
+		}
+	}
+
+	private boolean publishOnPrivateTopic(int token, FailableWritable writable) {
+		//this is a private topic
+		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
+		if (PipeWriter.hasRoomForWrite(output)) {
+			DataOutputBlobWriter<MessagePrivate> writer = PipeWriter.outputStream(output);
+			DataOutputBlobWriter.openField(writer);
+			FailableWrite result = writable.write(writer);
+			boolean returnValue = true;
+			switch (result) {
+				case Success:
+					break;
+				case Cancel:
+					output.closeBlobFieldWrite();
+					return true;
+				case Retry:
+					returnValue = false;
+					break;
+			}
+
+			PipeWriter.presumeWriteFragment(output, MessagePrivate.MSG_PUBLISH_1);
+			DataOutputBlobWriter.closeHighLevelField(writer, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3);
+
+			PipeWriter.publishWrites(output);
+
+			return returnValue;
 		} else {
 			return false;
 		}

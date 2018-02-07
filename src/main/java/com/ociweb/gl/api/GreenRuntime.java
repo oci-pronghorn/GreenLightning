@@ -159,8 +159,9 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
 	    runtime.logStageScheduleRates();
 
-	    if ( runtime.builder.getTelemetryConfig() != null) {
-		   runtime.gm.enableTelemetry(defaultTelemetryPort);
+		TelemetryConfig telemetryConfig = runtime.builder.getTelemetryConfig();
+		if (telemetryConfig != null) {
+		   runtime.gm.enableTelemetry(telemetryConfig.getPort());
 	    }
 
 	      //exportGraphDotFile();
