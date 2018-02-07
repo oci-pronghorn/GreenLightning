@@ -511,8 +511,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//////////////////
 	//server and other behavior
 	//////////////////
+	@SuppressWarnings("unchecked")
 	public void declareBehavior(MsgApp app) {
 
+		//The server and telemetry http hosts/ports MUST be defined before we begin 
+		//the declaration of behaviors because we must do binding to the host names.
+		//as a result this finalize must happen early.
+		builder.finalizeDeclareConnections();
+		////////////////////////////////////////////
+		
 		if (builder.getHTTPServerConfig() != null) {
 		    buildGraphForServer(app);
 		} else {            	
@@ -530,9 +537,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 		constructingParallelInstancesEnding();
 		
-		//Init bridges
-
-		builder.finalizeDeclareConnections();
+		//Init bridges		
 		int b = bridges.length;
 		while (--b>=0) {
 			((BridgeConfigImpl)bridges[b]).finalizeDeclareConnections(this);
@@ -551,13 +556,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				config.getDecryptionUnitsPerTrack(),
 				config.getConcurrentChannelsPerDecryptUnit());
 
-		ServerCoordinator serverCoord = new ServerCoordinator( config.getCertificates(),
-				config.bindHost(), config.bindPort(),
+		ServerCoordinator serverCoord = new ServerCoordinator(
+				config.getCertificates(),
+				config.bindHost(), 
+				config.bindPort(),
 				serverConfig.maxConnectionBitsOnServer,
 				serverConfig.maxConcurrentInputs,
 				serverConfig.maxConcurrentOutputs,
 				builder.parallelismTracks(), false,
-				"Server",config.defaultHostPath());
+				"Server",
+				config.defaultHostPath());
 		
 		final int routerCount = builder.parallelismTracks();
 		
