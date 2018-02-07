@@ -607,7 +607,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	
 	            	 final short statusId = reader.readShort();	
-				     reader.setParseDetails(headerToPositionTable, headerTrieParser, builder.httpSpec);
+				     reader.setParseDetails(headerToPositionTable, 
+				    		                headerTrieParser, 
+				    		                builder.httpSpec);
 
 				     reader.setStatusCode(statusId);
 				     

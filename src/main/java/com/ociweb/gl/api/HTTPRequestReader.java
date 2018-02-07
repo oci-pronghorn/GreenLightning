@@ -34,7 +34,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 			                    int paraIndexCount, 
 			                    TrieParser headerTrieParser,
 			                    HTTPSpecification httpSpec) {
-		this.paraIndexCount = paraIndexCount; //count of fields before headers which are before the payload
+		this.paraIndexCount = paraIndexCount+1; //count of fields before headers which are before the payload
 		this.extractionParser = extractionParser;
 		this.headerHash = table;
 		this.headerTrieParser = headerTrieParser;

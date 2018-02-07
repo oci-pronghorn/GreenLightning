@@ -1,5 +1,8 @@
 package com.ociweb.gl.impl;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.MessageSchema;
@@ -9,7 +12,8 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 
 	private static final int INDEX_BASE_OFFSET_FOR_PAYLOAD_POSITION = 1;
 
-
+	private static final Logger logger = LoggerFactory.getLogger(PayloadReader.class);
+	
 	public PayloadReader(Pipe<S> pipe) {
         super(pipe);
     }
@@ -38,6 +42,7 @@ public class PayloadReader<S extends MessageSchema<S>> extends DataInputBlobRead
 	public int computePosition(long fieldId) {
 		assert(fieldId>=0) : "check field name, it does not match any found field";
 		//jump to end and index backwards to find data position
+		//logger.info("compute from the end {} value found {} ",fieldIdx(fieldId), readFromEndLastInt(fieldIdx(fieldId)));
 		return readFromEndLastInt(fieldIdx(fieldId));	
 
 	}

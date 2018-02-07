@@ -18,7 +18,7 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader<S> implements HeaderReader {
 
 	protected IntHashTable headerHash; //look up index of the header we want from its header id
-	protected int paraIndexCount = 0; //how may fields to skip over before starting
+	protected int paraIndexCount; //how may fields to skip over before starting
 	protected TrieParser headerTrieParser; //look up header id from the header string bytes
 	protected TrieParserReader reader = new TrieParserReader(0, true);
 	protected HTTPSpecification<
@@ -63,6 +63,8 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 			if (item!=0) { //index location for the header				
 								
 				int posFromStart = readFromEndLastInt(paraIndexCount + 1 + (0xFFFF & item));
+							
+				
 				assert(posFromStart<=getBackingPipe(this).maxVarLen) : "index position "+posFromStart+" is out of bounds "+getBackingPipe(this).maxVarLen;
 				assert(posFromStart>=0) : "index position must be zero or positive";
 				
