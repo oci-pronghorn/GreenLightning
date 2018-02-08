@@ -821,17 +821,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				if (result == FailableWrite.Cancel) {
 					messagePubSub.closeBlobFieldWrite();
 				}
+				else {
+					PipeWriter.presumeWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103);
+					PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
+					PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);
 
-				PipeWriter.presumeWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103);
-				PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-				PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);
+					DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 
-				DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+					PipeWriter.publishWrites(messagePubSub);
 
-				PipeWriter.publishWrites(messagePubSub);
-
-				publishGo(1, builder.pubSubIndex(), this);
-
+					publishGo(1, builder.pubSubIndex(), this);
+				}
 				return result;
 			} else {
 				return FailableWrite.Retry;
@@ -969,12 +969,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			if (result == FailableWrite.Cancel) {
 				output.closeBlobFieldWrite();
 			}
+			else {
+				PipeWriter.presumeWriteFragment(output, MessagePrivate.MSG_PUBLISH_1);
+				DataOutputBlobWriter.closeHighLevelField(writer, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3);
 
-			PipeWriter.presumeWriteFragment(output, MessagePrivate.MSG_PUBLISH_1);
-			DataOutputBlobWriter.closeHighLevelField(writer, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3);
-
-			PipeWriter.publishWrites(output);
-
+				PipeWriter.publishWrites(output);
+			}
 			return result;
 		} else {
 			return FailableWrite.Retry;
