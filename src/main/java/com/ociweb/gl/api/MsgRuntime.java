@@ -676,7 +676,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		int r = routerCount;
 		while (--r>=0) {
 			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
-			Pipe<ServerResponseSchema>[] temp = fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);
+			Pipe<ServerResponseSchema>[] temp = 
+				   fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);
 			
 			//this block is required to make sure the ordering stage has room
 			int c = temp.length;
@@ -689,9 +690,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				
 		
 		boolean catchAll = builder.routerConfig().routesCount()==0;
-		NetGraphBuilder.buildRouters(gm, routerCount, planIncomingGroup, acks, 
-				                     fromRouterToModules, errorResponsePipes, routerConfig,
-				                     serverCoord, catchAll);
+		NetGraphBuilder.buildRouters(gm, planIncomingGroup, acks, fromRouterToModules, 
+				                     errorResponsePipes, routerConfig, serverCoord,
+				                     catchAll);
 		
 	
 		//NOTE: this array populated here must be equal or larger than the fromModules..
