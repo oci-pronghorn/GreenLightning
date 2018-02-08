@@ -799,11 +799,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
 
-	public boolean publishTopic(CharSequence topic, FailableWritable writable) {
+	public FailableWrite publishTopic(CharSequence topic, FailableWritable writable) {
     	return publishTopic(topic, writable, WaitFor.All);
 	}
 
-	public boolean publishTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
+	public FailableWrite publishTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
 
@@ -817,16 +817,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 				DataOutputBlobWriter.openField(pw);
 				FailableWrite result = writable.write(pw);
-				boolean returnValue = true;
-				switch (result) {
-					case Success:
-						break;
-					case Cancel:
-						messagePubSub.closeBlobFieldWrite();
-						return true;
-					case Retry:
-						returnValue = false;
-						break;
+
+				if (result == FailableWrite.Cancel) {
+					messagePubSub.closeBlobFieldWrite();
 				}
 
 				PipeWriter.presumeWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103);
@@ -839,9 +832,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 				publishGo(1, builder.pubSubIndex(), this);
 
-				return returnValue;
+				return result;
 			} else {
-				return false;
+				return FailableWrite.Retry;
 			}
 		}
 	}
@@ -965,23 +958,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 	}
 
-	private boolean publishOnPrivateTopic(int token, FailableWritable writable) {
+	private FailableWrite publishOnPrivateTopic(int token, FailableWritable writable) {
 		//this is a private topic
 		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
 		if (PipeWriter.hasRoomForWrite(output)) {
 			DataOutputBlobWriter<MessagePrivate> writer = PipeWriter.outputStream(output);
 			DataOutputBlobWriter.openField(writer);
 			FailableWrite result = writable.write(writer);
-			boolean returnValue = true;
-			switch (result) {
-				case Success:
-					break;
-				case Cancel:
-					output.closeBlobFieldWrite();
-					return true;
-				case Retry:
-					returnValue = false;
-					break;
+
+			if (result == FailableWrite.Cancel) {
+				output.closeBlobFieldWrite();
 			}
 
 			PipeWriter.presumeWriteFragment(output, MessagePrivate.MSG_PUBLISH_1);
@@ -989,9 +975,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 			PipeWriter.publishWrites(output);
 
-			return returnValue;
+			return result;
 		} else {
-			return false;
+			return FailableWrite.Retry;
 		}
 	}
     
