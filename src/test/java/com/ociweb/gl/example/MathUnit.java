@@ -1,5 +1,7 @@
 package com.ociweb.gl.example;
 
+import com.ociweb.json.encode.StringTemplateScript;
+import com.ociweb.json.encode.StringTemplateWriter;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,8 +11,6 @@ import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.Headable;
 import com.ociweb.gl.api.MsgCommandChannel;
-import com.ociweb.gl.api.NetResponseTemplate;
-import com.ociweb.gl.api.NetResponseTemplateData;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
@@ -20,6 +20,7 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.math.Decimal;
 import com.ociweb.pronghorn.util.math.DecimalResult;
+import com.ociweb.json.encode.StringTemplateBuilder;
 
 public class MathUnit implements RestListener {
 
@@ -30,34 +31,34 @@ public class MathUnit implements RestListener {
 	private final byte[] fieldA = "a".getBytes();
 	private final byte[] fieldB = "b".getBytes();
 	
-	private final NetResponseTemplate<HTTPFieldReader> template;
+	private final StringTemplateBuilder<HTTPFieldReader> template;
 
 	public MathUnit(final GreenRuntime runtime) {
 
 		this.cc = runtime.newCommandChannel(MsgCommandChannel.NET_RESPONDER);
-		
-		NetResponseTemplateData<HTTPFieldReader> consumeX = new NetResponseTemplateData<HTTPFieldReader>() {
+
+		StringTemplateScript<HTTPFieldReader> consumeX = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(ChannelWriter writer, HTTPFieldReader source) {
+			public void fetch(StringTemplateWriter writer, HTTPFieldReader source) {
 				source.getText(fieldA, writer);
 			}
 			
 		};
-		
-		NetResponseTemplateData<HTTPFieldReader> consumeY = new NetResponseTemplateData<HTTPFieldReader>() {
+
+		StringTemplateScript<HTTPFieldReader> consumeY = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(ChannelWriter writer, HTTPFieldReader source) {
+			public void fetch(StringTemplateWriter writer, HTTPFieldReader source) {
 				source.getText(fieldB, writer);
 			}
 			
 		};
-		
-		NetResponseTemplateData<HTTPFieldReader> consumeSum = new NetResponseTemplateData<HTTPFieldReader>() {
+
+		StringTemplateScript<HTTPFieldReader> consumeSum = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(final ChannelWriter writer, HTTPFieldReader source) {
+			public void fetch(final StringTemplateWriter writer, HTTPFieldReader source) {
 				 DecimalResult adder = new DecimalResult() {
 						@Override
 						public void result(long m, byte e) {
@@ -74,7 +75,7 @@ public class MathUnit implements RestListener {
 			
 		};
 		
-		template = new NetResponseTemplate<HTTPFieldReader>()
+		template = new StringTemplateBuilder<HTTPFieldReader>()
 				     .add("{\"x\":").add(consumeX)
 				     .add(",\"y\":").add(consumeY)
 				     .add(",\"groovySum\":").add(consumeSum)
