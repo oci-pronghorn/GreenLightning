@@ -72,7 +72,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 				//we look back 2 bytes to grab the short for this header
 				assert(matchesHeader(headerId, posFromStart-2)) : "Index did not point to the expeced header";
 				
-				setPositionBytesFromStart(posFromStart);
+				position(this, posFromStart);
 				
 				headReader.read(this.httpSpec.getHeader(headerId), this);
 				
@@ -84,7 +84,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	}
 	
 	private boolean matchesHeader(int headerId, int idx) {
-		setPositionBytesFromStart(idx);
+		position(this, idx);
 		return (this.readShort() == headerId);
 	}
 
@@ -98,7 +98,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	//	assert(headerFieldIdx<=length) : "index of "+headerFieldIdx+" is out of limit "+length;
 		
 		if(headerFieldIdx > 0 && headerFieldIdx<length) {
-			setPositionBytesFromStart(headerFieldIdx-sizeOfHeaderId);
+			position(this, headerFieldIdx-sizeOfHeaderId);
 			return readShort();
 		}
 
@@ -143,7 +143,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	
 	public boolean openPayloadData(Payloadable reader) {
 		if (hasRemainingBytes()) {
-			setPositionBytesFromStart(readFromEndLastInt(PAYLOAD_INDEX_LOCATION));
+			position(this, readFromEndLastInt(PAYLOAD_INDEX_LOCATION));
 			reader.read(this);//even when we have zero length...
 			return true;
 		} else {
@@ -154,7 +154,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 
 	public boolean openPayloadData(PayloadablePredicate reader) {
 		if (hasRemainingBytes()) {
-			setPositionBytesFromStart(readFromEndLastInt(PAYLOAD_INDEX_LOCATION));
+			position(this, readFromEndLastInt(PAYLOAD_INDEX_LOCATION));
 			return reader.read(this);//even when we have zero length...
 		} else {
 			return false;

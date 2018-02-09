@@ -177,7 +177,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	@SuppressWarnings("unchecked")
 	public long getLong(long fieldId) {
 		
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		
 		checkLimit(this,1);
 		
@@ -198,21 +198,21 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	
 	public long getLongDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_SIGNED_INT == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
 	public double getDoubleDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		checkLimit(this,2);
 		return Decimal.asDouble(readPackedLong(this), readByte());
 	}
 	
 	public <A extends Appendable> A getTextDirect(long fieldId, A appendable) {
 		assert(TrieParser.ESCAPE_CMD_BYTES == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));	
+		position(this, computePosition(fieldId));	
 		checkLimit(this,2);
 		readUTF(appendable);
 		return appendable;
@@ -224,7 +224,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	
 	public long getRationalNumeratorDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
@@ -235,7 +235,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	
 	public long getRationalDenominatorDirect(long fieldId) {		
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePositionSecond(fieldId));
+		position(this, computePositionSecond(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
@@ -246,7 +246,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	
 	public long getDecimalMantissaDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
@@ -257,7 +257,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	
 	public byte getDecimalExponentDirect(long fieldId) {
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
-		setPositionBytesFromStart(computePositionSecond(fieldId));
+		position(this, computePositionSecond(fieldId));
 		checkLimit(this,1);
 		return readByte();
 	}
@@ -269,7 +269,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	@SuppressWarnings("unchecked")
 	public double getDouble(long fieldId) {
 		
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		checkLimit(this,1);
 		
 		int type = fieldType(fieldId);
@@ -294,7 +294,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	@SuppressWarnings("unchecked")
 	public long getRationalNumerator(long fieldId) {
 		
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		checkLimit(this,1);
 		
 		int type = fieldType(fieldId);
@@ -321,11 +321,11 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 				
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
-			setPositionBytesFromStart(computePositionSecond(fieldId));
+			position(this, computePositionSecond(fieldId));
 			checkLimit(this,1);
 			return DataInputBlobReader.readPackedLong(this);
 		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
-			setPositionBytesFromStart(computePosition(fieldId));
+			position(this, computePosition(fieldId));
 			checkLimit(this,1);
 			DataInputBlobReader.readPackedLong(this); 
 			byte e = readByte();
@@ -365,7 +365,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 			throw new UnsupportedOperationException("unknown field name");
 		}
 		
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		
 		
 		int type = fieldType(fieldId);
@@ -401,7 +401,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	@Override
 	public boolean isEqual(long fieldId, byte[] equalText) {
 		
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
@@ -421,7 +421,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	@Override
 	public long trieText(long fieldId, TrieParserReader reader, TrieParser trie) {
 
-		setPositionBytesFromStart(computePosition(fieldId));
+		position(this, computePosition(fieldId));
 		checkLimit(this,2);
 		
 		int type = fieldType(fieldId);
