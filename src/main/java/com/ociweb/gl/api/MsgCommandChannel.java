@@ -799,18 +799,18 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
 
-	public FailableWrite publishTopic(CharSequence topic, FailableWritable writable) {
-    	return publishTopic(topic, writable, WaitFor.All);
+	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable) {
+    	return publishFailableTopic(topic, writable, WaitFor.All);
 	}
 
-	public FailableWrite publishTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
+	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
 
 		int token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic);
 
 		if (token>=0) {
-			return publishOnPrivateTopic(token, writable);
+			return publishFailableOnPrivateTopic(token, writable);
 		} else {
 			if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) && PipeWriter.hasRoomForWrite(messagePubSub)) {
 				PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
@@ -958,7 +958,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 	}
 
-	private FailableWrite publishOnPrivateTopic(int token, FailableWritable writable) {
+	private FailableWrite publishFailableOnPrivateTopic(int token, FailableWritable writable) {
 		//this is a private topic
 		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
 		if (PipeWriter.hasRoomForWrite(output)) {
