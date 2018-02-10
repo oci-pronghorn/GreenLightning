@@ -1,7 +1,7 @@
 package com.ociweb.gl.impl.http.server;
 import java.io.IOException;
 
-import com.ociweb.gl.api.PayloadablePredicate;
+import com.ociweb.gl.api.FailablePayloadReading;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.pronghorn.network.config.*;
 import org.slf4j.Logger;
@@ -152,7 +152,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	}
 
 
-	public boolean openPayloadData(PayloadablePredicate reader) {
+	public boolean openPayloadDataFailable(FailablePayloadReading reader) {
 		if (hasRemainingBytes()) {
 			position(this, readFromEndLastInt(PAYLOAD_INDEX_LOCATION));
 			return reader.read(this);//even when we have zero length...
