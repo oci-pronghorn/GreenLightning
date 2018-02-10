@@ -53,6 +53,7 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.http.CompositeRoute;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
@@ -249,18 +250,41 @@ public class BuilderImpl implements Builder {
     }
  
     
-	public final void appendPipeMapping(Pipe<HTTPRequestSchema> httpRequestPipe, int routeIdx, int parallelId) {
-		
+	public final boolean appendPipeMappingIncludingGroupIds(Pipe<HTTPRequestSchema> pipe,
+											            int parallelId,
+											            int ... groupIds) {
 		lazyCreatePipeLookupMatrix();
-		collectedHTTPRequstPipes[parallelId][routeIdx].add(httpRequestPipe);
-
+		return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequstPipes, groupIds);
 	}
-
+    
+	public final boolean appendPipeMappingExcludingGroupIds(Pipe<HTTPRequestSchema> pipe,
+					                            int parallelId,
+					                            int ... groupIds) {
+		lazyCreatePipeLookupMatrix();
+		return routerConfig().appendPipeIdMappingForExcludedGroupIds(pipe, parallelId, collectedHTTPRequstPipes, groupIds);
+	}
+	
+	public final boolean appendPipeMappingAllGroupIds(Pipe<HTTPRequestSchema> pipe,
+									int parallelId) {
+		lazyCreatePipeLookupMatrix();
+		return routerConfig().appendPipeIdMappingForAllGroupIds(pipe, parallelId, collectedHTTPRequstPipes);
+	}
+	
+	final ArrayList<Pipe<HTTPRequestSchema>>[][] targetPipeMapping() {
+		lazyCreatePipeLookupMatrix();
+		return collectedHTTPRequstPipes;
+	}
+	
+	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int r, int p) {
+		return null!=collectedHTTPRequstPipes ? collectedHTTPRequstPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>();
+	}
+	
+	
 	private void lazyCreatePipeLookupMatrix() {
 		if (null==collectedHTTPRequstPipes) {
 			
 			int parallelism = parallelismTracks();
-			int routesCount = routerConfig().routesCount();
+			int routesCount = routerConfig().totalPathsCount();
 			
 			assert(parallelism>=1);
 			assert(routesCount>-1);	
@@ -279,15 +303,9 @@ public class BuilderImpl implements Builder {
 					collectedHTTPRequstPipes[p][r] = new ArrayList();
 				}
 			}
-			
-	
 		}
 	}
-	
-	
-	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int r, int p) {
-		return null!=collectedHTTPRequstPipes ? collectedHTTPRequstPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>();
-	}
+
 	
 	
 	public final void recordPipeMapping(Pipe<ServerResponseSchema> netResponse, int parallelInstanceId) {
@@ -649,6 +667,15 @@ public class BuilderImpl implements Builder {
 		return defineRoute(route, headers);
 	}
 	
+	//all others will be deprecated and removed once complete...
+	public final CompositeRoute defineRoute(JSONExtractorCompleted extractor, byte[] ... headers) {
+		return routerConfig().registerCompositeRoute(extractor, headers);
+	}
+	public final CompositeRoute defineRoute(byte[] ... headers) {
+		return routerConfig().registerCompositeRoute(headers);
+	}
+
+	
 	@Override
 	public final int defineRoute(CharSequence route, JSONExtractorCompleted extractor, byte[] ... headers) {
 	
@@ -685,11 +712,11 @@ public class BuilderImpl implements Builder {
 	}
 	
 	public TrieParser routeHeaderTrieParser(int routeId) {
-		return routerConfig().headerTrieParser(routeId);
+		return routerConfig().httpSpec.headerParser();
 	}
 
 	public final Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {
-		final boolean hasNoRoutes = (0==routerConfig().routesCount());
+		final boolean hasNoRoutes = (0==routerConfig().totalPathsCount());
 		Pipe<HTTPRequestSchema> pipe = new Pipe<HTTPRequestSchema>(restPipeConfig) {
 			@SuppressWarnings("unchecked")
 			@Override

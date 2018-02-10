@@ -20,11 +20,7 @@ public class ListenerConfig {
 		while (--x>=0) {	
 			int parallelId = -1 == parallelInstance ? x : parallelInstance;
 			Pipe<HTTPRequestSchema> pipe = restRequests[--idx];
-			r = routes.length;
-			while (--r >= 0) {	
-				int routeIndex = routes[r];
-				builder.appendPipeMapping(pipe, routeIndex, parallelId);          
-			}            
+			builder.appendPipeMappingIncludingGroupIds(pipe, parallelId, routes);           
 		}
 	}
 

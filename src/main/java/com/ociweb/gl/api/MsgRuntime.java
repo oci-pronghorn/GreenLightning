@@ -626,7 +626,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		int totalRequestPipes = 0;
 		while (--t>=0) {
 			//[router/parallel] then [parser/routes] 
-			int path = routerConfig.routesCount();
+			int path = routerConfig.totalPathsCount();
 
 			/////////////////
 			///for catch all
@@ -689,7 +689,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 				
 		
-		boolean catchAll = builder.routerConfig().routesCount()==0;
+		boolean catchAll = builder.routerConfig().totalPathsCount()==0;
 		NetGraphBuilder.buildRouters(gm, planIncomingGroup, acks, fromRouterToModules, 
 				                     errorResponsePipes, routerConfig, serverCoord,
 				                     catchAll);

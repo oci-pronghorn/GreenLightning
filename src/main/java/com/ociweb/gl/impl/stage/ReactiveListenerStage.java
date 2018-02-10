@@ -909,22 +909,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			int i =	inputPipes.length;
 			while (--i>=0) {
 				//we only expect to find a single request pipe
-				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
-				   
-					int routes = builder.routerConfig().routesCount();
+				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {					   
 					int p = parallelInstance==-1?count:parallelInstance;
-					
-					assert(routes>=0);
-					///////////
-					//for catch all
-					///////////
-					if (routes==0) {
-						routes=1;
-					}
-					
-					while (--routes>=0) {
-						builder.appendPipeMapping((Pipe<HTTPRequestSchema>) inputPipes[i], routes, p);
-					}
+					builder.appendPipeMappingAllGroupIds((Pipe<HTTPRequestSchema>) inputPipes[i], p);
 					count++;
 				}
 			}
@@ -938,18 +925,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	public final ListenerFilter includeRoutes(int... routeIds) {
 
 		if (listener instanceof RestListener) {
+	
 			int count = 0;
-			int i =	inputPipes.length;
-			while (--i>=0) {
+			for(int i = 0; i<inputPipes.length; i++) {
 				//we only expect to find a single request pipe
 				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
-				  
-					int x = routeIds.length;
-					int p = parallelInstance==-1?count:parallelInstance;
-					while (--x>=0) {
-						restRoutesDefined = true;
-						builder.appendPipeMapping((Pipe<HTTPRequestSchema>) inputPipes[i], routeIds[x], p);
-					}
+					final int p = parallelInstance==-1?count:parallelInstance;
+					final Pipe<HTTPRequestSchema> pipe = (Pipe<HTTPRequestSchema>) inputPipes[i];
+					restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(pipe, p, routeIds);
 					count++;
 				}
 			}
@@ -969,14 +952,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				//we only expect to find a single request pipe
 				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
 				  
-					int allRoutes = builder.routerConfig().routesCount();	
 					int p = parallelInstance==-1?count:parallelInstance;
-					while (--allRoutes>=0) {
-						if (!contains(routeIds,allRoutes)) {
-							restRoutesDefined = true;
-							builder.appendPipeMapping((Pipe<HTTPRequestSchema>) inputPipes[i], allRoutes, p);
-						}
-					}
+					restRoutesDefined |= builder.appendPipeMappingExcludingGroupIds(
+							                 (Pipe<HTTPRequestSchema>) inputPipes[i], 
+																p, routeIds);
+								
 					count++;
 				}
 			}
@@ -986,15 +966,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		}
 	}
 	
-	private boolean contains(int[] array, int item) {
-		int i = array.length;
-		while (--i>=0) {
-			if (array[i] == item) {
-				return true;
-			}
-		}
-		return false;
-	}
 
 	
 //	@Override

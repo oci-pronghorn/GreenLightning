@@ -18,47 +18,26 @@ public class StageRouteFilter implements RouteFilter {
 		
 	@Override
 	public RouteFilter includeRoutes(int... routeIds) {
-	    //  RouteFilter
-		int j = routeIds.length;
-		while(--j>=0) {
-			builder.appendPipeMapping(input, routeIds[j], parallelIndex);			
-		}
 		
+		builder.appendPipeMappingIncludingGroupIds(input, parallelIndex, routeIds);
+	    
 		return this;
 	}
 
 	@Override
 	public RouteFilter excludeRoutes(int... routeIds) {
-		int allRoutes = builder.routerConfig().routesCount();	
-		while(--allRoutes>=0) {		
-			if (!contains(routeIds,allRoutes)) {			
-				builder.appendPipeMapping(input, allRoutes, parallelIndex);			
-			}
-		}
 		
+		builder.appendPipeMappingExcludingGroupIds(input, parallelIndex, routeIds);
+
 		return this;
 	}
-	
-	private boolean contains(int[] array, int item) {
-		int i = array.length;
-		while (--i>=0) {
-			if (array[i] == item) {
-				return true;
-			}
-		}
-		return false;
-	}
+
 
 	@Override
 	public RouteFilter includeAllRoutes() {
 		
-		//  RouteFilter
-		final int count = Math.max(1, builder.routerConfig().routesCount());
-		int j = count;
-		while(--j>=0) {
-			builder.appendPipeMapping(input, j, parallelIndex);			
-		}
-		
+		builder.appendPipeMappingAllGroupIds(input, parallelIndex);
+
 		return this;
 	}
 
