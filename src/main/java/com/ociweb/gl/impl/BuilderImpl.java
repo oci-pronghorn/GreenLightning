@@ -687,7 +687,7 @@ public class BuilderImpl implements Builder {
 		if (route.charAt(0)!='/') {
 			throw new UnsupportedOperationException("path must start with /");
 		}
-		return routerConfig().registerRoute(route, extractor, headers);
+		return routerConfig().registerCompositeRoute(extractor,headers).path(route).routeId();
 	}
 	
 	@Override

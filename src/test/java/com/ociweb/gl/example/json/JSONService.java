@@ -22,7 +22,7 @@ public class JSONService implements com.ociweb.gl.api.RestListener {
 	public boolean restRequest(HTTPRequestReader request) {
 		
 		//TODO: must not be zero..
-		logger.info("got call to readRequest size:"+request.available());
+		//logger.info("got call to readRequest size:"+request.available());
 		
 		//pull in args from the URL
 		//request.getInt("my field".getBytes())

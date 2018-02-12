@@ -646,7 +646,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    	totalRequestPipes += size;
 		    	
 				if (1==size) {
-		    		fromRouterToModules[t][path] = requestPipes.get(0);
+		    		fromRouterToModules[t][path] = 
+		    				requestPipes.get(0);
 		    	} else {
 		    		//we only create a pipe when we are about to use the replicator
 		    		fromRouterToModules[t][path] =  

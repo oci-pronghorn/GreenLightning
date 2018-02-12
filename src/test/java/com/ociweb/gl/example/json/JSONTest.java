@@ -8,6 +8,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
@@ -18,8 +19,6 @@ public class JSONTest {
 	
 	@Test
 	public void testSimpleCall() {
-		
-		
 		
 		//startup backing server
 		GreenRuntime.run(new ExampleJSONConsume());

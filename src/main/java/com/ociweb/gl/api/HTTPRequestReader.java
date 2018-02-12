@@ -303,7 +303,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		} else if (type == TrieParser.ESCAPE_CMD_DECIMAL) {
 			long m = readPackedLong(); 
 			byte e = readByte();
-			return e<0 ? m : Decimal.asLong(m, e);
+			return Decimal.asNumerator(m, e);
 		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
 			return DataInputBlobReader.readPackedLong(this);			
 		} else if (type == TrieParser.ESCAPE_CMD_BYTES) {
@@ -311,7 +311,8 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		} 
 		throw new UnsupportedOperationException("unknown type "+type);
 	}
-	
+
+
 	public long getRationalDenominator(byte[] fieldName) {
 		return getRationalDenominator(getFieldId(fieldName));		
 	}
@@ -329,7 +330,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 			checkLimit(this,1);
 			DataInputBlobReader.readPackedLong(this); 
 			byte e = readByte();
-			return e<0 ? (long)(1d/Decimal.powdi[64 - e]) : 1;
+			return Decimal.asDenominator(e);
 		} else if (type == TrieParser.ESCAPE_CMD_SIGNED_INT) {
 			return 1;			
 		} else if (type == TrieParser.ESCAPE_CMD_BYTES) {
@@ -337,7 +338,8 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		} 
 		throw new UnsupportedOperationException("unknown type "+type);
 	}
-	
+
+
 	public <A extends Appendable> A getText(byte[] fieldName, A appendable) {
 		return getText(getFieldId(fieldName),appendable);		
 	}
