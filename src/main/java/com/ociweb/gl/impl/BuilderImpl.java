@@ -53,7 +53,7 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
-import com.ociweb.pronghorn.network.http.CompositeRoute;
+import com.ociweb.pronghorn.network.http.CompositePath;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
@@ -72,7 +72,6 @@ import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
@@ -670,10 +669,10 @@ public class BuilderImpl implements Builder {
 	}
 	
 	//all others will be deprecated and removed once complete...
-	public final CompositeRoute defineRoute(JSONExtractorCompleted extractor, byte[] ... headers) {
+	public final CompositePath defineRoute(JSONExtractorCompleted extractor, byte[] ... headers) {
 		return routerConfig().registerCompositeRoute(extractor, headers);
 	}
-	public final CompositeRoute defineRoute(byte[] ... headers) {
+	public final CompositePath defineRoute(byte[] ... headers) {
 		return routerConfig().registerCompositeRoute(headers);
 	}
 
