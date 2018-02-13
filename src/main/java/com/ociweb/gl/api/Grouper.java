@@ -39,16 +39,8 @@ public class Grouper {
 				return inputPipes[i].config();
 			}
 		}
-		
-		logger.info("all known schemas");
-		
-		i = inputPipes.length;
-		logger.info("InputPipe length is {}", i);
-		while (--i>=0) {
-			logger.info("known schema "+Pipe.schemaName(inputPipes[i]));
-		}		
-		
-		throw new UnsupportedOperationException("can not find "+schema);
+		//may not find a match, if not return null.
+		return null;
 	}
 	
 	

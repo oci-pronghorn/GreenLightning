@@ -9,6 +9,7 @@ import com.ociweb.gl.api.Grouper;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
 
 public class ReactiveOperators {
 
@@ -52,14 +53,16 @@ public class ReactiveOperators {
 	private Pipe[] createPipes(BuilderImpl builder, int i, int matches, Object listener, Grouper g) {
 		 if (i<interfaces.size()) {
 			 
-			 boolean doesMatch = interfaces.get(i).isInstance(listener);
+			 final PipeConfig config = g.config(builder.schemaMapper(schemas.get(i)));
+			 final boolean isInUse = null!=config;
+			 final boolean doesMatch = interfaces.get(i).isInstance(listener) && isInUse;
 
 			 Pipe[] result = createPipes(builder, i+1,
 					                     doesMatch ? 1+matches : matches,
 					                     listener, g);
 			 if (doesMatch) {
 				// logger.info("Does Match! {}", listener);
-				 result[matches] = new Pipe(g.config(builder.schemaMapper(schemas.get(i))).grow2x());
+				result[matches] = new Pipe(config.grow2x());
 			 }
 			 return result;
 		 } else {
