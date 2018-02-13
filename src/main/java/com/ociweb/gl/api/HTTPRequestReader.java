@@ -1,8 +1,12 @@
 package com.ociweb.gl.api;
 
+import java.io.IOException;
+
 import com.ociweb.gl.impl.http.server.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.http.FieldExtractionDefinitions;
+import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
@@ -22,6 +26,8 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	private int requestContext;
 	private HTTPVerbDefaults verb;
 	private final boolean hasNoRoutes;
+	private HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig;
+	
 	
 	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe, boolean hasNoRoutes) {
 		super(pipe);
@@ -33,13 +39,18 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 			                    IntHashTable table, 
 			                    int paraIndexCount, 
 			                    TrieParser headerTrieParser,
-			                    HTTPSpecification httpSpec) {
+			                    HTTPSpecification httpSpec,
+			                    //TODO: rename this, it should not be HTTP1.x specific but more general...
+			                    HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig) {
+		
 		this.paraIndexCount = paraIndexCount+1; //count of fields before headers which are before the payload
 		this.extractionParser = extractionParser;
 		this.headerHash = table;
 		this.headerTrieParser = headerTrieParser;
 		this.httpSpec = httpSpec;
 		this.payloadIndexOffset = paraIndexCount + IntHashTable.count(headerHash) + 1;
+		this.http1xRouterStageConfig = http1xRouterStageConfig;
+		
 	}
 	
 	public void setVerb(HTTPVerbDefaults verb) {
@@ -96,8 +107,11 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		return requestContext;
 	}
 
-	public void setRouteId(int routeId) {
-		this.routeId = routeId;
+	public void setRouteId(int pathId) {
+		
+		this.fieldDefs = this.http1xRouterStageConfig.extractionParser(pathId);
+		this.routeId = fieldDefs.groupId;
+		
 	}
 
 	public int getRouteId() {
@@ -131,6 +145,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		return revisionId;
 	}
 	
+	private FieldExtractionDefinitions fieldDefs;
 	protected TrieParser extractionParser;
 	
 	public long getFieldId(byte[] fieldName) {
@@ -174,8 +189,58 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		return (byte)getLong(fieldName);		
 	}
 	
+	public long getRationalDenominatorDirect(byte[] fieldName) {
+		return getRationalDenominatorDirect(getFieldId(fieldName));		
+	}
+	
+	public long getDecimalMantissaDirect(byte[] fieldName) {
+		return getDecimalMantissaDirect(getFieldId(fieldName));		
+	}
+	
+	public byte getDecimalExponentDirect(byte[] fieldName) {
+		return (byte)getDecimalExponentDirect(getFieldId(fieldName));		
+	}
+	
+	public double getDouble(byte[] fieldName) {
+		return getDouble(getFieldId(fieldName));		
+	}
+	
+	public long getRationalNumerator(byte[] fieldName) {
+		return getRationalNumerator(getFieldId(fieldName));		
+	}
+	public long getRationalDenominator(byte[] fieldName) {
+		return getRationalDenominator(getFieldId(fieldName));		
+	}
+	
+	public <A extends Appendable> A getText(byte[] fieldName, A appendable) {
+		return getText(getFieldId(fieldName),appendable);		
+	}
+	
+	@Override
+	public boolean isEqual(byte[] fieldName, byte[] equalText) {
+		return isEqual(getFieldId(fieldName),equalText);
+	}
+	
+	@Override
+	public long trieText(byte[] fieldName, TrieParserReader reader, TrieParser trie) {
+		return trieText(getFieldId(fieldName),reader,trie);
+	}
+	
+	public long getRationalNumeratorDirect(byte[] fieldName) {
+		return getRationalNumeratorDirect(getFieldId(fieldName));		
+	}
+	
+	////////////////
+	///////////////
+	///////////////
+	
+	
 	@SuppressWarnings("unchecked")
 	public long getLong(long fieldId) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultInteger((int)fieldId);
+		}
 		
 		position(this, computePosition(fieldId));
 		
@@ -197,6 +262,11 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	}
 	
 	public long getLongDirect(long fieldId) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultInteger((int)fieldId);
+		}
+		
 		assert(TrieParser.ESCAPE_CMD_SIGNED_INT == fieldType(fieldId));
 		position(this, computePosition(fieldId));
 		checkLimit(this,1);
@@ -204,6 +274,11 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	}
 	
 	public double getDoubleDirect(long fieldId) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultDouble((int)fieldId);
+		}
+		
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
 		position(this, computePosition(fieldId));
 		checkLimit(this,2);
@@ -211,63 +286,73 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	}
 	
 	public <A extends Appendable> A getTextDirect(long fieldId, A appendable) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			fieldDefs.appendDefaultText((int)fieldId, appendable);			
+		}
+		
 		assert(TrieParser.ESCAPE_CMD_BYTES == fieldType(fieldId));
 		position(this, computePosition(fieldId));	
 		checkLimit(this,2);
 		readUTF(appendable);
 		return appendable;
 	}
-		
-	public long getRationalNumeratorDirect(byte[] fieldName) {
-		return getRationalNumeratorDirect(getFieldId(fieldName));		
-	}
+
 	
 	public long getRationalNumeratorDirect(long fieldId) {
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultNumerator((int)fieldId);
+		}
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
 		position(this, computePosition(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
-	
-	public long getRationalDenominatorDirect(byte[] fieldName) {
-		return getRationalDenominatorDirect(getFieldId(fieldName));		
-	}
-	
-	public long getRationalDenominatorDirect(long fieldId) {		
+		
+	public long getRationalDenominatorDirect(long fieldId) {
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultDenominator((int)fieldId);
+		}
 		assert(TrieParser.ESCAPE_CMD_RATIONAL == fieldType(fieldId));
 		position(this, computePositionSecond(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
-	public long getDecimalMantissaDirect(byte[] fieldName) {
-		return getDecimalMantissaDirect(getFieldId(fieldName));		
-	}
 	
 	public long getDecimalMantissaDirect(long fieldId) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultDecimalM((int)fieldId);
+		}
+		
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
 		position(this, computePosition(fieldId));
 		checkLimit(this,1);
 		return DataInputBlobReader.readPackedLong(this);
 	}
 	
-	public byte getDecimalExponentDirect(byte[] fieldName) {
-		return (byte)getDecimalExponentDirect(getFieldId(fieldName));		
-	}
+
 	
 	public byte getDecimalExponentDirect(long fieldId) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultDecimalE((int)fieldId);
+		}
+		
 		assert(TrieParser.ESCAPE_CMD_DECIMAL == fieldType(fieldId));
 		position(this, computePositionSecond(fieldId));
 		checkLimit(this,1);
 		return readByte();
 	}
-	
-	public double getDouble(byte[] fieldName) {
-		return getDouble(getFieldId(fieldName));		
-	}
+
 	
 	@SuppressWarnings("unchecked")
 	public double getDouble(long fieldId) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultDouble((int)fieldId);
+		}
 		
 		position(this, computePosition(fieldId));
 		checkLimit(this,1);
@@ -287,12 +372,14 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		throw new UnsupportedOperationException("unknown type "+type+" field "+Long.toHexString(fieldId));
 	}
 	
-	public long getRationalNumerator(byte[] fieldName) {
-		return getRationalNumerator(getFieldId(fieldName));		
-	}
+
 		
 	@SuppressWarnings("unchecked")
 	public long getRationalNumerator(long fieldId) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultNumerator((int)fieldId);
+		}
 		
 		position(this, computePosition(fieldId));
 		checkLimit(this,1);
@@ -313,13 +400,15 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	}
 
 
-	public long getRationalDenominator(byte[] fieldName) {
-		return getRationalDenominator(getFieldId(fieldName));		
-	}
+
 
 	@SuppressWarnings("unchecked")
 	public long getRationalDenominator(long fieldId) {
 				
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.getDefaultDenominator((int)fieldId);
+		}
+		
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_RATIONAL) {
 			position(this, computePositionSecond(fieldId));
@@ -340,9 +429,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	}
 
 
-	public <A extends Appendable> A getText(byte[] fieldName, A appendable) {
-		return getText(getFieldId(fieldName),appendable);		
-	}
+
 	
 	/**
 	 * Only call this method when NO routes have been defined.
@@ -366,10 +453,13 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		if (fieldId<0) {
 			throw new UnsupportedOperationException("unknown field name");
 		}
-		
+
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.appendDefaultText((int)fieldId, appendable);
+		}
+				
 		position(this, computePosition(fieldId));
-		
-		
+				
 		int type = fieldType(fieldId);
 		if (type == TrieParser.ESCAPE_CMD_BYTES) {
 			checkLimit(this,2);
@@ -395,13 +485,14 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		throw new UnsupportedOperationException("unknown field type "+type);
 	}
 
-	@Override
-	public boolean isEqual(byte[] fieldName, byte[] equalText) {
-		return isEqual(getFieldId(fieldName),equalText);
-	}
+
 
 	@Override
 	public boolean isEqual(long fieldId, byte[] equalText) {
+		
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.isEqualDefaultText((int)fieldId, equalText);
+		}
 		
 		position(this, computePosition(fieldId));
 		checkLimit(this,2);
@@ -415,14 +506,15 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 
 
 
-	@Override
-	public long trieText(byte[] fieldName, TrieParserReader reader, TrieParser trie) {
-		return trieText(getFieldId(fieldName),reader,trie);
-	}
+
 
 	@Override
 	public long trieText(long fieldId, TrieParserReader reader, TrieParser trie) {
 
+		if (0!=(fieldId & FieldExtractionDefinitions.DEFAULT_VALUE_FLAG) ) {			
+			return fieldDefs.parse((int)fieldId, reader, trie);
+		}
+		
 		position(this, computePosition(fieldId));
 		checkLimit(this,2);
 		

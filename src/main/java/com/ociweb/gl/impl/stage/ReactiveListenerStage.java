@@ -58,7 +58,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
     private static final int SIZE_OF_PRIVATE_MSG_PUB = Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1);
 	private static final int SIZE_OF_MSG_STATECHANGE = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_STATECHANGED_71);
-	private static final int SIZE_OF_MSG_PUBLISH = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_PUBLISH_103);
+	private static final int SIZE_OF_MSG_PUBLISH     = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_PUBLISH_103);
 	protected final Behavior            listener;
     protected final TimeListener        timeListener;
     
@@ -518,17 +518,21 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  final int sequenceNo = Pipe.takeInt(p);    	    	  
 
     	    	  int routeVerb = Pipe.takeInt(p);
-    	    	  int routeId = routeVerb>>>HTTPVerb.BITS;
+    	    	  int pathId = routeVerb>>>HTTPVerb.BITS;
     	    	  int verbId = HTTPVerb.MASK & routeVerb;
     	    	  
     	    	      	    	  
     	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.openInputStream(p);
     	        	    	    	  
- 				  reader.setParseDetails( builder.routeExtractionParser(routeId),
- 						                  builder.routeHeaderToPositionTable(routeId), 
- 						                  builder.routeExtractionParserIndexCount(routeId),
- 						                  builder.routeHeaderTrieParser(routeId),
- 						                  builder.httpSpec
+    	    	
+    	    	  
+    	    	  
+ 				  reader.setParseDetails( builder.routeExtractionParser(pathId),
+ 						                  builder.routeHeaderToPositionTable(pathId), 
+ 						                  builder.routeExtractionParserIndexCount(pathId),
+ 						                  builder.routeHeaderTrieParser(pathId),
+ 						                  builder.httpSpec,
+ 						                  builder.routerConfig()
  						                 );
  				  
     	    	  int parallelRevision = Pipe.takeInt(p);
@@ -538,7 +542,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				  reader.setRevisionId(revision);
     	    	  reader.setRequestContext(Pipe.takeInt(p));  
     	    
-    	    	  reader.setRouteId(routeId);
+    	    	  reader.setRouteId(pathId);
     	    	  
     	    	  //both these values are required in order to ensure the right sequence order once processed.
     	    	  long sequenceCode = (((long)parallelIdx)<<32) | ((long)sequenceNo);
@@ -550,10 +554,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  reader.setVerb((HTTPVerbDefaults)httpSpec.verbs[verbId]);
  			
     	    	  if (null!=restRequestReader && 
-    	    	      routeId<restRequestReader.length &&
-    	    	      null!=restRequestReader[routeId]) {
+    	    	      pathId<restRequestReader.length &&
+    	    	      null!=restRequestReader[pathId]) {
     	    		  
-    	    		  if (!restRequestReader[routeId].restRequest(listener, reader)) {
+    	    		  if (!restRequestReader[pathId].restRequest(listener, reader)) {
     	    			  Pipe.resetTail(p);
 		            	  return;//continue later and repeat this same value.
     	    		  }
