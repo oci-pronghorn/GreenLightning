@@ -2,6 +2,7 @@ package com.ociweb.gl.api;
 
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.http.CompositePath;
 
 /**
  * Base interface for an IoT device's hardware.
@@ -48,12 +49,14 @@ public interface Builder extends ArgumentProvider {
     void limitThreads();
 
 	void parallelism(int parallel);
-		
+	
+	@Deprecated
 	int defineRoute(CharSequence route, byte[] ... headers);
+	@Deprecated
 	int defineRoute(CharSequence route, JSONExtractorCompleted extractor, byte[] ... headers);
-		
-	@Deprecated //use defineRoute instead
-	int registerRoute(CharSequence route, byte[] ... headers);
+
+	CompositePath defineRoute(JSONExtractorCompleted extractor, byte[] ... headers);
+	CompositePath defineRoute(byte[] ... headers);
 	
 	HTTPServerConfig useHTTP1xServer(int bindPort);
 
@@ -90,6 +93,7 @@ public interface Builder extends ArgumentProvider {
 	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String target);
 	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String ... targets);
 	void usePrivateTopicsExclusively();
+	void defineNonParallelTopic(String topic);
 	
 	void enableDynamicTopicPublish(String id);//without this any private topic above will not support dynamic routing
 	void enableDynamicTopicSubscription(String id);

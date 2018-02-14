@@ -662,16 +662,12 @@ public class BuilderImpl implements Builder {
 	public long fieldId(int routeId, byte[] fieldName) {	
 		return TrieParserReader.query(localReader, this.routeExtractionParser(routeId), fieldName, 0, fieldName.length, Integer.MAX_VALUE);
 	}
-		
-	@Override
-	public final int registerRoute(CharSequence route, byte[] ... headers) {
-		return defineRoute(route, headers);
-	}
 	
-	//all others will be deprecated and removed once complete...
+	@Override
 	public final CompositePath defineRoute(JSONExtractorCompleted extractor, byte[] ... headers) {
 		return routerConfig().registerCompositeRoute(extractor, headers);
 	}
+	@Override
 	public final CompositePath defineRoute(byte[] ... headers) {
 		return routerConfig().registerCompositeRoute(headers);
 	}
@@ -1010,6 +1006,13 @@ public class BuilderImpl implements Builder {
 	}	
 	
 	@Override
+	public void defineNonParallelTopic(String topic) {
+		
+		
+		
+	}
+	
+	@Override
 	public void definePrivateTopic(String topic, String source, String ... targets) {
 		
 		definePrivateTopic(10, 10000, topic, source, targets);
@@ -1024,7 +1027,11 @@ public class BuilderImpl implements Builder {
 		}
 				
 		boolean hideTopics = false;
-		PrivateTopic sourcePT = new PrivateTopic(topic, queueLength, maxMessageSize, hideTopics);
+		PrivateTopic sourcePT = new PrivateTopic(topic, 
+				                                 queueLength, 
+				                                 maxMessageSize, 
+				                                 hideTopics,
+				                                 parallelismTracks);
 		
 		List<PrivateTopic> localSourceTopics = null;
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
@@ -1060,9 +1067,12 @@ public class BuilderImpl implements Builder {
 			
 			localTargetTopics.add(trgtTopics[t]);
 		}
-		
-		
 		ReplicatorStage.newInstance(gm, src, trgts);
+		
+		
+		
+		
+		
 		
 	}
 	
@@ -1072,10 +1082,13 @@ public class BuilderImpl implements Builder {
 	}
 	
 	@Override
-	public void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String target) {
+	public void definePrivateTopic(int queueLength, int maxMessageSize, 
+			                        String topic, String source, String target) {
 		
 		boolean hideTopics = false;
-		PrivateTopic obj = new PrivateTopic(topic, queueLength, maxMessageSize, hideTopics);
+		PrivateTopic obj = new PrivateTopic(topic, queueLength, 
+				                            maxMessageSize, hideTopics,
+				                            parallelismTracks);
 		
 		List<PrivateTopic> localSourceTopics = null;
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
