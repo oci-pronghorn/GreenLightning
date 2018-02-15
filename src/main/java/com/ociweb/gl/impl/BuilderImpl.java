@@ -1006,7 +1006,7 @@ public class BuilderImpl implements Builder {
 	}	
 	
 	@Override
-	public void defineNonParallelTopic(String topic) {
+	public void defineUnScopedTopic(String topic) {
 		
 		
 		

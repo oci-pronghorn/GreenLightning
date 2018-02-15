@@ -93,7 +93,7 @@ public interface Builder extends ArgumentProvider {
 	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String target);
 	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String ... targets);
 	void usePrivateTopicsExclusively();
-	void defineNonParallelTopic(String topic);
+	void defineUnScopedTopic(String topic);
 	
 	void enableDynamicTopicPublish(String id);//without this any private topic above will not support dynamic routing
 	void enableDynamicTopicSubscription(String id);
