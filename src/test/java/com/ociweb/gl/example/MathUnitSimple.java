@@ -1,8 +1,8 @@
 package com.ociweb.gl.example;
 
-import com.ociweb.json.encode.StringTemplateBuilder;
-import com.ociweb.json.encode.StringTemplateScript;
-import com.ociweb.json.encode.StringTemplateWriter;
+import com.ociweb.json.appendable.AppendableByteWriter;
+import com.ociweb.json.template.StringTemplateBuilder;
+import com.ociweb.json.template.StringTemplateScript;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +38,7 @@ public class MathUnitSimple implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeX = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(StringTemplateWriter writer, HTTPFieldReader source) {
+			public void fetch(AppendableByteWriter writer, HTTPFieldReader source) {
 				source.getText(fieldA, writer);
 			}
 			
@@ -47,7 +47,7 @@ public class MathUnitSimple implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeY = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(StringTemplateWriter writer, HTTPFieldReader source) {
+			public void fetch(AppendableByteWriter writer, HTTPFieldReader source) {
 				source.getText(fieldB, writer);
 			}
 			
@@ -56,7 +56,7 @@ public class MathUnitSimple implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeSum = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(StringTemplateWriter writer, HTTPFieldReader source) {
+			public void fetch(AppendableByteWriter writer, HTTPFieldReader source) {
 				Appendables.appendValue(writer, source.getInt(fieldA) +source.getInt(fieldB));	
 			}
 			
