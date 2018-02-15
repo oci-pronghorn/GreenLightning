@@ -11,7 +11,8 @@ public class CountBehavior implements PubSubMethodListener {
     private final CharSequence publishTopic;
     private final GreenCommandChannel channel;
     private final GreenRuntime runtime;
-	
+	private final boolean doShutdown = true;
+    
 	public CountBehavior(GreenRuntime runtime, CharSequence publishTopic) {
 		this.channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 		this.publishTopic = publishTopic;
@@ -30,7 +31,9 @@ public class CountBehavior implements PubSubMethodListener {
 			
 			return result;
 		} else {
-			runtime.shutdownRuntime();
+			if (doShutdown) {
+				runtime.shutdownRuntime();
+			}
 		}
 		
 		return true;

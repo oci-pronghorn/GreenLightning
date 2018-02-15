@@ -20,6 +20,7 @@ public class PubSub implements GreenApp
     @Override
     public void declareConfiguration(Builder c) {
         //no connections are needed
+    	c.enableTelemetry();
     }
 
     @Override

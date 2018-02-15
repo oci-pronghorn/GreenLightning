@@ -43,13 +43,13 @@ public class HTTPServer implements GreenApp
     			
 		
 		//emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
-		smallResponseRouteId = c.registerRoute("/testpageB");
+		smallResponseRouteId = c.defineRoute("/testpageB");
 		//largeResponseRouteId = c.registerRoute("/testpageC", cookieHeader);
 		//splitResponseRouteId = c.registerRoute("/testpageD");
 		
 		//only do in test mode... 
 		//in production it is a bad idea to let clients turn off server.
-		shutdownRouteId = c.registerRoute("/shutdown?key=${key}");
+		shutdownRouteId = c.defineRoute("/shutdown?key=${key}");
 				
 		
     }
