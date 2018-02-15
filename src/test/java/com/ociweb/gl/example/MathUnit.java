@@ -1,7 +1,8 @@
 package com.ociweb.gl.example;
 
-import com.ociweb.json.encode.StringTemplateScript;
-import com.ociweb.json.encode.StringTemplateWriter;
+import com.ociweb.json.appendable.AppendableByteWriter;
+import com.ociweb.json.template.StringTemplateBuilder;
+import com.ociweb.json.template.StringTemplateScript;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,7 +21,6 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.math.Decimal;
 import com.ociweb.pronghorn.util.math.DecimalResult;
-import com.ociweb.json.encode.StringTemplateBuilder;
 
 public class MathUnit implements RestListener {
 
@@ -40,7 +40,7 @@ public class MathUnit implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeX = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(StringTemplateWriter writer, HTTPFieldReader source) {
+			public void fetch(AppendableByteWriter writer, HTTPFieldReader source) {
 				source.getText(fieldA, writer);
 			}
 			
@@ -49,7 +49,7 @@ public class MathUnit implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeY = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(StringTemplateWriter writer, HTTPFieldReader source) {
+			public void fetch(AppendableByteWriter writer, HTTPFieldReader source) {
 				source.getText(fieldB, writer);
 			}
 			
@@ -58,7 +58,7 @@ public class MathUnit implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeSum = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(final StringTemplateWriter writer, HTTPFieldReader source) {
+			public void fetch(final AppendableByteWriter writer, HTTPFieldReader source) {
 				 DecimalResult adder = new DecimalResult() {
 						@Override
 						public void result(long m, byte e) {
