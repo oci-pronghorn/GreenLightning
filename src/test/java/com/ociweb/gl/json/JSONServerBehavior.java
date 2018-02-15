@@ -15,12 +15,13 @@ public class JSONServerBehavior implements RestListener {
 
     JSONServerBehavior(GreenRuntime runtime) {
         channel = runtime.newCommandChannel();
+        channel.ensureHTTPServerResponse();
         this.runtime = runtime;
     }
 
     @Override
     public boolean restRequest(HTTPRequestReader request) {
-        System.out.println("Server received request.");
+        
         channel.publishHTTPResponse(
                 request.getConnectionId(), request.getSequenceCode(),
                 200, false, HTTPContentTypeDefaults.JSON,

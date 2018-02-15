@@ -651,7 +651,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    	} else {
 		    		//we only create a pipe when we are about to use the replicator
 		    		fromRouterToModules[t][path] =  
-		    				builder.newHTTPRequestPipe(builder.pcm.getConfig(HTTPRequestSchema.class));		    		
+		    				builder.newHTTPRequestPipe(builder.pcm.getConfig(HTTPRequestSchema.class));
 		    		if (0==size) {
 		    			logger.info("warning there are routes without any consumers");
 		    			//we have no consumer so tie it to pipe cleaner		    		
@@ -691,8 +691,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				
 		
 		boolean catchAll = builder.routerConfig().totalPathsCount()==0;
-		NetGraphBuilder.buildRouters(gm, planIncomingGroup, acks, fromRouterToModules, 
-				                     errorResponsePipes, routerConfig, serverCoord,
+		NetGraphBuilder.buildRouters(gm, planIncomingGroup, acks,
+				                     fromRouterToModules, 
+				                     errorResponsePipes, 
+				                     routerConfig, serverCoord,
 				                     catchAll);
 		
 	
@@ -823,7 +825,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return registerListenerImpl(null, listener);
     }
     
-    private ListenerFilter registerListenerImpl(final String id, final Behavior listener) {
+    private ListenerFilter registerListenerImpl(String id, final Behavior listener) {
     	
     	////////////
     	//OUTPUT
@@ -855,18 +857,31 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			inputPipes = autoWireTransducers(listener, inputPipes, consumers);
 		}       
         
-		if (null!=id) {
-			
+		if (null!=id ) {
+
 			List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(id);
 			int i = sourceTopics.size();
 			while (--i>=0) {
-				outputPipes = PronghornStage.join(outputPipes, sourceTopics.get(i).getPipe());				
+				PrivateTopic privateTopic = sourceTopics.get(i);
+				if (parallelInstanceUnderActiveConstruction>=0) {
+					privateTopic.cloneSource(parallelInstanceUnderActiveConstruction);
+				}
+				outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe());				
 			}
 						
 			List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(id);
 			int j = targetTopics.size();
 			while (--j>=0) {
-				inputPipes = PronghornStage.join(inputPipes, targetTopics.get(j).getPipe());
+				PrivateTopic privateTopic = targetTopics.get(j);
+				if (parallelInstanceUnderActiveConstruction>=0) {
+					privateTopic.cloneTarget(parallelInstanceUnderActiveConstruction);
+				}				
+				inputPipes = PronghornStage.join(inputPipes, privateTopic.getPipe());
+			}
+						
+			if (parallelInstanceUnderActiveConstruction>=0) {
+				//add trailing value to make each unique when building parallel
+				id=(id+parallelInstanceUnderActiveConstruction);
 			}
 						
 		}

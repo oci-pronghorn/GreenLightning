@@ -16,6 +16,7 @@ public class JSONClientBehavior implements HTTPResponseListener, StartupListener
         this.runtime = runtime;
         this.command = runtime.newCommandChannel();
         this.command.ensureHTTPClientRequesting();
+        
         this.session = session;
     }
 

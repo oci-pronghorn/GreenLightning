@@ -5,21 +5,48 @@ import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
 import com.ociweb.json.appendable.AppendableByteWriter;
 import com.ociweb.json.encode.JSONRenderer;
+import com.ociweb.json.encode.function.ToLongFunction;
+import com.ociweb.json.encode.function.ToStringFunction;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.util.parse.JSONReader;
 
 public class RestResponse {
-    private int status = 0;
+	private int status = 0;
     private final StringBuilder message = new StringBuilder();
     private final StringBuilder body = new StringBuilder();
     //private List<LogInfo> logInfo;
 
+    private static ToLongFunction<RestResponse> statusFun = new  ToLongFunction<RestResponse>() {
+
+		@Override
+		public long applyAsLong(RestResponse value) {
+			return value.getStatus();
+		}
+    	
+    };
+	private static ToStringFunction<RestResponse> statusMessage = new ToStringFunction<RestResponse>() {
+
+		@Override
+		public CharSequence applyAsString(RestResponse value) {
+			return value.getMessage();
+		}
+		
+	};
+	private static ToStringFunction<RestResponse> statusBody = new ToStringFunction<RestResponse>() {
+
+		@Override
+		public CharSequence applyAsString(RestResponse value) {
+			return value.getBody();
+		}
+		
+	};
+	
     private static final JSONRenderer<RestResponse> jsonRenderer = new JSONRenderer<RestResponse>()
             .beginObject()
-            .integer("status", o->o.status)
-            .string("message", o->o.message)
-            .string("body", o->o.body)
+            .integer("status", statusFun)
+            .string("message", statusMessage)
+            .string("body", statusBody)
             //.beginObject("logInfo")
             //.endObject()
             .endObject();

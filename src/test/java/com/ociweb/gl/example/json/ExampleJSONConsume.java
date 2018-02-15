@@ -22,6 +22,8 @@ public class ExampleJSONConsume implements GreenApp {
 			.key("root").key("keya")
 			.completePath("a");
 
+	private int routeId;
+	
 	@Override
 	public void declareConfiguration(Builder builder) {
 
@@ -29,14 +31,19 @@ public class ExampleJSONConsume implements GreenApp {
 		       .setHost("127.0.0.1") 
 		       .useInsecureServer();
 		
-		builder.defineRoute("/test", simpleExtractor);
+		routeId = builder.defineRoute(simpleExtractor)
+		       .path("/test")
+		       .path("/other?s=#{number}")
+		       .defaultInteger("number", 10)
+		       .routeId();
+		
 				
 	}
 
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
 		
-		runtime.addRestListener(new JSONService(simpleExtractor)).includeAllRoutes();
+		runtime.addRestListener(new JSONService(simpleExtractor)).includeRoutes(routeId);
 		
 	}
 	
