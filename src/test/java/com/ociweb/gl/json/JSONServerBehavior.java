@@ -1,12 +1,11 @@
 package com.ociweb.gl.json;
 import com.ociweb.gl.api.*;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class JSONServerBehavior implements RestListener {
     private final GreenRuntime runtime;
     private final GreenCommandChannel channel;
-    private final JSONObject response = new JSONObject();
+    private final JSONResponse response = new JSONResponse();
 
     static int defineRoute(Builder builder) {
         return builder.defineRoute().path("/atp/location").routeId();
@@ -23,12 +22,7 @@ public class JSONServerBehavior implements RestListener {
         channel.publishHTTPResponse(
                 request.getConnectionId(), request.getSequenceCode(),
                 200, false, HTTPContentTypeDefaults.JSON,
-                new Writable() {
-                    @Override
-                    public void write(ChannelWriter writer) {
-                        response.writeToJSON(writer);
-                    }
-                });
+                response::writeToJSON);
         //runtime.shutdownRuntime();
         return true;
     }
