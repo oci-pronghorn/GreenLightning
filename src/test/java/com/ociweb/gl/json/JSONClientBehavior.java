@@ -3,7 +3,7 @@ package com.ociweb.gl.json;
 import com.ociweb.gl.api.*;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 
-public class JSONClientBehavior implements HTTPResponseListener, StartupListener, PubSubMethodListener {
+public class JSONClientBehavior implements HTTPResponseListener, StartupListener {
     private final GreenRuntime runtime;
     private final GreenCommandChannel command;
     private final ClientHostPortInstance session;
@@ -18,8 +18,14 @@ public class JSONClientBehavior implements HTTPResponseListener, StartupListener
 
     @Override
     public void startup() {
-        command.httpPost(session, "/test/path?flag=42", writer -> writer.write("{}".getBytes()));
-        command.httpPost(session, "/test/path", writer -> writer.write("{}".getBytes()));
+        JSONRequest request1 = new JSONRequest();
+        request1.name = "Bob";
+        request1.age = 22;
+        JSONRequest request2 = new JSONRequest();
+        request2.name = "Sam";
+        request2.age = 44;
+        command.httpPost(session, "/test/path?flag=42", writer -> JSONRequest.renderer.render(writer, request1));
+        command.httpPost(session, "/test/path", writer -> JSONRequest.renderer.render(writer, request2));
     }
 
     @Override
