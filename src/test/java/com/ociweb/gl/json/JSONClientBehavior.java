@@ -1,6 +1,7 @@
 package com.ociweb.gl.json;
 
 import com.ociweb.gl.api.*;
+import com.ociweb.json.appendable.StringBuilderWriter;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 
 public class JSONClientBehavior implements HTTPResponseListener, StartupListener {
@@ -19,11 +20,18 @@ public class JSONClientBehavior implements HTTPResponseListener, StartupListener
     @Override
     public void startup() {
         JSONRequest request1 = new JSONRequest();
-        request1.name = "Bob";
-        request1.age = 22;
+        request1.setId1("Chesterfield");
+        request1.setId2("12345657890");
+        request1.setValue(42);
         JSONRequest request2 = new JSONRequest();
-        request2.name = "Sam";
-        request2.age = 44;
+        request1.setId1("Bridgeton");
+        request1.setId2("0987654321");
+        request1.setValue(43);
+
+        StringBuilderWriter out = new StringBuilderWriter();
+        JSONRequest.renderer.render(out, request1);
+        System.out.println(out);
+
         command.httpPost(session, "/test/path?flag=42", writer -> JSONRequest.renderer.render(writer, request1));
         command.httpPost(session, "/test/path", writer -> JSONRequest.renderer.render(writer, request2));
     }
