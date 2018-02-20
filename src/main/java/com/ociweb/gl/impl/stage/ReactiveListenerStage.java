@@ -15,7 +15,7 @@ import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.HTTPSession;
+import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
@@ -150,6 +150,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private int parallelInstance;
     
     private final ArrayList<ReactiveManagerPipeConsumer> consumers;
+	private String behaviorName;
     
     //////////////////////////////////////////////////
     ///NOTE: keep all the work here to a minimum, we should just
@@ -177,21 +178,26 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
         //only create private topics for named behaviors
         if (null!=nameId) {
-        	List<PrivateTopic> listOut = builder.getPrivateTopicsFromTarget(nameId);
+        	List<PrivateTopic> privateTopicList = builder.getPrivateTopicsFromTarget(nameId);
      
+			this.behaviorName = builder.validateUniqueName(nameId, parallelInstance);        
+			GraphManager.addNota(graphManager, GraphManager.STAGE_NAME, this.behaviorName, this);
+        	
         	//only lookup topics if the builder knows of some
-        	if (!listOut.isEmpty()) {
+        	if (!privateTopicList.isEmpty()) {
         		
 		        int i = inputPipes.length;
-		        this.receivePrivateTopics = new PrivateTopic[i];
+		        this.receivePrivateTopics = new PrivateTopic[inputPipes.length];		        					
 		        while (--i>=0) {
 		   
 		        	if ( Pipe.isForSchema(inputPipes[i], MessagePrivate.instance) ) {
 		        		
-		        		int j = listOut.size();
+		        		int j = privateTopicList.size();
 		        		while(--j>=0) {
-		        			if ( listOut.get(j).getPipe() == inputPipes[i] ) {
-		        				this.receivePrivateTopics[i] = listOut.get(j);
+		        			PrivateTopic privateTopic = privateTopicList.get(j);	
+		        			privateTopic.selectTrack(parallelInstance);
+							if ( privateTopic.getPipe() == (inputPipes[i])) {	        				
+		        				this.receivePrivateTopics[i] = privateTopic;
 		        				break;//done		        				
 		        			}
 		        		}
@@ -683,7 +689,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
 	final void consumePrivateMessage(int index, Object listener, Pipe<MessagePrivate> p) {
-		
+
 		final PrivateTopic topic = receivePrivateTopics[index];
 		assert (null!=topic);
 		assert (null!=listener);
@@ -1067,7 +1073,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		}
 		
 		if (!startupCompleted && listener instanceof PubSubMethodListenerBase) {
-			builder.addStartupSubscription(topic, System.identityHashCode(listener));
+			builder.addStartupSubscription(topic, System.identityHashCode(listener), parallelInstance);
 			toStringDetails = toStringDetails+"sub:'"+topic+"'\n";
 		} else {
 			if (startupCompleted) {
@@ -1089,7 +1095,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	@Override
 	public final ListenerFilter addSubscription(CharSequence topic) {		
 		if (!startupCompleted && listener instanceof PubSubMethodListenerBase) {
-			builder.addStartupSubscription(topic, System.identityHashCode(listener));		
+	
+			builder.addStartupSubscription(topic, System.identityHashCode(listener), parallelInstance);		
 			
 			toStringDetails = toStringDetails+"sub:'"+topic+"'\n";
 								
@@ -1206,15 +1213,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		ChildClassScanner.visitUsedByClass(listener, privateTopicReg, MsgCommandChannel.class);		
 	}
 	
-	
+	//TODO: deprecated and rename this method?? include  acceptHostResponses ?
 	@Override
-	public <E extends Enum<E>> ListenerFilter includeHTTPSession(HTTPSession... httpSessions) {
+	public <E extends Enum<E>> ListenerFilter includeHTTPSession(ClientHostPortInstance... httpSessions) {
+		
+		//JSON parser known here??
 		
 		int j = httpSessions.length;
 		while(--j >= 0) {
-			
-			//TODO: big issue with lambdas inside the parallel code geting mixed !!!!
-			
 			//register listener will set these values before we use include
 		    int pipeIdx = builder.lookupHTTPClientPipe(builder.behaviorId(listener));
 		    //we added one more uniqueId to the same pipeIdx given this listeners id

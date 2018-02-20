@@ -33,7 +33,8 @@ public class JSONServerApp implements GreenAppParallel {
     @Override
     public void declareBehavior(GreenRuntime runtime) {
         JSONServerBehavior restListener = new JSONServerBehavior(runtime);
-        runtime.registerListener(restListener).includeRoutes(InventoryLocationOrgcodRouteId); // POST
+        runtime.registerListener(restListener).includeRoutes(InventoryLocationOrgcodRouteId);
+
     }
 
     @Override

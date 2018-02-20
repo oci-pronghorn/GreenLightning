@@ -8,11 +8,11 @@ import com.ociweb.pronghorn.util.parse.JSONReader;
 public class JSONClientBehavior implements HTTPResponseListener, StartupListener {
     private final GreenRuntime runtime;
     private final GreenCommandChannel command;
-    private final HTTPSession session;
+    private final ClientHostPortInstance session;
     private final JSONReader jsonReader = JSONObject.createReader();
     private final JSONObject restResponse = new JSONObject();
 
-    JSONClientBehavior(GreenRuntime runtime, HTTPSession session) {
+    JSONClientBehavior(GreenRuntime runtime, ClientHostPortInstance session) {
         this.runtime = runtime;
         this.command = runtime.newCommandChannel();
         this.command.ensureHTTPClientRequesting();
@@ -32,6 +32,7 @@ public class JSONClientBehavior implements HTTPResponseListener, StartupListener
     @Override
     public boolean responseHTTP(HTTPResponseReader httpResponseReader) {
         System.out.println("Client received response.");
+        
         // This crashes...
         httpResponseReader.openPayloadData(new Payloadable() {
             @Override

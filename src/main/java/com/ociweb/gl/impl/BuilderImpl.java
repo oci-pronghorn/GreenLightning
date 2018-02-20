@@ -2,7 +2,9 @@ package com.ociweb.gl.impl;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -15,7 +17,7 @@ import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.HTTPClientConfig;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPServerConfig;
-import com.ociweb.gl.api.HTTPSession;
+import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.ListenerTransducer;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
@@ -73,6 +75,7 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
+import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
@@ -178,6 +181,34 @@ public class BuilderImpl implements Builder {
 	    
     public final ReactiveOperators operators;
 
+    private final Set<String> behaviorNames = new HashSet<String>();
+    
+    //will throw if a duplicate stage name is detected.
+    public String validateUniqueName(String behaviorName, int trackId) {
+    	
+    	String fullName = behaviorName;
+    	//confirm stage name is not found..
+    	if (behaviorNames.contains(behaviorName)) {
+    		throw new UnsupportedOperationException("Duplicate name detected: "+behaviorName);
+    	}
+    	
+    	if (trackId>=0) {
+    		fullName = behaviorName+"."+trackId;
+    		//additional check for name+"."+trackId
+    		if (behaviorNames.contains(fullName)) {
+        		throw new UnsupportedOperationException("Duplicate name detected: "+fullName);
+        	}
+    		//add the name+"."+name
+    		behaviorNames.add(fullName);//never add the root since we are watching that no one else did.
+    	} else {
+    		//add the stage name
+    		behaviorNames.add(behaviorName);
+    	}
+    	
+    	return fullName;
+    }
+    
+    
     private IntHashTable netPipeLookup = new IntHashTable(7);//Initial default size
 
 	public void registerHTTPClientId(int routeId, int pipeIdx) {
@@ -187,6 +218,10 @@ public class BuilderImpl implements Builder {
 			netPipeLookup = IntHashTable.doubleSize(netPipeLookup);			
 		}
 				
+		//TODO: netPipeLookup is the entry point for JSON extraction??
+		//      we need to stroe extracor so its done when we do the lookup.
+		
+		
 		boolean addedItem = IntHashTable.setItem(netPipeLookup, routeId, pipeIdx);
         if (!addedItem) {
         	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"
@@ -284,7 +319,7 @@ public class BuilderImpl implements Builder {
 	private void lazyCreatePipeLookupMatrix() {
 		if (null==collectedHTTPRequstPipes) {
 			
-			int parallelism = parallelismTracks();
+			int parallelism = parallelTracks();
 			int routesCount = routerConfig().totalPathsCount();
 			
 			assert(parallelism>=1);
@@ -312,7 +347,7 @@ public class BuilderImpl implements Builder {
 	public final void recordPipeMapping(Pipe<ServerResponseSchema> netResponse, int parallelInstanceId) {
 		
 		if (null == collectedServerResponsePipes) {
-			int parallelism = parallelismTracks();
+			int parallelism = parallelTracks();
 			collectedServerResponsePipes =  (ArrayList<Pipe<ServerResponseSchema>>[]) new ArrayList[parallelism];
 			
 			int p = parallelism;
@@ -600,12 +635,38 @@ public class BuilderImpl implements Builder {
 		return null==beginningState? new Enum[0] : beginningState.getClass().getEnumConstants();
 	}
 
-	public final void addStartupSubscription(CharSequence topic, int systemHash) {
+
+	
+	public final void addStartupSubscription(CharSequence topic, int systemHash, int parallelInstance) {
 
 		Pipe<MessagePubSub> pipe = getTempPipeOfStartupSubscriptions();
 
 		if (PipeWriter.tryWriteFragment(pipe, MessagePubSub.MSG_SUBSCRIBE_100)) {
-			PipeWriter.writeUTF8(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1, topic);
+			
+    		DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(pipe);
+    		output.openField();
+    		output.append(topic);
+    		//this is in a track amay need a suffix.
+    		if (parallelInstance>=0) { 
+    			if (BuilderImpl.hasNoUnscopedTopics()) {
+    				//add suffix..
+    				output.append('/');
+    				Appendables.appendValue(output, parallelInstance);
+    			} else {
+    				if (BuilderImpl.notUnscoped(reader, output)) {
+    					//add suffix
+        				output.append('/');
+        				Appendables.appendValue(output, parallelInstance);
+    				}
+    			}
+    		}
+    		
+    		output.closeHighLevelField(MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);	
+			//PipeWriter.writeUTF8(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1, topic);
+			
+			
+			
+	
 			PipeWriter.writeInt(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, systemHash);
 			PipeWriter.publishWrites(pipe);
 		} else {
@@ -646,12 +707,13 @@ public class BuilderImpl implements Builder {
 		return Runtime.getRuntime().availableProcessors()*4;
 	}
 
-	public final int parallelismTracks() {
+	@Override
+	public final int parallelTracks() {
 		return parallelismTracks;
 	}
-
+	
 	@Override
-	public final void parallelism(int parallel) {
+	public final void parallelTracks(int parallel) {
 		parallelismTracks = parallel;
 	}
 
@@ -864,7 +926,7 @@ public class BuilderImpl implements Builder {
 		////////
 		if (useNetClient(netRequestPipes)) {
 			
-			int maxPartialResponses = Math.max(2,HTTPSession.getSessionCount());	
+			int maxPartialResponses = Math.max(2,ClientHostPortInstance.getSessionCount());	
 			int connectionsInBits = (int)Math.ceil(Math.log(maxPartialResponses)/Math.log(2));
 
 			int netResponseCount = 8;
@@ -1005,11 +1067,18 @@ public class BuilderImpl implements Builder {
 		return result;
 	}	
 	
+
+	public static TrieParser unScopedTopics = null; //package protected static, all unscoped topics
+	
 	@Override
 	public void defineUnScopedTopic(String topic) {
 		
+		if (null == unScopedTopics) {
+			unScopedTopics = new TrieParser();			
+		}
 		
-		
+		unScopedTopics.setUTF8Value(topic, 1);
+
 	}
 	
 	@Override
@@ -1044,6 +1113,9 @@ public class BuilderImpl implements Builder {
 		}
 		localSourceTopics.add(sourcePT);
 		
+		if (parallelismTracks>1) {
+			logger.info("warning this is not yet configured right for multiple targets while parallel is in use");
+		}
 		
 		Pipe<MessagePrivate> src = sourcePT.getPipe();
 		PipeConfig<MessagePrivate> trgtConfig = src.config().grow2x();
@@ -1186,6 +1258,14 @@ public class BuilderImpl implements Builder {
 		if (telemetry != null) {
 			telemetry.finalizeDeclareConnections();
 		}
+	}
+
+	public static boolean notUnscoped(TrieParserReader reader, DataOutputBlobWriter<MessagePubSub> output){
+			return (-1 == output.startsWith(reader, BuilderImpl.unScopedTopics ));
+	}
+
+	public static boolean hasNoUnscopedTopics() {
+		return null==BuilderImpl.unScopedTopics;
 	}
 
 }

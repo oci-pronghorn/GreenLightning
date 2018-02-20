@@ -34,22 +34,15 @@ public class PrivateTopic {
 		if (null == result) {
 			result = p[activeIndex] = PipeConfig.pipe(config);	
 		}
-		activeIndex = 0; //clear back to zero
 		return result;
-		
-		//one vs many is causing unconnected pipe
-		
+
 	}
 
-	public void cloneSource(int parallelInstanceUnderActiveConstruction) {
+	public void selectTrack(int parallelInstanceUnderActiveConstruction) {
 		//store index so next getPipe() call picks it up
 		activeIndex = parallelInstanceUnderActiveConstruction;
 	}
 
-	public void cloneTarget(int parallelInstanceUnderActiveConstruction) {
-		//store index so next getPipe() call picks it up
-		activeIndex = parallelInstanceUnderActiveConstruction;
-	}
 	
 }
 

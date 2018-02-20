@@ -12,19 +12,38 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 
 		builder.useHTTP1xServer(8080).useInsecureServer();		
 		builder.enableTelemetry();		
-		builder.parallelism(4);
+		
+		///////////////////////////
+		//NOTE: the parallel tracks by default will limit the scope of 
+		//any pub/sub topic to inside that track.  The same topic usages
+		//found in declareBehavior will also be isolated to those 
+		//inside declareBehavior only.
+		//NOTE: to create a message which spans between parallel
+		//tracks and declareBehavior it must be done with a topic
+		//defined as UnScoped wit the method defineUnScopedTopic.
+		//NOTE: UnScoped topics are never supported as private topics 
+		//since they require a router to manage the interTrack communication.	
+		///////////////////////////
+				
+		builder.parallelTracks(4);
+		
+		builder.defineRoute().path("/test").routeId();
 		
 		//TODO: if the responder is found in the parallel section then mutate the name.
-//		builder.definePrivateTopic("/sent/200", "responder", "watcher");
-//		builder.definePrivateTopic("/sent/200", "responder1", "watcher");
-//		builder.definePrivateTopic("/sent/200", "responder2", "watcher");
-//		builder.definePrivateTopic("/sent/200", "responder3", "watcher");
+		builder.definePrivateTopic("/send/200", "consumer", "responder");
+
+		//parallel looks right just does not yet do private topics.
 		
-	//	builder.usePrivateTopicsExclusively();
-		builder.defineUnScopedTopic("/test/sdf");
+		builder.usePrivateTopicsExclusively();
 		
-		//clone method used for private topic routes
-		//cnl writes and subscribe in looop is appended unless its not parallal
+	//	builder.defineUnScopedTopic("/test/gobal");//not sure this is possible?
+		
+		////////////////////////////////////
+		//add values on subcription
+		//add values on command channel publish
+	
+		
+		//let all track scoped topics publish to router 
 		
 		
 		
@@ -32,19 +51,17 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
-		runtime.addPubSubListener("watcher",new Watcher(runtime)).addSubscription("/sent/200");
+	//	runtime.addPubSubListener("watcher",new Watcher(runtime))
+		//       .addSubscription("/test/gobal");
 	}
 
 	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {
-				
-		//any pub subs here on the same topic become private!
-		
-		//test this by moving watcher down to this section...
-		
-		runtime.addRestListener("responder",new RestConsumer(runtime)).includeAllRoutes();
-		
-		
-	}
 
+		runtime.addRestListener("consumer",new RestConsumer(runtime))
+		       .includeAllRoutes();
+		runtime.addPubSubListener("responder",new RestResponder(runtime))
+		       .addSubscription("/send/200"); //add boolean for unscoped if required
+
+	}
 }

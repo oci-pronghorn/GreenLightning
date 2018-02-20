@@ -404,18 +404,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	protected void populateGreenPipes(Behavior listener, int pipesCount, Pipe<?>[] inputPipes) {
 		
 		//if this listener is an HTTP listener then add its behavior id for this pipe
-		if (this.builder.isListeningToHTTPResponse(listener)) {        	
+		if (this.builder.isListeningToHTTPResponse(listener)) {
+
         	inputPipes[--pipesCount] = buildNetResponsePipe();
             
         	netResponsePipeIdx = netResponsePipeIdxCounter++;
      
-			builder.registerHTTPClientId(builder.behaviorId(listener), netResponsePipeIdx);
-            
+			builder.registerHTTPClientId(builder.behaviorId(listener), netResponsePipeIdx);            
         }
         
         if ((!this.builder.isAllPrivateTopics())
         	&& this.builder.isListeningToSubscription(listener)) {   
-            inputPipes[--pipesCount]=buildPublishPipe(listener);
+            inputPipes[--pipesCount] = buildPublishPipe(listener);
         }
 
         
@@ -526,7 +526,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			app.declareBehavior(this);
 			
 			if (app instanceof MsgAppParallel) {
-				int parallelism = builder.parallelismTracks();
+				int parallelism = builder.parallelTracks();
 				//since server was not started and did not create each parallel instance this will need to be done here
 	   
 				for(int i = 0;i<parallelism;i++) { //do not use this loop, we will loop inside server setup..
@@ -550,7 +550,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		ServerPipesConfig serverConfig = new ServerPipesConfig(
 				config.isTLS(),
 				config.getMaxConnectionBits(),
-		   		builder.parallelismTracks(),
+		   		builder.parallelTracks(),
 				config.getEncryptionUnitsPerTrack(),
 				config.getConcurrentChannelsPerEncryptUnit(),
 				config.getDecryptionUnitsPerTrack(),
@@ -563,11 +563,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				serverConfig.maxConnectionBitsOnServer,
 				serverConfig.maxConcurrentInputs,
 				serverConfig.maxConcurrentOutputs,
-				builder.parallelismTracks(), false,
+				builder.parallelTracks(), false,
 				"Server",
 				config.defaultHostPath());
 		
-		final int routerCount = builder.parallelismTracks();
+		final int routerCount = builder.parallelTracks();
 		
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
 		
@@ -602,16 +602,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//////////////////////////
 
 		if (app instanceof MsgAppParallel) {
-			int p = builder.parallelismTracks();
+			int p = builder.parallelTracks();
 			
 			for (int i = 0; i < p; i++) {
 				constructingParallelInstance(i);
 				((MsgAppParallel)app).declareParallelBehavior(this);  //this creates all the modules for this parallel instance								
 			}	
 		} else {
-			if (builder.parallelismTracks()>1) {
+			if (builder.parallelTracks()>1) {
 				throw new UnsupportedOperationException(
-						"Remove call to parallelism("+builder.parallelismTracks()+") OR make the application implement GreenAppParallel or something extending it.");
+						"Remove call to parallelism("+builder.parallelTracks()+") OR make the application implement GreenAppParallel or something extending it.");
 			}
 		}
 
@@ -860,15 +860,23 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(id);
 			int i = sourceTopics.size();
 			while (--i>=0) {
-				outputPipes = PronghornStage.join(outputPipes, sourceTopics.get(i).getPipe());				
+								
+				PrivateTopic privateTopic = sourceTopics.get(i);
+				privateTopic.selectTrack(parallelInstanceUnderActiveConstruction);
+				
+				outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe());				
 			}
 						
 			List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(id);
 			int j = targetTopics.size();
 			while (--j>=0) {
-				inputPipes = PronghornStage.join(inputPipes, targetTopics.get(j).getPipe());
+								
+				PrivateTopic privateTopic = targetTopics.get(j);
+				privateTopic.selectTrack(parallelInstanceUnderActiveConstruction);
+				
+				inputPipes = PronghornStage.join(inputPipes, privateTopic.getPipe());
 			}
-						
+			
 		}
 		
         ReactiveListenerStage<?> reactiveListener = builder.createReactiveListener(gm, listener, 

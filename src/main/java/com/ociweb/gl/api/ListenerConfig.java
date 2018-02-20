@@ -39,7 +39,7 @@ public class ListenerConfig {
 	public static int computeParallel(BuilderImpl builder, int parallelInstance) {
 		final int p;
 		if (-1 == parallelInstance) {
-			p = builder.parallelismTracks();
+			p = builder.parallelTracks();
 		} else {
 			p = 1;
 		}

@@ -26,7 +26,14 @@ public class JSONServerBehavior implements RestListener {
                 new Writable() {
                     @Override
                     public void write(ChannelWriter writer) {
-                        response.writeToJSON(writer);
+                    	
+                        System.err.println("pre "+writer.length());
+                        
+                    	response.writeToJSON(writer);
+                        
+                    	System.err.println("post "+writer.length());
+                    	
+                        
                     }
                 });
         //runtime.shutdownRuntime();

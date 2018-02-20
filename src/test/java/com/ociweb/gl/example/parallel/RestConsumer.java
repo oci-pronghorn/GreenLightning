@@ -6,27 +6,21 @@ import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.RestListener;
 
 public class RestConsumer implements RestListener {
-
-	private GreenCommandChannel cmd1;
-	private GreenCommandChannel cmd2;
 	
-	public RestConsumer(GreenRuntime runtime) {
-		
-		cmd1 = runtime.newCommandChannel();
-		cmd2 = runtime.newCommandChannel();
-		
-		cmd1.ensureHTTPServerResponse();
-		cmd2.ensureDynamicMessaging();
-		
+	private GreenCommandChannel cmd2;	
+	public RestConsumer(GreenRuntime runtime) {		
+		cmd2 = runtime.newCommandChannel();		
+		cmd2.ensureDynamicMessaging();		
 	}
 
 
 	@Override
-	public boolean restRequest(HTTPRequestReader request) {
-		
-		cmd1.publishHTTPResponse(request, 200);
-		cmd2.publishTopic("/sent/200"); //what should this do?
-		
+	public boolean restRequest(HTTPRequestReader request) {		
+		cmd2.publishTopic("/send/200",(w)->{
+			w.writePackedLong(request.getConnectionId());
+			w.writePackedLong(request.getSequenceCode());			
+		}); 
+	//	cmd2.publishTopic("/test/gobal");//tell the watcher its good
 		return true;
 	}
 

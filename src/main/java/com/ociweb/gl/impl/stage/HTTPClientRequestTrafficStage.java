@@ -227,8 +227,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 					                if ((-1 != connectionId) && (null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId)))) {
 					                	
 						                
-						        		//TODO: due to this thread unsafe method we must only have 1 HTTPClientRequestStage per client coord.
-						        		clientConnection.recordDestinationRouteId(userId);
+					                	assert(routeId>=0);
+					                	clientConnection.recordDestinationRouteId(routeId);// userId ??
 						        		
 					                	int outIdx = clientConnection.requestPipeLineIdx();
 					                					                  	
@@ -389,7 +389,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		int hostMeta = PipeReader.peekDataMeta(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
 		int hostLen = PipeReader.peekDataLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
 		int port = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1);
-		int userId = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10);		
+		int sessionId = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10);		
 
 		PipeUTF8MutableCharSquence mCharSeq = mCharSequence.setToField(requestPipe, hostMeta, hostLen);				
 		long connectionId;
@@ -397,14 +397,14 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		if (ClientHTTPRequestSchema.MSG_FASTHTTPGET_200 == msgIdx) {
 			
 			connectionId = PipeReader.peekLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20);
-			assert(connectionId == ccm.lookup(mCharSeq, port, userId));
+			assert(connectionId == ccm.lookup(mCharSeq, port, sessionId));
 			
 		} else {			
-			connectionId = ccm.lookup(mCharSeq, port, userId);			
+			connectionId = ccm.lookup(mCharSeq, port, sessionId);			
 		}
 		
 		ClientConnection activeConnection = ClientCoordinator.openConnection(
-				ccm, mCharSeq, port, userId, output, connectionId);
+				ccm, mCharSeq, port, sessionId, output, connectionId);
 				
 		
 		if (null != activeConnection) {

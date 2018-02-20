@@ -11,7 +11,7 @@ public class AllRoutesExample1 implements GreenAppParallel {
 	@Override
 	public void declareConfiguration(Builder builder) {
 		builder.useHTTP1xServer(8082).setHost("localhost").useInsecureServer(); //127.0.0.1
-		builder.parallelism(2);
+		builder.parallelTracks(2);
 		builder.enableTelemetry();
 	}
 
