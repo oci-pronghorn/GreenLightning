@@ -10,6 +10,7 @@ public class JSONServerBehavior implements RestListener {
     private final GreenRuntime runtime;
     private final GreenCommandChannel channel;
     private final JSONResponse response = new JSONResponse();
+    private final JSONRequest jsonRequest = new JSONRequest();
     private final JSONReader jsonReader = JSONRequest.jsonExtractor.reader();
 
     static int defineRoute(Builder builder) {
@@ -30,8 +31,7 @@ public class JSONServerBehavior implements RestListener {
         int f = request.getInt("flag".getBytes());
 
         request.openPayloadData(reader -> {
-            jsonReader.getText("name".getBytes(), reader, new StringBuilder());
-            long age = jsonReader.getLong("age".getBytes(), reader);
+            jsonRequest.readFromJSON(jsonReader, reader);
         });
 
         System.out.println("Server received request. " + f);
