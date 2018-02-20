@@ -2,15 +2,18 @@ package com.ociweb.gl.json;
 
 import com.ociweb.gl.api.*;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
+import com.ociweb.pronghorn.util.parse.JSONReader;
 
 public class JSONServerBehavior implements RestListener {
     private final GreenRuntime runtime;
     private final GreenCommandChannel channel;
     private final JSONResponse response = new JSONResponse();
+    private final JSONReader jsonReader = JSONRequest.jsonExtractor.reader();
 
     static int defineRoute(Builder builder) {
-        return builder.defineRoute()
+        return builder.defineRoute(JSONRequest.jsonExtractor)
         		.path("/test/path")
         		.path("/test/path?flag=#{flag}")
                 .defaultInteger("flag", -6)
@@ -26,9 +29,10 @@ public class JSONServerBehavior implements RestListener {
     public boolean restRequest(HTTPRequestReader request) {
         int f = request.getInt("flag".getBytes());
 
-        // BUG: f is always -6
-        // -- unknown key specified in getIntCall
-        // -- client sends value
+        request.openPayloadData(reader -> {
+            jsonReader.getText("name".getBytes(), reader, new StringBuilder());
+            long age = jsonReader.getLong("age".getBytes(), reader);
+        });
 
         System.out.println("Server received request. " + f);
         channel.publishHTTPResponse(
