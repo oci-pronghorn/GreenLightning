@@ -195,14 +195,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		        		int j = privateTopicList.size();
 		        		while(--j>=0) {
 		        			PrivateTopic privateTopic = privateTopicList.get(j);	
-		        			privateTopic.selectTrack(parallelInstance);
-							if ( privateTopic.getPipe() == (inputPipes[i])) {	        				
+		        			
+							if ( privateTopic.getPipe(parallelInstance) == (inputPipes[i])) {	        				
 		        				this.receivePrivateTopics[i] = privateTopic;
 		        				break;//done		        				
 		        			}
 		        		}
 		        		assert (j>=0) : "error: did not find matching pipe for private topic";
-		        	}		        	
+		        	}    	
 		        }
 		        
         	} else {
@@ -225,7 +225,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		        while (--i >= 0) {
 		        	PrivateTopic topic = listIn.get(i);
 		        	//logger.info("set private topic for use {} {}",i,topic.topic);
-		        	privateTopicPublishPipes[i] = topic.getPipe();
+		        	privateTopicPublishPipes[i] = topic.getPipe(parallelInstance);
 		        	privateTopicsPublishTrie.setUTF8Value(topic.topic, i);//to matching pipe index	
 		        }
 		        privateTopicsTrieReader = new TrieParserReader(0,true);

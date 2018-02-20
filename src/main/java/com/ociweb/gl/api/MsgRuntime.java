@@ -862,9 +862,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			while (--i>=0) {
 								
 				PrivateTopic privateTopic = sourceTopics.get(i);
-				privateTopic.selectTrack(parallelInstanceUnderActiveConstruction);
 				
-				outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe());				
+				outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe(parallelInstanceUnderActiveConstruction));				
 			}
 						
 			List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(id);
@@ -872,9 +871,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			while (--j>=0) {
 								
 				PrivateTopic privateTopic = targetTopics.get(j);
-				privateTopic.selectTrack(parallelInstanceUnderActiveConstruction);
 				
-				inputPipes = PronghornStage.join(inputPipes, privateTopic.getPipe());
+				inputPipes = PronghornStage.join(inputPipes, privateTopic.getPipe(parallelInstanceUnderActiveConstruction));
 			}
 			
 		}

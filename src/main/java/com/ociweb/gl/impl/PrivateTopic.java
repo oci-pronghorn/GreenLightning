@@ -7,7 +7,6 @@ import com.ociweb.pronghorn.pipe.PipeConfig;
 public class PrivateTopic {
 
 	private Pipe<MessagePrivate>[] p;
-	private int activeIndex=0;
 	
 	public final String topic;
 	
@@ -29,18 +28,30 @@ public class PrivateTopic {
 		this.config = config;
 	}
 
-	public Pipe<MessagePrivate> getPipe() {
+	private int maxIndex = Integer.MAX_VALUE;
+	
+	public Pipe<MessagePrivate> getPipe(int activeIndex) {
+		if (activeIndex>maxIndex) {
+			throw new UnsupportedOperationException("can not span between primary and tracks with private topic");			
+		}
+		if (activeIndex<0) {
+			//confirm that this topic was never used for tracks since we have a single request
+			for(int i = 1; i<p.length; i++) {
+				if (null!=p[i]) {
+					throw new UnsupportedOperationException("can not span between primary and tracks with private topic");
+				}
+			}
+			maxIndex = 0;
+			activeIndex = 0;
+		}
+		
+		
 		Pipe<MessagePrivate> result = p[activeIndex];
 		if (null == result) {
 			result = p[activeIndex] = PipeConfig.pipe(config);	
 		}
 		return result;
 
-	}
-
-	public void selectTrack(int parallelInstanceUnderActiveConstruction) {
-		//store index so next getPipe() call picks it up
-		activeIndex = parallelInstanceUnderActiveConstruction;
 	}
 
 	

@@ -1116,8 +1116,7 @@ public class BuilderImpl implements Builder {
 		int pt = parallelismTracks<1?1:parallelismTracks;
 		while (--pt>=0) {
 		
-			sourcePT.selectTrack(pt);
-			Pipe<MessagePrivate> src = sourcePT.getPipe();
+			Pipe<MessagePrivate> src = sourcePT.getPipe(pt);
 			PipeConfig<MessagePrivate> trgtConfig = src.config().grow2x();
 			int t = targets.length;
 			Pipe[] trgts = new Pipe[t];
@@ -1125,8 +1124,8 @@ public class BuilderImpl implements Builder {
 			while (--t>=0) {
 				
 				trgtTopics[t] = new PrivateTopic(topic, trgtConfig);
-				trgtTopics[t].selectTrack(pt);
-				trgts[t] = trgtTopics[t].getPipe();
+				
+				trgts[t] = trgtTopics[t].getPipe(pt);
 	
 				List<PrivateTopic> localTargetTopics = null;
 				int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, targets[t]);
