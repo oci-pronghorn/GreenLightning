@@ -1113,33 +1113,36 @@ public class BuilderImpl implements Builder {
 		}
 		localSourceTopics.add(sourcePT);
 		
-		if (parallelismTracks>1) {
-			logger.info("warning this is not yet configured right for multiple targets while parallel is in use");
-		}
+		int pt = parallelismTracks<1?1:parallelismTracks;
+		while (--pt>=0) {
 		
-		Pipe<MessagePrivate> src = sourcePT.getPipe();
-		PipeConfig<MessagePrivate> trgtConfig = src.config().grow2x();
-		int t = targets.length;
-		Pipe[] trgts = new Pipe[t];
-		PrivateTopic[] trgtTopics = new PrivateTopic[t];
-		while (--t>=0) {
-			
-			trgtTopics[t] = new PrivateTopic(topic, trgtConfig);
-			trgts[t] = trgtTopics[t].getPipe();
-
-			List<PrivateTopic> localTargetTopics = null;
-			int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, targets[t]);
-			if (targetId<0) {
-				localTargetTopics = new ArrayList<PrivateTopic>();
-				privateTopicTarget.setUTF8Value( targets[t], privateTargetTopics.size());
-				privateTargetTopics.add(localTargetTopics);
-			} else {
-				localTargetTopics = privateTargetTopics.get(targetId); 
+			sourcePT.selectTrack(pt);
+			Pipe<MessagePrivate> src = sourcePT.getPipe();
+			PipeConfig<MessagePrivate> trgtConfig = src.config().grow2x();
+			int t = targets.length;
+			Pipe[] trgts = new Pipe[t];
+			PrivateTopic[] trgtTopics = new PrivateTopic[t];
+			while (--t>=0) {
+				
+				trgtTopics[t] = new PrivateTopic(topic, trgtConfig);
+				trgtTopics[t].selectTrack(pt);
+				trgts[t] = trgtTopics[t].getPipe();
+	
+				List<PrivateTopic> localTargetTopics = null;
+				int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, targets[t]);
+				if (targetId<0) {
+					localTargetTopics = new ArrayList<PrivateTopic>();
+					privateTopicTarget.setUTF8Value( targets[t], privateTargetTopics.size());
+					privateTargetTopics.add(localTargetTopics);
+				} else {
+					localTargetTopics = privateTargetTopics.get(targetId); 
+				}
+				
+				localTargetTopics.add(trgtTopics[t]);
 			}
-			
-			localTargetTopics.add(trgtTopics[t]);
+			ReplicatorStage.newInstance(gm, src, trgts);
+		
 		}
-		ReplicatorStage.newInstance(gm, src, trgts);
 		
 		
 		
