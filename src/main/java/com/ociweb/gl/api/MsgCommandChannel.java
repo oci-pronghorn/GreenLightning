@@ -105,7 +105,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.pcm = pcm;
        this.parallelInstanceId = parallelInstanceId;
               
-       this.track = parallelInstanceId<=0 ? null : trackNameBuilder(parallelInstanceId);
+       this.track = parallelInstanceId<0 ? null : trackNameBuilder(parallelInstanceId);
     }
 
     //common method for building topic suffix
@@ -419,7 +419,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
             		if (!sentEOF(messagePubSub)) {
             			if (!sentEOF(httpRequest)) {
             				if (!sentEOF(netResponse)) {
-            					secondShutdownMsg();
+            					if (!sentEOFPrivate()) {
+            						secondShutdownMsg();
+            					}
             				}            				
             			}
             		}
@@ -435,8 +437,23 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
     //can be overridden to add shutdown done by another service.
 	protected void secondShutdownMsg() {
+		
 		//if pubsub or request or response is supported any can be used for shutdown
 		logger.warn("Unable to shutdown, no supported services found...");
+	
+	}
+
+	private boolean sentEOFPrivate() {
+		boolean ok = false;
+		if (null!=publishPrivateTopics) {
+			int c = publishPrivateTopics.count();
+			while (--c>=0) {				
+				Pipe.publishEOF(publishPrivateTopics.getPipe(c));
+				ok = true;
+			}
+			
+		}
+		return ok;
 	}
     
     protected boolean sentEOF(Pipe<?> pipe) {
