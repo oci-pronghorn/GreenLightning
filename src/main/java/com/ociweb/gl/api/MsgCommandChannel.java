@@ -29,6 +29,7 @@ import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
+import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.field.MessageConsumer;
 
 /**
@@ -48,6 +49,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     private Pipe<ServerResponseSchema>[] netResponse;
     
     
+    public TrieParserReader unScopedReader = null; //only build when needed in this instance.
+    private final byte[] track;
+    
     private Pipe<MessagePubSub>[] exclusivePubSub;
 
 	private static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
@@ -62,11 +66,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
          
     private Behavior listener;
     
+    //TODO: add GreenService class for getting API specific objects.
     public static final int DYNAMIC_MESSAGING = 1<<0;
     public static final int STATE_MACHINE = DYNAMIC_MESSAGING;//state machine is based on DYNAMIC_MESSAGING;    
-    
-    //TODO: add GreenService class for getting API specific objects.
-    
+   
     public static final int NET_REQUESTER     = 1<<1;
     public static final int NET_RESPONDER     = 1<<2;
     public static final int USE_DELAY         = 1<<3;
@@ -101,7 +104,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.builder = builder;
        this.pcm = pcm;
        this.parallelInstanceId = parallelInstanceId;
+              
+       this.track = parallelInstanceId<=0 ? null : trackNameBuilder(parallelInstanceId);
     }
+
+    //common method for building topic suffix
+	static byte[] trackNameBuilder(int parallelInstanceId) {		
+		return ('/'+Integer.toString(parallelInstanceId)).getBytes();
+	}
 
     public boolean hasRoomFor(int messageCount) {
 		return null==goPipe || Pipe.hasRoomForWrite(goPipe, 
@@ -216,7 +226,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				   //int parallelInstanceId = hardware.ac
 				   if (-1 == parallelInstanceId) {
 					   //we have only a single instance of this object so we must have 1 pipe for each parallel track
-					   int p = builder.parallelismTracks();
+					   int p = builder.parallelTracks();
 					   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[p];
 					   while (--p>=0) {
 						   netResponse[p] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), p);
@@ -494,13 +504,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
     }
  
-    public boolean httpGet(HTTPSession session, CharSequence route) {
+    public boolean httpGet(ClientHostPortInstance session, CharSequence route) {
     	return httpGet(session,route,"");
     }
     
     //TODO: update the httpRequest to use the low level API.
     
-	public boolean httpGet(HTTPSession session, CharSequence route, CharSequence headers) {
+	public boolean httpGet(ClientHostPortInstance session, CharSequence route, CharSequence headers) {
 	
 		assert(headers==null || 0==headers.length() || headers.toString().endsWith("\r\n")) : "Invalid header values, must be absent, zero length or present. When present each header must end with \\r\\n";
 		
@@ -564,7 +574,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return false;
 	}
 
-	public boolean httpClose(HTTPSession session) {
+	public boolean httpClose(ClientHostPortInstance session) {
 		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
@@ -584,12 +594,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return false;
 	}
 	
-	public boolean httpPost(HTTPSession session, CharSequence route, Writable payload) {
+	public boolean httpPost(ClientHostPortInstance session, CharSequence route, Writable payload) {
 		return httpPost(session, route, "", payload);
 	}
 	
     
-	public boolean httpPost(HTTPSession session, CharSequence route, CharSequence headers, Writable payload) {
+	public boolean httpPost(ClientHostPortInstance session, CharSequence route, CharSequence headers, Writable payload) {
 		
 		int routeId = session.uniqueId;
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
@@ -598,6 +608,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			&& PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
 
 			int pipeId = builder.lookupHTTPClientPipe(routeId);
+			//TODO: note many routes may all go to the same pipe so where is JSON extraction?
 			
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_DESTINATION_11, pipeId);
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_SESSION_10, session.sessionId);
@@ -657,7 +668,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100)) {
             
             PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, System.identityHashCode(listener));
-            PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1, topic);
+            //OLD -- PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1, topic);
+            
+            DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(messagePubSub);
+    		output.openField();	    		
+    		output.append(topic);
+    		
+    		publicTrackedTopicSuffix(this, output);
+    		
+    		output.closeHighLevelField(MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);
             
             PipeWriter.publishWrites(messagePubSub);
             
@@ -697,7 +716,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101)) {
             
             PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, System.identityHashCode(listener));
-            PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1, topic);
+           //OLD  PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1, topic);
+            DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(messagePubSub);
+    		output.openField();	    		
+    		output.append(topic);
+    		
+    		publicTrackedTopicSuffix(this, output);
+    		
+    		output.closeHighLevelField(MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1);
             
             PipeWriter.publishWrites(messagePubSub);
             
@@ -778,10 +804,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 	    		
 	    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-	        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+	        	//PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
 	
-	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-	           
+	        	DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(messagePubSub);
+	     		output.openField();	    		
+	     		output.append(topic);	     		
+	     		publicTrackedTopicSuffix(this, output);
+	     		output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	     		
+	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);	           
 	        	DataOutputBlobWriter.openField(pw);
 	        	writable.write(pw);
 	            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
@@ -824,7 +855,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				else {
 					PipeWriter.presumeWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103);
 					PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-					PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);
+					
+		    		DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(messagePubSub);
+		    		output.openField();	    		
+		    		output.append(topic);
+		    		
+		    		publicTrackedTopicSuffix(this, output);
+		    		
+		    		output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+										
+					//OLD PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);
 
 					DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 
@@ -863,7 +903,18 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 	    		
 	    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-	        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+	        	
+	    		DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(messagePubSub);
+	    		output.openField();	    		
+	    		output.append(topic);
+	    		
+	    		publicTrackedTopicSuffix(this, output);
+	    		
+	    		output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	    		
+	    		////OLD: PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+	 
+	        	
 	        	
 				PipeWriter.writeSpecialBytesPosAndLen(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3, -1, 0);
 				PipeWriter.publishWrites(messagePubSub);
@@ -878,8 +929,43 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 		
     }
-  
-    public boolean publishTopic(byte[] topic, Writable writable) {
+
+    
+    private static final void publicTrackedTopicSuffix(MsgCommandChannel cmd, DataOutputBlobWriter<MessagePubSub> output) {
+    	if (null==cmd.track) { //most command channels are assumed to be un tracked
+    		//nothing to do.
+    	} else {
+    		trackedChannelSuffix(cmd, output);
+    	}
+	}
+
+	private static void trackedChannelSuffix(MsgCommandChannel cmd, DataOutputBlobWriter<MessagePubSub> output) {
+		if (BuilderImpl.hasNoUnscopedTopics()) {//normal case where topics are scoped
+			output.write(cmd.track);
+		} else {
+			unScopedCheckForTrack(cmd, output);
+		}
+	}
+
+	private static void unScopedCheckForTrack(MsgCommandChannel cmd, DataOutputBlobWriter<MessagePubSub> output) {
+		boolean addSuffix=false;
+		
+		if (null!=cmd.unScopedReader) {
+			//only do this if 1. we are tracked & 2. there are unscoped topics
+			addSuffix = BuilderImpl.notUnscoped(cmd.unScopedReader, output);
+		} else {
+			cmd.unScopedReader = new TrieParserReader(0, true);			
+			//only do this if 1. we are tracked & 2. there are unscoped topics
+			addSuffix = BuilderImpl.notUnscoped(cmd.unScopedReader, output);
+		}
+		
+		if (addSuffix) {
+			output.write(cmd.track);			
+		}
+		
+	}
+
+	public boolean publishTopic(byte[] topic, Writable writable) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
  
@@ -894,7 +980,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         	if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) && 
 	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 	            
-	        	PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+        		DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(messagePubSub);
+	    		output.openField();	
+	    		output.write(topic);
+	    		publicTrackedTopicSuffix(this, output);    		
+	    		
+	    		output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+        		
+	        	//OLD PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
 	        	
 	            PubSubWriter writer = (PubSubWriter) Pipe.outputStream(messagePubSub);
 	            
@@ -925,7 +1018,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         	if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) && 
 	        	PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 	            
-	        	PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
+        		DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(messagePubSub);
+	    		output.openField();	
+	    		output.write(topic);
+	    		publicTrackedTopicSuffix(this, output);	    		
+	    		
+	    		output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+	        	//OLD  PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
 	        		        	
 				PipeWriter.writeSpecialBytesPosAndLen(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3, -1, 0);
 				PipeWriter.publishWrites(messagePubSub);
@@ -1034,6 +1133,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
 	        	DataOutputBlobWriter.openField(pw);
 	        	topic.write(pw);
+	     		publicTrackedTopicSuffix(this, pw);
 	        	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
 	           
 	        	DataOutputBlobWriter.openField(pw);
@@ -1076,6 +1176,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	        	PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
 	        	DataOutputBlobWriter.openField(pw);
 	        	topic.write(pw);
+	     		publicTrackedTopicSuffix(this, pw);
 	        	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
 	                   	
 				PipeWriter.writeSpecialBytesPosAndLen(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3, -1, 0);
@@ -1245,6 +1346,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				                statusCode, hasContinuation, contentType, writable);
 	}	
 
+	public boolean publishHTTPResponse(long connectionId, long sequenceCode, int statusCode) {
+		return publishHTTPResponse(connectionId, sequenceCode, statusCode, false, null, Writable.NO_OP);
+	}
+	
 	///////////////////////////////////
 	//these fields are needed for holding the position data for the first block of two
 	//this is required so we can go back to fill in length after the second block
@@ -1260,6 +1365,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			                           HTTPContentType contentType,
 			                           Writable writable) {
 		
+		assert(null!=writable);
 		assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;

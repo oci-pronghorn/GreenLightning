@@ -311,7 +311,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		ensureConnected();
 
 		//logger.trace("added subscription to {} in order to transmit out to  ",internalTopic, externalTopic);
-		builder.addStartupSubscription(internalTopic, code);
+		builder.addStartupSubscription(internalTopic, code, -1);
 		
 		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
 		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);
@@ -331,7 +331,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	public long addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
 		ensureConnected();
 
-		builder.addStartupSubscription(internalTopic, code);
+		builder.addStartupSubscription(internalTopic, code, -1);
 		
 		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
 		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);

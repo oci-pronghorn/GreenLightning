@@ -48,7 +48,8 @@ public interface Builder extends ArgumentProvider {
     
     void limitThreads();
 
-	void parallelism(int parallel);
+    int parallelTracks();
+	void parallelTracks(int parallel);
 	
 	@Deprecated
 	int defineRoute(CharSequence route, byte[] ... headers);

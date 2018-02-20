@@ -4,25 +4,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.HTTPSession;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
-import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class TestClientSequential implements GreenApp {
 	
 	
 	private static final Logger logger = LoggerFactory.getLogger(TestClientSequential.class);
-	private final HTTPSession session;
+	private final ClientHostPortInstance session;
 	private int countDown;
 	private long callTime;
 	
@@ -40,7 +39,7 @@ public class TestClientSequential implements GreenApp {
 	public TestClientSequential(int cycles, int port, String route, String post, boolean enableTelemetry) {
 		this.countDown = cycles;
 		this.totalCycles = cycles;
-		this.session = new HTTPSession("127.0.0.1",port);
+		this.session = new ClientHostPortInstance("127.0.0.1",port);
 		this.route = route;
 		this.post = post;
 		this.enableTelemetry = enableTelemetry;

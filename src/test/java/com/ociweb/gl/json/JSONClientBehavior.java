@@ -6,9 +6,9 @@ import com.ociweb.pronghorn.pipe.ChannelReader;
 public class JSONClientBehavior implements HTTPResponseListener, StartupListener, PubSubMethodListener {
     private final GreenRuntime runtime;
     private final GreenCommandChannel command;
-    private final HTTPSession session;
+    private final ClientHostPortInstance session;
 
-    JSONClientBehavior(GreenRuntime runtime, HTTPSession session) {
+    JSONClientBehavior(GreenRuntime runtime, ClientHostPortInstance session) {
         this.runtime = runtime;
         this.command = runtime.newCommandChannel();
         this.command.ensureHTTPClientRequesting();

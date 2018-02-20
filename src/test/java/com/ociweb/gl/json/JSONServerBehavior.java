@@ -1,6 +1,8 @@
 package com.ociweb.gl.json;
+
 import com.ociweb.gl.api.*;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class JSONServerBehavior implements RestListener {
     private final GreenRuntime runtime;
@@ -22,7 +24,19 @@ public class JSONServerBehavior implements RestListener {
         channel.publishHTTPResponse(
                 request.getConnectionId(), request.getSequenceCode(),
                 200, false, HTTPContentTypeDefaults.JSON,
-                response::writeToJSON);
+                new Writable() {
+                    @Override
+                    public void write(ChannelWriter writer) {
+                    	
+                        System.err.println("pre "+writer.length());
+                        
+                    	response.writeToJSON(writer);
+                        
+                    	System.err.println("post "+writer.length());
+                    	
+                        
+                    }
+                });
         //runtime.shutdownRuntime();
         return true;
     }
