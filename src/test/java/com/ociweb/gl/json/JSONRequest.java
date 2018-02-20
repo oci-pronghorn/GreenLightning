@@ -10,6 +10,18 @@ import com.ociweb.pronghorn.util.parse.JSONReader;
 
 public class JSONRequest {
     private final StringBuilder id1 = new StringBuilder();
+
+    @Override
+    public String toString() {
+        final StringBuffer sb = new StringBuffer("JSONRequest{");
+        sb.append("id1=").append(id1);
+        sb.append(", id2=").append(id2);
+        sb.append(", timestamp=").append(timestamp);
+        sb.append(", value=").append(value);
+        sb.append('}');
+        return sb.toString();
+    }
+
     private final StringBuilder id2 = new StringBuilder();
     private long timestamp = 567891345;
     private int value;

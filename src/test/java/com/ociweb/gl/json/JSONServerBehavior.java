@@ -2,9 +2,13 @@ package com.ociweb.gl.json;
 
 import com.ociweb.gl.api.*;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.util.parse.JSONReader;
+
+import org.junit.Test;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class JSONServerBehavior implements RestListener {
     private final GreenRuntime runtime;
@@ -31,10 +35,15 @@ public class JSONServerBehavior implements RestListener {
         int f = request.getInt("flag".getBytes());
 
         request.openPayloadData(reader -> {
+            jsonRequest.reset();
             jsonRequest.readFromJSON(jsonReader, reader);
         });
 
-        System.out.println("Server received request. " + f);
+        System.out.println("Server: " + f + " " + jsonRequest);
+
+        if (f == 42) assertEquals(42, jsonRequest.getValue());
+        if (f == -6) assertEquals(43, jsonRequest.getValue());
+
         channel.publishHTTPResponse(
                 request.getConnectionId(), request.getSequenceCode(),
                 200, false, HTTPContentTypeDefaults.JSON,
@@ -42,11 +51,11 @@ public class JSONServerBehavior implements RestListener {
                     @Override
                     public void write(ChannelWriter writer) {
                     	
-                        System.err.println("pre "+writer.length());
+                        //System.err.println("pre "+writer.length());
                         
                     	response.writeToJSON(writer);
                         
-                    	System.err.println("post "+writer.length());
+                    	//System.err.println("post "+writer.length());
                     	
                         
                     }
