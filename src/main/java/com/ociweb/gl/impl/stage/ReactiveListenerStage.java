@@ -529,9 +529,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  
     	    	      	    	  
     	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.openInputStream(p);
-    	        	    	    	  
-    	    	
-    	    	  
+   	    	
+    	    	  //logger.trace("route path selected {}",pathId);	    	  
     	    	  
  				  reader.setParseDetails( builder.routeExtractionParser(pathId),
  						                  builder.routeHeaderToPositionTable(pathId), 
@@ -699,13 +698,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				Pipe.markTail(p);
 				
 	            final int msgIdx = Pipe.takeMsgIdx(p);             		            
-	            assert(MessagePrivate.MSG_PUBLISH_1 == msgIdx) : "message id "+msgIdx;
 	            
-	           // if (-1 == msgIdx) {
-	           // 	Pipe.confirmLowLevelRead(p, Pipe.EOF_SIZE);
-	           // 	Pipe.releaseReadLock(p);
-	           // 	return;
-	           // }
+	            if (-1 == msgIdx) {
+	            	Pipe.confirmLowLevelRead(p, Pipe.EOF_SIZE);
+	            	Pipe.releaseReadLock(p);
+	            	requestShutdown();
+	            	return;
+	            }
+	            assert(MessagePrivate.MSG_PUBLISH_1 == msgIdx) : "message id "+msgIdx;
 	            
 	            
 	            int dispatch = -1; //TODO: move all these topic lookups to be done once and stored under index..
