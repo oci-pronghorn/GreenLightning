@@ -11,9 +11,10 @@ public class JSONServerBehavior implements RestListener {
 
     static int defineRoute(Builder builder) {
         return builder.defineRoute()
-                .path("/test/path")
-                .path("/test/path?flag=#{flag}")
-                .defaultInteger("flag", -6).routeId();
+        		.path("/test/path")
+        		.path("/test/path?flag=#{flag}")
+                .defaultInteger("flag", -6)
+                .routeId();
     }
 
     JSONServerBehavior(GreenRuntime runtime) {
