@@ -10,7 +10,10 @@ public class JSONServerBehavior implements RestListener {
     private final JSONResponse response = new JSONResponse();
 
     static int defineRoute(Builder builder) {
-        return builder.defineRoute().path("/atp/location").routeId();
+        return builder.defineRoute()
+                .path("/test/path")
+                .path("/test/path?flag=#{flag}")
+                .defaultInteger("flag", -6).routeId();
     }
 
     JSONServerBehavior(GreenRuntime runtime) {
@@ -20,7 +23,13 @@ public class JSONServerBehavior implements RestListener {
 
     @Override
     public boolean restRequest(HTTPRequestReader request) {
-        System.out.println("Server received request.");
+        int f = request.getInt("flag".getBytes());
+
+        // BUG: f is always -6
+        // -- unknown key specified in getIntCall
+        // -- client sends value
+
+        System.out.println("Server received request. " + f);
         channel.publishHTTPResponse(
                 request.getConnectionId(), request.getSequenceCode(),
                 200, false, HTTPContentTypeDefaults.JSON,

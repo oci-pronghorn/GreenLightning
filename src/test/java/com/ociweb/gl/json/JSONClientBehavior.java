@@ -18,7 +18,8 @@ public class JSONClientBehavior implements HTTPResponseListener, StartupListener
 
     @Override
     public void startup() {
-        command.httpPost(session, "/atp/location", writer -> writer.write("{}".getBytes()));
+        command.httpPost(session, "/test/path?flag=42", writer -> writer.write("{}".getBytes()));
+        command.httpPost(session, "/test/path", writer -> writer.write("{}".getBytes()));
     }
 
     @Override
