@@ -56,6 +56,7 @@ public class JSONResponse {
     }
 
     public boolean readFromJSON(JSONReader jsonReader, ChannelReader reader) {
+        jsonReader.clear();
         status = (int)jsonReader.getLong("status".getBytes(), reader);
         jsonReader.getText("message".getBytes(), reader, message);
         jsonReader.getText("body".getBytes(), reader, body);
