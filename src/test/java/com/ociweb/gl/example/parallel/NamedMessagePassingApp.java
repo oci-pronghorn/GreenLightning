@@ -4,14 +4,25 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenAppParallel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.json.JSONExtractor;
+import com.ociweb.json.JSONExtractorCompleted;
+import com.ociweb.json.JSONType;
 
 public class NamedMessagePassingApp implements GreenAppParallel {
 
+	public static void main(String[] args) {
+		GreenRuntime.run(new NamedMessagePassingApp());
+	}
+	
+	
 	@Override
 	public void declareConfiguration(Builder builder) {
 
-		builder.useHTTP1xServer(8080).useInsecureServer();		
-		builder.enableTelemetry();		
+		builder.useHTTP1xServer(8080)
+		       .useInsecureServer()
+		       .setDecryptionUnitsPerTrack(2)
+		       .setHost("127.0.0.1");		
+		builder.enableTelemetry("127.0.0.1",8099);		
 		
 		///////////////////////////
 		//NOTE: the parallel tracks by default will limit the scope of 
@@ -27,7 +38,17 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 				
 		builder.parallelTracks(4);
 		
-		builder.defineRoute().path("/test").routeId();
+		builder.limitThreads(8);
+		
+		// "{\"key1\":\"value\",\"key2\":123}";
+		
+		JSONExtractorCompleted extractor = 
+				new JSONExtractor()
+				.newPath(JSONType.TypeString).key("key1").completePath("a")
+		        .newPath(JSONType.TypeInteger).key("key2").completePath("b");
+		
+		
+		builder.defineRoute(extractor).path("/test?track=#{track}").routeId();
 		
 		//TODO: if the responder is found in the parallel section then mutate the name.
 		builder.definePrivateTopic("/send/200", "consumer", "responder");
@@ -36,7 +57,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		
 		builder.usePrivateTopicsExclusively();
 		
-	//	builder.defineUnScopedTopic("/test/gobal");//not sure this is possible?
+		//builder.defineUnScopedTopic("/test/gobal");//not sure this is possible?
 		
 		////////////////////////////////////
 		//add values on subcription

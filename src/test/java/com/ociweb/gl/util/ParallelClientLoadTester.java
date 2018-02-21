@@ -35,7 +35,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final String post;
     private final boolean enableTelemetry;
     private final boolean insecureClient;
-    private final boolean sendTrackId = true;
+    private final boolean sendTrackId;
     private final int parallelTracks;
     
     private static final String STARTUP_NAME   = "startup";
@@ -50,7 +50,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			int port, 
 			String route, 
 			String post, boolean enableTelemetry) {
-		this(4, cyclesPerTrack, port, route, post, enableTelemetry);
+		this(4, cyclesPerTrack, port, route, post, enableTelemetry, false);
 	}
 	
 	public ParallelClientLoadTester(
@@ -58,10 +58,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			int cyclesPerTrack, 
 			int port, 
 			String route, 
-			String post, boolean enableTelemetry) {
+			String post, boolean enableTelemetry, boolean sendTrackId) {
 		
 		this.parallelTracks = parallelTracks;
 		this.insecureClient = true;
+		this.sendTrackId = sendTrackId;
 		
 		this.totalCycles = cyclesPerTrack;
 		
@@ -97,11 +98,41 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		builder.definePrivateTopic(CALL_TOPIC, STARTUP_NAME, CALLER_NAME);
 		builder.definePrivateTopic(CALL_TOPIC, RESPONDER_NAME, CALLER_NAME);
 		
+		builder.defineUnScopedTopic(ENDERS_TOPIC);
+		
 	}
 
 	@Override
 	public void declareBehavior(final GreenRuntime runtime) {
 
+		PubSubListener ender = new PubSubListener() {
+			private int enderCounter;
+			GreenCommandChannel cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+			
+			@Override
+			public boolean message(CharSequence topic, ChannelReader payload) {
+				
+				if (++enderCounter >= parallelTracks) {
+					System.out.println();
+					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
+					int t = elapsedTime.length;
+					while (--t>=0) {
+						etr.add(elapsedTime[t]);
+					}					
+					etr.report(System.out).append("\n");
+										
+					System.out.println();
+					
+					return cmd3.shutdown();					
+				}
+				return true;
+			}
+			
+			
+			
+		};
+		runtime.addPubSubListener(ENDERS_NAME, ender).addSubscription(ENDERS_TOPIC);
+		
 	}
 
 	@Override
@@ -143,15 +174,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				if (--countDown>0) {
 					return cmd3.publishTopic(CALL_TOPIC);
 				} else {
-					//return cmd3.publishTopic(ENDERS_TOPIC);
-					
-					System.out.println();			
-					elapsedTime[track].report(System.out).append("\n");
-										
-					System.out.println();
-					
-					return cmd3.shutdown();		
-					
+					return cmd3.publishTopic(ENDERS_TOPIC);
 				}
 			}
 		};
@@ -166,10 +189,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				callTime[track] = System.nanoTime();
 				
 				if (null==post) {
-					//logger.info("sent get to {} {}",session,route);
+					//logger.info("sent get to {} {}",session,trackRoute);
 					return cmd2.httpGet(session[track], trackRoute);
 				} else {
-					//logger.info("sent post to {} {}",session,route);
+					//logger.info("sent post to {} {}",session,trackRoute);
 					return cmd2.httpPost(session[track], trackRoute, writer);
 					
 				}
@@ -178,33 +201,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		};
 		runtime.addPubSubListener(CALLER_NAME, caller).addSubscription(CALL_TOPIC);
 		
-//		PubSubListener ender = new PubSubListener() {
-//			private int enderCounter;
-//			GreenCommandChannel cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
-//			
-//			@Override
-//			public boolean message(CharSequence topic, ChannelReader payload) {
-//				
-//				if (++enderCounter >= parallelTracks) {
-//					System.out.println();
-//					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
-//					int t = elapsedTime.length;
-//					while (--t>=0) {
-//						etr.add(elapsedTime[t]);
-//					}					
-//					etr.report(System.out).append("\n");
-//										
-//					System.out.println();
-//					
-//					return cmd3.shutdown();					
-//				}
-//				return true;
-//			}
-//			
-//			
-//			
-//		};
-//		runtime.addPubSubListener(ENDERS_NAME, ender).addSubscription(ENDERS_TOPIC);
+
 		
 	}
 

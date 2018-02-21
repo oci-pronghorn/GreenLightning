@@ -713,8 +713,9 @@ public class BuilderImpl implements Builder {
 	}
 	
 	@Override
-	public final void parallelTracks(int parallel) {
-		parallelismTracks = parallel;
+	public final void parallelTracks(int trackCount) {
+		assert(trackCount>0);
+		parallelismTracks = trackCount;
 	}
 
 	
@@ -1102,7 +1103,7 @@ public class BuilderImpl implements Builder {
 				                                 queueLength, 
 				                                 maxMessageSize, 
 				                                 hideTopics,
-				                                 parallelismTracks);
+				                                 this);
 		
 		List<PrivateTopic> localSourceTopics = null;
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
@@ -1125,7 +1126,7 @@ public class BuilderImpl implements Builder {
 			PrivateTopic[] trgtTopics = new PrivateTopic[t];
 			while (--t>=0) {
 				
-				trgtTopics[t] = new PrivateTopic(topic, trgtConfig);
+				trgtTopics[t] = new PrivateTopic(topic, trgtConfig, this);
 				
 				trgts[t] = trgtTopics[t].getPipe(pt);
 	
@@ -1164,7 +1165,7 @@ public class BuilderImpl implements Builder {
 		boolean hideTopics = false;
 		PrivateTopic obj = new PrivateTopic(topic, queueLength, 
 				                            maxMessageSize, hideTopics,
-				                            parallelismTracks);
+				                            this);
 		
 		List<PrivateTopic> localSourceTopics = null;
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);

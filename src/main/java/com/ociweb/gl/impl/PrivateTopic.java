@@ -9,28 +9,34 @@ public class PrivateTopic {
 	private Pipe<MessagePrivate>[] p;
 	
 	public final String topic;
+	private final BuilderImpl builder;
 	
 	private final PipeConfig<MessagePrivate> config;
 	
 	public PrivateTopic(String topic, int messageCount, 
 			            int messageSize, boolean hideLabels,
-			            int parallelismTracks) {
+			            BuilderImpl builder) {
 		this.topic = topic;
 		this.config = new PipeConfig<MessagePrivate>(MessagePrivate.instance, messageCount, messageSize);		
 		if (hideLabels) {
 			this.config.hideLabels(); //private topics can clutter if they show all the details.
 		}
-		this.p = (Pipe<MessagePrivate>[])new Pipe[parallelismTracks];
+		this.builder = builder;
 	}
 	
-	public PrivateTopic(String topic, PipeConfig<MessagePrivate> config) {
+	public PrivateTopic(String topic, PipeConfig<MessagePrivate> config, BuilderImpl builder) {
 		this.topic = topic;
 		this.config = config;
+		this.builder = builder;
 	}
 
 	private int maxIndex = Integer.MAX_VALUE;
 	
 	public Pipe<MessagePrivate> getPipe(int activeIndex) {
+		if (null==p) {
+			p = new Pipe[builder.parallelTracks()];
+		}
+		
 		if (activeIndex>maxIndex) {
 			throw new UnsupportedOperationException("can not span between primary and tracks with private topic");			
 		}
