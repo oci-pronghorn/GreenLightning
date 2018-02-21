@@ -12,7 +12,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.util.TestClientSequential;
+import com.ociweb.gl.util.ParallelClientLoadTester;
 
 public class JSONTest {
 
@@ -28,7 +28,7 @@ public class JSONTest {
     	String route = "/test";
     	long timeoutMS = 2_000;
 		//GreenRuntime.testConcurrentUntilShutdownRequested(new TestClientParallel(12000,8786), timeoutMS);	 
-	    GreenRuntime.testUntilShutdownRequested(new TestClientSequential(2, 8088, route, post, false), timeoutMS);	
+	    GreenRuntime.testUntilShutdownRequested(new ParallelClientLoadTester(2, 8088, route, post, false), timeoutMS);	
 
 	}
 	
