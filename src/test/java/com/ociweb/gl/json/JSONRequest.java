@@ -76,7 +76,11 @@ public class JSONRequest {
     }
 
     public boolean readFromJSON(JSONReader jsonReader, ChannelReader channelReader) {
+
     	jsonReader.clear();
+    	
+//    	jsonReader.dump(channelReader, System.err);
+    	
         jsonReader.getText("ID1".getBytes(), channelReader, id1);
         jsonReader.getText("ID2".getBytes(), channelReader, id2);
         jsonReader.getText("TimeStamp".getBytes(), channelReader, extractTemp);

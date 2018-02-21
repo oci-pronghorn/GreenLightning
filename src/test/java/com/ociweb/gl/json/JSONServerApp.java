@@ -9,7 +9,7 @@ public class JSONServerApp implements GreenAppParallel {
     @Override
     public void declareConfiguration(Builder builder) {
         // Setup the server
-        builder.useHTTP1xServer(8088).setHost("127.0.0.1")
+        builder.useHTTP1xServer(8068).setHost("127.0.0.1")
                 .useInsecureServer()
                 .setDecryptionUnitsPerTrack(8)
                 .setEncryptionUnitsPerTrack(4)
