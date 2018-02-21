@@ -3,7 +3,7 @@ package com.ociweb.gl.example.parallel;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.util.ParallelClientLoadTester;
+import com.ociweb.gl.test.ParallelClientLoadTester;
 
 public class NamedMessagePassingTest {
 

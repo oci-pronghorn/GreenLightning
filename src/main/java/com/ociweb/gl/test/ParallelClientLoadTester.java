@@ -1,29 +1,13 @@
-package com.ociweb.gl.util;
+package com.ociweb.gl.test;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.ociweb.gl.api.*;
 
-import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.ClientHostPortInstance;
-import com.ociweb.gl.api.GreenApp;
-import com.ociweb.gl.api.GreenAppParallel;
-import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.HTTPResponseListener;
-import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.StartupListener;
-import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.pipe.ChannelReader;
-import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
-import com.ociweb.pronghorn.util.Appendables;
+
+import java.util.function.Supplier;
 
 public class ParallelClientLoadTester implements GreenAppParallel {
-	
-	
-	private static final Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
-	
 	private final ClientHostPortInstance[] session;
 	private final long[] callTime;
 
@@ -32,13 +16,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private int trackId = 0;
 	private final int totalCycles;
     private final String route;
-    private final String post;
-    private final boolean enableTelemetry;
+    private final Supplier<Writable> post;
+    private final Integer enableTelemetry;
     private final boolean insecureClient;
     private final boolean sendTrackId;
     private final int parallelTracks;
-    
-    private static final String STARTUP_NAME   = "startup";
+	private final int maxPayload;
+
+	private static final String STARTUP_NAME   = "startup";
     private static final String CALLER_NAME    = "caller";
     private static final String RESPONDER_NAME = "responder";
     private static final String CALL_TOPIC     = "makeCall";
@@ -49,18 +34,35 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			int cyclesPerTrack, 
 			int port, 
 			String route, 
-			String post, boolean enableTelemetry) {
-		this(4, cyclesPerTrack, port, route, post, enableTelemetry, false);
+			String post,
+			boolean enableTelemetry) {
+		this(4, cyclesPerTrack, "127.0.0.1", port, route, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, false);
+	}
+
+	public ParallelClientLoadTester(
+			int parallelTracks,
+			int cyclesPerTrack,
+			int port,
+			String route,
+			String post,
+			boolean enableTelemetry,
+			boolean sendTrackId) {
+		this(parallelTracks, cyclesPerTrack, "127.0.0.1", port, route, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, sendTrackId);
 	}
 	
 	public ParallelClientLoadTester(
 			int parallelTracks,
-			int cyclesPerTrack, 
+			int cyclesPerTrack,
+			String host,
 			int port, 
-			String route, 
-			String post, boolean enableTelemetry, boolean sendTrackId) {
+			String route,
+			Supplier<Writable> post,
+			int maxPayload,
+			Integer enableTelemetry,
+			boolean sendTrackId) {
 		
 		this.parallelTracks = parallelTracks;
+		this.maxPayload = maxPayload;
 		this.insecureClient = true;
 		this.sendTrackId = sendTrackId;
 		
@@ -72,7 +74,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				
 		int i = parallelTracks;
 		while (--i>=0) {
-			session[i]=new ClientHostPortInstance("127.0.0.1",port);
+			session[i]=new ClientHostPortInstance(host,port);
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 		
@@ -90,8 +92,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			builder.useNetClient();
 		}
 		
-		if (enableTelemetry) {
-			builder.enableTelemetry();
+		if (enableTelemetry != null) {
+			builder.enableTelemetry(enableTelemetry);
 		}
 		builder.parallelTracks(session.length);
 		
@@ -141,14 +143,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		final int track = trackId++;
 		final String trackRoute = sendTrackId ? route+"?track="+track : route;
 
-		final Writable writer = new Writable() {
-
-			@Override
-			public void write(ChannelWriter writer) {
-				writer.append(post);
-			}				
-		};
-		
 		StartupListener startup = new StartupListener() {
 			GreenCommandChannel cmd1 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			@Override
@@ -162,16 +156,16 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		HTTPResponseListener responder = new HTTPResponseListener() {
 
 			int countDown = totalCycles;
-				 
+
 			GreenCommandChannel cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			
 			@Override
 			public boolean responseHTTP(HTTPResponseReader reader) {
 				long duration = System.nanoTime() - callTime[track];
-	
+
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);
-				
-				if (--countDown>0) {
+
+				if (--countDown >= 0) {
 					return cmd3.publishTopic(CALL_TOPIC);
 				} else {
 					return cmd3.publishTopic(ENDERS_TOPIC);
@@ -179,30 +173,32 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 		};
 		runtime.addResponseListener(RESPONDER_NAME, responder).includeHTTPSession(session[track]);
-		
-		
-		PubSubListener caller = new PubSubListener() {
-			GreenCommandChannel cmd2 = runtime.newCommandChannel(NET_REQUESTER);
 
+
+        final GreenCommandChannel cmd2 = runtime.newCommandChannel();
+        if (post != null) {
+            cmd2.ensureHTTPClientRequesting(4, maxPayload + 1024);
+        }
+        else {
+            cmd2.ensureHTTPClientRequesting();
+        }
+
+		Writable writer = post != null ? post.get() : null;
+
+		PubSubListener caller = new PubSubListener() {
 			@Override
 			public boolean message(CharSequence topic, ChannelReader payload) {
 				callTime[track] = System.nanoTime();
-				
-				if (null==post) {
+
+				if (null==writer) {
 					//logger.info("sent get to {} {}",session,trackRoute);
 					return cmd2.httpGet(session[track], trackRoute);
 				} else {
 					//logger.info("sent post to {} {}",session,trackRoute);
 					return cmd2.httpPost(session[track], trackRoute, writer);
-					
 				}
 			}
-			
 		};
 		runtime.addPubSubListener(CALLER_NAME, caller).addSubscription(CALL_TOPIC);
-		
-
-		
 	}
-
 }

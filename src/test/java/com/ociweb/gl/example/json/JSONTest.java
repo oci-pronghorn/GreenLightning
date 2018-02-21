@@ -8,11 +8,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 
-import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.util.ParallelClientLoadTester;
+import com.ociweb.gl.test.ParallelClientLoadTester;
 
 public class JSONTest {
 
