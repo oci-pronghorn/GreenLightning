@@ -931,9 +931,11 @@ public class BuilderImpl implements Builder {
 
 			int netResponseCount = 8;
 			int responseQueue = 10;
-			int outputsCount = 1;
 			
-
+			//must be adjusted together
+			int outputsCount = 1; //count of pipes to channel writer
+			int clientWriters = 1; //count of channel writer stages
+			
 			//TODO: delete this block if this works, these checks where here before we removed cops.
 //			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
 //				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+masterAckIn[IDX_NET].length);
@@ -962,7 +964,7 @@ public class BuilderImpl implements Builder {
 			int writeBufferMultiplier = 20;
 			int responseUnwrapCount = 2;
 			int clientWrapperCount = 2;
-			int clientWriters = 1;
+	
 			
 			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
 												responseQueue, clientRequests, 

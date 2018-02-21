@@ -45,7 +45,7 @@ public class ClientHostPortInstance {
 		this.host = host;
 		this.hostBytes = host.getBytes();
 		this.port = port;
-		this.sessionId = 0;
+		this.sessionId = uniqueId;
 		this.extractor = null;
 	}
 	

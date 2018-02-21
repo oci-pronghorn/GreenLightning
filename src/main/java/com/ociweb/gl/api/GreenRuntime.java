@@ -37,27 +37,6 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
  				pcm
  		  );    	
      }
-
-//     //must not have two ints or we may use a comma betweeen them to cause a bug.
-//     //Delete method in October...     
-//     @Deprecated
-//     public GreenCommandChannel newCommandChannel(int features, int customChannelLength, CharSequence ... supportedTopics) { 
-//        
-//     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
-//     			                                         defaultCommandChannelMaxPayload);
-//     	
-//     	pcm.addConfig(customChannelLength,defaultCommandChannelMaxPayload,MessagePubSub.class);
-//     	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
-//     	pcm.addConfig(customChannelLength,0,TrafficOrderSchema.class);
-//     	pcm.addConfig(customChannelLength,defaultCommandChannelHTTPMaxPayload,ServerResponseSchema.class);
-//     	//pcm.addConfig(100,0,TrafficAckSchema.class);
-//     	
-//         return this.builder.newCommandChannel(
-// 				features,
-// 				parallelInstanceUnderActiveConstruction,
-// 				pcm
-// 		  );        
-//     }
      
     public static GreenRuntime run(GreenApp app) {
     	return run(app,new String[0]);
