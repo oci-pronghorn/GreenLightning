@@ -9,5 +9,5 @@ public interface GreenAppParallel extends GreenApp, MsgAppParallel<Builder, Gree
 	public static final int DYNAMIC_MESSAGING = MsgCommandChannel.DYNAMIC_MESSAGING;
 	public static final int NET_REQUESTER = MsgCommandChannel.NET_REQUESTER;
 	public static final int NET_RESPONDER = MsgCommandChannel.NET_RESPONDER;
-
+	public static final int USE_DELAY = MsgCommandChannel.USE_DELAY;
 }
