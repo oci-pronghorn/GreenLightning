@@ -169,7 +169,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
 
     }
-   
+
+    public void ensureDelaySupport() {
+    	if (isInit) {
+    		throw new UnsupportedOperationException("Too late, ensureDelaySupport method must be called in define behavior.");
+    	}
+    	this.initFeatures |= USE_DELAY;
+    }
+    
     public void ensureHTTPServerResponse() {
     	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPServerResponse method must be called in define behavior.");
@@ -478,6 +485,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return false;
 	}
 
+    @Deprecated
+    public boolean block(long durationNanos) {
+    	return delay(durationNanos);
+    }    
+    
+    @Deprecated
+    public boolean blockUntil(long msTime) {
+    	return delayUntil(msTime);
+    }
     
 	/**
      * Causes this channel to delay processing any actions until the specified
@@ -487,7 +503,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if blocking was successful, and false otherwise.
      */
-    public boolean block(long durationNanos) {
+    public boolean delay(long durationNanos) {
         assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
         try {
             if (goHasRoom()) {
@@ -507,7 +523,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if blocking was successful, and false otherwise.
      */
-    public boolean blockUntil(long msTime) {
+    public boolean delayUntil(long msTime) {
         assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
         try {
             if (goHasRoom()) {
