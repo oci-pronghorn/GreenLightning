@@ -2,6 +2,8 @@ package com.ociweb.gl.test;
 
 import com.ociweb.gl.api.*;
 
+import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 
@@ -21,6 +23,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final boolean insecureClient;
     private final boolean sendTrackId;
     private final int parallelTracks;
+	private final HTTPContentTypeDefaults contentType;
 	private final int maxPayload;
 
 	private static final String STARTUP_NAME   = "startup";
@@ -36,7 +39,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			String route, 
 			String post,
 			boolean enableTelemetry) {
-		this(4, cyclesPerTrack, "127.0.0.1", port, route, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, false);
+		this(4, cyclesPerTrack, "127.0.0.1", port, route, null, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, false);
 	}
 
 	public ParallelClientLoadTester(
@@ -47,7 +50,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			String post,
 			boolean enableTelemetry,
 			boolean sendTrackId) {
-		this(parallelTracks, cyclesPerTrack, "127.0.0.1", port, route, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, sendTrackId);
+		this(parallelTracks, cyclesPerTrack, "127.0.0.1", port, route, null, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, sendTrackId);
 	}
 	
 	public ParallelClientLoadTester(
@@ -56,12 +59,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			String host,
 			int port, 
 			String route,
+			HTTPContentTypeDefaults contentType,
 			Supplier<Writable> post,
 			int maxPayload,
 			Integer enableTelemetry,
 			boolean sendTrackId) {
 		
 		this.parallelTracks = parallelTracks;
+		this.contentType = contentType;
 		this.maxPayload = maxPayload;
 		this.insecureClient = true;
 		this.sendTrackId = sendTrackId;
@@ -167,7 +172,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);
 
-				if (countDown >= 10_000) {
+				if (countDown == totalCycles) {
+					System.out.println(out + countDown);
+				}
+				else if (countDown >= 10_000) {
 					if ((countDown % 10_000) == 0) {
 						System.out.println(out + countDown);
 					}
@@ -199,7 +207,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		};
 		runtime.addResponseListener(RESPONDER_NAME, responder).includeHTTPSession(session[track]);
 
-
         final GreenCommandChannel cmd2 = runtime.newCommandChannel();
         if (post != null) {
             cmd2.ensureHTTPClientRequesting(4, maxPayload + 1024);
@@ -208,7 +215,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
             cmd2.ensureHTTPClientRequesting();
         }
 
-		Writable writer = post != null ? post.get() : null;
+		final Writable writer = post != null ? post.get() : null;
+		final String header = contentType != null ?
+				String.format("%s%s\r\n", HTTPHeaderDefaults.CONTENT_TYPE.writingRoot(), contentType.contentType()) : null;
 
 		PubSubListener caller = new PubSubListener() {
 			@Override
@@ -218,8 +227,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				if (null==writer) {
 					//logger.info("sent get to {} {}",session,trackRoute);
 					return cmd2.httpGet(session[track], trackRoute);
-				} else {
+				} else if (header != null) {
 					//logger.info("sent post to {} {}",session,trackRoute);
+					return cmd2.httpPost(session[track], trackRoute, header, writer);
+				}
+				else {
 					return cmd2.httpPost(session[track], trackRoute, writer);
 				}
 			}
