@@ -25,7 +25,7 @@ public class ExampleJSONConsume implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 
-		builder.useHTTP1xServer(8088)
+		builder.useHTTP1xServer(8078)
 		       .setHost("127.0.0.1") 
 		       .useInsecureServer();
 		

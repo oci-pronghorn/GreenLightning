@@ -13,7 +13,7 @@ public class JSONClient implements GreenApp {
     @Override
     public void declareBehavior(GreenRuntime runtime) {
         // Create the session
-        ClientHostPortInstance session = new ClientHostPortInstance("127.0.0.1",8088,0);
+        ClientHostPortInstance session = new ClientHostPortInstance("127.0.0.1",8068,0);
         // Inject business logic
         runtime.registerListener(new JSONClientBehavior(runtime, session)).includeHTTPSession(session);
     }

@@ -21,13 +21,13 @@ public class JSONTest {
 		
 		//startup backing server
 		GreenRuntime.run(new ExampleJSONConsume());
-    	waitForServer("http://127.0.0.1:8088/");
+    	waitForServer("http://127.0.0.1:8078/");
     	
     	String post = "{\"root\": {\"keyb\":\"hello\", \"keya\":123} }";
     	String route = "/test";
     	long timeoutMS = 2_000;
 		//GreenRuntime.testConcurrentUntilShutdownRequested(new TestClientParallel(12000,8786), timeoutMS);	 
-	    GreenRuntime.testUntilShutdownRequested(new ParallelClientLoadTester(2, 8088, route, post, false), timeoutMS);	
+	    GreenRuntime.testUntilShutdownRequested(new ParallelClientLoadTester(2, 8078, route, post, false), timeoutMS);	
 
 	}
 	
