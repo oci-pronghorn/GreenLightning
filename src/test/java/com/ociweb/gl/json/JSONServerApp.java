@@ -11,8 +11,8 @@ public class JSONServerApp implements GreenAppParallel {
         // Setup the server
         builder.useHTTP1xServer(8068).setHost("127.0.0.1")
                 .useInsecureServer()
-                .setDecryptionUnitsPerTrack(8)
-                .setEncryptionUnitsPerTrack(4)
+                .setDecryptionUnitsPerTrack(2)
+                .setEncryptionUnitsPerTrack(2)
                 .setConcurrentChannelsPerDecryptUnit(2)
                 .setConcurrentChannelsPerEncryptUnit(2);
 
