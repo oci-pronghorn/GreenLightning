@@ -207,6 +207,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		runtime.addResponseListener(RESPONDER_NAME, responder).includeHTTPSession(session[track]);
 
         final GreenCommandChannel cmd2 = runtime.newCommandChannel();
+		if (durationNanos > 0) {
+			cmd2.ensureDelaySupport();
+		}
+
         if (post != null) {
             cmd2.ensureHTTPClientRequesting(4, maxPayload + 1024);
         }
@@ -218,25 +222,22 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		final String header = contentType != null ?
 				String.format("%s%s\r\n", HTTPHeaderDefaults.CONTENT_TYPE.writingRoot(), contentType.contentType()) : null;
 
-		PubSubListener caller = new PubSubListener() {
-			@Override
-			public boolean message(CharSequence topic, ChannelReader payload) {
-				callTime[track] = System.nanoTime();
-				if (durationNanos > 0) {
-					cmd2.block(durationNanos);
-				}
-				if (null==writer) {
-					//logger.info("sent get to {} {}",session,trackRoute);
-					return cmd2.httpGet(session[track], trackRoute);
-				} else if (header != null) {
-					//logger.info("sent post to {} {}",session,trackRoute);
-					return cmd2.httpPost(session[track], trackRoute, header, writer);
-				}
-				else {
-					return cmd2.httpPost(session[track], trackRoute, writer);
-				}
-			}
-		};
+		PubSubListener caller = (topic, payload) -> {
+            callTime[track] = System.nanoTime();
+            if (durationNanos > 0) {
+                cmd2.delay(durationNanos);
+            }
+            if (null==writer) {
+                //logger.info("sent get to {} {}",session,trackRoute);
+                return cmd2.httpGet(session[track], trackRoute);
+            } else if (header != null) {
+                //logger.info("sent post to {} {}",session,trackRoute);
+                return cmd2.httpPost(session[track], trackRoute, header, writer);
+            }
+            else {
+                return cmd2.httpPost(session[track], trackRoute, writer);
+            }
+        };
 		runtime.addPubSubListener(CALLER_NAME, caller).addSubscription(CALL_TOPIC);
 	}
 }
