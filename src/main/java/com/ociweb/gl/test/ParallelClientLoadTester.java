@@ -124,9 +124,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					etr.report(System.out).append("\n");
 										
 					System.out.println();
-					
-					return cmd3.shutdown();					
+					return cmd3.shutdown();
 				}
+				System.out.println("Ender " + enderCounter);
+
 				return true;
 			}
 			
@@ -151,7 +152,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}			
 		};
 		runtime.addStartupListener(STARTUP_NAME, startup ); 
-			
+
+		String out = "Track " + track + ".";
 		
 		HTTPResponseListener responder = new HTTPResponseListener() {
 
@@ -165,6 +167,29 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);
 
+				if (countDown >= 10_000) {
+					if ((countDown % 10_000) == 0) {
+						System.out.println(out + countDown);
+					}
+				}
+				else if (countDown >= 1_000) {
+					if ((countDown % 1_000) == 0) {
+						System.out.println(out + countDown);
+					}
+				}
+				else if (countDown >= 100) {
+					if ((countDown % 100) == 0) {
+						System.out.println(out + countDown);
+					}
+				}
+				else if (countDown >= 10) {
+					if ((countDown % 10) == 0) {
+						System.out.println(out + countDown);
+					}
+				}
+				else {
+					System.out.println(out + countDown);
+				}
 				if (--countDown >= 0) {
 					return cmd3.publishTopic(CALL_TOPIC);
 				} else {

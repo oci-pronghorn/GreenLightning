@@ -143,7 +143,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
 	public MsgRuntime(String[] args) {
 		 this.gm = new GraphManager();
-		 this.args = args;
+		 this.args = args != null ? args : new String[0];
 	}
 
     public String[] args() {
