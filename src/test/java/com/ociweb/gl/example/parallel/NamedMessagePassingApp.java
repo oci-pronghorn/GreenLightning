@@ -36,7 +36,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		//since they require a router to manage the interTrack communication.	
 		///////////////////////////
 				
-		builder.parallelTracks(4);
+		builder.parallelTracks(2);
 		
 		builder.limitThreads(8);
 		
