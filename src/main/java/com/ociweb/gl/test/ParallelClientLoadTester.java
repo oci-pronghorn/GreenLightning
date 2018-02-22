@@ -23,6 +23,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final boolean insecureClient;
     private final boolean sendTrackId;
     private final int parallelTracks;
+	private final long durationNanos;
 	private final HTTPContentTypeDefaults contentType;
 	private final int maxPayload;
 
@@ -39,7 +40,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			String route, 
 			String post,
 			boolean enableTelemetry) {
-		this(4, cyclesPerTrack, "127.0.0.1", port, route, null, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, false);
+		this(4, cyclesPerTrack, "127.0.0.1", port, route, 0, null, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, false);
 	}
 
 	public ParallelClientLoadTester(
@@ -50,7 +51,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			String post,
 			boolean enableTelemetry,
 			boolean sendTrackId) {
-		this(parallelTracks, cyclesPerTrack, "127.0.0.1", port, route, null, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, sendTrackId);
+		this(parallelTracks, cyclesPerTrack, "127.0.0.1", port, route, 0, null, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, sendTrackId);
 	}
 	
 	public ParallelClientLoadTester(
@@ -59,6 +60,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			String host,
 			int port, 
 			String route,
+			long durationNanos,
 			HTTPContentTypeDefaults contentType,
 			Supplier<Writable> post,
 			int maxPayload,
@@ -66,6 +68,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			boolean sendTrackId) {
 		
 		this.parallelTracks = parallelTracks;
+		this.durationNanos = durationNanos;
 		this.contentType = contentType;
 		this.maxPayload = maxPayload;
 		this.insecureClient = true;
@@ -106,7 +109,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		builder.definePrivateTopic(CALL_TOPIC, RESPONDER_NAME, CALLER_NAME);
 		
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
-		
 	}
 
 	@Override
@@ -135,9 +137,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 				return true;
 			}
-			
-			
-			
 		};
 		runtime.addPubSubListener(ENDERS_NAME, ender).addSubscription(ENDERS_TOPIC);
 		
@@ -223,7 +222,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			@Override
 			public boolean message(CharSequence topic, ChannelReader payload) {
 				callTime[track] = System.nanoTime();
-
+				if (durationNanos > 0) {
+					cmd2.block(durationNanos);
+				}
 				if (null==writer) {
 					//logger.info("sent get to {} {}",session,trackRoute);
 					return cmd2.httpGet(session[track], trackRoute);
