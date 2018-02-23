@@ -109,6 +109,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		builder.definePrivateTopic(CALL_TOPIC, RESPONDER_NAME, CALLER_NAME);
 		
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
+
+		builder.setTimerPulseRate(100);
 	}
 
 	@Override
@@ -116,20 +118,23 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		PubSubListener ender = new PubSubListener() {
 			private int enderCounter;
+			private int failedMessagesSum;
 			GreenCommandChannel cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			
 			@Override
 			public boolean message(CharSequence topic, ChannelReader payload) {
-				
+				int failedMessages = payload.readPackedInt();
+				failedMessagesSum += failedMessages;
+
 				if (++enderCounter >= parallelTracks) {
 					System.out.println();
 					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
 					int t = elapsedTime.length;
 					while (--t>=0) {
 						etr.add(elapsedTime[t]);
-					}					
+					}
 					etr.report(System.out).append("\n");
-										
+					System.out.println("Responses not received: " + failedMessagesSum + " out of " + parallelTracks * totalCycles);
 					System.out.println();
 					return cmd3.shutdown();
 				}
@@ -159,57 +164,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		String out = "Track " + track + ".";
 		
-		HTTPResponseListener responder = new HTTPResponseListener() {
-
-			int countDown = totalCycles;
-
-			GreenCommandChannel cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
-			
-			@Override
-			public boolean responseHTTP(HTTPResponseReader reader) {
-				long duration = System.nanoTime() - callTime[track];
-
-				ElapsedTimeRecorder.record(elapsedTime[track], duration);
-
-				if (countDown == totalCycles) {
-					System.out.println(out + countDown);
-				}
-				else if (countDown >= 10_000) {
-					if ((countDown % 10_000) == 0) {
-						System.out.println(out + countDown);
-					}
-				}
-				else if (countDown >= 1_000) {
-					if ((countDown % 1_000) == 0) {
-						System.out.println(out + countDown);
-					}
-				}
-				else if (countDown >= 100) {
-					if ((countDown % 100) == 0) {
-						System.out.println(out + countDown);
-					}
-				}
-				else if (countDown >= 10) {
-					if ((countDown % 10) == 0) {
-						System.out.println(out + countDown);
-					}
-				}
-				else {
-					System.out.println(out + countDown);
-				}
-				if (--countDown >= 0) {
-					return cmd3.publishTopic(CALL_TOPIC);
-				} else {
-					return cmd3.publishTopic(ENDERS_TOPIC);
-				}
-			}
-		};
+		HTTPResponseListener responder = new MyHTTPResponseListener(runtime, track, out);
 		runtime.addResponseListener(RESPONDER_NAME, responder).includeHTTPSession(session[track]);
 
         final GreenCommandChannel cmd2 = runtime.newCommandChannel();
-		if (durationNanos > 0) {
-			cmd2.ensureDelaySupport();
-		}
 
         if (post != null) {
             cmd2.ensureHTTPClientRequesting(4, maxPayload + 1024);
@@ -224,9 +182,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		PubSubListener caller = (topic, payload) -> {
             callTime[track] = System.nanoTime();
-            if (durationNanos > 0) {
-                cmd2.delay(durationNanos);
-            }
             if (null==writer) {
                 //logger.info("sent get to {} {}",session,trackRoute);
                 return cmd2.httpGet(session[track], trackRoute);
@@ -239,5 +194,91 @@ public class ParallelClientLoadTester implements GreenAppParallel {
             }
         };
 		runtime.addPubSubListener(CALLER_NAME, caller).addSubscription(CALL_TOPIC);
+	}
+
+	private class MyHTTPResponseListener implements HTTPResponseListener, TimeListener {
+		private final GreenRuntime runtime;
+		private final GreenCommandChannel cmd3;
+		private final int track;
+		private final String out;
+		private final long timeoutNS = 100_000_000;
+
+		private int countDown;
+		private int failedResponse;
+
+		public MyHTTPResponseListener(GreenRuntime runtime, int track, String out) {
+			this.runtime = runtime;
+			this.track = track;
+			this.out = out;
+			countDown = totalCycles;
+			cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+			if (durationNanos > 0) {
+				cmd3.ensureDelaySupport();
+			}
+		}
+
+		@Override
+        public boolean responseHTTP(HTTPResponseReader reader) {
+            long duration = System.nanoTime() - callTime[track];
+
+            ElapsedTimeRecorder.record(elapsedTime[track], duration);
+
+			printCountDown("");
+
+			return nextCall();
+		}
+
+		private boolean nextCall() {
+			if (--countDown >= 0) {
+				if (durationNanos > 0) {
+					cmd3.delay(durationNanos);
+				}
+                return cmd3.publishTopic(CALL_TOPIC);
+            } else {
+                return cmd3.publishTopic(ENDERS_TOPIC, writer -> writer.writePackedInt(failedResponse));
+            }
+		}
+
+		@Override
+		public void timeEvent(long time, int iteration) {
+			long callTimeValue = callTime[track];
+			if (callTimeValue != 0) {
+				long duration = System.nanoTime() - callTimeValue;
+				if (duration > timeoutNS) {
+					failedResponse++;
+					printCountDown("*");
+					nextCall();
+				}
+			}
+		}
+
+		private void printCountDown(String suffix) {
+			if (countDown == totalCycles) {
+                System.out.println(out + countDown + suffix);
+            }
+            else if (countDown >= 10_000) {
+                if ((countDown % 10_000) == 0) {
+                    System.out.println(out + countDown + suffix);
+                }
+            }
+            else if (countDown >= 1_000) {
+                if ((countDown % 1_000) == 0) {
+                    System.out.println(out + countDown + suffix);
+                }
+            }
+            else if (countDown >= 100) {
+                if ((countDown % 100) == 0) {
+                    System.out.println(out + countDown + suffix);
+                }
+            }
+            else if (countDown >= 10) {
+                if ((countDown % 10) == 0) {
+                    System.out.println(out + countDown + suffix);
+                }
+            }
+            else {
+                System.out.println(out + countDown + suffix);
+            }
+		}
 	}
 }
