@@ -64,6 +64,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				post != null ? new ParallelTestPayload(post) : null,
 				new DefaultParallelTestCountdownDisplay());
 	}
+
+	public ParallelClientLoadTester(
+			ParallelTestConfig config,
+			ParallelTestPayload payload) {
+		this(config, payload, new DefaultParallelTestCountdownDisplay());
+	}
 	
 	public ParallelClientLoadTester(
 			ParallelTestConfig config,
@@ -220,7 +226,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);
 				display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseReveived);
 			} else {
-				display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseIgnpored);
+				display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseIgnored);
 			}
 			return nextCall();
 		}

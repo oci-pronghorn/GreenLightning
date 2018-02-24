@@ -10,13 +10,16 @@ public class ParallelTestPayload {
     public Supplier<Writable> post = null;
     public int maxPayloadSize = 512;
 
-    ParallelTestPayload(String payload) {
+    public ParallelTestPayload() {
+    }
+
+    public ParallelTestPayload(String payload) {
         final byte[] bytes = payload.getBytes();
         maxPayloadSize = bytes.length;
         post = ()->writer->writer.write(bytes);
     }
 
-    ParallelTestPayload(String[] payload) {
+    public ParallelTestPayload(String[] payload) {
         maxPayloadSize = 0;
         for (int i = 0; i < payload.length; i++) {
             maxPayloadSize = Math.max(maxPayloadSize, payload[i].length());

@@ -8,7 +8,7 @@ public class DefaultParallelTestCountdownDisplay implements ParallelTestCountdow
     public void display(int track, int total, int current, Response response) {
         String out = "Track " + track + ".";
         String suffix = "";
-        if (response == Response.ResponseIgnpored) {
+        if (response == Response.ResponseIgnored) {
             suffix = "*";
         }
         if (response == Response.ResponseTimeout) {

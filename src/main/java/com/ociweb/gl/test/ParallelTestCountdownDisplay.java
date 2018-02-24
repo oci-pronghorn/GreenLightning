@@ -5,7 +5,7 @@ import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 public interface ParallelTestCountdownDisplay {
     enum Response {
         ResponseReveived,
-        ResponseIgnpored,
+        ResponseIgnored,
         ResponseTimeout,
     }
     void display(int track, int total, int current, Response response);
