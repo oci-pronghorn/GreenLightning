@@ -16,16 +16,19 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private final ElapsedTimeRecorder[] elapsedTime;
 	
 	private int trackId = 0;
-	private final int totalCycles;
+	private final int cyclesPerTrack;
     private final String route;
     private final Supplier<Writable> post;
-    private final Integer enableTelemetry;
+    private final Integer telemetryPort;
     private final boolean insecureClient;
     private final boolean sendTrackId;
     private final int parallelTracks;
 	private final long durationNanos;
 	private final HTTPContentTypeDefaults contentType;
-	private final int maxPayload;
+	private final int maxPayloadSize;
+	private final int ignoreInitialPerTrack;
+	private final long responseTimeoutNS;
+	private final ParallelTestCountdownDisplay display;
 
 	private static final String STARTUP_NAME   = "startup";
     private static final String CALLER_NAME    = "caller";
@@ -33,14 +36,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private static final String CALL_TOPIC     = "makeCall";
     private static final String ENDERS_NAME    = "ender";
     private static final String ENDERS_TOPIC   = "end";
-            
+
 	public ParallelClientLoadTester(
 			int cyclesPerTrack, 
 			int port, 
 			String route, 
 			String post,
 			boolean enableTelemetry) {
-		this(4, cyclesPerTrack, "127.0.0.1", port, route, 0, null, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, false);
+
+		this(
+				new ParallelTestConfig(cyclesPerTrack, port, route, enableTelemetry),
+				post != null ? new ParallelTestPayload(post) : null,
+				new DefaultParallelTestCountdownDisplay());
 	}
 
 	public ParallelClientLoadTester(
@@ -51,30 +58,28 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			String post,
 			boolean enableTelemetry,
 			boolean sendTrackId) {
-		this(parallelTracks, cyclesPerTrack, "127.0.0.1", port, route, 0, null, ()->writer->writer.append(post), post.length(), enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null, sendTrackId);
+
+		this(
+				new ParallelTestConfig(parallelTracks, cyclesPerTrack, port, route, enableTelemetry, sendTrackId),
+				post != null ? new ParallelTestPayload(post) : null,
+				new DefaultParallelTestCountdownDisplay());
 	}
 	
 	public ParallelClientLoadTester(
-			int parallelTracks,
-			int cyclesPerTrack,
-			String host,
-			int port, 
-			String route,
-			long durationNanos,
-			HTTPContentTypeDefaults contentType,
-			Supplier<Writable> post,
-			int maxPayload,
-			Integer enableTelemetry,
-			boolean sendTrackId) {
+			ParallelTestConfig config,
+			ParallelTestPayload payload,
+			ParallelTestCountdownDisplay display) {
 		
-		this.parallelTracks = parallelTracks;
-		this.durationNanos = durationNanos;
-		this.contentType = contentType;
-		this.maxPayload = maxPayload;
+		this.parallelTracks = config.parallelTracks;
+		this.durationNanos = config.durationNanos;
+		this.contentType = payload.contentType;
+		this.maxPayloadSize = payload.maxPayloadSize;
+		this.ignoreInitialPerTrack = config.ignoreInitialPerTrack;
 		this.insecureClient = true;
-		this.sendTrackId = sendTrackId;
+		this.sendTrackId = config.sendTrackId;
+		this.responseTimeoutNS = config.responseTimeoutNS;
 		
-		this.totalCycles = cyclesPerTrack;
+		this.cyclesPerTrack = config.cyclesPerTrack;
 		
 		this.session = new ClientHostPortInstance[parallelTracks];
 		this.callTime = new long[parallelTracks];
@@ -82,13 +87,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				
 		int i = parallelTracks;
 		while (--i>=0) {
-			session[i]=new ClientHostPortInstance(host,port);
+			session[i]=new ClientHostPortInstance(config.host,config.port);
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 		
-		this.route = route;
-		this.post = post;
-		this.enableTelemetry = enableTelemetry;
+		this.route = config.route;
+		this.post = payload.post;
+		this.telemetryPort = config.telemetryPort;
+		this.display = display;
 	}
 	
 	@Override
@@ -100,8 +106,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			builder.useNetClient();
 		}
 		
-		if (enableTelemetry != null) {
-			builder.enableTelemetry(enableTelemetry);
+		if (telemetryPort != null) {
+			builder.enableTelemetry(telemetryPort);
 		}
 		builder.parallelTracks(session.length);
 		
@@ -110,7 +116,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
 
-		builder.setTimerPulseRate(100);
+		if (responseTimeoutNS > 0) {
+			builder.setTimerPulseRate(responseTimeoutNS / 1_000_000);
+		}
 	}
 
 	@Override
@@ -127,18 +135,15 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				failedMessagesSum += failedMessages;
 
 				if (++enderCounter >= parallelTracks) {
-					System.out.println();
 					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
 					int t = elapsedTime.length;
 					while (--t>=0) {
 						etr.add(elapsedTime[t]);
 					}
-					etr.report(System.out).append("\n");
-					System.out.println("Responses not received: " + failedMessagesSum + " out of " + parallelTracks * totalCycles);
-					System.out.println();
+					display.displayEnd(etr, parallelTracks * cyclesPerTrack, failedMessagesSum);
 					return cmd3.shutdown();
 				}
-				System.out.println("Ender " + enderCounter);
+				display.displayTrackEnd(enderCounter);
 
 				return true;
 			}
@@ -160,17 +165,15 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				cmd1.publishTopic(CALL_TOPIC); //must use message to startup the system
 			}			
 		};
-		runtime.addStartupListener(STARTUP_NAME, startup ); 
-
-		String out = "Track " + track + ".";
+		runtime.addStartupListener(STARTUP_NAME, startup );
 		
-		HTTPResponseListener responder = new MyHTTPResponseListener(runtime, track, out);
+		HTTPResponseListener responder = new TheHTTPResponseListener(runtime, track);
 		runtime.addResponseListener(RESPONDER_NAME, responder).includeHTTPSession(session[track]);
 
         final GreenCommandChannel cmd2 = runtime.newCommandChannel();
 
         if (post != null) {
-            cmd2.ensureHTTPClientRequesting(4, maxPayload + 1024);
+            cmd2.ensureHTTPClientRequesting(4, maxPayloadSize + 1024);
         }
         else {
             cmd2.ensureHTTPClientRequesting();
@@ -183,10 +186,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		PubSubListener caller = (topic, payload) -> {
             callTime[track] = System.nanoTime();
             if (null==writer) {
-                //logger.info("sent get to {} {}",session,trackRoute);
                 return cmd2.httpGet(session[track], trackRoute);
             } else if (header != null) {
-                //logger.info("sent post to {} {}",session,trackRoute);
                 return cmd2.httpPost(session[track], trackRoute, header, writer);
             }
             else {
@@ -196,21 +197,16 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		runtime.addPubSubListener(CALLER_NAME, caller).addSubscription(CALL_TOPIC);
 	}
 
-	private class MyHTTPResponseListener implements HTTPResponseListener, TimeListener {
-		private final GreenRuntime runtime;
+	private class TheHTTPResponseListener implements HTTPResponseListener, TimeListener {
 		private final GreenCommandChannel cmd3;
 		private final int track;
-		private final String out;
-		private final long timeoutNS = 100_000_000;
 
 		private int countDown;
 		private int failedResponse;
 
-		public MyHTTPResponseListener(GreenRuntime runtime, int track, String out) {
-			this.runtime = runtime;
+		TheHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
-			this.out = out;
-			countDown = totalCycles;
+			countDown = cyclesPerTrack;
 			cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			if (durationNanos > 0) {
 				cmd3.ensureDelaySupport();
@@ -218,13 +214,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 
 		@Override
-        public boolean responseHTTP(HTTPResponseReader reader) {
-            long duration = System.nanoTime() - callTime[track];
-
-            ElapsedTimeRecorder.record(elapsedTime[track], duration);
-
-			printCountDown("");
-
+		public boolean responseHTTP(HTTPResponseReader reader) {
+			if ((cyclesPerTrack - countDown) > ignoreInitialPerTrack) {
+				long duration = System.nanoTime() - callTime[track];
+				ElapsedTimeRecorder.record(elapsedTime[track], duration);
+				display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseReveived);
+			} else {
+				display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseIgnpored);
+			}
 			return nextCall();
 		}
 
@@ -233,10 +230,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				if (durationNanos > 0) {
 					cmd3.delay(durationNanos);
 				}
-                return cmd3.publishTopic(CALL_TOPIC);
-            } else {
-                return cmd3.publishTopic(ENDERS_TOPIC, writer -> writer.writePackedInt(failedResponse));
-            }
+				return cmd3.publishTopic(CALL_TOPIC);
+			} else {
+				return cmd3.publishTopic(ENDERS_TOPIC, writer -> writer.writePackedInt(failedResponse));
+			}
 		}
 
 		@Override
@@ -244,41 +241,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			long callTimeValue = callTime[track];
 			if (callTimeValue != 0) {
 				long duration = System.nanoTime() - callTimeValue;
-				if (duration > timeoutNS) {
+				if (duration > responseTimeoutNS) {
 					failedResponse++;
-					printCountDown("*");
+					display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseTimeout);
 					nextCall();
 				}
 			}
-		}
-
-		private void printCountDown(String suffix) {
-			if (countDown == totalCycles) {
-                System.out.println(out + countDown + suffix);
-            }
-            else if (countDown >= 10_000) {
-                if ((countDown % 10_000) == 0) {
-                    System.out.println(out + countDown + suffix);
-                }
-            }
-            else if (countDown >= 1_000) {
-                if ((countDown % 1_000) == 0) {
-                    System.out.println(out + countDown + suffix);
-                }
-            }
-            else if (countDown >= 100) {
-                if ((countDown % 100) == 0) {
-                    System.out.println(out + countDown + suffix);
-                }
-            }
-            else if (countDown >= 10) {
-                if ((countDown % 10) == 0) {
-                    System.out.println(out + countDown + suffix);
-                }
-            }
-            else {
-                System.out.println(out + countDown + suffix);
-            }
 		}
 	}
 }
