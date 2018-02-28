@@ -17,6 +17,7 @@ public class ParallelTestConfig {
     public long responseTimeoutNS = 100_000_000;
     public int ignoreInitialPerTrack = 0;
     public Integer telemetryPort = null;
+    public Long rate = null;
 
 
     public String toString() {
@@ -72,6 +73,7 @@ public class ParallelTestConfig {
                 .integer("responseTimeoutNS", o->o.responseTimeoutNS)
                 .integer("ignoreInitialPerTrack", o->o.ignoreInitialPerTrack)
                 .nullableInteger("telemetryPort", (o, func) -> func.visit(o.telemetryPort != null ? o.telemetryPort : 0, o.telemetryPort == null))
+                .nullableInteger("rate", (o, func) -> func.visit(o.rate != null ? o.rate : 0, o.rate == null))
             .endObject();
 
     public static final JSONExtractorCompleted jsonExtractor = new JSONExtractor();

@@ -29,6 +29,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private final int ignoreInitialPerTrack;
 	private final long responseTimeoutNS;
 	private final ParallelTestCountdownDisplay display;
+	private final Long rate;
 
 	private static final String STARTUP_NAME   = "startup";
     private static final String CALLER_NAME    = "caller";
@@ -83,6 +84,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.insecureClient = true;
 
 		this.responseTimeoutNS = config.responseTimeoutNS;
+		this.rate = config.rate;
 		
 		this.cyclesPerTrack = config.cyclesPerTrack;
 		
@@ -116,6 +118,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 		builder.parallelTracks(session.length);
 		
+		if (rate != null) {
+			builder.setDefaultRate(rate);
+		}
+		
 		builder.definePrivateTopic(CALL_TOPIC, STARTUP_NAME, CALLER_NAME);
 		builder.definePrivateTopic(CALL_TOPIC, RESPONDER_NAME, CALLER_NAME);
 		
@@ -129,6 +135,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	@Override
 	public void declareBehavior(final GreenRuntime runtime) {
 
+		runtime.setEnsureLowLatency(false);
+		
 		PubSubListener ender = new PubSubListener() {
 			private int enderCounter;
 			private int failedMessagesSum;
