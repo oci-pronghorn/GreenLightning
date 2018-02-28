@@ -15,7 +15,7 @@ public class NamedMessagePassingTest {
 		String payload = "{\"key1\":\"value\",\"key2\":123}";
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
-				new ParallelClientLoadTester(4, 10_000, 8080, "/test", payload, false, true),
+				new ParallelClientLoadTester(4, 10_000, 8080, "/test", payload, false),
 				200_000);
 
 	}
