@@ -41,6 +41,7 @@ public class ParallelTestConfig {
         this.port = port;
         this.route = route;
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
+        this.responseTimeoutNS = 0;
     }
 
     public ParallelTestConfig(
@@ -54,7 +55,7 @@ public class ParallelTestConfig {
         this.port = port;
         this.route = route;
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
-
+        this.responseTimeoutNS = 0;
     }
 
     public ParallelTestConfig(String filePath) {

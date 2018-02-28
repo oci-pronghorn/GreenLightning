@@ -247,7 +247,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		@Override
 		public void timeEvent(long time, int iteration) {
 			long callTimeValue = callTime[track];
-			if (callTimeValue != 0) {
+			if (callTimeValue != 0 && countDown > 0) {
 				long duration = System.nanoTime() - callTimeValue;
 				if (duration > responseTimeoutNS) {
 					failedResponse++;
