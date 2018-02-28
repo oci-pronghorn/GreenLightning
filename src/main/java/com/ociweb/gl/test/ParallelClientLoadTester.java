@@ -21,7 +21,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final Supplier<Writable> post;
     private final Integer telemetryPort;
     private final boolean insecureClient;
-    private final boolean sendTrackId;
+
     private final int parallelTracks;
 	private final long durationNanos;
 	private final HTTPContentTypeDefaults contentType;
@@ -56,11 +56,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			int port,
 			String route,
 			String post,
-			boolean enableTelemetry,
-			boolean sendTrackId) {
+			boolean enableTelemetry) {
 
 		this(
-				new ParallelTestConfig(parallelTracks, cyclesPerTrack, port, route, enableTelemetry, sendTrackId),
+				new ParallelTestConfig(parallelTracks, cyclesPerTrack, port, route, enableTelemetry),
 				post != null ? new ParallelTestPayload(post) : null,
 				new DefaultParallelTestCountdownDisplay());
 	}
@@ -82,7 +81,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.maxPayloadSize = payload.maxPayloadSize;
 		this.ignoreInitialPerTrack = config.ignoreInitialPerTrack;
 		this.insecureClient = true;
-		this.sendTrackId = config.sendTrackId;
+
 		this.responseTimeoutNS = config.responseTimeoutNS;
 		
 		this.cyclesPerTrack = config.cyclesPerTrack;
@@ -162,8 +161,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	public void declareParallelBehavior(GreenRuntime runtime) {
 				
 		final int track = trackId++;
-		final String trackRoute = sendTrackId ? route+"?track="+track : route;
-
 		StartupListener startup = new StartupListener() {
 			GreenCommandChannel cmd1 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			@Override
@@ -192,12 +189,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		PubSubListener caller = (topic, payload) -> {
             callTime[track] = System.nanoTime();
             if (null==writer) {
-                return cmd2.httpGet(session[track], trackRoute);
+                return cmd2.httpGet(session[track], route);
             } else if (header != null) {
-                return cmd2.httpPost(session[track], trackRoute, header, writer);
+                return cmd2.httpPost(session[track], route, header, writer);
             }
             else {
-                return cmd2.httpPost(session[track], trackRoute, writer);
+                return cmd2.httpPost(session[track], route, writer);
             }
         };
 		runtime.addPubSubListener(CALLER_NAME, caller).addSubscription(CALL_TOPIC);

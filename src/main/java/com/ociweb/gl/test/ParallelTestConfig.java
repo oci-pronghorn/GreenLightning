@@ -17,7 +17,7 @@ public class ParallelTestConfig {
     public long responseTimeoutNS = 100_000_000;
     public int ignoreInitialPerTrack = 0;
     public Integer telemetryPort = null;
-    public boolean sendTrackId = false;
+
 
     public String toString() {
         StringBuilderWriter out = new StringBuilderWriter();
@@ -48,14 +48,13 @@ public class ParallelTestConfig {
             int cyclesPerTrack,
             int port,
             String route,
-            boolean enableTelemetry,
-            boolean sendTrackId) {
+            boolean enableTelemetry) {
         this.parallelTracks = parallelTracks;
         this.cyclesPerTrack = cyclesPerTrack;
         this.port = port;
         this.route = route;
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
-        this.sendTrackId = sendTrackId;
+
     }
 
     public ParallelTestConfig(String filePath) {
@@ -73,7 +72,6 @@ public class ParallelTestConfig {
                 .integer("responseTimeoutNS", o->o.responseTimeoutNS)
                 .integer("ignoreInitialPerTrack", o->o.ignoreInitialPerTrack)
                 .nullableInteger("telemetryPort", (o, func) -> func.visit(o.telemetryPort != null ? o.telemetryPort : 0, o.telemetryPort == null))
-                .bool("sendTrackId", o->o.sendTrackId)
             .endObject();
 
     public static final JSONExtractorCompleted jsonExtractor = new JSONExtractor();
