@@ -13,5 +13,7 @@ public interface ParallelTestCountdownDisplay {
     void displayTrackEnd(int enderCounter);
 
     void displayEnd(ElapsedTimeRecorder etr, int totalMessages, int failedMessagesSum);
+
+    void displayConnectionClosed(int track);
 }
 

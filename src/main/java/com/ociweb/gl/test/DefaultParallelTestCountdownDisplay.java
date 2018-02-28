@@ -55,4 +55,9 @@ public class DefaultParallelTestCountdownDisplay implements ParallelTestCountdow
         System.out.println("Responses not received: " + failedMessagesSum + " out of " + totalMessages);
         System.out.println();
     }
+
+    @Override
+    public void displayConnectionClosed(int track) {
+        System.out.println("Connection Closed: " + track);
+    }
 }

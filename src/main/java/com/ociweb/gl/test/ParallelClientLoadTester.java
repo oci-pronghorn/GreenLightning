@@ -221,13 +221,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
-			if ((cyclesPerTrack - countDown) > ignoreInitialPerTrack) {
+			boolean connectionClosed = reader.isConnectionClosed();
+			if (connectionClosed) {
+				display.displayConnectionClosed(track);
+			}
+			//if (ignoreInitialPerTrack > 0 && (cyclesPerTrack - countDown) < ignoreInitialPerTrack) {
+				//display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseIgnored);
+			//}
+			//else {
 				long duration = System.nanoTime() - callTime[track];
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);
 				display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseReveived);
-			} else {
-				display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseIgnored);
-			}
+			//}
 			return nextCall();
 		}
 
