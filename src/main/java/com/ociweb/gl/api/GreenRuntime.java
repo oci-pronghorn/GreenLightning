@@ -70,6 +70,10 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		return runtime;
     }
 	
+	public void checkForException() {
+		scheduler.checkForException();
+	}
+	
 	@Deprecated
     public static GreenRuntime test(GreenApp app) {
     	GreenRuntime runtime = new GreenRuntime();
