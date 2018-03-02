@@ -29,9 +29,7 @@ public class TelemetryConfigImpl implements TelemetryConfig {
     }
 
     public void finalizeDeclareConnections() {
-        if (null == this.getHost()) {
-            this.host = NetGraphBuilder.bindHost();
-        }
+    	this.host = NetGraphBuilder.bindHost(this.host);
         this.configStage = BridgeConfigStage.DeclareBehavior;
     }
 }

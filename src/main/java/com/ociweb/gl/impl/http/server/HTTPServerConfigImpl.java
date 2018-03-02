@@ -140,12 +140,7 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	}
 
 	public void finalizeDeclareConnections() {
-		if (null == this.bindHost) {
-			this.bindHost = NetGraphBuilder.bindHost();
-			if (null == this.bindHost) {
-				this.bindHost = "127.0.0.1";
-			}
-		}
+		this.bindHost = NetGraphBuilder.bindHost(this.bindHost);
 		this.configStage = BridgeConfigStage.DeclareBehavior;
 	}
 }

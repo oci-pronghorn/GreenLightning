@@ -1,14 +1,16 @@
 package com.ociweb.gl.json;
 
-import com.ociweb.gl.api.*;
+import static org.junit.Assert.assertEquals;
+
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.util.parse.JSONReader;
-
-import org.junit.Test;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 
 public class JSONServerBehavior implements RestListener {
     private final GreenRuntime runtime;
