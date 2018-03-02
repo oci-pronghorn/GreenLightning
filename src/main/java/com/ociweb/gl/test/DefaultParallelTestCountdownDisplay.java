@@ -52,7 +52,7 @@ public class DefaultParallelTestCountdownDisplay implements ParallelTestCountdow
         
         if (totalTimeSumNS>0) {
         	long requestsPerSecond =  (1_000_000_000L*(long)totalMessages)/totalTimeSumNS;
-        	System.out.println(requestsPerSecond+" requests per second");
+        	System.out.println(requestsPerSecond+" requests per second per tack");
         } else {
         	System.out.println("warning: zero total time");
         }

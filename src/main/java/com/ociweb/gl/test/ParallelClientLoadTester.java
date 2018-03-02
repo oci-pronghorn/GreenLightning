@@ -31,7 +31,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private final long responseTimeoutNS;
 	private final ParallelTestCountdownDisplay display;
 	private final Long rate;
-	private final long startupTime;
+	private long startupTime;
 	private final boolean ensureLowLatency;
 
 	private static final String STARTUP_NAME   = "startup";
@@ -80,8 +80,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			ParallelTestConfig config,
 			ParallelTestPayload payload,
 			ParallelTestCountdownDisplay display) {
-		
-		this.startupTime = System.nanoTime();
+				
 		this.parallelTracks = config.parallelTracks;
 		this.durationNanos = config.durationNanos;
 		this.contentType = payload.contentType;
@@ -148,6 +147,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		runtime.setEnsureLowLatency(ensureLowLatency);
 		
+		StartupListener startClock = new StartupListener() {
+			@Override
+			public void startup() {
+				startupTime = System.nanoTime();				
+			}			
+		};
+		runtime.addStartupListener(startClock);
+		
 		PubSubListener ender = new PubSubListener() {
 			private int enderCounter;
 			private int failedMessagesSum;
@@ -176,11 +183,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 							Thread.currentThread().interrupt();
 						}
 						
-						display.displayEnd(etr, parallelTracks * cyclesPerTrack, 
+						int total = parallelTracks * cyclesPerTrack;
+						display.displayEnd(etr, total, 
 								           totalTimeSum, 
 								           failedMessagesSum);
 						
-						Appendables.appendNearestTimeUnit(System.out, System.nanoTime()-startupTime).append(" test duration\n");
+						long duration = System.nanoTime()-startupTime;
+						Appendables.appendNearestTimeUnit(System.out, duration).append(" test duration\n");
+																	
+						
+						long serverCallsPerSecond = (1_000_000_000L*total)/duration;
+						Appendables.appendValue(System.out, serverCallsPerSecond).append(" total calls per second agaist server\n");
+												
 						return cmd3.shutdown();
 					}
 				}
