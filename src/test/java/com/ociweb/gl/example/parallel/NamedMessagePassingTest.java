@@ -7,7 +7,7 @@ import com.ociweb.gl.test.ParallelClientLoadTester;
 
 public class NamedMessagePassingTest {
 
-	@Test
+	@Ignore
 	public void runTest() {
 		
 		GreenRuntime.run(new NamedMessagePassingApp());
