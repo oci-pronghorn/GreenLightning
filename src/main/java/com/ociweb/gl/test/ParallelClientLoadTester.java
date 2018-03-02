@@ -268,7 +268,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		runtime.addStartupListener(STARTUP_NAME, startup );
 		
 		HTTPResponseListener responder = new TheHTTPResponseListener(runtime, track);
-		runtime.addResponseListener(RESPONDER_NAME, responder).includeHTTPSession(session[track]);
+		runtime.addResponseListener(RESPONDER_NAME, responder)
+		  .isolate() //Note hack test for now.     
+		  .includeHTTPSession(session[track]);
 
         final GreenCommandChannel cmd2 = runtime.newCommandChannel();
 
