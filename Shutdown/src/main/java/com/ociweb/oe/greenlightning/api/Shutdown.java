@@ -22,10 +22,10 @@ public class Shutdown implements GreenApp
     public void declareConfiguration(Builder c) {
     	
     	HTTPServerConfig conf = c.useHTTP1xServer(8443)
-    			.setHost(null==host?NetGraphBuilder.bindHost():host)
+    			.setHost(NetGraphBuilder.bindHost(host))
     			.setDefaultPath("");
     	    	
-    	c.defineRoute("/shutdown?key=${key}");
+    	c.defineRoute().path("/shutdown?key=${key}");
     }
   
     @Override
