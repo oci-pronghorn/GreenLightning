@@ -18,6 +18,8 @@ public class ParallelTestConfig {
     public int ignoreInitialPerTrack = 0;
     public Integer telemetryPort = null;
     public Long rate = null;
+	public boolean insecureClient=true;
+	public boolean ensureLowLatency=false;
 
 
     public String toString() {
@@ -74,6 +76,9 @@ public class ParallelTestConfig {
                 .integer("ignoreInitialPerTrack", o->o.ignoreInitialPerTrack)
                 .nullableInteger("telemetryPort", (o, func) -> func.visit(o.telemetryPort != null ? o.telemetryPort : 0, o.telemetryPort == null))
                 .nullableInteger("rate", (o, func) -> func.visit(o.rate != null ? o.rate : 0, o.rate == null))
+                .bool("insecureClient", o->o.insecureClient)
+                .bool("ensureLowLatency", o->o.ensureLowLatency)                
+                
             .endObject();
 
     public static final JSONExtractorCompleted jsonExtractor = new JSONExtractor();

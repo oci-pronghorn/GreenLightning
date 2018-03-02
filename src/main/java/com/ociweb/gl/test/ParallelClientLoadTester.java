@@ -6,6 +6,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
+import com.ociweb.pronghorn.util.Appendables;
 
 import java.util.function.Supplier;
 
@@ -30,13 +31,17 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private final long responseTimeoutNS;
 	private final ParallelTestCountdownDisplay display;
 	private final Long rate;
+	private final long startupTime;
+	private final boolean ensureLowLatency;
 
 	private static final String STARTUP_NAME   = "startup";
     private static final String CALLER_NAME    = "caller";
     private static final String RESPONDER_NAME = "responder";
     private static final String CALL_TOPIC     = "makeCall";
     private static final String ENDERS_NAME    = "ender";
+    private static final String PROGRESS_NAME  = "progessor";
     private static final String ENDERS_TOPIC   = "end";
+    private static final String PROGRESS_TOPIC = "progress";
 
 	public ParallelClientLoadTester(
 			int cyclesPerTrack, 
@@ -76,13 +81,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			ParallelTestPayload payload,
 			ParallelTestCountdownDisplay display) {
 		
+		this.startupTime = System.nanoTime();
 		this.parallelTracks = config.parallelTracks;
 		this.durationNanos = config.durationNanos;
 		this.contentType = payload.contentType;
 		this.maxPayloadSize = payload.maxPayloadSize;
 		this.ignoreInitialPerTrack = config.ignoreInitialPerTrack;
-		this.insecureClient = true;
+		
+		this.insecureClient = config.insecureClient;
+		this.ensureLowLatency = config.ensureLowLatency;
 
+		
+		
 		this.responseTimeoutNS = config.responseTimeoutNS;
 		this.rate = config.rate;
 		
@@ -126,6 +136,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		builder.definePrivateTopic(CALL_TOPIC, RESPONDER_NAME, CALLER_NAME);
 		
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
+		builder.defineUnScopedTopic(PROGRESS_TOPIC);
 
 		if (responseTimeoutNS > 0) {
 			builder.setTimerPulseRate(responseTimeoutNS / 1_000_000);
@@ -135,33 +146,97 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	@Override
 	public void declareBehavior(final GreenRuntime runtime) {
 
-		runtime.setEnsureLowLatency(false);
+		runtime.setEnsureLowLatency(ensureLowLatency);
 		
 		PubSubListener ender = new PubSubListener() {
 			private int enderCounter;
 			private int failedMessagesSum;
+			private long totalTimeSum;
 			GreenCommandChannel cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			
 			@Override
 			public boolean message(CharSequence topic, ChannelReader payload) {
-				int failedMessages = payload.readPackedInt();
-				failedMessagesSum += failedMessages;
-
-				if (++enderCounter >= parallelTracks) {
-					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
-					int t = elapsedTime.length;
-					while (--t>=0) {
-						etr.add(elapsedTime[t]);
+				if (topic.equals(ENDERS_TOPIC)) {
+					if (payload.hasRemainingBytes()) {
+						int failedMessages = payload.readPackedInt();
+						totalTimeSum += payload.readPackedLong();
+						failedMessagesSum += failedMessages;
 					}
-					display.displayEnd(etr, parallelTracks * cyclesPerTrack, failedMessagesSum);
-					return cmd3.shutdown();
+					
+					if (++enderCounter == (parallelTracks+1)) { //we add 1 for the progress of 100%
+						ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
+						int t = elapsedTime.length;
+						while (--t>=0) {
+							etr.add(elapsedTime[t]);
+						}
+						
+						try {
+							Thread.sleep(100); //fixing system out IS broken problem.
+						} catch (InterruptedException e) {
+							Thread.currentThread().interrupt();
+						}
+						
+						display.displayEnd(etr, parallelTracks * cyclesPerTrack, 
+								           totalTimeSum, 
+								           failedMessagesSum);
+						
+						Appendables.appendNearestTimeUnit(System.out, System.nanoTime()-startupTime).append(" test duration\n");
+						return cmd3.shutdown();
+					}
 				}
-				display.displayTrackEnd(enderCounter);
-
 				return true;
 			}
 		};
 		runtime.addPubSubListener(ENDERS_NAME, ender).addSubscription(ENDERS_TOPIC);
+		
+		PubSubListener progress = new PubSubListener() {
+
+			private final int[] finished = new int[parallelTracks];
+			private final int[] failures   = new int[parallelTracks];
+			GreenCommandChannel cmd4 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+			private int lastPct = 0;
+			private long lastTime = 0;
+			
+			@Override
+			public boolean message(CharSequence topic, ChannelReader payload) {
+				int track = payload.readPackedInt();
+				int countDown = payload.readPackedInt();
+				int failed = payload.readPackedInt();
+				finished[track] = cyclesPerTrack-countDown;
+				failures[track] = failed;
+				
+				int sumFail = 0;
+				int sumFinished = 0;
+				int i = parallelTracks;
+				while (--i>=0) {
+					sumFail += failures[i];
+					sumFinished += finished[i];
+				}
+				
+				int totalRequests = cyclesPerTrack*parallelTracks;
+				int pctDone = (100*sumFinished)/totalRequests;
+
+				long now = 0;
+								
+				//updates every half a second
+				if ( (pctDone != lastPct  && ((now=System.nanoTime()) - lastTime)>500_000_000L)					
+						|| 100==pctDone  ) {
+					Appendables.appendValue(
+							Appendables.appendValue(
+									System.out, pctDone).append("% complete  "),sumFail).append(" failed\n");
+					lastTime = now;
+					lastPct = pctDone;
+				}
+				
+				
+				if (100 == pctDone) {
+					System.err.println();
+					return cmd4.publishTopic(ENDERS_TOPIC);
+				}				
+				return true;
+			}
+		};
+		runtime.addPubSubListener(PROGRESS_NAME, progress).addSubscription(PROGRESS_TOPIC);
 		
 	}
 
@@ -214,6 +289,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		private int countDown;
 		private int failedResponse;
+		private long totalTime;
+		
 
 		TheHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
@@ -230,26 +307,44 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if (connectionClosed) {
 				display.displayConnectionClosed(track);
 			}
-			//if (ignoreInitialPerTrack > 0 && (cyclesPerTrack - countDown) < ignoreInitialPerTrack) {
-				//display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseIgnored);
-			//}
-			//else {
-				long duration = System.nanoTime() - callTime[track];
-				ElapsedTimeRecorder.record(elapsedTime[track], duration);
-				display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseReveived);
-			//}
+			/////
+			long duration = System.nanoTime() - callTime[track];
+			ElapsedTimeRecorder.record(elapsedTime[track], duration);
+			totalTime+=duration;
+			
 			return nextCall();
 		}
 
 		private boolean nextCall() {
-			if (--countDown >= 0) {
+			
+			if ((0xFFF & countDown) == 0) {
+				cmd3.publishTopic(PROGRESS_TOPIC, writer-> {
+					writer.writePackedInt(track);
+					writer.writePackedInt(countDown);
+					writer.writePackedInt(failedResponse);
+				});
+			}
+			
+			boolean result;
+			if (countDown > 0) {
 				if (durationNanos > 0) {
 					cmd3.delay(durationNanos);
 				}
-				return cmd3.publishTopic(CALL_TOPIC);
-			} else {
-				return cmd3.publishTopic(ENDERS_TOPIC, writer -> writer.writePackedInt(failedResponse));
+				result = cmd3.publishTopic(CALL_TOPIC);
+			} else {				
+				result = cmd3.publishTopic(ENDERS_TOPIC, writer -> 
+				   {
+					   writer.writePackedInt(failedResponse);
+					   writer.writePackedLong(totalTime);
+				   });				
 			}
+			
+			//upon failure should not count down
+			if (result) {
+				countDown--;
+			}			
+			
+			return result;
 		}
 
 		@Override
@@ -259,8 +354,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				long duration = System.nanoTime() - callTimeValue;
 				if (duration > responseTimeoutNS) {
 					failedResponse++;
-					display.display(track, cyclesPerTrack, countDown, ParallelTestCountdownDisplay.Response.ResponseTimeout);
-					nextCall();
+					while (!nextCall()) {//must run now.	
+						Thread.yield();
+					}
 				}
 			}
 		}

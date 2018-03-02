@@ -1,6 +1,7 @@
 package com.ociweb.gl.test;
 
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class DefaultParallelTestCountdownDisplay implements ParallelTestCountdownDisplay {
 
@@ -44,14 +45,25 @@ public class DefaultParallelTestCountdownDisplay implements ParallelTestCountdow
     }
 
     @Override
-    public void displayTrackEnd(int enderCounter) {
-        System.out.println("Ender " + enderCounter);
-    }
-
-    @Override
-    public void displayEnd(ElapsedTimeRecorder etr, int totalMessages, int failedMessagesSum) {
+    public void displayEnd(ElapsedTimeRecorder etr, int totalMessages, long totalTimeSumNS, int failedMessagesSum) {
         System.out.println();
         etr.report(System.out).append("\n");
+        System.out.println();
+        
+        if (totalTimeSumNS>0) {
+        	long requestsPerSecond =  (1_000_000_000L*(long)totalMessages)/totalTimeSumNS;
+        	System.out.println(requestsPerSecond+" requests per second");
+        } else {
+        	System.out.println("warning: zero total time");
+        }
+        
+        if (totalMessages>0) {
+        	long avgLatencyNS = totalTimeSumNS/(long)totalMessages;
+        	Appendables.appendNearestTimeUnit(System.out, avgLatencyNS).append(" average\n");
+        } else {
+        	System.out.println("warning: zero messages tested");
+        }
+        
         System.out.println("Responses not received: " + failedMessagesSum + " out of " + totalMessages);
         System.out.println();
     }
