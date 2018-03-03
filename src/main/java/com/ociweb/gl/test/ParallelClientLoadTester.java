@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 
 public class ParallelClientLoadTester implements GreenAppParallel {
 	private final ClientHostPortInstance[] session;
-	private final long[] callTime;
 
 	private final ElapsedTimeRecorder[] elapsedTime;
 	
@@ -21,6 +20,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final String route;
     private final Supplier<Writable> post;
     private final Integer telemetryPort;
+    private final String telemetryHost;
     private final boolean insecureClient;
 
     private final int parallelTracks;
@@ -33,6 +33,17 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private final Long rate;
 	private long startupTime;
 	private final boolean ensureLowLatency;
+	
+	private final int maxInFlightBits;
+	private final int maxInFlight;
+	private final int maxInFlightMask;
+
+	private final long[][] callTime;
+	private final int[] inFlight;
+	private final int[] inFlightHead;
+	private final int[] inFlightTail;
+		
+	
 
 	private static final String STARTUP_NAME   = "startup";
     private static final String CALLER_NAME    = "caller";
@@ -89,16 +100,19 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		
 		this.insecureClient = config.insecureClient;
 		this.ensureLowLatency = config.ensureLowLatency;
-
 		
-		
+		this.maxInFlightBits = config.inFlightBits;		
+		this.maxInFlight = 1<<maxInFlightBits;
+		this.maxInFlightMask = maxInFlight-1;
+				
 		this.responseTimeoutNS = config.responseTimeoutNS;
 		this.rate = config.rate;
 		
 		this.cyclesPerTrack = config.cyclesPerTrack;
 		
 		this.session = new ClientHostPortInstance[parallelTracks];
-		this.callTime = new long[parallelTracks];
+		this.callTime = new long[parallelTracks][maxInFlight];
+		this.inFlight = new int[parallelTracks];
 		this.elapsedTime = new ElapsedTimeRecorder[parallelTracks];
 				
 		int i = parallelTracks;
@@ -110,7 +124,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.route = config.route;
 		this.post = payload.post;
 		this.telemetryPort = config.telemetryPort;
+		this.telemetryHost = config.telemetryHost;
 		this.display = display;
+		
+		this.inFlightHead = new int[parallelTracks];
+		this.inFlightTail = new int[parallelTracks];
+		
 	}
 	
 	@Override
@@ -123,7 +142,13 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 		
 		if (telemetryPort != null) {
-			builder.enableTelemetry(telemetryPort);
+			
+			if (null == this.telemetryHost) {
+				builder.enableTelemetry(telemetryPort);				
+			} else {
+				builder.enableTelemetry(telemetryHost, telemetryPort);
+			}
+			
 		}
 		builder.parallelTracks(session.length);
 		
@@ -257,19 +282,22 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {
 				
+		
 		final int track = trackId++;
 		StartupListener startup = new StartupListener() {
 			GreenCommandChannel cmd1 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
 			@Override
 			public void startup() {
-				cmd1.publishTopic(CALL_TOPIC); //must use message to startup the system
+				int i = maxInFlight;
+				while (--i>=0) {		
+					cmd1.publishTopic(CALL_TOPIC); //must use message to startup the system
+				}
 			}			
 		};
 		runtime.addStartupListener(STARTUP_NAME, startup );
 		
 		HTTPResponseListener responder = new TheHTTPResponseListener(runtime, track);
 		runtime.addResponseListener(RESPONDER_NAME, responder)
-		  .isolate() //Note hack test for now.     
 		  .includeHTTPSession(session[track]);
 
         final GreenCommandChannel cmd2 = runtime.newCommandChannel();
@@ -286,7 +314,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				String.format("%s%s\r\n", HTTPHeaderDefaults.CONTENT_TYPE.writingRoot(), contentType.contentType()) : null;
 
 		PubSubListener caller = (topic, payload) -> {
-            callTime[track] = System.nanoTime();
+			if (inFlight[track]==maxInFlight) {
+				return false;
+			}
+			
+            callTime[track][maxInFlightMask & inFlightHead[track]++] = System.nanoTime();
+            
             if (null==writer) {
                 return cmd2.httpGet(session[track], route);
             } else if (header != null) {
@@ -324,7 +357,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				display.displayConnectionClosed(track);
 			}
 			/////
-			long duration = System.nanoTime() - callTime[track];
+			
+			long duration = System.nanoTime() - callTime[track][maxInFlightMask & inFlightTail[track]++];
+			
 			ElapsedTimeRecorder.record(elapsedTime[track], duration);
 			totalTime+=duration;
 			
@@ -365,7 +400,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		@Override
 		public void timeEvent(long time, int iteration) {
-			long callTimeValue = callTime[track];
+			
+			long callTimeValue = callTime[track][maxInFlightMask & inFlightTail[track]];
 			if (callTimeValue != 0) {
 				long duration = System.nanoTime() - callTimeValue;
 				if (duration > responseTimeoutNS) {

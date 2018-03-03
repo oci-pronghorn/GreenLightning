@@ -17,9 +17,11 @@ public class ParallelTestConfig {
     public long responseTimeoutNS = 100_000_000;
     public int ignoreInitialPerTrack = 0;
     public Integer telemetryPort = null;
+    public String telemetryHost = null;
     public Long rate = null;
 	public boolean insecureClient=true;
 	public boolean ensureLowLatency=false;
+	public int inFlightBits = 1;
 
 
     public String toString() {
@@ -75,6 +77,7 @@ public class ParallelTestConfig {
                 .integer("responseTimeoutNS", o->o.responseTimeoutNS)
                 .integer("ignoreInitialPerTrack", o->o.ignoreInitialPerTrack)
                 .nullableInteger("telemetryPort", (o, func) -> func.visit(o.telemetryPort != null ? o.telemetryPort : 0, o.telemetryPort == null))
+                .string("telemetryHost", o-> (o.telemetryHost != null ? o.telemetryHost : "127.0.0.1"))
                 .nullableInteger("rate", (o, func) -> func.visit(o.rate != null ? o.rate : 0, o.rate == null))
                 .bool("insecureClient", o->o.insecureClient)
                 .bool("ensureLowLatency", o->o.ensureLowLatency)                
