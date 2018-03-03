@@ -218,7 +218,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 																	
 						
 						long serverCallsPerSecond = (1_000_000_000L*total)/duration;
-						Appendables.appendValue(System.out, serverCallsPerSecond).append(" total calls per second agaist server\n");
+						Appendables.appendValue(System.out, serverCallsPerSecond).append(" total calls per second against server\n");
 												
 						return cmd3.shutdown();
 					}
