@@ -51,10 +51,20 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     protected final String[] args;
     
-    protected StageScheduler scheduler;
+    private StageScheduler scheduler;
+    private boolean hasPendingHighVolume;  
     
     protected String telemetryHost;
     
+    protected void setScheduler(StageScheduler scheduler) {
+    	this.scheduler = scheduler;
+    	if (hasPendingHighVolume) {
+    		if (scheduler instanceof ScriptedFixedThreadsScheduler) {
+        		((ScriptedFixedThreadsScheduler)scheduler).setEnsureLowLatency(false);
+        	}
+    	}
+    	
+    }
     
     //NOTE: keep short since the MessagePubSubStage will STOP consuming message until the one put on here
     //      is actually taken off and consumed.  We have little benefit to making this longer.
@@ -130,13 +140,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     
     public boolean setEnsureLowLatency(boolean value) {
-    	
+    	    	
     	if (scheduler instanceof ScriptedFixedThreadsScheduler) {
     		((ScriptedFixedThreadsScheduler)scheduler).setEnsureLowLatency(value);
     		return true;
     	} else {
-    		logger.info("low latency switching is not supported for this scheduler");
-    		return false;
+    		if (null == scheduler) {
+    			hasPendingHighVolume = !value;
+    			return true;
+    		} else {
+    			logger.info("low latency switching is not supported for this scheduler");
+    			return false;
+    		}
     	}
     	
     }
@@ -444,7 +459,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
-				return new HTTPResponseReader(this);
+				return new HTTPResponseReader(this);//, gm.recordTypeData);
 			}
 		};
 		return netResponsePipe;
@@ -494,7 +509,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<MessageSubscription> createNewBlobReader() {
-				return new MessageReader(this);
+				return new MessageReader(this);//, gm.recordTypeData);
 			}
 		};
 		return subscriptionPipe;

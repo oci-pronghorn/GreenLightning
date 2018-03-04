@@ -63,15 +63,15 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		   //exportGraphDotFile();
 
 		//runtime.scheduler = StageScheduler.threadPerStage(runtime.gm);//hack test.				
-		runtime.scheduler = runtime.builder.createScheduler(runtime);
+		runtime.setScheduler(runtime.builder.createScheduler(runtime));
 	    
-		runtime.scheduler.startup();
+		runtime.getScheduler().startup();
 
 		return runtime;
     }
 	
 	public void checkForException() {
-		scheduler.checkForException();
+		getScheduler().checkForException();
 	}
 	
 	@Deprecated
@@ -149,9 +149,9 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
 	      //exportGraphDotFile();
 	    boolean reverseOrder = false;
-		runtime.scheduler = new ScriptedNonThreadScheduler(runtime.gm, reverseOrder);
+		runtime.setScheduler(new ScriptedNonThreadScheduler(runtime.gm, reverseOrder));
 		
-		return (ScriptedNonThreadScheduler) runtime.scheduler;
+		return (ScriptedNonThreadScheduler) runtime.getScheduler();
 	}
 
     
