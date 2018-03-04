@@ -38,8 +38,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private final int maxInFlight;
 	private final int maxInFlightMask;
 
-	private final long[][] callTime;
-	private final int[] inFlight;
+	private final long[][] callTime;	
 	private final int[] inFlightHead;
 	private final int[] inFlightTail;
 		
@@ -100,19 +99,25 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		
 		this.insecureClient = config.insecureClient;
 		this.ensureLowLatency = config.ensureLowLatency;
+		//bit  size   mask   pos
+		//0     1      0      0
+		//1     2      1      0,1
+		//2     4      3      0,1,2,3
 		
 		this.maxInFlightBits = config.inFlightBits;		
 		this.maxInFlight = 1<<maxInFlightBits;
 		this.maxInFlightMask = maxInFlight-1;
-				
+		this.callTime = new long[parallelTracks][maxInFlight];
+		this.inFlightHead = new int[parallelTracks];
+		this.inFlightTail = new int[parallelTracks];
+
+		
 		this.responseTimeoutNS = config.responseTimeoutNS;
 		this.rate = config.rate;
 		
 		this.cyclesPerTrack = config.cyclesPerTrack;
 		
 		this.session = new ClientHostPortInstance[parallelTracks];
-		this.callTime = new long[parallelTracks][maxInFlight];
-		this.inFlight = new int[parallelTracks];
 		this.elapsedTime = new ElapsedTimeRecorder[parallelTracks];
 				
 		int i = parallelTracks;
@@ -126,9 +131,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.telemetryPort = config.telemetryPort;
 		this.telemetryHost = config.telemetryHost;
 		this.display = display;
-		
-		this.inFlightHead = new int[parallelTracks];
-		this.inFlightTail = new int[parallelTracks];
+
 		
 	}
 	
@@ -281,8 +284,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {
-				
-		
+						
 		final int track = trackId++;
 		StartupListener startup = new StartupListener() {
 			GreenCommandChannel cmd1 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
@@ -290,7 +292,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			public void startup() {
 				int i = maxInFlight;
 				while (--i>=0) {		
-					cmd1.publishTopic(CALL_TOPIC); //must use message to startup the system
+					while(!cmd1.publishTopic(CALL_TOPIC)) {
+						//must publish this many to get the world moving
+						Thread.yield();
+					}
+					
+					//must use message to startup the system
 				}
 			}			
 		};
@@ -314,9 +321,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				String.format("%s%s\r\n", HTTPHeaderDefaults.CONTENT_TYPE.writingRoot(), contentType.contentType()) : null;
 
 		PubSubListener caller = (topic, payload) -> {
-			if (inFlight[track]==maxInFlight) {
-				return false;
-			}
 			
             callTime[track][maxInFlightMask & inFlightHead[track]++] = System.nanoTime();
             

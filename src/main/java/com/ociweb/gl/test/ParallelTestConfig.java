@@ -21,7 +21,7 @@ public class ParallelTestConfig {
     public Long rate = null;
 	public boolean insecureClient=true;
 	public boolean ensureLowLatency=false;
-	public int inFlightBits = 1;
+	public int inFlightBits = 0;//only 1 in flight is zero
 
 
     public String toString() {
