@@ -159,7 +159,6 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 		this.configStage = BridgeConfigStage.DeclareBehavior;
 	}
 
-	@Override
 	public int getMaxRequestSize() {
 		return this.maxRequestSize;
 	}
