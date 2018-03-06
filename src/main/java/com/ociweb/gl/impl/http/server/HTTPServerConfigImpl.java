@@ -16,7 +16,8 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	private int concurrentChannelsPerDecryptUnit = 1; //default 1, for low memory usage
 	private TLSCertificates serverTLS;
 	private BridgeConfigStage configStage = BridgeConfigStage.Construction;
-
+	private int maxRequestSize = 1<<9;//default of 512 bytes
+	
 	public HTTPServerConfigImpl(int bindPort) {
 		this.bindPort = bindPort;
 		if (bindPort<=0 || (bindPort>=(1<<16))) {
@@ -32,7 +33,7 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	public void beginDeclarations() {
 		this.configStage = BridgeConfigStage.DeclareConnections;
 	}
-
+	
 	public final int getMaxConnectionBits() {
 		return maxConnectionBits;
 	}
@@ -52,7 +53,7 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	public final int getConcurrentChannelsPerDecryptUnit() {
 		return concurrentChannelsPerDecryptUnit;
 	}
-
+	
 	public final boolean isTLS() {
 		return serverTLS != null;
 	}
@@ -74,6 +75,13 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 		return defaultHostPath;
 	}
 
+	@Override
+	public HTTPServerConfig setMaxRequestSize(int maxRequestSize) {
+		this.maxRequestSize = maxRequestSize;
+		return this;
+	}
+	
+	
 	@Override
 	public HTTPServerConfig setDefaultPath(String defaultPath) {
 		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
@@ -107,6 +115,13 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	@Override
 	public HTTPServerConfig setMaxConnectionBits(int bits) {
 		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
+		if (bits<1) {
+			throw new UnsupportedOperationException("Must support at least 1 connection");
+		}
+		if (bits>30) {
+			throw new UnsupportedOperationException("Can not support "+(1<<bits)+" connections");
+		}
+		
 		this.maxConnectionBits = bits;
 		return this;
 	}
@@ -142,5 +157,10 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	public void finalizeDeclareConnections() {
 		this.bindHost = NetGraphBuilder.bindHost(this.bindHost);
 		this.configStage = BridgeConfigStage.DeclareBehavior;
+	}
+
+	@Override
+	public int getMaxRequestSize() {
+		return this.maxRequestSize;
 	}
 }

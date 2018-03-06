@@ -569,7 +569,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				config.getEncryptionUnitsPerTrack(),
 				config.getConcurrentChannelsPerEncryptUnit(),
 				config.getDecryptionUnitsPerTrack(),
-				config.getConcurrentChannelsPerDecryptUnit());
+				config.getConcurrentChannelsPerDecryptUnit(),				
+				//one message might be broken into this many parts
+				2+(config.getMaxRequestSize()/1500),
+				config.getMaxRequestSize());
 
 		ServerCoordinator serverCoord = new ServerCoordinator(
 				config.getCertificates(),
