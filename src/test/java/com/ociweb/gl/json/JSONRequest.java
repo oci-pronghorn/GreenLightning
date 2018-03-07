@@ -81,10 +81,10 @@ public class JSONRequest {
     	
 //    	jsonReader.dump(channelReader, System.err);
     	
-        jsonReader.getText("ID1".getBytes(), channelReader, id1);
-        jsonReader.getText("ID2".getBytes(), channelReader, id2);
-        jsonReader.getText("TimeStamp".getBytes(), channelReader, extractTemp);
-        value = (int) jsonReader.getLong("Value".getBytes(), channelReader);
+        jsonReader.getText(0, channelReader, id1);
+        jsonReader.getText(1, channelReader, id2);
+        jsonReader.getText(2, channelReader, extractTemp);
+        value = (int) jsonReader.getLong(3, channelReader);
         return true;
     }
 

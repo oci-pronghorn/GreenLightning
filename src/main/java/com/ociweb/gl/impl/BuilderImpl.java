@@ -693,6 +693,12 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public final void limitThreads(int threadLimit) {
+		
+		if (telemetry != null) {
+			//must ensure telemetry has the threads it needs.
+			threadLimit+=2; 
+		}
+		
 		this.threadLimit = threadLimit;
 		this.threadLimitHard = true;
 	}
@@ -791,9 +797,17 @@ public class BuilderImpl implements Builder {
 	
 	@Override
 	public TelemetryConfig enableTelemetry(String host, int port) {
-		if (telemetry != null) throw new RuntimeException("Telemetry already enabled");
+		if (telemetry != null) {
+			throw new RuntimeException("Telemetry already enabled");
+		}
 		this.telemetry = new TelemetryConfigImpl(host, port);
 		this.telemetry.beginDeclarations();
+		
+		if (threadLimit>0) {
+			//we must increase the thread limit to ensure telemetry is not started
+			threadLimit += 2;			
+		}
+		
 		return this.telemetry;
 	}
 
