@@ -6,6 +6,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
@@ -114,6 +116,13 @@ public class BuilderImpl implements Builder {
     private int parallelismTracks = 1;//default is one
 	private static final int BehaviorMask = 1<<31;//high bit on
 	
+	///////////////////////////////////////////////////////////////////
+    //all non shutdown listening reactors will be shutdown only after the listeners have finished.
+    public AtomicInteger liveShutdownListeners = new AtomicInteger();
+    public AtomicInteger totalLiveReactors = new AtomicInteger();    
+    public AtomicBoolean shutdownRequsted = new AtomicBoolean(false);
+    public Runnable lastCall; //TODO: group these into an object for ReactiveListenerStage to use...
+    /////////////////////////////////////////////
 
 	/////////////////
 	///Pipes for initial startup declared subscriptions. (Not part of graph)

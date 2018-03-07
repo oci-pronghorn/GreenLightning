@@ -366,7 +366,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	    	};
 	    	
 	    	//notify all the reactors to begin shutdown.
-	    	ReactiveListenerStage.requestSystemShutdown(new Runnable() {
+	    	ReactiveListenerStage.requestSystemShutdown(builder, new Runnable() {
 	
 				@Override
 				public void run() {
@@ -379,7 +379,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
 
 	public boolean isShutdownRequested() {
-		return ReactiveListenerStage.isShutdownRequested();
+		return ReactiveListenerStage.isShutdownRequested(builder);
 	}
     
 
