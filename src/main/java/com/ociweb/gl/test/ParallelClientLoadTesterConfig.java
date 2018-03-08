@@ -32,9 +32,9 @@ public class ParallelClientLoadTesterConfig {
         responseTimeoutNS = args.getArgumentValue("--timeout", "-to", responseTimeoutNS);
         telemetryPort = args.getArgumentValue("--telemPort", "-tp", telemetryPort);
         telemetryHost = args.getArgumentValue("--telemHost", "-th", telemetryHost);
-        rate = args.getArgumentValue("--rate", "-r", rate);
+        rate = args.getArgumentValue("--rate", "-ra", rate);
         ensureLowLatency = args.getArgumentValue("--lowLatency", "-ll", ensureLowLatency);
-        simultaneousRequestsPerTrack = args.getArgumentValue("--simulRquests", "-s", simultaneousRequestsPerTrack);
+        simultaneousRequestsPerTrack = args.getArgumentValue("--simulRquests", "-sr", simultaneousRequestsPerTrack);
     }
 
     public ParallelClientLoadTesterConfig(
