@@ -1,5 +1,6 @@
 package com.ociweb.gl.test;
 
+import com.ociweb.gl.api.ArgumentProvider;
 import com.ociweb.gl.api.TelemetryConfig;
 
 public class ParallelClientLoadTesterConfig {
@@ -18,6 +19,22 @@ public class ParallelClientLoadTesterConfig {
 	public int simultaneousRequestsPerTrack = 0; // as power of 2. 0 == serial requests opn a track
 
     public ParallelClientLoadTesterConfig() {
+    }
+
+    public ParallelClientLoadTesterConfig(ArgumentProvider args) {
+        host = args.getArgumentValue("--host", "-h", host);
+        port = args.getArgumentValue("--port", "-p", port);
+        route = args.getArgumentValue("--route", "-r", route);
+        insecureClient = args.getArgumentValue("--insecure", "-is", insecureClient);
+        parallelTracks = args.getArgumentValue("--tracks", "-t", parallelTracks);
+        cyclesPerTrack = args.getArgumentValue("--cycles", "-c", cyclesPerTrack);
+        durationNanos = args.getArgumentValue("--duration", "-d", durationNanos);
+        responseTimeoutNS = args.getArgumentValue("--timeout", "-to", responseTimeoutNS);
+        telemetryPort = args.getArgumentValue("--telemPort", "-tp", telemetryPort);
+        telemetryHost = args.getArgumentValue("--telemHost", "-th", telemetryHost);
+        rate = args.getArgumentValue("--rate", "-ra", rate);
+        ensureLowLatency = args.getArgumentValue("--lowLatency", "-ll", ensureLowLatency);
+        simultaneousRequestsPerTrack = args.getArgumentValue("--simulRquests", "-sr", simultaneousRequestsPerTrack);
     }
 
     public ParallelClientLoadTesterConfig(
