@@ -2,26 +2,25 @@ package com.ociweb.gl.test;
 
 import com.ociweb.gl.api.TelemetryConfig;
 
-public class ParallelTestConfig {
-    public int parallelTracks = 4;
-    public int cyclesPerTrack = 1;
+public class ParallelClientLoadTesterConfig {
     public String host = "127.0.0.1";
     public int port = 8080;
     public String route = "";
+    public boolean insecureClient=true;
+    public int parallelTracks = 4;
+    public int cyclesPerTrack = 1;
     public long durationNanos = 0;
     public long responseTimeoutNS = 100_000_000;
-    public int ignoreInitialPerTrack = 0;
     public Integer telemetryPort = null;
     public String telemetryHost = null;
     public Long rate = null;
-	public boolean insecureClient=true;
 	public boolean ensureLowLatency=false;
-	public int inFlightBits = 0;//only 1 in flight is zero
+	public int simultaneousRequestsPerTrack = 0; // as power of 2. 0 == serial requests opn a track
 
-    public ParallelTestConfig() {
+    public ParallelClientLoadTesterConfig() {
     }
 
-    public ParallelTestConfig(
+    public ParallelClientLoadTesterConfig(
             int cyclesPerTrack,
             int port,
             String route,
@@ -33,7 +32,7 @@ public class ParallelTestConfig {
         this.responseTimeoutNS = 0;
     }
 
-    public ParallelTestConfig(
+    public ParallelClientLoadTesterConfig(
             int parallelTracks,
             int cyclesPerTrack,
             int port,
