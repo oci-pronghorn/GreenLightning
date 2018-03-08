@@ -56,7 +56,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		this(
             new ParallelClientLoadTesterConfig(cyclesPerTrack, port, route, enableTelemetry),
-            post != null ? new ParallelTestPayload(post) : null,
+            post != null ? new ParallelClientLoadTesterPayload(post) : null,
             new DefaultParallelClientLoadTesterOutput());
 	}
 
@@ -70,19 +70,19 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		this(
             new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, port, route, enableTelemetry),
-            post != null ? new ParallelTestPayload(post) : null,
+            post != null ? new ParallelClientLoadTesterPayload(post) : null,
             new DefaultParallelClientLoadTesterOutput());
 	}
 
 	public ParallelClientLoadTester(
 			ParallelClientLoadTesterConfig config,
-			ParallelTestPayload payload) {
+			ParallelClientLoadTesterPayload payload) {
 		this(config, payload, new DefaultParallelClientLoadTesterOutput());
 	}
 
 	public ParallelClientLoadTester(
 			ParallelClientLoadTesterConfig config,
-			ParallelTestPayload payload,
+			ParallelClientLoadTesterPayload payload,
 			ParallelClientLoadTesterOutput out) {
 
         this.route = config.route;

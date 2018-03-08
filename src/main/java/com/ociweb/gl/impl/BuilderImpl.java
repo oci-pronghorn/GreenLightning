@@ -10,22 +10,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.ociweb.gl.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.Behavior;
-import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.HTTPClientConfig;
-import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.HTTPServerConfig;
-import com.ociweb.gl.api.ClientHostPortInstance;
-import com.ociweb.gl.api.ListenerTransducer;
-import com.ociweb.gl.api.MsgCommandChannel;
-import com.ociweb.gl.api.MsgRuntime;
-import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.TelemetryConfig;
-import com.ociweb.gl.api.TimeTrigger;
 import com.ociweb.gl.api.transducer.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.transducer.PubSubListenerTransducer;
 import com.ociweb.gl.api.transducer.RestListenerTransducer;
@@ -97,7 +85,7 @@ public class BuilderImpl implements Builder {
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
-	public final String[] args;
+	public final ArgumentParser args;
 	
 	private int threadLimit = -1;
 	private boolean threadLimitHard = false;
@@ -272,14 +260,6 @@ public class BuilderImpl implements Builder {
 	public final HTTPServerConfig getHTTPServerConfig() {
 		return this.server;
 	}
-    
-    public String getArgumentValue(String longName, String shortName, String defaultValue) {
-    	return MsgRuntime.getOptArg(longName, shortName, args, defaultValue);
-    }
-
-	public boolean hasArgument(String longName, String shortName) {
-		return MsgRuntime.hasArg(longName, shortName, args);
-	}
 
     public int behaviorId(Behavior b) {
     	return BehaviorMask | System.identityHashCode(b);
@@ -401,7 +381,7 @@ public class BuilderImpl implements Builder {
 		
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
-		this.args = args;
+		this.args = new ArgumentParser(args);
 		
 		this.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
 									                   MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT, 
@@ -1233,7 +1213,47 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public String[] args() {
-		return args;
+		return args.args();
+	}
+
+	@Override
+	public boolean hasArgument(String longName, String shortName) {
+		return args.hasArgument(longName, shortName);
+	}
+
+	@Override
+	public String getArgumentValue(String longName, String shortName, String defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Boolean getArgumentValue(String longName, String shortName, Boolean defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Character getArgumentValue(String longName, String shortName, Character defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Byte getArgumentValue(String longName, String shortName, Byte defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Short getArgumentValue(String longName, String shortName, Short defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Long getArgumentValue(String longName, String shortName, Long defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Integer getArgumentValue(String longName, String shortName, Integer defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
 	}
 
 	public void blockChannelDuration(long durationNanos, int pipeId) {
