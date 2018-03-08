@@ -23,7 +23,7 @@ public class ParallelClientLoadTesterConfig {
 
     public ParallelClientLoadTesterConfig(ArgumentProvider args) {
         host = args.getArgumentValue("--host", "-h", host);
-        port = Integer.parseInt(args.getArgumentValue("--port", "-p", Integer.toString(port)));
+        port = args.getArgumentValue("--port", "-p", port);
         route = args.getArgumentValue("--route", "-r", route);
         insecureClient = args.getArgumentValue("--insecure", "-is", insecureClient);
         parallelTracks = args.getArgumentValue("--tracks", "-t", parallelTracks);
