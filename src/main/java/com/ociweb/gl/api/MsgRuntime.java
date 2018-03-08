@@ -696,7 +696,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		while (--r>=0) {
 			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
 			Pipe<ServerResponseSchema>[] temp = 
-				   fromModulesToOrderSuper[r] = PronghornStage.join(builder.buildToOrderArray(r),errorResponsePipes[r]);
+				   fromModulesToOrderSuper[r] = PronghornStage.join(errorResponsePipes[r], builder.buildToOrderArray(r));
 			
 			//this block is required to make sure the ordering stage has room
 			int c = temp.length;
