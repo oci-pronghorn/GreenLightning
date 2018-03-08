@@ -87,7 +87,7 @@ public class BuilderImpl implements Builder {
 	//NB: The Green Lightning maximum header size 64K is defined here HTTP1xRouterStage.MAX_HEADER
 	protected static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
 	//  This has a large impact on memory usage but also on performance volume
-	protected static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<8;
+	protected static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<6;
 	protected static final int MINIMUM_TLS_BLOB_SIZE = 1<<15;
 
 	protected long timeTriggerRate;
@@ -97,7 +97,7 @@ public class BuilderImpl implements Builder {
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
-	public final String[] args;
+	public final ArgumentParser args;
 	
 	private int threadLimit = -1;
 	private boolean threadLimitHard = false;
@@ -272,14 +272,6 @@ public class BuilderImpl implements Builder {
 	public final HTTPServerConfig getHTTPServerConfig() {
 		return this.server;
 	}
-    
-    public String getArgumentValue(String longName, String shortName, String defaultValue) {
-    	return MsgRuntime.getOptArg(longName, shortName, args, defaultValue);
-    }
-
-	public boolean hasArgument(String longName, String shortName) {
-		return MsgRuntime.hasArg(longName, shortName, args);
-	}
 
     public int behaviorId(Behavior b) {
     	return BehaviorMask | System.identityHashCode(b);
@@ -401,7 +393,7 @@ public class BuilderImpl implements Builder {
 		
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
-		this.args = args;
+		this.args = new ArgumentParser(args);
 		
 		this.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
 									                   MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT, 
@@ -1233,7 +1225,47 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public String[] args() {
-		return args;
+		return args.args();
+	}
+
+	@Override
+	public boolean hasArgument(String longName, String shortName) {
+		return args.hasArgument(longName, shortName);
+	}
+
+	@Override
+	public String getArgumentValue(String longName, String shortName, String defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Boolean getArgumentValue(String longName, String shortName, Boolean defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Character getArgumentValue(String longName, String shortName, Character defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Byte getArgumentValue(String longName, String shortName, Byte defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Short getArgumentValue(String longName, String shortName, Short defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Long getArgumentValue(String longName, String shortName, Long defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
+	}
+
+	@Override
+	public Integer getArgumentValue(String longName, String shortName, Integer defaultValue) {
+		return args.getArgumentValue(longName, shortName, defaultValue);
 	}
 
 	public void blockChannelDuration(long durationNanos, int pipeId) {
