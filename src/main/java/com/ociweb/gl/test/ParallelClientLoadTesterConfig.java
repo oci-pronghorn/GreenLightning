@@ -22,6 +22,10 @@ public class ParallelClientLoadTesterConfig {
     }
 
     public ParallelClientLoadTesterConfig(ArgumentProvider args) {
+        inject(args);
+    }
+
+    public void inject(ArgumentProvider args) {
         host = args.getArgumentValue("--host", "-h", host);
         port = args.getArgumentValue("--port", "-p", port);
         route = args.getArgumentValue("--route", "-r", route);
