@@ -3,7 +3,11 @@ package com.ociweb.gl.impl.http.server;
 import com.ociweb.gl.api.HTTPServerConfig;
 import com.ociweb.gl.impl.BridgeConfigStage;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
+import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
+import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeConfigManager;
 
 public class HTTPServerConfigImpl implements HTTPServerConfig {
 	private String defaultHostPath = "";
@@ -17,8 +21,10 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	private TLSCertificates serverTLS;
 	private BridgeConfigStage configStage = BridgeConfigStage.Construction;
 	private int maxRequestSize = 1<<9;//default of 512 bytes
+	private final PipeConfigManager pcm;
 	
-	public HTTPServerConfigImpl(int bindPort) {
+	
+	public HTTPServerConfigImpl(int bindPort, PipeConfigManager pcm) {
 		this.bindPort = bindPort;
 		if (bindPort<=0 || (bindPort>=(1<<16))) {
 			throw new UnsupportedOperationException("invalid port "+bindPort);
@@ -28,6 +34,7 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 
 		this.bindHost = null;
 		this.maxConnectionBits = 12;
+		this.pcm = pcm;
 	}
 
 	public void beginDeclarations() {
@@ -157,6 +164,33 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	public void finalizeDeclareConnections() {
 		this.bindHost = NetGraphBuilder.bindHost(this.bindHost);
 		this.configStage = BridgeConfigStage.DeclareBehavior;
+	}
+	
+	@Override
+	public ServerPipesConfig buildServerConfig(int tracks) {
+		
+		int incomingMsgFragCount = defaultComputedChunksCount();
+
+		pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
+				Math.max(incomingMsgFragCount-2, 2), 
+				getMaxRequestSize()));
+				
+		return new ServerPipesConfig(
+				isTLS(),
+				getMaxConnectionBits(),
+		   		tracks,
+				getEncryptionUnitsPerTrack(),
+				getConcurrentChannelsPerEncryptUnit(),
+				getDecryptionUnitsPerTrack(),
+				getConcurrentChannelsPerDecryptUnit(),				
+				//one message might be broken into this many parts
+				incomingMsgFragCount,
+				getMaxRequestSize());
+		
+	}
+
+	private int defaultComputedChunksCount() {
+		return 2+(getMaxRequestSize()/1500);
 	}
 
 	public int getMaxRequestSize() {
