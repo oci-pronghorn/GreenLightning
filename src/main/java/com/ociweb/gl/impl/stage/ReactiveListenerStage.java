@@ -337,11 +337,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	
     	String behaviorName = null==listener ? "Unknown Behavior" :
     		listener.getClass().getSimpleName().trim();
-    	
-    	if (behaviorName.length()>0) {
-    		parent = parent.substring(getClass().getSimpleName().length(), parent.length());    		
-    	}
-    	
+     	
 		return behaviorName+parent+toStringDetails;    	
     }
     
