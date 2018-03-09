@@ -337,12 +337,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
 	protected String toStringDetails = "\n";
     public String toString() {
-    	String parent = super.toString();
-    	
-    	String behaviorName = null==listener ? "Unknown Behavior" :
-    		listener.getClass().getSimpleName().trim();
-     	
-		return behaviorName+parent+toStringDetails;    	
+    	return super.toString()+toStringDetails;
     }
     
     public final void setTimeEventSchedule(long rate, long start) {
