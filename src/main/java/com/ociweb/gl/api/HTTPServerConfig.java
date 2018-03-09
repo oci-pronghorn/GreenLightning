@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
 
 public interface HTTPServerConfig {
@@ -35,5 +36,7 @@ public interface HTTPServerConfig {
 	String defaultHostPath();
 	
 	int getMaxRequestSize();
+		
+	ServerPipesConfig buildServerConfig(int tracks);
 }
 
