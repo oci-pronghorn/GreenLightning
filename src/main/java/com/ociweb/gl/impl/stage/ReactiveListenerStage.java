@@ -460,14 +460,18 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				processTimeEvents(timeListener, timeTrigger);            
 			}
 	        
-	        //behaviors
-	        consumer.process(this);
-	        
-	        //all transducers
-	        int j = consumers.size();
-	        while(--j>=0) {
-	        	consumers.get(j).process(this);
-	        }
+	        //NOTE: still testing this idea 2018/03/09
+	        int repeat = Math.max(1, inputPipes.length);
+	        do {
+		        //behaviors
+		        consumer.process(this);
+		        
+		        //all transducers
+		        int j = consumers.size();
+		        while(--j>=0) {
+		        	consumers.get(j).process(this);
+		        }
+	        } while (--repeat>0);
 	  
     	} else {
     		//shutdown in progress logic
@@ -607,9 +611,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	
 	            	 final short statusId = reader.readShort();	
-				     reader.setParseDetails(headerToPositionTable, 
-				    		                headerTrieParser, 
-				    		                builder.httpSpec);
+				     reader.setParseDetails(builder.httpSpec);
 
 				     reader.setStatusCode(statusId);
 				     
@@ -619,12 +621,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				     
             	 	            	 
 	            	 reader.setFlags(flags);
-	        
-	            	 
-	            	 //TODO: map calls to diferent methods?
-	            	 //      done by status code?
-	            	 //TODO: can we get the call latency??
-	            	 
+	 
 	            	 if (!((HTTPResponseListener)listener).responseHTTP(reader)) {
 	            		 Pipe.resetTail(p);
 	            		 //logger.info("CONTINUE LATER");
