@@ -19,7 +19,7 @@ public class MQTTClient implements GreenApp {
 		
 		//TODO: the base is wrong for a script since they do not match total...
 		
-		ScriptedNonThreadScheduler.debugStageOrder = false;
+		ScriptedNonThreadScheduler.debugStageOrder = null;
 	
 		
 		//final String brokerHost = "127.0.0.1"; //1883
