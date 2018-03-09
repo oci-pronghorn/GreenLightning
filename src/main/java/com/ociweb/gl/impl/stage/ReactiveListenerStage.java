@@ -531,8 +531,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
    	    	
     	    	  //logger.trace("route path selected {}",pathId);	    	  
     	    	  
- 				  reader.setParseDetails( builder.routeExtractionParser(pathId), 
+ 				  reader.setParseDetails( builder.routeExtractionParser(pathId),
+ 						                  builder.routeHeaderToPositionTable(pathId), 
  						                  builder.routeExtractionParserIndexCount(pathId),
+ 						                  builder.routeHeaderTrieParser(pathId),
  						                  builder.httpSpec,
  						                  builder.routerConfig()
  						                 );
