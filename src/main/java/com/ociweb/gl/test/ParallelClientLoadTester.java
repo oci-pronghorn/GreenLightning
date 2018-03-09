@@ -46,6 +46,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private static final String PROGRESS_NAME  = "progessor";
 	private static final String ENDERS_TOPIC   = "end";
 	private static final String PROGRESS_TOPIC = "progress";
+	
+	private static final int PUB_MSGS      = 8000;
+	private static final int PUB_MSGS_SIZE = 48;
+	
 
 	public ParallelClientLoadTester(
 			int cyclesPerTrack,
@@ -179,7 +183,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private final GreenCommandChannel cmd3;
 
 		TrackCompletion(GreenRuntime runtime) {
-			this.cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+			this.cmd3 = runtime.newCommandChannel();
+			this.cmd3.ensureDynamicMessaging(1, PUB_MSGS_SIZE);
 		}
 
 		@Override
@@ -232,7 +237,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private long lastTime = 0;
 
 		Progress(GreenRuntime runtime) {
-			this.cmd4 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+			this.cmd4 = runtime.newCommandChannel();
+			this.cmd4.ensureDynamicMessaging(PUB_MSGS, PUB_MSGS_SIZE);
 		}
 
 		@Override
@@ -296,7 +302,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private final GreenCommandChannel cmd1;
 
 		TrackStartup(GreenRuntime runtime) {
-			this.cmd1 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+			this.cmd1 = runtime.newCommandChannel();
+			this.cmd1.ensureDynamicMessaging(PUB_MSGS, PUB_MSGS_SIZE);
 		}
 
 		@Override
@@ -359,7 +366,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
 			countDown = cyclesPerTrack;
-			cmd3 = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+			cmd3 = runtime.newCommandChannel();
+			cmd3.ensureDynamicMessaging(PUB_MSGS, PUB_MSGS_SIZE);
 			if (durationNanos > 0) {
 				cmd3.ensureDelaySupport();
 			}

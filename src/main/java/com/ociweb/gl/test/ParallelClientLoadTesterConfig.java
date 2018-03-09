@@ -14,7 +14,7 @@ public class ParallelClientLoadTesterConfig {
     public long responseTimeoutNS = 100_000_000;
     public Integer telemetryPort = null;
     public String telemetryHost = null;
-    public Long rate = null;
+    public Long rate = new Long(2000);//very fast rate
 	public boolean ensureLowLatency=false;
 	public int simultaneousRequestsPerTrack = 0; // as power of 2. 0 == serial requests opn a track
 

@@ -26,15 +26,7 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
 
         System.out.println();
         etr.report(System.out).append("\n");
-        System.out.println();
-        
-        if (totalTimeSumNS>0) {
-        	long requestsPerSecond =  (1_000_000_000L*(long)totalMessages)/totalTimeSumNS;
-        	System.out.println(requestsPerSecond+" requests per second per tack");
-        } else {
-        	System.out.println("warning: zero total time");
-        }
-        
+             
         if (totalMessages>0) {
         	long avgLatencyNS = totalTimeSumNS/(long)totalMessages;
         	Appendables.appendNearestTimeUnit(System.out, avgLatencyNS).append(" average\n");
