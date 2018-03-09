@@ -176,8 +176,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         if (null!=nameId) {
         	List<PrivateTopic> privateTopicList = builder.getPrivateTopicsFromTarget(nameId);
      
-			this.behaviorName = builder.validateUniqueName(nameId, parallelInstance);        
-			GraphManager.addNota(graphManager, GraphManager.STAGE_NAME, this.behaviorName, this);
+			this.behaviorName = builder.validateUniqueName(nameId, parallelInstance);  
+			
+			logger.info("setting stage name: {}",this.behaviorName);
+			
+			GraphManager.addNota(graphManager, GraphManager.STAGE_NAME,
+					             this.behaviorName, this);
         	
         	//only lookup topics if the builder knows of some
         	if (!privateTopicList.isEmpty()) {
@@ -527,10 +531,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
    	    	
     	    	  //logger.trace("route path selected {}",pathId);	    	  
     	    	  
- 				  reader.setParseDetails( builder.routeExtractionParser(pathId),
- 						                  builder.routeHeaderToPositionTable(pathId), 
+ 				  reader.setParseDetails( builder.routeExtractionParser(pathId), 
  						                  builder.routeExtractionParserIndexCount(pathId),
- 						                  builder.routeHeaderTrieParser(pathId),
  						                  builder.httpSpec,
  						                  builder.routerConfig()
  						                 );
@@ -611,7 +613,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	
 	            	 final short statusId = reader.readShort();	
-				     reader.setParseDetails(builder.httpSpec);
+				     reader.setParseDetails(headerToPositionTable, 
+				    		                headerTrieParser, 
+				    		                builder.httpSpec);
 
 				     reader.setStatusCode(statusId);
 				     
