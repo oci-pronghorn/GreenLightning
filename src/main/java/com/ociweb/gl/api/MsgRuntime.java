@@ -562,17 +562,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	private void buildGraphForServer(MsgApp app) {
 
 		HTTPServerConfig config = builder.getHTTPServerConfig();
-		ServerPipesConfig serverConfig = new ServerPipesConfig(
-				config.isTLS(),
-				config.getMaxConnectionBits(),
-		   		builder.parallelTracks(),
-				config.getEncryptionUnitsPerTrack(),
-				config.getConcurrentChannelsPerEncryptUnit(),
-				config.getDecryptionUnitsPerTrack(),
-				config.getConcurrentChannelsPerDecryptUnit(),				
-				//one message might be broken into this many parts
-				2+(config.getMaxRequestSize()/1500),
-				config.getMaxRequestSize());
+		
+		ServerPipesConfig serverConfig = config.buildServerConfig(builder.parallelTracks());
 
 		ServerCoordinator serverCoord = new ServerCoordinator(
 				config.getCertificates(),
@@ -609,7 +600,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		buildLastHalfOfGraphForServer(app, serverConfig, serverCoord, routerCount, 
 				                      acks, handshakeIncomingGroup, planIncomingGroup);
 	}
-
 
 	private void buildLastHalfOfGraphForServer(MsgApp app, ServerPipesConfig serverConfig,
 			ServerCoordinator serverCoord, final int routerCount, Pipe[] acks, 

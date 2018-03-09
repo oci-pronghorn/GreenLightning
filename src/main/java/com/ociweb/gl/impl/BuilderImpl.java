@@ -72,10 +72,7 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class BuilderImpl implements Builder {
 
-	//NB: The Green Lightning maximum header size 64K is defined here HTTP1xRouterStage.MAX_HEADER
-	protected static final int MAXIMUM_INCOMMING_REST_SIZE = 2*HTTP1xRouterStage.MAX_HEADER;
-	//  This has a large impact on memory usage but also on performance volume
-	protected static final int MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT = 1<<6;
+
 	protected static final int MINIMUM_TLS_BLOB_SIZE = 1<<15;
 
 	protected long timeTriggerRate;
@@ -252,7 +249,7 @@ public class BuilderImpl implements Builder {
 	@Override
 	public HTTPServerConfig useHTTP1xServer(int bindPort) {
 		if (server != null) throw new RuntimeException("Server already enabled");
-		this.server = new HTTPServerConfigImpl(bindPort);
+		this.server = new HTTPServerConfigImpl(bindPort,pcm);
 		server.beginDeclarations();
 		return server;
 	}
@@ -383,10 +380,6 @@ public class BuilderImpl implements Builder {
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
 		this.args = new ArgumentParser(args);
 		
-		this.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
-									                   MINIMUM_INCOMMING_REST_REQUESTS_IN_FLIGHT, 
-									                   MAXIMUM_INCOMMING_REST_SIZE));
-				
 		int requestQueue = 4;
 		this.pcm.addConfig(new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,
 				                                    requestQueue,

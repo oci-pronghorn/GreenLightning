@@ -1,7 +1,5 @@
 package com.ociweb.gl.api;
 
-import static com.ociweb.gl.api.TelemetryConfig.defaultTelemetryPort;
-
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
