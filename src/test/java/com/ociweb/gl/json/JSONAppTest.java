@@ -10,11 +10,6 @@ import com.ociweb.gl.api.GreenRuntime;
 public class JSONAppTest {
 	
 	@Test
-	public void emptyTest() {
-		assertTrue(true);
-	}
-	
-    @Ignore //rebuilding JSON parse
     public void testApp() {
     	//HTTP1xRouterStage.showHeader = true;
         GreenRuntime serverRuntime = GreenRuntime.run(new JSONServerApp());

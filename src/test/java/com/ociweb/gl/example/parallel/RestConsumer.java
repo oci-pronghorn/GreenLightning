@@ -10,8 +10,6 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class RestConsumer implements RestListener {
 	
-	private static final byte[] TRACK = "track".getBytes();
-	
 	private GreenCommandChannel cmd2;
 	
 	private HTTPRequestReader requestW;
@@ -22,7 +20,8 @@ public class RestConsumer implements RestListener {
 		public void write(ChannelWriter writer) {
 			writer.writePackedLong(requestW.getConnectionId());
 			writer.writePackedLong(requestW.getSequenceCode());	
-			writer.writePackedLong(requestW.getInt(TRACK));
+			long track = 0;//unknown
+			writer.writePackedLong(track);
 		}
 		
 	};
