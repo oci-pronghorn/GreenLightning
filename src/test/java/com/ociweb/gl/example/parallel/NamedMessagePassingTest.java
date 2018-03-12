@@ -31,7 +31,7 @@ public class NamedMessagePassingTest {
 				200_000);
 
 		ParallelClientLoadTesterConfig config2 = 
-				new ParallelClientLoadTesterConfig(16, 100_000, 8080, "/test", telemetry);
+				new ParallelClientLoadTesterConfig(16, 10_000, 8080, "/test", telemetry);
 		
 		config2.simultaneousRequestsPerTrackBits  = 5;
 		config2.responseTimeoutNS = 1_000_000_000L;
