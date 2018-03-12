@@ -194,7 +194,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 					                int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10);
 	                
 					                
-					                long connectionId = ccm.lookup(hostBack, hostPos, hostLen, hostMask, port, userId);	
+					                long connectionId = ccm.lookup(ccm.lookupHostId(hostBack, hostPos, hostLen, hostMask), port, userId);	
 					                
 					                ClientConnection clientConnection;
 					                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId) ) ) {
@@ -220,7 +220,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 				            		int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_SESSION_10);
 					                int port = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1);
 					                
-					                long connectionId = ccm.lookup(hostBack, hostPos, hostLen, hostMask, port, userId);	
+					                long connectionId = ccm.lookup(ccm.lookupHostId(hostBack, hostPos, hostLen, hostMask), port, userId);	
 					                //openConnection(activeHost, port, userId, outIdx);
 					                
 					                ClientConnection clientConnection;
@@ -288,7 +288,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 				                final int port = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_PORT_1);
 				                final int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_SESSION_10);
 				                
-				                long connectionId = ccm.lookup(hostBack, hostPos, hostLen, hostMask, port, userId);	
+				                long connectionId = ccm.lookup(ccm.lookupHostId(hostBack, hostPos, hostLen, hostMask), port, userId);	
 				                //only close if we find a live connection
 				                if ((-1 != connectionId)) {
 				                	ClientConnection connectionToKill = (ClientConnection)ccm.connectionForSessionId(connectionId);
@@ -377,7 +377,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	
 	//has side effect of storing the active connection as a member so it need not be looked up again later.
 	public boolean hasOpenConnection(Pipe<ClientHTTPRequestSchema> requestPipe, 
-											Pipe<NetPayloadSchema>[] output, ClientCoordinator ccm, int activePipe) {
+									 Pipe<NetPayloadSchema>[] output, 
+									 ClientCoordinator ccm, int activePipe) {
 		
 		if (PipeReader.peekMsg(requestPipe, -1)) {
 			return com.ociweb.pronghorn.network.http.HTTPClientRequestStage.hasRoomForEOF(output);
@@ -397,10 +398,10 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		if (ClientHTTPRequestSchema.MSG_FASTHTTPGET_200 == msgIdx) {
 			
 			connectionId = PipeReader.peekLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20);
-			assert(connectionId == ccm.lookup(mCharSeq, port, sessionId));
+			//assert(connectionId == ccm.lookup(mCharSeq, port, sessionId));
 			
 		} else {			
-			connectionId = ccm.lookup(mCharSeq, port, sessionId);			
+			connectionId = ccm.lookup(ccm.lookupHostId(mCharSeq), port, sessionId);			
 		}
 		
 		ClientConnection activeConnection = ClientCoordinator.openConnection(

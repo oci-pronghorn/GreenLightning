@@ -13,6 +13,7 @@ import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.PublishPrivateTopics;
+import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
@@ -561,13 +562,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		//get the cached connection ID so we need not deal with the host again
 		/////////////////////
 		if (session.getConnectionId()<0) {
-			long id = builder.getClientCoordinator().lookup(
-					    session.hostBytes, 0, session.hostBytes.length, Integer.MAX_VALUE,
-					    session.port, session.sessionId);
+			ClientCoordinator r = builder.getClientCoordinator();
+			final long id = r.lookup(r.lookupHostId(session.host), session.port, session.sessionId);
 		    if (id>=0) {
 		    	session.setConnectionId(id);
 		    }
-		}
+			
+			
+		} 
 
 		if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe))) {
 
@@ -1129,6 +1131,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 			return true;
 		} else {
+			//TODO: make this an assert?
+			logger.info("warning, private topic is queue is not long enough, set desired value in definePrivateTopic method");
 			return false;
 		}
 	}
@@ -1415,15 +1419,25 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		Pipe<ServerResponseSchema> pipe = netResponse.length>1 ? netResponse[parallelIndex] : netResponse[0];
 		
 		//logger.trace("try new publishHTTPResponse");
-		if (!Pipe.hasRoomForWrite(pipe)) {
+		if (!Pipe.hasRoomForWrite(pipe, 2*Pipe.sizeOf(pipe, ServerResponseSchema.MSG_TOCHANNEL_100))) {
 			return false;
 		}		
+		//simple check to ensure we have room.
+        assert(Pipe.workingHeadPosition(pipe)<(Pipe.tailPosition(pipe)+ pipe.sizeOfSlabRing  /*    pipe.slabMask*/  )) : "Working position is now writing into published(unreleased) tail "+
+        Pipe.workingHeadPosition(pipe)+"<"+Pipe.tailPosition(pipe)+"+"+pipe.sizeOfSlabRing /*pipe.slabMask*/+" total "+((Pipe.tailPosition(pipe)+pipe.slabMask));
+
 
 		///////////////////////////////////////
 		//message 1 which contains the headers
 		//////////////////////////////////////		
 		holdEmptyBlock(connectionId, sequenceNo, pipe);
-				
+	
+		
+		//check again because we have taken 2 spots now
+        assert(Pipe.workingHeadPosition(pipe)<(Pipe.tailPosition(pipe)+ pipe.sizeOfSlabRing  /*    pipe.slabMask*/  )) : "Working position is now writing into published(unreleased) tail "+
+        Pipe.workingHeadPosition(pipe)+"<"+Pipe.tailPosition(pipe)+"+"+pipe.sizeOfSlabRing /*pipe.slabMask*/+" total "+((Pipe.tailPosition(pipe)+pipe.slabMask));
+
+		
 		//////////////////////////////////////////
 		//begin message 2 which contains the body
 		//////////////////////////////////////////

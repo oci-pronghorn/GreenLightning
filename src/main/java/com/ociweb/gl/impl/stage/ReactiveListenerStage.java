@@ -178,7 +178,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
      
 			this.behaviorName = builder.validateUniqueName(nameId, parallelInstance);  
 			
-			logger.info("setting stage name: {}",this.behaviorName);
+			logger.trace("setting stage name: {}",this.behaviorName);
 			
 			GraphManager.addNota(graphManager, GraphManager.STAGE_NAME,
 					             this.behaviorName, this);
