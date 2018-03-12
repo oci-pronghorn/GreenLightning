@@ -3,21 +3,28 @@ package com.ociweb.gl.api;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import com.ociweb.json.JSONExtractor;
+import com.ociweb.pronghorn.network.ClientCoordinator;
+import com.ociweb.pronghorn.util.TrieParser;
+import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class ClientHostPortInstance {
 
 	public static AtomicInteger sessionCounter = new AtomicInteger(0);
 	
 	public final String host;
+	public final int hostId;
 	public final byte[] hostBytes;
 	public final int port;
 	public final int sessionId;
 	public final int uniqueId;
 	
 	public final JSONExtractor extractor;
-		
+	
 	//cache
 	private long connectionId=-1;
+
+	
+	
 	
 	public String toString() {
 		return host+":"+port;
@@ -34,17 +41,27 @@ public class ClientHostPortInstance {
 	public ClientHostPortInstance(String host, int port, JSONExtractor extractor, int sessionId) {
 		this.uniqueId = sessionCounter.incrementAndGet();
 		this.host = host;
-		this.hostBytes = host.getBytes();
 		this.port = port;
+		if (port<=0 || port>65535) {
+			throw new UnsupportedOperationException("Invalid port "+port+" must be postive and <= 65535");
+		}
 		this.sessionId = sessionId;
 		this.extractor = null;
+		this.hostId = ClientCoordinator.registerDomain(host);
+		this.hostBytes = host.getBytes();
+
 	}
+
 	
 	public ClientHostPortInstance(String host, int port, JSONExtractor extractor) {
 		this.uniqueId = sessionCounter.incrementAndGet();
 		this.host = host;
+		this.hostId = ClientCoordinator.registerDomain(host);
 		this.hostBytes = host.getBytes();
 		this.port = port;
+		if (port<=0 || port>65535) {
+			throw new UnsupportedOperationException("Invalid port "+port+" must be postive and <= 65535");
+		}
 		this.sessionId = uniqueId;
 		this.extractor = null;
 	}
