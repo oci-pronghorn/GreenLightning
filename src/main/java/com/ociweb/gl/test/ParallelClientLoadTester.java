@@ -149,7 +149,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			builder.setDefaultRate(rate);
 		}
 
-		builder.definePrivateTopic(Math.max(8, maxInFlight) ,100, CALL_TOPIC, RESPONDER_NAME, RESPONDER_NAME);
+		builder.definePrivateTopic(2+Math.max(8, maxInFlight) ,0, CALL_TOPIC, RESPONDER_NAME, RESPONDER_NAME);
 
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
 		builder.defineUnScopedTopic(PROGRESS_TOPIC);
@@ -185,7 +185,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		Progress(GreenRuntime runtime) {
 			this.cmd4 = runtime.newCommandChannel();
-			this.cmd4.ensureDynamicMessaging(PUB_MSGS, PUB_MSGS_SIZE);
+			this.cmd4.ensureDynamicMessaging(Math.max(PUB_MSGS, maxInFlight), PUB_MSGS_SIZE);
 		}
 
 		@Override
