@@ -174,13 +174,29 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		this.user = user;
 		this.pass = pass;
 
-		//assert(null != user);
-		//assert(null != pass);
+		if (null==user) {
+			throw new UnsupportedOperationException("User must not be null");
+		}
+		if (null==pass) {
+			throw new UnsupportedOperationException("Pass must not be null");
+		}
+		if (null==certificates) {
+			throw new UnsupportedOperationException("Certificates must not be null");
+		}
+		
+		return this;
+	}
+
+	public MQTTBridge authentication(TLSCertificates certificates) {
+		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
+
+		logger.warn("Security Risk: User and Pass should be used when using certificates.");
+		
 		assert(null != certificates);
 
 		return this;
 	}
-
+	
 	@Override
 	public MQTTBridge subscriptionQoS(MQTTQoS qos) {
 		subscriptionQoS = qos.getSpecification();
@@ -242,6 +258,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			final byte totalConnectionsInBits = 2; //only 4 brokers
 			final short maxPartialResponses = 1;
 
+			if (null == user || null == pass) {
+				logger.warn("no user or pass has been set for this MQTT client connection");
+			}
+			
 			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, certificates,
 					                              maxInFlight,
 					                              maximumLenghOfVariableLengthFields, 
