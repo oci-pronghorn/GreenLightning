@@ -291,7 +291,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private long totalTime;
 		
 		private final GreenCommandChannel cmd2;
-		private final String header;
+		private final HeaderWritable header;
 		private final Writable writer;
 
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
@@ -305,8 +305,25 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		
 			this.cmd2 = runtime.newCommandChannel();
 		
+			
+			
+//			String.format("%s%s\r\n", 
+//			              HTTPHeaderDefaults.CONTENT_TYPE.writingRoot(),
+			//            contentType.contentType())
+			
+			//hack test for now.
 			this.header = contentType != null ?
-					String.format("%s%s\r\n", HTTPHeaderDefaults.CONTENT_TYPE.writingRoot(), contentType.contentType()) : null;
+					new HeaderWritable() {
+						@Override
+						public void write(HeaderWriter writer) {
+							writer.write(HTTPHeaderDefaults.CONTENT_TYPE,
+									     contentType.contentType());
+						}
+					}				
+					
+					: null;
+					
+					
 			this.writer = post != null ? post.get() : null;
 
 			if (post != null) {

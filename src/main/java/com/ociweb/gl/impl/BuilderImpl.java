@@ -10,10 +10,23 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.ociweb.gl.api.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.ArgumentParser;
+import com.ociweb.gl.api.Behavior;
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.ClientHostPortInstance;
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.HTTPClientConfig;
+import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPServerConfig;
+import com.ociweb.gl.api.ListenerTransducer;
+import com.ociweb.gl.api.MsgCommandChannel;
+import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.NetResponseWriter;
+import com.ociweb.gl.api.TelemetryConfig;
+import com.ociweb.gl.api.TimeTrigger;
 import com.ociweb.gl.api.transducer.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.transducer.PubSubListenerTransducer;
 import com.ociweb.gl.api.transducer.RestListenerTransducer;
@@ -46,7 +59,6 @@ import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.http.CompositePath;
-import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
@@ -676,7 +688,7 @@ public class BuilderImpl implements Builder {
 	@Override
 	public final void limitThreads(int threadLimit) {
 		
-		if (telemetry != null) {
+		if (telemetry != null && threadLimit>0 && threadLimit<64) {
 			//must ensure telemetry has the threads it needs.
 			threadLimit+=2; 
 		}
@@ -785,7 +797,7 @@ public class BuilderImpl implements Builder {
 		this.telemetry = new TelemetryConfigImpl(host, port);
 		this.telemetry.beginDeclarations();
 		
-		if (threadLimit>0) {
+		if (threadLimit>0 && threadLimit>0 && threadLimit<64) {
 			//we must increase the thread limit to ensure telemetry is not started
 			threadLimit += 2;			
 		}
@@ -930,19 +942,8 @@ public class BuilderImpl implements Builder {
 			int responseQueue = 10;
 			
 			//must be adjusted together
-			int outputsCount = 1; //count of pipes to channel writer
+			int outputsCount = 8; //Multipler per session for total connections ,count of pipes to channel writer
 			int clientWriters = 1; //count of channel writer stages
-			
-			//TODO: delete this block if this works, these checks where here before we removed cops.
-//			if (masterGoOut[IDX_NET].length != masterAckIn[IDX_NET].length) {
-//				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+masterAckIn[IDX_NET].length);
-//			}
-//			if (masterGoOut[IDX_NET].length != netRequestPipes.length) {
-//				throw new UnsupportedOperationException(masterGoOut[IDX_NET].length+"!="+netRequestPipes.length);
-//			}
-//			
-//			assert(masterGoOut[IDX_NET].length == masterAckIn[IDX_NET].length);
-//			assert(masterGoOut[IDX_NET].length == netRequestPipes.length);
 
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					
@@ -954,11 +955,20 @@ public class BuilderImpl implements Builder {
 			while (--r>=0) {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}
-			HTTPClientRequestTrafficStage requestStage = new HTTPClientRequestTrafficStage(gm, runtime, this, ccm, netRequestPipes, masterGoOut[IDX_NET], masterAckIn[IDX_NET], clientRequests);
+			
+			//TODO: if the go pipes are not used then create the simpler stage
+//			new HTTPClientRequestStage(gm, ccm, netRequestPipes, clientRequests);
+		
+			
+			new HTTPClientRequestTrafficStage(
+					gm, runtime, this, 
+					ccm, netRequestPipes, 
+					masterGoOut[IDX_NET], masterAckIn[IDX_NET], 
+					clientRequests);
 
 
 			int releaseCount = 1024;
-			int writeBufferMultiplier = 20;
+			int writeBufferMultiplier = 30;
 			int responseUnwrapCount = 2;
 			int clientWrapperCount = 2;
 	

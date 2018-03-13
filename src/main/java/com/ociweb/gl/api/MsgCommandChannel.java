@@ -543,17 +543,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
             assert(exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
         }
     }
+    //TODO: update the httpRequest to use the low level API.
  
     public boolean httpGet(ClientHostPortInstance session, CharSequence route) {
-    	return httpGet(session,route,"");
+    	return httpGet(session,route,null);
     }
     
-    //TODO: update the httpRequest to use the low level API.
     
-	public boolean httpGet(ClientHostPortInstance session, CharSequence route, CharSequence headers) {
-	
-		assert(headers==null || 0==headers.length() || headers.toString().endsWith("\r\n")) : "Invalid header values, must be absent, zero length or present. When present each header must end with \\r\\n";
-		
+	public boolean httpGet(ClientHostPortInstance session, CharSequence route, HeaderWritable headers) {
+
 		int routeId = session.uniqueId;
 		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
@@ -584,7 +582,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		    		PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, session.hostBytes);
 		    		
 		    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, route);
-					PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7, headers);
+					
+					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(httpRequest);
+				    DataOutputBlobWriter.openField(hw);
+				    if (null!=headers) {
+				    	headers.write(headerWriter.target(hw));
+				    }
+				    hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7);
+					
 					PipeWriter.publishWrites(httpRequest);
 					
 					publishGo(1, builder.netIndex(), this);
@@ -601,7 +606,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		    		PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HOST_2, session.hostBytes);
 		    		PipeWriter.writeLong(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20, session.getConnectionId());
 		    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PATH_3, route);
-					PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HEADERS_7, headers);
+
+					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(httpRequest);
+				    DataOutputBlobWriter.openField(hw);
+				    if (null!=headers) {
+				    	headers.write(headerWriter.target(hw));
+				    }
+				    hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HEADERS_7);
+										
 					PipeWriter.publishWrites(httpRequest);
 					
 					publishGo(1, builder.netIndex(), this);
@@ -635,12 +647,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return false;
 	}
 	
-	public boolean httpPost(ClientHostPortInstance session, CharSequence route, Writable payload) {
-		return httpPost(session, route, "", payload);
-	}
+	private final HeaderWriter headerWriter = new HeaderWriter();//used in each post call.
 	
+	public boolean httpPost(ClientHostPortInstance session, CharSequence route, Writable payload) {
+		return httpPost(session, route, null, payload);
+	}	
     
-	public boolean httpPost(ClientHostPortInstance session, CharSequence route, CharSequence headers, Writable payload) {
+	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		
 		int routeId = session.uniqueId;
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
@@ -656,10 +669,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, session.port);
 			PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, session.hostBytes);
 			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
-    		PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7, headers);
-    				    
-		    PayloadWriter<ClientHTTPRequestSchema> pw = (PayloadWriter<ClientHTTPRequestSchema>) Pipe.outputStream(httpRequest);
 
+			DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(httpRequest);
+		    DataOutputBlobWriter.openField(hw);
+		    if (null!=headers) {
+		    	headers.write(headerWriter.target(hw));
+		    }
+		    hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7);
+			
+		    DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(httpRequest);
 		    DataOutputBlobWriter.openField(pw);
 		    payload.write(pw);
 		    pw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5);

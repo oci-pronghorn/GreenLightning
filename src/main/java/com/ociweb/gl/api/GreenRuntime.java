@@ -9,13 +9,21 @@ import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 
 public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	
-    public GreenRuntime() {
-        this(null);
+     public GreenRuntime() {
+        this(new String[0],null);
+     }
+     
+     public GreenRuntime(String name) {
+        this(new String[0],name);
      }
      
      public GreenRuntime(String[] args) {
-         super(args);
-      }
+         super(args,null);
+     }
+     
+     public GreenRuntime(String[] args, String name) {
+         super(args,name);
+     }
      
      public GreenCommandChannel newCommandChannel() { 
     	 return newCommandChannel(0);
@@ -41,7 +49,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
     }
     
 	public static GreenRuntime run(GreenApp app, String[] args) {
-		GreenRuntime runtime = new GreenRuntime(args);
+		GreenRuntime runtime = new GreenRuntime(args, app.getClass().getSimpleName());
  
     	app.declareConfiguration(runtime.getBuilder());
 	    GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
@@ -100,7 +108,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	}
 
 	public static boolean testUntilShutdownRequested(GreenApp app, long timeoutMS) {
-		GreenRuntime runtime = new GreenRuntime();
+		GreenRuntime runtime = new GreenRuntime(app.getClass().getSimpleName());
 		
 		ScriptedNonThreadScheduler s = test(app, runtime);
  
