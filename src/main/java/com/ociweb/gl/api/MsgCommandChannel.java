@@ -30,6 +30,7 @@ import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
+import com.ociweb.pronghorn.util.BloomFilter;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.field.MessageConsumer;
 
@@ -1112,6 +1113,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 			return true;
 		} else {
+			logPrivateTopicTooShort(token);
 			return false;
 		}
 	}
@@ -1149,13 +1151,25 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 			return true;
 		} else {
-			//TODO: make this an assert?
-			logger.info("warning, private topic is queue is not long enough, set desired value in definePrivateTopic method");
+			logPrivateTopicTooShort(token);
 			return false;
 		}
 	}
 	
-    public void presumePublishTopic(TopicWritable topic, Writable writable) {
+	
+	private final BloomFilter topicsTooShort = new BloomFilter(10000, .00001); //32K
+	
+    private void logPrivateTopicTooShort(int token) {
+    	String topic = publishPrivateTopics.getTopic(token);
+    	
+    	if (!topicsTooShort.mayContain(topic)) {    	
+    		logger.info("the private topic '{}' has become backed up, it may be too short. When it was defined it should be made to be longer.", topic);
+    		topicsTooShort.addValue(topic);
+    	} 
+		
+	}
+
+	public void presumePublishTopic(TopicWritable topic, Writable writable) {
     	presumePublishTopic(topic,writable,WaitFor.All);
     }        
     public void presumePublishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
