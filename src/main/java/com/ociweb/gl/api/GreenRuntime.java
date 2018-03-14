@@ -4,8 +4,10 @@ import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
+import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
+import com.ociweb.pronghorn.stage.scheduling.StageVisitor;
 
 public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	
@@ -155,7 +157,20 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
 	      //exportGraphDotFile();
 	    boolean reverseOrder = false;
-		runtime.setScheduler(new ScriptedNonThreadScheduler(runtime.gm, reverseOrder));
+		StageVisitor badPlayers = new StageVisitor(){
+			
+			byte[] seen = new byte[GraphManager.countStages(runtime.gm)+1];
+				
+			@Override
+			public void visit(PronghornStage stage) {
+				if (0==seen[stage.stageId]) {
+					seen[stage.stageId] = 1;
+					logger.warn("Slow or blocking stage detected, investigation required: {}",stage);
+				}
+			}
+			
+		};
+		runtime.setScheduler(new ScriptedNonThreadScheduler(runtime.gm, reverseOrder, badPlayers,null));
 		
 		return (ScriptedNonThreadScheduler) runtime.getScheduler();
 	}
