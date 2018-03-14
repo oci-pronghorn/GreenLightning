@@ -1031,6 +1031,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {
+		ClientCoordinator.registerDomain(host);		
 		if (maxInFlight>(1<<15)) {
 			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
 		}
