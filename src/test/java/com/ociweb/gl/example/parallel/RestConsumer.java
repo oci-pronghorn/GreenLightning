@@ -26,14 +26,21 @@ public class RestConsumer implements RestListener {
 		
 	};
 	public RestConsumer(GreenRuntime runtime) {		
-		cmd2 = runtime.newCommandChannel(MsgCommandChannel.USE_DELAY);		
-		cmd2.ensureDynamicMessaging();	
+		cmd2 = runtime.newCommandChannel();		
+		cmd2.ensureDynamicMessaging();
+		cmd2.ensureHTTPServerResponse();
 	
 	}
 
 
 	@Override
 	public boolean restRequest(final HTTPRequestReader request) {
+		
+		if (!( request.isVerbPost() || request.isVerbGet() )) {
+			cmd2.publishHTTPResponse(request, 404);
+		}
+		
+		
 		requestW = request;
 		return cmd2.publishTopic("/send/200", w);
 

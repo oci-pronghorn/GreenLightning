@@ -48,7 +48,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		//since they require a router to manage the interTrack communication.	
 		///////////////////////////
 				
-		builder.parallelTracks(2);
+		builder.parallelTracks(1);
 		
 		
 		// "{\"key1\":\"value\",\"key2\":123}";
@@ -65,12 +65,11 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		builder.definePrivateTopic("/send/200", "consumer", "responder");
 		builder.usePrivateTopicsExclusively();
 
-		builder.setDefaultRate(8000);
 	}
 
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
-		runtime.setEnsureLowLatency(true);
+		runtime.setEnsureLowLatency(false);//must be false for high volume
 	//	runtime.addPubSubListener("watcher",new Watcher(runtime))
 		//       .addSubscription("/test/gobal");
 	}
