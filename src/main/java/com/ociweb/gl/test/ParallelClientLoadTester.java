@@ -298,7 +298,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			this.track = track;
 			countDown = cyclesPerTrack;
 			cmd3 = runtime.newCommandChannel();
-			cmd3.ensureDynamicMessaging(Math.max(maxInFlight,PUB_MSGS), PUB_MSGS_SIZE);
+			cmd3.ensureDynamicMessaging(Math.max(2+maxInFlight,PUB_MSGS), PUB_MSGS_SIZE);
 			if (durationNanos > 0) {
 				cmd3.ensureDelaySupport();
 			}
@@ -357,12 +357,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			int i = maxInFlight;
 			while (--i>=0) {
 								
-				while(!cmd3.publishTopic(CALL_TOPIC, WaitFor.None)) {
+				while(!cmd3.publishTopic(CALL_TOPIC)) {
 					//must publish this many to get the world moving
 					Thread.yield();
 					if ((System.currentTimeMillis()-now) > 10_000) {
-						System.err.println("Unable to send "+maxInFlight+" messages to start up.");
-						System.exit(-1);
+						System.err.println("Unable to send "+maxInFlight+" messages to start up.");			
+						cmd3.shutdown();
 					}
 				}
 				//must use message to startup the system
