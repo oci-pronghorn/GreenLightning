@@ -11,16 +11,18 @@ public class PublishPrivateTopics {
 	private TrieParser privateTopicsPublishTrie;
 	private Pipe<MessagePrivate>[] privateTopicPublishPipes;
 	private TrieParserReader privateTopicsTrieReader;
+	private String[] topics;
 
 	public PublishPrivateTopics(TrieParser privateTopicsPublishTrie,
 								Pipe<MessagePrivate>[] privateTopicPublishPipes,
-								TrieParserReader privateTopicsTrieReader
+								TrieParserReader privateTopicsTrieReader,
+								String[] topics
 			) {
 		
 		this.privateTopicsPublishTrie = privateTopicsPublishTrie;
 		this.privateTopicPublishPipes = privateTopicPublishPipes;
 		this.privateTopicsTrieReader = privateTopicsTrieReader;
-	
+		this.topics = topics;
 	}
 
 	public int count() {
@@ -43,6 +45,10 @@ public class PublishPrivateTopics {
 
 	public Pipe<MessagePrivate> getPipe(int index) {
 		return privateTopicPublishPipes[index];
+	}
+	
+	public String getTopic(int index) {
+		return topics[index];
 	}
 
 	public int getToken(CharSequence topic) {
