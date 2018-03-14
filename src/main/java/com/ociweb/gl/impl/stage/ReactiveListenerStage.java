@@ -215,17 +215,18 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	        if (!listIn.isEmpty()) {
 		        	        	
 	        	TrieParser privateTopicsPublishTrie;
-	        	Pipe<MessagePrivate>[] privateTopicPublishPipes;
 	        	TrieParserReader privateTopicsTrieReader;
 	        	
 	        	
 	        	int i = listIn.size();
 		        privateTopicsPublishTrie = new TrieParser(i,1,false,false,false);//a topic is case-sensitive
-		        privateTopicPublishPipes = new Pipe[i];
+		        Pipe<MessagePrivate>[] privateTopicPublishPipes = new Pipe[i];
+		        String[] topics = new String[i];
 		        while (--i >= 0) {
 		        	PrivateTopic topic = listIn.get(i);
 		        	//logger.info("set private topic for use {} {}",i,topic.topic);
 		        	privateTopicPublishPipes[i] = topic.getPipe(parallelInstance);
+		        	topics[i] = topic.topic;
 		        	privateTopicsPublishTrie.setUTF8Value(topic.topic, i);//to matching pipe index	
 		        }
 		        privateTopicsTrieReader = new TrieParserReader(0,true);
@@ -233,7 +234,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		        this.publishPrivateTopics =
 			        new PublishPrivateTopics(privateTopicsPublishTrie,
 							        		privateTopicPublishPipes,
-							        		privateTopicsTrieReader);
+							        		privateTopicsTrieReader,topics);
 		        
 	        } else {
 	        	this.publishPrivateTopics = null;
