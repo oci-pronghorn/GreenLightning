@@ -168,7 +168,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         this.inputPipes = inputPipes;
         this.outputPipes = outputPipes;       
         this.builder = builder;
-                                       
+                                  
+        //Just to be safe turn these off
+        this.supportsBatchedPublish = false;
+        this.supportsBatchedRelease = false;
+        /////////////////////////////////
+        
         this.states = builder.getStates();
         this.graphManager = graphManager;
 
