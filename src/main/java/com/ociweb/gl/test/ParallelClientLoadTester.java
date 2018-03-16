@@ -310,20 +310,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			this.track = track;
 			countDown = cyclesPerTrack;
 			cmd3 = runtime.newCommandChannel();
-			cmd3.ensureDynamicMessaging(Math.max(2+maxInFlight,PUB_MSGS), PUB_MSGS_SIZE);
+			cmd3.ensureDynamicMessaging(Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
 			if (durationNanos > 0) {
 				cmd3.ensureDelaySupport();
 			}
 		
-			this.cmd2 = runtime.newCommandChannel();
-		
-			
-			
-//			String.format("%s%s\r\n", 
-//			              HTTPHeaderDefaults.CONTENT_TYPE.writingRoot(),
-			//            contentType.contentType())
-			
-			//hack test for now.
+
 			this.header = contentType != null ?
 					new HeaderWritable() {
 						@Override
@@ -338,10 +330,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					
 			this.writer = post != null ? post.get() : null;
 
+			this.cmd2 = runtime.newCommandChannel();
 			if (post != null) {
-				cmd2.ensureHTTPClientRequesting(4, maxPayloadSize + 1024);
+				cmd2.ensureHTTPClientRequesting(2+maxInFlight, maxPayloadSize + 1024);
 			} else {
-				cmd2.ensureHTTPClientRequesting();
+				cmd2.ensureHTTPClientRequesting(2+maxInFlight, 46);
 			}
 			
 		}
@@ -350,16 +343,23 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			return makeCall();
 		}
 
+		private boolean lastMakeCallWasOk = true;
+		
 		private boolean makeCall() {
-			callTime[track][maxInFlightMask & inFlightHead[track]++] = System.nanoTime();
-
-			if (null==writer) {
-				return cmd2.httpGet(session[track], route);
-			} else if (header != null) {
-				return cmd2.httpPost(session[track], route, header, writer);
-			} else {
-				return cmd2.httpPost(session[track], route, writer);
+			//if not ok we have already done this and should not count a second time.
+			if (lastMakeCallWasOk) {
+				callTime[track][maxInFlightMask & inFlightHead[track]++] = System.nanoTime();
 			}
+			
+			if (null==writer) {
+				lastMakeCallWasOk = cmd2.httpGet(session[track], route);
+			} else if (header != null) {
+				lastMakeCallWasOk = cmd2.httpPost(session[track], route, header, writer);
+			} else {
+				lastMakeCallWasOk = cmd2.httpPost(session[track], route, writer);
+			}
+			
+			return lastMakeCallWasOk;
 		}
 
 		
