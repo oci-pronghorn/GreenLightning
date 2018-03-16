@@ -1,20 +1,31 @@
 package com.ociweb.gl.test;
 
-import com.ociweb.gl.api.*;
+import java.util.function.Supplier;
 
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.ClientHostPortInstance;
+import com.ociweb.gl.api.GreenAppParallel;
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.HTTPResponseReader;
+import com.ociweb.gl.api.HeaderWritable;
+import com.ociweb.gl.api.HeaderWriter;
+import com.ociweb.gl.api.PubSubMethodListener;
+import com.ociweb.gl.api.StartupListener;
+import com.ociweb.gl.api.TimeListener;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
-
-import java.util.Arrays;
-import java.util.function.Supplier;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class ParallelClientLoadTester implements GreenAppParallel {
     private final String route;
     private boolean insecureClient=true;
     private final int parallelTracks;
-    private final int cyclesPerTrack;
+    private final long cyclesPerTrack;
     private long durationNanos = 0;
     private final long responseTimeoutNS;
     private final Integer telemetryPort;
@@ -155,6 +166,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		builder.defineUnScopedTopic(PROGRESS_TOPIC);
 
 		if (responseTimeoutNS > 0) {
+			Appendables.appendNearestTimeUnit(System.out.append("Checking for timeouts at this rate: "), responseTimeoutNS).append('\n');
 			builder.setTimerPulseRate(responseTimeoutNS / 1_000_000);
 		}
 		
@@ -173,7 +185,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	}
 
 	private class Progress implements PubSubMethodListener, StartupListener {
-		private final int[] finished = new int[parallelTracks];
+		private final long[] finished = new long[parallelTracks];
 		private final int[] failures = new int[parallelTracks];
 		private final GreenCommandChannel cmd4;
 		private int lastPct = 0;
@@ -214,7 +226,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 						etr.add(elapsedTime[t]);
 					}
 
-                    int total = parallelTracks * cyclesPerTrack;
+                    long total = parallelTracks * cyclesPerTrack;
                     long duration = System.nanoTime() - startupTime;
                     long serverCallsPerSecond = (1_000_000_000L * total) / duration;
 
@@ -234,30 +246,30 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		
 		public boolean progressMessage(CharSequence topic, ChannelReader payload) {
 			int track = payload.readPackedInt();
-			int countDown = payload.readPackedInt();
+			long countDown = payload.readPackedLong();
 			int failed = payload.readPackedInt();
 			finished[track] = cyclesPerTrack - countDown;
 			failures[track] = failed;
 
 			int sumFail = 0;
-			int sumFinished = 0;
+			long sumFinished = 0;
 			int i = parallelTracks;
 			while (--i >= 0) {
 				sumFail += failures[i];
 				sumFinished += finished[i];
 			}
 
-			int totalRequests = cyclesPerTrack * parallelTracks;
-			int pctDone = (100 * sumFinished) / totalRequests;
-
+			long totalRequests = cyclesPerTrack * parallelTracks;
+			int pctDone = (int)((100L * sumFinished) / totalRequests);
+			assert(pctDone>=0);
+			
 			long now = 0;
 
 			//updates every half a second
 			if ((pctDone != lastPct && ((now = System.nanoTime()) - lastTime) > 500_000_000L)
-					|| 100 == pctDone) {
+					|| 100L == pctDone) {
 			    out.progress(pctDone, sumFail);
-			    
-			    
+			    			    
 				lastTime = now;
 				lastPct = pctDone;
 			}
@@ -286,7 +298,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private class TrackHTTPResponseListener implements HTTPResponseListener, TimeListener, StartupListener, PubSubMethodListener {
 		private final GreenCommandChannel cmd3;
 		private final int track;
-		private int countDown;
+		private long countDown;
 		private int failedResponse;
 		private long totalTime;
 		
@@ -388,40 +400,38 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if ((0xFFFF & countDown) == 0) {
 				cmd3.publishTopic(PROGRESS_TOPIC, writer-> {
 					writer.writePackedInt(track);
-					writer.writePackedInt(countDown);
+					writer.writePackedLong(countDown);
 					writer.writePackedInt(failedResponse);
-				}, WaitFor.None);
+				});
 			}
 
-			boolean result;
+			boolean isOk = true;
 			if (countDown > 0) {
 				if (durationNanos > 0) {
-					cmd3.delay(durationNanos);
+					isOk = cmd3.delay(durationNanos);
 				}
-				
-				result = cmd3.publishTopic(CALL_TOPIC, WaitFor.None);
-		
+				if (isOk) {
+					isOk = cmd3.publishTopic(CALL_TOPIC);
+				}
 			}
 			else {
 				if (1 == (maxInFlight+countDown)) {
 					//only end after all the inFlightMessages have returned.
-					result = cmd3.publishTopic(ENDERS_TOPIC, writer -> {
+					isOk = cmd3.publishTopic(ENDERS_TOPIC, writer -> {
 						writer.writePackedInt(track);
 						writer.writePackedInt(failedResponse);
 						writer.writePackedLong(totalTime);
-					}, WaitFor.None);
+					});
 					//System.err.println("publish end of "+track);
-				} else {
-					result = true;
-				}
+				} 
 			}
 
 			//upon failure should not count down
-			if (result) {
+			if (isOk) {
 				countDown--;
 			}
 
-			return result;
+			return isOk;
 		}
 
 		@Override
@@ -430,6 +440,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if (callTimeValue != 0) {
 				long duration = System.nanoTime() - callTimeValue;
 				if (duration > responseTimeoutNS) {
+					
+					Appendables.appendNearestTimeUnit(System.out.append("Failed response detected after timeout of: "), responseTimeoutNS).append('\n');
+										
 					failedResponse++;
 					while (!nextCall()) {//must run now.
 						Thread.yield();

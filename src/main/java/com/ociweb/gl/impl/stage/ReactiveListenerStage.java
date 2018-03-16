@@ -705,22 +705,28 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            
 	            int dispatch = -1; //TODO: move all these topic lookups to be done once and stored under index..
 	            
-                if (((null==methodReader) 
-                	|| ((dispatch=(int)TrieParserReader.query(methodReader, methodLookup, topic.topic))<0))
-                	&& ((listener instanceof PubSubListenerBase))) {
-                	
-                	if (! ((PubSubListenerBase)listener).message(topic.topic, Pipe.openInputStream(p))) {
-                		Pipe.resetTail(p);
-	            		return;//continue later and repeat this same value.
-                	}
-                	
-                } else {
-                	if (! methods[dispatch].method(listener, topic.topic, Pipe.openInputStream(p))) {
-                		Pipe.resetTail(p);
-                		return;//continue later and repeat this same value.	                    		
-                	}
+	            try {
+	                if (((null==methodReader) 
+	                	|| ((dispatch=(int)TrieParserReader.query(methodReader, methodLookup, topic.topic))<0))
+	                	&& ((listener instanceof PubSubListenerBase))) {
+	                	
+	                	if (! ((PubSubListenerBase)listener).message(topic.topic, Pipe.openInputStream(p))) {
+	                		Pipe.resetTail(p);
+		            		return;//continue later and repeat this same value.
+	                	}
+	                	
+	                } else {
+	                	if (! methods[dispatch].method(listener, topic.topic, Pipe.openInputStream(p))) {
+	                		Pipe.resetTail(p);
+	                		return;//continue later and repeat this same value.	                    		
+	                	}
+	                }
+                } catch (Throwable t) {
+                	logger.warn("Unexpected error ",t); //TODO: refine this
+                	             	
+                	Pipe.resetTail(p);
+            		return;//continue later and repeat this same value.
                 }
-	           
 	            
 	            Pipe.confirmLowLevelRead(p, SIZE_OF_PRIVATE_MSG_PUB);
 	            Pipe.releaseReadLock(p);
@@ -750,22 +756,28 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	                    	                           
 	                    int dispatch = -1;
 	                    
-	                    if (((null==methodReader) 
-	                    	|| ((dispatch=methodLookup(p, len, pos))<0))
-	                    	&& ((listener instanceof PubSubListenerBase))) {
-	                    	
-	                    	if (! ((PubSubListenerBase)listener).message(mutableTopic,reader)) {
-	                    		Pipe.resetTail(p);
-			            		return;//continue later and repeat this same value.
-	                    	}
-	                    	
-	                    } else {
-	                    	if (! methods[dispatch].method(listener, mutableTopic, reader)) {
-	                    		Pipe.resetTail(p);
-	                    		return;//continue later and repeat this same value.	                    		
-	                    	}
+	                    try {
+		                    if (((null==methodReader) 
+		                    	|| ((dispatch=methodLookup(p, len, pos))<0))
+		                    	&& ((listener instanceof PubSubListenerBase))) {
+		                    	                    
+		                    	if (! ((PubSubListenerBase)listener).message(mutableTopic,reader)) {
+		                    		Pipe.resetTail(p);
+				            		return;//continue later and repeat this same value.
+		                    	}
+		                    	
+		                    } else {
+		                    	if (! methods[dispatch].method(listener, mutableTopic, reader)) {
+		                    		Pipe.resetTail(p);
+		                    		return;//continue later and repeat this same value.	                    		
+		                    	}
+		                    }
+	                    } catch (Throwable t) {
+	                    	logger.warn("Unexpected error ",t); //TODO: refine this
+	                    	             	
+	                    	Pipe.resetTail(p);
+                    		return;//continue later and repeat this same value.
 	                    }
- 
                         Pipe.confirmLowLevelRead(p, SIZE_OF_MSG_PUBLISH);
                     break;
                 case MessageSubscription.MSG_STATECHANGED_71:

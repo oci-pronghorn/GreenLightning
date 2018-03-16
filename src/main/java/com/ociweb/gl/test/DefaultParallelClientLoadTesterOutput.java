@@ -13,7 +13,7 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
     }
 
     @Override
-    public void end(ElapsedTimeRecorder etr, int totalMessages, long totalTimeSumNS, int failedMessagesSum, long duration, long serverCallsPerSecond) {
+    public void end(ElapsedTimeRecorder etr, long totalMessages, long totalTimeSumNS, int failedMessagesSum, long duration, long serverCallsPerSecond) {
         try {
             Thread.sleep(100); //fixing system out IS broken problem.
         }

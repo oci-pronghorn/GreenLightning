@@ -6,7 +6,7 @@ public interface ParallelClientLoadTesterOutput {
 
     void progress(int pctDone, int sumFail);
 
-    void end(ElapsedTimeRecorder etr, int totalMessages, long totalTimeSum, int failedMessagesSum, long duration, long serverCallsPerSecond);
+    void end(ElapsedTimeRecorder etr, long totalMessages, long totalTimeSum, int failedMessagesSum, long duration, long serverCallsPerSecond);
 
     void connectionClosed(int track);
 }
