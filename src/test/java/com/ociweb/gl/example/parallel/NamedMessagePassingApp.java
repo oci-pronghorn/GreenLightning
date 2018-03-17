@@ -1,14 +1,11 @@
 package com.ociweb.gl.example.parallel;
 
 import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenAppParallel;
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
-import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 
 public class NamedMessagePassingApp implements GreenAppParallel {
 
@@ -27,13 +24,14 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 
 		builder.useHTTP1xServer(8080)
 		       .useInsecureServer()
-		       .setDecryptionUnitsPerTrack(8)
+		       .setDecryptionUnitsPerTrack(2)
+		       .setEncryptionUnitsPerTrack(2)
 		       .setHost("127.0.0.1");		
 		
 		if (telemetry) {
 			builder.enableTelemetry("127.0.0.1",8099);		
 		}
-			
+				
 //		ScriptedNonThreadScheduler.debugStageOrder = System.err;
 		
 		///////////////////////////
@@ -48,8 +46,8 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		//since they require a router to manage the interTrack communication.	
 		///////////////////////////
 				
-		builder.parallelTracks(1);
-		
+		builder.parallelTracks(2);
+		builder.setDefaultRate(2000L);
 		
 		// "{\"key1\":\"value\",\"key2\":123}";
 		
@@ -62,14 +60,13 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		builder.defineRoute().path("/test").routeId();
 		
 		//TODO: if the responder is found in the parallel section then mutate the name.
-		builder.definePrivateTopic("/send/200", "consumer", "responder");
+		builder.definePrivateTopic(2000,100,"/send/200", "consumer", "responder");
 		builder.usePrivateTopicsExclusively();
 
 	}
 
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
-		runtime.setEnsureLowLatency(false);//must be false for high volume
 	//	runtime.addPubSubListener("watcher",new Watcher(runtime))
 		//       .addSubscription("/test/gobal");
 	}
