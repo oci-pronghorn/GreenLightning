@@ -52,18 +52,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected final String[] args;
     
     private StageScheduler scheduler;
-    private boolean hasPendingHighVolume;  
-    
+     
     protected String telemetryHost;
     
     protected void setScheduler(StageScheduler scheduler) {
     	this.scheduler = scheduler;
-    	if (hasPendingHighVolume) {
-    		if (scheduler instanceof ScriptedFixedThreadsScheduler) {
-        		((ScriptedFixedThreadsScheduler)scheduler).setEnsureLowLatency(false);
-        	}
-    	}
-    	
     }
     
     //NOTE: keep short since the MessagePubSubStage will STOP consuming message until the one put on here
@@ -136,24 +129,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     		bridges = newArray;
     		
     	}
-    }
-    
-    
-    public boolean setEnsureLowLatency(boolean value) {
-    	    	
-    	if (scheduler instanceof ScriptedFixedThreadsScheduler) {
-    		((ScriptedFixedThreadsScheduler)scheduler).setEnsureLowLatency(value);
-    		return true;
-    	} else {
-    		if (null == scheduler) {
-    			hasPendingHighVolume = !value;
-    			return true;
-    		} else {
-    			logger.info("low latency switching is not supported for this scheduler");
-    			return false;
-    		}
-    	}
-    	
     }
     
 	public MsgRuntime(String[] args, String name) {
