@@ -31,7 +31,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final Integer telemetryPort;
     private final String telemetryHost;
     private final Long rate;
-    private final boolean ensureLowLatency;
     private final int maxInFlight;
     private final int maxInFlightMask;
 
@@ -104,7 +103,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.parallelTracks = config.parallelTracks;
 		this.durationNanos = config.durationNanos;
 		this.insecureClient = config.insecureClient;
-		this.ensureLowLatency = config.ensureLowLatency;
         this.responseTimeoutNS = config.responseTimeoutNS;
         this.cyclesPerTrack = config.cyclesPerTrack;
         this.rate = config.rate;
@@ -174,7 +172,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 	@Override
 	public void declareBehavior(final GreenRuntime runtime) {
-		runtime.setEnsureLowLatency(ensureLowLatency);
 
 		Progress progress = new Progress(runtime);
 		runtime.registerListener(PROGRESS_NAME, progress)
@@ -334,7 +331,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if (post != null) {
 				cmd2.ensureHTTPClientRequesting(2+maxInFlight, maxPayloadSize + 1024);
 			} else {
-				cmd2.ensureHTTPClientRequesting(2+maxInFlight, 46);
+				cmd2.ensureHTTPClientRequesting(2+maxInFlight, 0);
 			}
 			
 		}

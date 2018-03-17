@@ -14,9 +14,8 @@ public class ParallelClientLoadTesterConfig {
     public long responseTimeoutNS = 100_000_000;
     public Integer telemetryPort = null;
     public String telemetryHost = null;
-    public Long rate = new Long(2000);//very fast rate
-	public boolean ensureLowLatency=false;
-	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests opn a track
+    public Long rate = new Long(4000);//very fast rate
+	public int simultaneousRequestsPerTrackBits = 12; // as power of 2. 0 == serial requests opn a track
 
     public ParallelClientLoadTesterConfig() {
     }
@@ -37,7 +36,6 @@ public class ParallelClientLoadTesterConfig {
         telemetryPort = args.getArgumentValue("--telemPort", "-tp", telemetryPort);
         telemetryHost = args.getArgumentValue("--telemHost", "-th", telemetryHost);
         rate = args.getArgumentValue("--rate", "-ra", rate);
-        ensureLowLatency = args.getArgumentValue("--lowLatency", "-ll", ensureLowLatency);
         simultaneousRequestsPerTrackBits = args.getArgumentValue("--simulRquests", "-sr", simultaneousRequestsPerTrackBits);
     }
 
