@@ -11,11 +11,11 @@ public class ParallelClientLoadTesterConfig {
     public int parallelTracks = 4;
     public int cyclesPerTrack = 1;
     public long durationNanos = 0;
-    public long responseTimeoutNS = 100_000_000;
+    public long responseTimeoutNS = 0;
     public Integer telemetryPort = null;
     public String telemetryHost = null;
     public Long rate = new Long(4000);//very fast rate
-	public int simultaneousRequestsPerTrackBits = 12; // as power of 2. 0 == serial requests opn a track
+	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests opn a track
 
     public ParallelClientLoadTesterConfig() {
     }
