@@ -25,18 +25,21 @@ public class NamedMessagePassingTest {
 				= new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
 		
 		ParallelClientLoadTesterConfig config1 = 
-				new ParallelClientLoadTesterConfig(1, 4000, 8080, "/test", false);
+				new ParallelClientLoadTesterConfig(2, 50000, 8080, "/test", false);
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config1, null),
 				600_000);
 
 		ParallelClientLoadTesterConfig config2 = 
-				new ParallelClientLoadTesterConfig(2, 10_000, 8080, "/test", telemetry);
+				new ParallelClientLoadTesterConfig(1, 100_000, 8080, "/test", telemetry);
 		
-		config2.simultaneousRequestsPerTrackBits  = 0;
+		config2.simultaneousRequestsPerTrackBits  = 1;
 		config2.responseTimeoutNS = 0L;
 		
-		config2.rate = 2_000L; //TODO: may need to be bigger for slow windows boxes.
+		//config2.rate = 4_000L;
+		
+		//For low latency
+		config2.rate = 1_000L; //TODO: may need to be bigger for slow windows boxes.
 				
 		//TODO: ensure we have enought volume to make the optimization...
 		

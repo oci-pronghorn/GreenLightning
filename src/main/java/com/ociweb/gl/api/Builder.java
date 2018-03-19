@@ -105,4 +105,6 @@ public interface Builder extends ArgumentProvider {
 	HTTPClientConfig useNetClient(TLSCertificates certificates);
 	HTTPClientConfig useInsecureNetClient();
 
+	void setGlobalSLALatencyNS(long ns);
+
 }

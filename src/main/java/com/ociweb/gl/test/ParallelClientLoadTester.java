@@ -57,7 +57,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 	private static final int PUB_MSGS      = 8000;
 	private static final int PUB_MSGS_SIZE = 48;
-	
 
 	public ParallelClientLoadTester(
 			int cyclesPerTrack,
@@ -142,6 +141,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		else {
 			builder.useNetClient();
 		}
+		
+		builder.setGlobalSLALatencyNS(20_000_000);
 
 		if (telemetryPort != null) {
 			if (null == this.telemetryHost) {
@@ -175,6 +176,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		Progress progress = new Progress(runtime);
 		runtime.registerListener(PROGRESS_NAME, progress)
+				.SLALatencyNS(200_000_000)//due to use of System out and shutdown this is allowed more time
 				.addSubscription(ENDERS_TOPIC, progress::enderMessage)
 		        .addSubscription(PROGRESS_TOPIC, progress::progressMessage);
 		
@@ -340,23 +342,22 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			return makeCall();
 		}
 
-		private boolean lastMakeCallWasOk = true;
-		
 		private boolean makeCall() {
-			//if not ok we have already done this and should not count a second time.
-			if (lastMakeCallWasOk) {
-				callTime[track][maxInFlightMask & inFlightHead[track]++] = System.nanoTime();
-			}
-			
+
+			long now = System.nanoTime();
+			boolean wasSent = false;
 			if (null==writer) {
-				lastMakeCallWasOk = cmd2.httpGet(session[track], route);
+				wasSent = cmd2.httpGet(session[track], route);
 			} else if (header != null) {
-				lastMakeCallWasOk = cmd2.httpPost(session[track], route, header, writer);
+				wasSent = cmd2.httpPost(session[track], route, header, writer);
 			} else {
-				lastMakeCallWasOk = cmd2.httpPost(session[track], route, writer);
+				wasSent = cmd2.httpPost(session[track], route, writer);
 			}
 			
-			return lastMakeCallWasOk;
+			if (wasSent) {
+				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
+			}
+			return wasSent;
 		}
 
 		
@@ -378,19 +379,35 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 		}
 
+		private boolean lastResponseOk=true;
+	
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
-			boolean connectionClosed = reader.isConnectionClosed();
-			if (connectionClosed) {
-				out.connectionClosed(track);
-			}
 
-			long duration = System.nanoTime() - callTime[track][maxInFlightMask & inFlightTail[track]++];
+				//if false we already closed this one and need to skip this part
+				if (lastResponseOk) {
+					boolean connectionClosed = reader.isConnectionClosed();
+					if (connectionClosed) {
+						out.connectionClosed(track);
+					}
+		
+					long duration = System.nanoTime() - callTime[track][maxInFlightMask & inFlightTail[track]++];
+						
+					boolean findLongCalls = false;
+					if (findLongCalls && duration>20_000_000) {
+						
+						Appendables.appendValue(
+								Appendables.appendNearestTimeUnit(System.err, duration)
+						        .append(" long call detected for ")
+						        ,(inFlightTail[track]-1)).append("\n");
+						
+					}
+					
+					ElapsedTimeRecorder.record(elapsedTime[track], duration);
+					totalTime+=duration;
+				}
+				return lastResponseOk = nextCall();
 
-			ElapsedTimeRecorder.record(elapsedTime[track], duration);
-			totalTime+=duration;
-
-			return nextCall();
 		}
 
 		private boolean nextCall() {

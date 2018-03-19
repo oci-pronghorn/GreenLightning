@@ -73,6 +73,8 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	       
 		assert(output.length >= goPipe.length);
 		
+		logger.info("Warning, 2ms latency may be introduced due to longer timeout on traffic stages. {}",this.getClass().getSimpleName());
+		
 		this.runtime = runtime;
 		this.hardware = hardware;
 		this.etcAndDataPipe = output;//the last few pipes align with goPipe
@@ -149,9 +151,12 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
    	
         boolean foundWork;
 		int[] localActiveCounts = activeCounts;
+		
 		long now = hardware.currentTimeMillis();
+		//TODO: update this so its not limited to the nearest MS, we need NS time.
 		long timeLimit = (int) (1+(timeoutNS/1_000_000)) + now; //rounds timeout up to next MS 
-        long unblockChannelLimit = -1;
+      
+		long unblockChannelLimit = -1;
         long windowLimit = 0;
         boolean holdForWindow = false;
 		do {
@@ -274,44 +279,49 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 
 	private void readNextCount(final int a) {
 		Pipe<TrafficReleaseSchema> localPipe = goPipe[a];
-		if (null != localPipe) {
-			
-			if (PipeReader.tryReadFragment(localPipe)) { 
-			
-				assert(PipeReader.isNewMessage(localPipe)) : "This test should only have one simple message made up of one fragment";
-				
-				int msgIdx = PipeReader.getMsgIdx(localPipe);
-				if(TrafficReleaseSchema.MSG_RELEASE_20 == msgIdx){
-					assert(-1==activeCounts[a]);
-					activeCounts[a] = PipeReader.readInt(localPipe, TrafficReleaseSchema.MSG_RELEASE_20_FIELD_COUNT_22);
-				} else {
-					assert(msgIdx == -1);
-					if (--hitPoints == 0) {
-						requestShutdown();
-					}
-				}
-				PipeReader.releaseReadLock(localPipe);
-			}
+		if (null != localPipe) {			
+			countFromGoPipe(a, localPipe);
 		} else {
 			//local pipe is null so we must review the input
 			//if there is data we mark it as 1 to be done.
-			Pipe<?> pipe = etcAndDataPipe[a+etcAndDataPipe.length-goPipe.length];
-			if (Pipe.contentRemaining( pipe )>0) {
-				
-				//detect any request to begin the shutdown process
-				if (PipeReader.peekMsg(pipe, -1)) {					
-					
-					PipeReader.tryReadFragment(pipe);
-					PipeReader.releaseReadLock(pipe);
-					
-					runtime.shutdownRuntime();
-				} else {
-					activeCounts[a] = 1; //NOTE: only do 1 at a time
+			noGoDoSingles(a, etcAndDataPipe[a+etcAndDataPipe.length-goPipe.length]);
+		}
+	}
+
+	//TOOD: convert to Low level, this is a hot spot.
+	private void countFromGoPipe(final int a, Pipe<TrafficReleaseSchema> localPipe) {
+		if (PipeReader.tryReadFragment(localPipe)) { 
+		
+			assert(PipeReader.isNewMessage(localPipe)) : "This test should only have one simple message made up of one fragment";
+			
+			int msgIdx = PipeReader.getMsgIdx(localPipe);
+			if(TrafficReleaseSchema.MSG_RELEASE_20 == msgIdx){
+				assert(-1==activeCounts[a]);
+				activeCounts[a] = PipeReader.readInt(localPipe, TrafficReleaseSchema.MSG_RELEASE_20_FIELD_COUNT_22);
+			} else {
+				assert(msgIdx == -1);
+				if (--hitPoints == 0) {
+					requestShutdown();
 				}
 			}
+			PipeReader.releaseReadLock(localPipe);
 		}
-		
-		
+	}
+
+	private void noGoDoSingles(final int a, Pipe<?> pipe) {
+		if (Pipe.contentRemaining( pipe )>0) {
+			
+			//detect any request to begin the shutdown process
+			if (PipeReader.peekMsg(pipe, -1)) {					
+				
+				PipeReader.tryReadFragment(pipe);
+				PipeReader.releaseReadLock(pipe);
+				
+				runtime.shutdownRuntime();
+			} else {
+				activeCounts[a] = 1; //NOTE: only do 1 at a time
+			}
+		}
 	}
 
 	protected void decReleaseCount(int a) {

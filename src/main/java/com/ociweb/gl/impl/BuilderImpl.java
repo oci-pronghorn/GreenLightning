@@ -60,6 +60,7 @@ import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.http.CompositePath;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
+import com.ociweb.pronghorn.network.http.HTTPClientRequestStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
@@ -956,16 +957,20 @@ public class BuilderImpl implements Builder {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}
 			
-			//TODO: if the go pipes are not used then create the simpler stage
-//			new HTTPClientRequestStage(gm, ccm, netRequestPipes, clientRequests);
-		
-			
-			new HTTPClientRequestTrafficStage(
-					gm, runtime, this, 
-					ccm, netRequestPipes, 
-					masterGoOut[IDX_NET], masterAckIn[IDX_NET], 
-					clientRequests);
-
+			if (isAllNull(masterGoOut[IDX_NET])) {
+				//this one has much lower latency and should be used if possible
+				new HTTPClientRequestStage(gm, ccm, netRequestPipes, clientRequests);
+			} else {	
+				logger.info("Warning, the slower HTTP Client Request code was called. 2ms latency may be introduced.");
+				
+				//this may stay for as long as 2ms before returning due to timeout of
+				//traffic logic, this is undesirable in some low latency cases.
+				new HTTPClientRequestTrafficStage(
+						gm, runtime, this, 
+						ccm, netRequestPipes, 
+						masterGoOut[IDX_NET], masterAckIn[IDX_NET], 
+						clientRequests);
+			}
 
 			int releaseCount = 1024;
 			int writeBufferMultiplier = 30;
@@ -986,6 +991,15 @@ public class BuilderImpl implements Builder {
 		}
 	}
 
+	private boolean isAllNull(Pipe<?>[] pipes) {
+		int p = pipes.length;
+		while (--p>=0) {
+			if (pipes[p]!=null) {
+				return false;
+			}
+		}
+		return true;
+	}
 
 	protected int populateGoAckPipes(int maxGoPipeId, Pipe<TrafficReleaseSchema>[][] masterGoOut,
 			Pipe<TrafficAckSchema>[][] masterAckIn, Pipe<TrafficReleaseSchema>[] goOut, Pipe<TrafficAckSchema>[] ackIn,
@@ -1318,6 +1332,11 @@ public class BuilderImpl implements Builder {
 
 	public static boolean hasNoUnscopedTopics() {
 		return null==BuilderImpl.unScopedTopics;
+	}
+
+	@Override
+	public void setGlobalSLALatencyNS(long ns) {
+		GraphManager.addDefaultNota(gm, GraphManager.SLA_LATENCY, ns);
 	}
 
 }

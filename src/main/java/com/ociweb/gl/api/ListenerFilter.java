@@ -58,5 +58,7 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 	int getId();//TODO: remove?  not sure this should be used...	
 	
 	<E extends Enum<E>> ListenerFilter includeHTTPSession(ClientHostPortInstance ... httpSessions);
+
+	ListenerFilter SLALatencyNS(long latency);
 	
 }

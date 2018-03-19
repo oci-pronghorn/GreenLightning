@@ -47,9 +47,16 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		///////////////////////////
 				
 		builder.parallelTracks(2);
+		
+		//high volume
+		//builder.setDefaultRate(10000L);
+		
+		//low latency
 		builder.setDefaultRate(2000L);
 		
 		// "{\"key1\":\"value\",\"key2\":123}";
+		
+		builder.setGlobalSLALatencyNS(10_000_000);
 		
 		JSONExtractorCompleted extractor = 
 				new JSONExtractor()
@@ -67,6 +74,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
+	
 	//	runtime.addPubSubListener("watcher",new Watcher(runtime))
 		//       .addSubscription("/test/gobal");
 	}
@@ -74,6 +82,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {
 
+		
 //		GreenCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);		
 //		runtime.addTimePulseListener((t,i)->{			
 //		//	if (i ==10) {

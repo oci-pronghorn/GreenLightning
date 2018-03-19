@@ -1249,5 +1249,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		return this;
 	}
 
+	@Override
+	public ListenerFilter SLALatencyNS(long latency) {
+		
+		GraphManager.addNota(graphManager, 
+				             GraphManager.SLA_LATENCY,
+	             			 latency, this);
+
+		return this;
+	}
+
     
 }

@@ -73,6 +73,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		//runtime.scheduler = StageScheduler.threadPerStage(runtime.gm);//hack test.				
 		runtime.setScheduler(runtime.builder.createScheduler(runtime));
 	    
+		System.gc();
 		runtime.getScheduler().startup();
 
 		return runtime;

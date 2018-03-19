@@ -158,6 +158,12 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   GraphManager.addNota(gm, GraphManager.DOT_BACKGROUND, "gold2", this);
 	   GraphManager.addNota(gm, GraphManager.ROUTER_HUB, GraphManager.ROUTER_HUB, this);
 	   
+	   //This extends traffic ordering and as a result often introduces a 2ms latency.
+	   //until this is resolved this stage must be isolated
+	   GraphManager.addNota(gm, GraphManager.ISOLATE, GraphManager.ISOLATE, this);
+	   
+	   
+	   
     }
 
     

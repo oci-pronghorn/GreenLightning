@@ -77,60 +77,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	public void startup() {
 		super.startup();		
 	}
-	
-	
-//	protected boolean processMessagesForPipe(int activePipe) {
-//		
-//		
-//	    Pipe<ClientHTTPRequestSchema> requestPipe = input[activePipe];
-//	    	  
-//	    boolean didWork = false;
-//
-//	    		    
-/////	    logger.info("send for active pipe {} has content to read {} ",activePipe,Pipe.hasContentToRead(requestPipe));
-//	    
-//	    
-//        if (Pipe.hasContentToRead(requestPipe)) {
-//
-//        	long now = System.currentTimeMillis();
-//        	//This check is required when TLS is in use.
-//        	if (isConnectionReadyForUse(requestPipe) ){
-//	        	didWork = true;	        
-//	        	
-//	               	//Need peek to know if this will block.
-//	 	        		        	
-//	            final int msgIdx = Pipe.takeMsgIdx(requestPipe);
-//	            
-//	            //logger.info("send for active pipe {} with msg {}",activePipe,msgIdx);
-//	            
-//	            if (ClientHTTPRequestSchema.MSG_FASTHTTPGET_200 == msgIdx) {
-//	            	activeConnection.setLastUsedTime(now);
-//					HTTPClientUtil.publishGet(requestPipe, activeConnection, output[activeConnection.requestPipeLineIdx()], now, stageId);
-//	            } else  if (ClientHTTPRequestSchema.MSG_HTTPGET_100 == msgIdx) {
-//	            	HTTPClientUtil.processGetLogic(now, requestPipe, activeConnection, output[activeConnection.requestPipeLineIdx()], stageId);
-//	            } else  if (ClientHTTPRequestSchema.MSG_HTTPPOST_101 == msgIdx) {
-//	            	HTTPClientUtil.processPostLogic(now, requestPipe, activeConnection, output[activeConnection.requestPipeLineIdx()], stageId);	            	
-//	            } else  if (ClientHTTPRequestSchema.MSG_CLOSE_104 == msgIdx) {
-//	            	HTTPClientUtil.cleanCloseConnection(activeConnection, output[activeConnection.requestPipeLineIdx()]);
-//	            } else  if (-1 == msgIdx) {
-//	            	//logger.info("Received shutdown message");								
-//					processShutdownLogic(requestPipe);
-//					return false;
-//	            } else {
-//	            	throw new UnsupportedOperationException("Unexpected Message Idx");
-//	            }		
-//				
-//				Pipe.confirmLowLevelRead(requestPipe, Pipe.sizeOf(ClientHTTPRequestSchema.instance, msgIdx));
-//				Pipe.releaseReadLock(requestPipe);	
-//
-//      
-//	        }	
-//        	
-//        }
-//        
-//        
-//	return didWork;
-//}
+
 	
 	@Override
 	protected void processMessagesForPipe(int activePipe) {
@@ -141,7 +88,6 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 //	        		+" && "+hasReleaseCountRemaining(activePipe) 
 //	        		+" && "+isChannelUnBlocked(activePipe)	                
 //	        		+" && "+hasOpenConnection(requestPipe, output, ccm));
-
 		    
 	        while (PipeReader.hasContentToRead(requestPipe) 
 	        		&& hasReleaseCountRemaining(activePipe) 
