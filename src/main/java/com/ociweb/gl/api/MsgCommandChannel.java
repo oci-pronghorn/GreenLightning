@@ -561,8 +561,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		//get the cached connection ID so we need not deal with the host again
 		/////////////////////
 		if (session.getConnectionId()<0) {
-			ClientCoordinator r = builder.getClientCoordinator();
-			final long id = r.lookup(r.lookupHostId(session.host), session.port, session.sessionId);
+			final long id = builder.getClientCoordinator().lookup(
+					                   ClientCoordinator.lookupHostId(session.host), 
+					                   session.port, 
+					                   session.sessionId);
 		    if (id>=0) {
 		    	session.setConnectionId(id);
 		    }
@@ -1113,7 +1115,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 			return true;
 		} else {
-			logPrivateTopicTooShort(token);
+			logPrivateTopicTooShort(token,output);
 			return false;
 		}
 	}
@@ -1151,7 +1153,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 			return true;
 		} else {
-			logPrivateTopicTooShort(token);
+			logPrivateTopicTooShort(token, output);
 			return false;
 		}
 	}
@@ -1159,10 +1161,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	
 	private final BloomFilter topicsTooShort = new BloomFilter(10000, .00001); //32K
 	
-    private void logPrivateTopicTooShort(int token) {
+    private void logPrivateTopicTooShort(int token, Pipe<?> p) {
     	String topic = publishPrivateTopics.getTopic(token);
     	
-    	if (!topicsTooShort.mayContain(topic)) {    	
+    	if (!topicsTooShort.mayContain(topic)) {   
+    		logger.info("full pipe {}",p);
     		logger.info("the private topic '{}' has become backed up, it may be too short. When it was defined it should be made to be longer.", topic);
     		topicsTooShort.addValue(topic);
     	} 
