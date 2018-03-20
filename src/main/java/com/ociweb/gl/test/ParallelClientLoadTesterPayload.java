@@ -1,5 +1,7 @@
 package com.ociweb.gl.test;
 
+import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 
@@ -9,6 +11,19 @@ public class ParallelClientLoadTesterPayload {
     public HTTPContentTypeDefaults contentType = null;
     public Supplier<Writable> post = null;
     public int maxPayloadSize = 512;
+
+    public Supplier<HTTPResponseListener> validate = new Supplier<HTTPResponseListener>() {
+        @Override
+        public HTTPResponseListener get() {
+            return new HTTPResponseListener() {
+                @Override
+                public boolean responseHTTP(HTTPResponseReader reader) {
+                    int code = reader.statusCode();
+                    return code >= 200 && code < 400;
+                }
+            };
+        }
+    };
 
     public ParallelClientLoadTesterPayload() {
     }
@@ -27,3 +42,4 @@ public class ParallelClientLoadTesterPayload {
         post = ()-> new ParallelClientLoadTesterPayloadScript(payload);
     }
 }
+
