@@ -82,7 +82,7 @@ public class MathUnitSimple implements RestListener {
 			}
 
 		};
-		request.openHeaderData(request.getFieldId(HTTPHeaderDefaults.COOKIE.rootBytes()), eat);
+		request.openHeaderData((int)request.getFieldId(HTTPHeaderDefaults.COOKIE.rootBytes()), eat);
 				
 		
 		Writable consume = new Writable() {
