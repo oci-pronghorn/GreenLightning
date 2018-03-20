@@ -4,7 +4,7 @@ import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.HTTPSession;
+import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.StartupListener;
@@ -16,9 +16,9 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 
 	
 	private final GreenCommandChannel cmd;
-	private HTTPSession session;
+	private ClientHostPortInstance session;
 	 
-	public HTTPGetBehaviorSingle(GreenRuntime runtime, HTTPSession session) {
+	public HTTPGetBehaviorSingle(GreenRuntime runtime, ClientHostPortInstance session) {
 		this.session = session;
 		cmd = runtime.newCommandChannel(NET_REQUESTER | DYNAMIC_MESSAGING);
 	}

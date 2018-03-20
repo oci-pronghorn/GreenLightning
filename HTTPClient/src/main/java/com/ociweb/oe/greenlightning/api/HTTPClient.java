@@ -4,7 +4,7 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.HTTPSession;
+import com.ociweb.gl.api.ClientHostPortInstance;
 
 public class HTTPClient implements GreenApp
 {
@@ -19,7 +19,7 @@ public class HTTPClient implements GreenApp
     @Override
     public void declareBehavior(GreenRuntime runtime) {       
     	
-    	HTTPSession session = new HTTPSession(
+    	ClientHostPortInstance session = new ClientHostPortInstance(
     			//"javanut.com",80,0);
     			"127.0.0.1",8088,0);
     	
