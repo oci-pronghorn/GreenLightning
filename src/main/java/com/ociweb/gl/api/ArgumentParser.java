@@ -84,7 +84,7 @@ public class ArgumentParser implements ArgumentProvider {
     }
 
     private String reportChoice(final String longName, final String shortName, final String value) {
-        System.out.append(longName).append(" ").append(shortName).append(" ").append(value).append("\n");
+        System.out.append(longName).append(" ").append(shortName).append(" = ").append(value).append("\n");
         return value;
     }
 }
