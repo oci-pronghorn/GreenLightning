@@ -16,9 +16,9 @@ public class AllRoutesExample2 implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 		builder.useHTTP1xServer(8082);
-		int a = builder.defineRoute("/routeOne");
-		int b = builder.defineRoute("/second?a=#{value}");
-		int c = builder.defineRoute("/woot");
+		int a = builder.defineRoute().path("/routeOne").routeId();
+		int b = builder.defineRoute().path("/second?a=#{value}").routeId();
+		int c = builder.defineRoute().path("/woot").routeId();
 		
 		System.err.println(a+"  "+b+"  "+c);
 

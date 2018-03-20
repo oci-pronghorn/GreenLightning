@@ -97,7 +97,8 @@ public class MathUnit implements RestListener {
 			}
 			
 		};
-		request.openHeaderData(HTTPHeaderDefaults.COOKIE.rootBytes(),eat);
+
+		request.openHeaderData(request.getFieldId(HTTPHeaderDefaults.COOKIE), eat);
 				
 		Writable render = new Writable() {
 

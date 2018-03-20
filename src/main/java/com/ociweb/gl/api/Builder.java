@@ -2,6 +2,7 @@ package com.ociweb.gl.api;
 
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.http.CompositePath;
 
 /**
@@ -51,13 +52,8 @@ public interface Builder extends ArgumentProvider {
     int parallelTracks();
 	void parallelTracks(int parallel);
 	
-	@Deprecated
-	int defineRoute(CharSequence route, byte[] ... headers);
-	@Deprecated
-	int defineRoute(CharSequence route, JSONExtractorCompleted extractor, byte[] ... headers);
-
-	CompositePath defineRoute(JSONExtractorCompleted extractor, byte[] ... headers);
-	CompositePath defineRoute(byte[] ... headers);
+	CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers);
+	CompositePath defineRoute(HTTPHeader ... headers);
 	
 	HTTPServerConfig useHTTP1xServer(int bindPort);
 

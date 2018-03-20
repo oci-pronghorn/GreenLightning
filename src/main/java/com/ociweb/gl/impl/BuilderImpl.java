@@ -54,6 +54,7 @@ import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
@@ -728,23 +729,12 @@ public class BuilderImpl implements Builder {
 	}
 	
 	@Override
-	public final CompositePath defineRoute(JSONExtractorCompleted extractor, byte[] ... headers) {
+	public final CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers) {
 		return routerConfig().registerCompositeRoute(extractor, headers);
 	}
 	@Override
-	public final CompositePath defineRoute(byte[] ... headers) {
+	public final CompositePath defineRoute(HTTPHeader ... headers) {
 		return routerConfig().registerCompositeRoute(headers);
-	}
-
-	
-	@Override
-	public final int defineRoute(CharSequence route, JSONExtractorCompleted extractor, byte[] ... headers) {
-		return routerConfig().registerCompositeRoute(extractor,headers).path(route).routeId();
-	}
-	
-	@Override
-	public final int defineRoute(CharSequence route, byte[] ... headers) {
-		return routerConfig().registerRoute(route, headers);
 	}
 
 	public final TrieParser routeExtractionParser(int route) {
