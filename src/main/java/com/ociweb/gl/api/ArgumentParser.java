@@ -63,9 +63,9 @@ public class ArgumentParser implements ArgumentProvider {
         for (String token : args) {
             if (longName.equals(prev) || shortName.equals(prev)) {
                 if (token == null || token.trim().length() == 0 || token.startsWith("-")) {
-                    return defaultValue;
+                    return reportChoice(longName, shortName, defaultValue);
                 }
-                return reportChoice(longName, shortName, token.trim());
+                return reportChoice(longName, shortName, token.trim(), defaultValue);
             }
             prev = token;
         }
@@ -76,15 +76,27 @@ public class ArgumentParser implements ArgumentProvider {
     private boolean hasArg(String longName, String shortName) {
         for(String token : args) {
             if(longName.equals(token) || shortName.equals(token)) {
-                reportChoice(longName, shortName, "");
-                return true;
+                return reportChoice(longName, shortName, true);
             }
         }
-        return false;
+        return reportChoice(longName, shortName, false);
     }
 
-    private String reportChoice(final String longName, final String shortName, final String value) {
-        System.out.append(longName).append(" ").append(shortName).append(" = ").append(value).append("\n");
+    private String reportChoice(final String longName, final String shortName, final String dflt) {
+        System.out.append(longName).append(" ").append(shortName).append(" = ").append(dflt).append("\n");
+        return dflt;
+    }
+
+    private String reportChoice(final String longName, final String shortName, final String value, final String dflt) {
+        if (value.equals(dflt)) {
+            return reportChoice(longName, shortName, dflt);
+        }
+        System.out.append(longName).append(" ").append(shortName).append(" = ").append(value).append(" (default = ").append(dflt).append(")\n");
         return value;
+    }
+
+    private boolean reportChoice(final String longName, final String shortName, boolean found) {
+        System.out.append(longName).append(" ").append(shortName).append(" found ").append(Boolean.toString(found)).append("\n");
+        return found;
     }
 }
