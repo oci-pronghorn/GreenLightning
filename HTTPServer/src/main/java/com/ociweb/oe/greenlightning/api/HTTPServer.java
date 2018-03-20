@@ -10,8 +10,6 @@ import com.ociweb.pronghorn.util.Appendables;
 
 public class HTTPServer implements GreenApp
 {
-	private byte[] cookieHeader = HTTPHeaderDefaults.COOKIE.rootBytes();
-	
 	private int emptyResponseRouteId;
 	private int smallResponseRouteId;
 	private int largeResponseRouteId;
@@ -39,14 +37,16 @@ public class HTTPServer implements GreenApp
         
 		c.useHTTP1xServer(port).setHost(host);
 		
-		emptyResponseRouteId = c.defineRoute("/testpageA?arg=#{myarg}", cookieHeader);
-		smallResponseRouteId = c.defineRoute("/testpageB");
-		largeResponseRouteId = c.defineRoute("/testpageC", cookieHeader);
-		splitResponseRouteId = c.defineRoute("/testpageD");
+		emptyResponseRouteId = c.defineRoute(HTTPHeaderDefaults.COOKIE)
+				                 .path("/testpageA?arg=#{myarg}").routeId();
+		smallResponseRouteId = c.defineRoute().path("/testpageB").routeId();
+		largeResponseRouteId = c.defineRoute(HTTPHeaderDefaults.COOKIE)
+				                  .path("/testpageC").routeId();
+		splitResponseRouteId = c.defineRoute().path("/testpageD").routeId();
 		
 		//only do in test mode... 
 		//in production it is a bad idea to let clients turn off server.
-		shutdownRouteId = c.defineRoute("/shutdown?key=${key}");
+		shutdownRouteId = c.defineRoute().path("/shutdown?key=${key}").routeId();
 				
 		c.enableTelemetry();
 		
