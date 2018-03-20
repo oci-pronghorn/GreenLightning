@@ -6,10 +6,10 @@ import com.ociweb.pronghorn.util.Appendables;
 public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoadTesterOutput {
 
     @Override
-    public void progress(int pctDone, int sumFail, int sumInvalid) {
-        Appendables.appendValue(System.out, pctDone);
+    public void progress(int percentDone, long sumTimeouts, long sumInvalid) {
+        Appendables.appendValue(System.out, percentDone);
         System.out.append("% complete  ");
-        Appendables.appendValue(System.out, sumFail);
+        Appendables.appendValue(System.out, sumTimeouts);
         System.out.append(" failed  ");
         Appendables.appendValue(System.out, sumInvalid);
         System.out.append(" invalid\n");
@@ -18,7 +18,7 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
     @Override
     public void end(
             ElapsedTimeRecorder etr, long testDuration, long totalMessages, long totalTimeSumNS, long serverCallsPerSecond,
-            int sendAttempts, int sendFailures, int timeouts, int responsesReceived, int invalidResponses) {
+            long sendAttempts, long sendFailures, long timeouts, long responsesReceived, long invalidResponses) {
         try {
             Thread.sleep(100); //fixing system out IS broken problem.
         }

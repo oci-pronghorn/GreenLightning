@@ -190,19 +190,19 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private final GreenCommandChannel cmd4;
 
 		private final long[] finished = new long[parallelTracks];
-		private final int[] sendAttempts = new int[parallelTracks];
-		private final int[] sendFailures = new int[parallelTracks];
-		private final int[] timeouts = new int[parallelTracks];
-		private final int[] responsesReceived = new int[parallelTracks];
-		private final int[] responsesInvalid = new int[parallelTracks];
+		private final long[] sendAttempts = new long[parallelTracks];
+		private final long[] sendFailures = new long[parallelTracks];
+		private final long[] timeouts = new long[parallelTracks];
+		private final long[] responsesReceived = new long[parallelTracks];
+		private final long[] responsesInvalid = new long[parallelTracks];
 
-		private int sendAttemptsSum;
-		private int sendFailuresSum;
-		private int timeoutsSum;
-		private int responsesReceivedSum;
-		private int responsesInvalidSum;
+		private long sendAttemptsSum;
+		private long sendFailuresSum;
+		private long timeoutsSum;
+		private long responsesReceivedSum;
+		private long responsesInvalidSum;
 
-		private int lastPct = 0;
+		private int lastPercent = 0;
 		private long lastTime = 0;
 		private int enderCounter;
 		private long totalTimeSum;
@@ -224,11 +224,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				if (payload.hasRemainingBytes()) {
 					int track = payload.readPackedInt();
 					long totalTime = payload.readPackedLong();
-					int sendAttempts = payload.readPackedInt();
-					int sendFailures = payload.readPackedInt();
-					int timeouts = payload.readPackedInt();
-					int responsesReceived = payload.readPackedInt();
-					int responsesInvalid = payload.readPackedInt();
+					long sendAttempts = payload.readPackedLong();
+					long sendFailures = payload.readPackedLong();
+					long timeouts = payload.readPackedLong();
+					long responsesReceived = payload.readPackedLong();
+					long responsesInvalid = payload.readPackedLong();
 
 					//System.err.println("end of track:"+track);
 
@@ -265,11 +265,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		public boolean progressMessage(CharSequence topic, ChannelReader payload) {
 			int track = payload.readPackedInt();
 			long countDown = payload.readPackedLong();
-			int sendAttempts = payload.readPackedInt();
-			int sendFailures = payload.readPackedInt();
-			int timeouts = payload.readPackedInt();
-			int responsesReceived = payload.readPackedInt();
-			int responsesInvalid = payload.readPackedInt();
+			long sendAttempts = payload.readPackedInt();
+			long sendFailures = payload.readPackedInt();
+			long timeouts = payload.readPackedInt();
+			long responsesReceived = payload.readPackedInt();
+			long responsesInvalid = payload.readPackedInt();
 
 			this.finished[track] = cyclesPerTrack - countDown;
 			this.sendAttempts[track] = sendAttempts;
@@ -278,38 +278,38 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			this.responsesReceived[track] = responsesReceived;
 			this.responsesInvalid[track] = responsesInvalid;
 
-			int sumFinished = 0;
-			int sumSendAttempts = 0;
-			int sumSendFailures = 0;
-			int sumTimeouts = 0;
-			int sumResponsesReceived = 0;
-			int sumResponsesInvalid = 0;
+			long sumFinished = 0;
+			//long sumSendAttempts = 0;
+			//long sumSendFailures = 0;
+			long sumTimeouts = 0;
+			//long sumResponsesReceived = 0;
+			long sumResponsesInvalid = 0;
 			int i = parallelTracks;
 			while (--i >= 0) {
 				sumFinished += this.finished[i];
-				sumSendAttempts += this.sendAttempts[track];
-				sendFailures += this.sendFailures[track];
+				//sumSendAttempts += this.sendAttempts[track];
+				//sumSendFailures += this.sendFailures[track];
 				sumTimeouts += this.timeouts[track];
-				sumResponsesReceived += this.responsesReceived[i];
+				//sumResponsesReceived += this.responsesReceived[i];
 				sumResponsesInvalid += this.responsesInvalid[i];
 			}
 
 			long totalRequests = cyclesPerTrack * parallelTracks;
-			int pctDone = (int)((100L * sumFinished) / totalRequests);
-			assert(pctDone>=0);
+			int percentDone = (int)((100L * sumFinished) / totalRequests);
+			assert(percentDone>=0);
 			
 			long now = 0;
 
 			//updates every half a second
-			if ((pctDone != lastPct && ((now = System.nanoTime()) - lastTime) > 500_000_000L)
-					|| 100L == pctDone) {
-			    out.progress(pctDone, sumTimeouts, sumResponsesInvalid);
+			if ((percentDone != lastPercent && ((now = System.nanoTime()) - lastTime) > 500_000_000L)
+					|| 100L == percentDone) {
+			    out.progress(percentDone, sumTimeouts, sumResponsesInvalid);
 			    			    
 				lastTime = now;
-				lastPct = pctDone;
+				lastPercent = percentDone;
 			}
 
-			if (100 == pctDone) {
+			if (100 == percentDone) {
 				//System.err.println(Arrays.toString(finished)+" "+cyclesPerTrack+" "+parallelTracks);
 				//System.err.println();
 				return cmd4.publishTopic(ENDERS_TOPIC);
@@ -340,11 +340,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		private long countDown;
 		private long totalTime;
-		private int sendAttempts;
-		private int sendFailures;
-		private int timeouts;
-		private int responsesInvalid;
-		private int responsesReceived;
+		private long sendAttempts;
+		private long sendFailures;
+		private long timeouts;
+		private long responsesInvalid;
+		private long responsesReceived;
 		private boolean lastResponseOk=true;
 
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
@@ -464,11 +464,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				cmd3.publishTopic(PROGRESS_TOPIC, writer-> {
 					writer.writePackedInt(track);
 					writer.writePackedLong(countDown);
-					writer.writePackedInt(sendAttempts);
-					writer.writePackedInt(sendFailures);
-					writer.writePackedInt(timeouts);
-					writer.writePackedInt(responsesReceived);
-					writer.writePackedInt(responsesInvalid);
+					writer.writePackedLong(sendAttempts);
+					writer.writePackedLong(sendFailures);
+					writer.writePackedLong(timeouts);
+					writer.writePackedLong(responsesReceived);
+					writer.writePackedLong(responsesInvalid);
 				});
 			}
 
@@ -487,11 +487,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					isOk = cmd3.publishTopic(ENDERS_TOPIC, writer -> {
 						writer.writePackedInt(track);
 						writer.writePackedLong(totalTime);
-						writer.writePackedInt(sendAttempts);
-						writer.writePackedInt(sendFailures);
-						writer.writePackedInt(timeouts);
-						writer.writePackedInt(responsesReceived);
-						writer.writePackedInt(responsesInvalid);
+						writer.writePackedLong(sendAttempts);
+						writer.writePackedLong(sendFailures);
+						writer.writePackedLong(timeouts);
+						writer.writePackedLong(responsesReceived);
+						writer.writePackedLong(responsesInvalid);
 					});
 					//System.err.println("publish end of "+track);
 				} 
