@@ -707,7 +707,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            
 	            try {
 	                if (((null==methodReader) 
-	                	|| ((dispatch=(int)TrieParserReader.query(methodReader, methodLookup, topic.topic))<0))
+	                	|| ((dispatch=customDispatchTargetForPrivateTopic(topic))<0))
 	                	&& ((listener instanceof PubSubListenerBase))) {
 	                	
 	                	if (! ((PubSubListenerBase)listener).message(topic.topic, Pipe.openInputStream(p))) {
@@ -732,6 +732,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            Pipe.releaseReadLock(p);
 		}
 		
+	}
+
+	private int customDispatchTargetForPrivateTopic(final PrivateTopic topic) {
+		//the dispatch function can never be changed at runtime so no need to look it up again
+		//once it is known.
+		if (-2 == topic.customDispatchId) {
+			//-1 represents that there is no custom distpatch but we did look it up once.
+			topic.customDispatchId = (int)TrieParserReader.query(methodReader, methodLookup, topic.topic);			
+		}
+		return topic.customDispatchId;	
 	}
 	
 	final void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {

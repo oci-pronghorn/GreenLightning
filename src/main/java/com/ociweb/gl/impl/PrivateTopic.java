@@ -31,6 +31,8 @@ public class PrivateTopic {
 	}
 
 	private int maxIndex = Integer.MAX_VALUE;
+
+	public int customDispatchId = -2; //-2 indicates that this cache is still empty
 	
 	public Pipe<MessagePrivate> getPipe(int activeIndex) {
 		if (null==p) {
