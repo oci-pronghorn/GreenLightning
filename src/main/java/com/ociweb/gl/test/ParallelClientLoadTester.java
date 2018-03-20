@@ -23,10 +23,9 @@ import com.ociweb.pronghorn.util.Appendables;
 
 public class ParallelClientLoadTester implements GreenAppParallel {
     private final String route;
-	private boolean insecureClient=true;
+	private final boolean insecureClient;
     private final int parallelTracks;
     private final long cyclesPerTrack;
-    private long durationNanos = 0;
     private final long responseTimeoutNS;
     private final Integer telemetryPort;
     private final String telemetryHost;
@@ -34,6 +33,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final int maxInFlight;
     private final int maxInFlightMask;
 
+	private final ParallelClientLoadTesterOutput out;
 	private final Supplier<Writable> post;
     private final int maxPayloadSize;
     private final HTTPContentTypeDefaults contentType;
@@ -43,8 +43,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final ElapsedTimeRecorder[] elapsedTime;
 
     private int trackId = 0;
-	private final ParallelClientLoadTesterOutput out;
 	private long startupTime;
+	private long durationNanos = 0;
 
 	private final long[][] callTime;
 	private final int[] inFlightHead;
@@ -418,7 +418,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					//must publish this many to get the world moving
 					Thread.yield();
 					if ((System.currentTimeMillis()-now) > 10_000) {
-						System.err.println("Unable to send "+maxInFlight+" messages to start up.");			
+						out.failedToStart(maxInFlight);
 						cmd3.shutdown();
 					}
 				}

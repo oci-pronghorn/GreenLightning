@@ -11,5 +11,7 @@ public interface ParallelClientLoadTesterOutput {
             int sendAttempts, int sendFailures, int timeouts, int responsesReceived, int invalidResponses);
 
     void connectionClosed(int track);
+
+    void failedToStart(int maxInFlight);
 }
 

@@ -50,4 +50,9 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
     public void connectionClosed(int track) {
         System.out.println("Connection Closed: " + track);
     }
+
+    @Override
+    public void failedToStart(int maxInFlight) {
+        System.err.println("Unable to send "+maxInFlight+" messages to start up.");
+    }
 }
