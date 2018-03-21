@@ -808,7 +808,7 @@ public class BuilderImpl implements Builder {
 	@Override
 	public final void setDefaultRate(long ns) {
 		//new Exception("setting new rate "+ns).printStackTrace();
-		defaultSleepRateNS = Math.max(ns, 2000); //protect against too small 
+		defaultSleepRateNS = Math.max(ns, 1000); //protect against too small 
 	}
 
 
@@ -964,7 +964,7 @@ public class BuilderImpl implements Builder {
 			}
 
 			int releaseCount = 1024;
-			int writeBufferMultiplier = 30;
+			int writeBufferMultiplier = 100; //takes more memory but limits writes, each creating a little GC
 			int responseUnwrapCount = 2;
 			int clientWrapperCount = 2;
 	
