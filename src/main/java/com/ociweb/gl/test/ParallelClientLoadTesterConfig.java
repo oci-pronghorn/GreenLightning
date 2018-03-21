@@ -7,15 +7,15 @@ public class ParallelClientLoadTesterConfig {
     public String host = "127.0.0.1";
     public int port = 8080;
     public String route = "";
-    public boolean insecureClient=true;
+    public boolean insecureClient = true;
     public int parallelTracks = 4;
     public int cyclesPerTrack = 1;
     public long durationNanos = 0;
     public long responseTimeoutNS = 0;
     public Integer telemetryPort = null;
     public String telemetryHost = null;
-    public Long rate = new Long(4000);//very fast rate
-	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests opn a track
+    public Long rate = 4000L; //very fast rate
+	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests on a track
 
     public ParallelClientLoadTesterConfig() {
     }

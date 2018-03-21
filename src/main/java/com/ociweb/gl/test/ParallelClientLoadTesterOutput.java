@@ -4,10 +4,14 @@ import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 
 public interface ParallelClientLoadTesterOutput {
 
-    void progress(int pctDone, int sumFail);
+    void failedToStart(int maxInFlight);
 
-    void end(ElapsedTimeRecorder etr, long totalMessages, long totalTimeSum, int failedMessagesSum, long duration, long serverCallsPerSecond);
+    void progress(int percentDone, long sumTimeouts, long sumInvalid);
 
     void connectionClosed(int track);
+
+    void end(
+            ElapsedTimeRecorder etr, long testDuration, long totalMessages, long totalTimeSumNS, long serverCallsPerSecond,
+            long sendAttempts, long sendFailures, long timeouts, long responsesReceived, long invalidResponses);
 }
 
