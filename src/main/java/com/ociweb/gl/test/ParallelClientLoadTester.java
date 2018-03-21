@@ -386,9 +386,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			} else {
 				wasSent = cmd2.httpPost(session[track], route, writer);
 			}
-
-			sendAttempts++;
+			
 			if (wasSent) {
+				sendAttempts++;
 				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
 			}
 			else {
@@ -413,6 +413,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				}
 				//must use message to startup the system
 			}
+			countDown--; //we launched 1 cycle for this track on startup.
 		}
 	
 		@Override
@@ -458,7 +459,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 
 			boolean isOk = true;
-			if (countDown > 0) {
+			if (countDown >= maxInFlight) { //others are still in flight
 				if (durationNanos > 0) {
 					isOk = cmd3.delay(durationNanos);
 				}
@@ -467,7 +468,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				}
 			}
 			else {
-				if (1 == (maxInFlight+countDown)) {
+				if (0==countDown) {
 					//only end after all the inFlightMessages have returned.
 					isOk = cmd3.publishTopic(ENDERS_TOPIC, writer -> {
 						writer.writePackedInt(track);
