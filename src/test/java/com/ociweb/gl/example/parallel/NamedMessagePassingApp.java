@@ -10,13 +10,15 @@ import com.ociweb.json.JSONType;
 public class NamedMessagePassingApp implements GreenAppParallel {
 
 	private boolean telemetry;
+	private long rate;
 	
 	public static void main(String[] args) {
-		GreenRuntime.run(new NamedMessagePassingApp(false));
+		GreenRuntime.run(new NamedMessagePassingApp(false,4000));
 	}
 	
-	public NamedMessagePassingApp(boolean telemetry) {
+	public NamedMessagePassingApp(boolean telemetry, long rate) {
 		this.telemetry = telemetry;
+		this.rate = rate;
 	}
 	
 	@Override
@@ -48,15 +50,12 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 				
 		builder.parallelTracks(2);
 		
-		//high volume
-		//builder.setDefaultRate(10000L);
-		
-		//low latency
-		builder.setDefaultRate(2000L);
+		builder.setDefaultRate(rate);
+
 		
 		// "{\"key1\":\"value\",\"key2\":123}";
 		
-		builder.setGlobalSLALatencyNS(10_000_000);
+		builder.setGlobalSLALatencyNS(2_000_000);
 		
 		JSONExtractorCompleted extractor = 
 				new JSONExtractor()
@@ -92,7 +91,6 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 //		});
 		
 		runtime.addRestListener("consumer",new RestConsumer(runtime))
-		//.isolate()
 		       .includeAllRoutes();
 		runtime.addPubSubListener("responder",new RestResponder(runtime))
 		       .addSubscription("/send/200"); //add boolean for unscoped if required

@@ -1,7 +1,5 @@
 package com.ociweb.gl.api;
 
-import java.io.IOException;
-
 import com.ociweb.gl.impl.http.server.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;

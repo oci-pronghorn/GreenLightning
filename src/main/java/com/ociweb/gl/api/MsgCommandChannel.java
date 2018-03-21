@@ -842,6 +842,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
     
+    //TODO: create object to wrap immutable topic and to cache its details
+    //      removes trie parser lookup of private topic plus UTF8 conversion
+    //      streamline the new hot spot in profiler!!!!
+    
+    String cachedTopic="";
+    int    cachedTopicToken=-2;
     
     public boolean publishTopic(CharSequence topic, Writable writable) {
     	return publishTopic(topic, writable, WaitFor.All);
@@ -857,7 +863,24 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
 
-        int token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic);
+        
+        ///////////////////////////////////////////////////
+        //hack test for now to see if this is worth doing.
+        //NOTE: this is not helping much because HTTP header parsing dwarfs this work.
+        int token;
+        if (topic instanceof String) {
+        	if (topic == cachedTopic) {
+        		token = cachedTopicToken;
+        	} else {
+        		token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic);
+        		cachedTopic = (String)topic;
+        		cachedTopicToken = token;
+        	}
+        } else {
+        	token =  null==publishPrivateTopics ? -1 : publishPrivateTopics.getToken(topic);	
+        }
+        //////////////////////////
+        
 		
 		if (token>=0) {
 			return publishOnPrivateTopic(token, writable);
@@ -1104,15 +1127,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	private boolean publishOnPrivateTopic(int token, Writable writable) {
 		//this is a private topic            
 		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
-		if (PipeWriter.tryWriteFragment(output, MessagePrivate.MSG_PUBLISH_1)) {
-					
-			DataOutputBlobWriter<MessagePrivate> writer = PipeWriter.outputStream(output);
-			DataOutputBlobWriter.openField(writer);
+		if (Pipe.hasRoomForWrite(output)) {
+			int size = Pipe.addMsgIdx(output, MessagePrivate.MSG_PUBLISH_1);
+	
+			DataOutputBlobWriter<MessagePrivate> writer = Pipe.openOutputStream(output);
 			writable.write(writer);
-			DataOutputBlobWriter.closeHighLevelField(writer, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3);
+			DataOutputBlobWriter.closeLowLevelField(writer);
+			Pipe.confirmLowLevelWrite(output, size);
+			Pipe.publishWrites(output);
 			
-			PipeWriter.publishWrites(output);
-
 			return true;
 		} else {
 			logPrivateTopicTooShort(token,output);
@@ -1123,19 +1146,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	private FailableWrite publishFailableOnPrivateTopic(int token, FailableWritable writable) {
 		//this is a private topic
 		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
-		if (PipeWriter.hasRoomForWrite(output)) {
-			DataOutputBlobWriter<MessagePrivate> writer = PipeWriter.outputStream(output);
-			DataOutputBlobWriter.openField(writer);
+		if (Pipe.hasRoomForWrite(output)) {
+			DataOutputBlobWriter<MessagePrivate> writer = Pipe.openOutputStream(output);
 			FailableWrite result = writable.write(writer);
 
 			if (result == FailableWrite.Cancel) {
 				output.closeBlobFieldWrite();
-			}
-			else {
-				PipeWriter.presumeWriteFragment(output, MessagePrivate.MSG_PUBLISH_1);
-				DataOutputBlobWriter.closeHighLevelField(writer, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3);
-
-				PipeWriter.publishWrites(output);
+			} else {
+				int size = Pipe.addMsgIdx(output, MessagePrivate.MSG_PUBLISH_1);
+				DataOutputBlobWriter.closeLowLevelField(writer);
+				Pipe.confirmLowLevelWrite(output, size);
+				Pipe.publishWrites(output);
 			}
 			return result;
 		} else {
@@ -1146,11 +1167,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	private boolean publishOnPrivateTopic(int token) {
 		//this is a private topic            
 		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
-		if (PipeWriter.tryWriteFragment(output, MessagePrivate.MSG_PUBLISH_1)) {
-			
-			PipeWriter.writeSpecialBytesPosAndLen(output, MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3, -1, 0);
-			PipeWriter.publishWrites(output);
-
+		if (Pipe.hasRoomForWrite(output)) {
+			int size = Pipe.addMsgIdx(output, MessagePrivate.MSG_PUBLISH_1);
+			Pipe.addNullByteArray(output);
+			Pipe.confirmLowLevelWrite(output, size);	
+			Pipe.publishWrites(output);
 			return true;
 		} else {
 			logPrivateTopicTooShort(token, output);
