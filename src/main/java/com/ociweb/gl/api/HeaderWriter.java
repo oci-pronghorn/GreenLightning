@@ -43,4 +43,12 @@ public class HeaderWriter {
 
 	}
 	
+	public void write(HTTPHeader header, HeaderValue value) {		
+		try {			
+			value.appendTo(activeTarget.append(header.writingRoot())).append("\r\n");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
 }

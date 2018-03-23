@@ -5,14 +5,22 @@ import com.ociweb.pronghorn.util.Appendables;
 
 public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoadTesterOutput {
 
+	StringBuilder progress = new StringBuilder();
+	
     @Override
     public void progress(int percentDone, long sumTimeouts, long sumInvalid) {
-        Appendables.appendValue(System.out, percentDone);
-        System.out.append("% complete  ");
-        Appendables.appendValue(System.out, sumTimeouts);
-        System.out.append(" failed  ");
-        Appendables.appendValue(System.out, sumInvalid);
-        System.out.append(" invalid\n");
+    	
+    	progress.setLength(0);
+    	
+        Appendables.appendValue(progress, percentDone);
+        progress.append("% complete  ");
+        Appendables.appendValue(progress, sumTimeouts);
+        progress.append(" failed  ");
+        Appendables.appendValue(progress, sumInvalid);
+        progress.append(" invalid ");
+        Appendables.appendEpochTime(progress, System.currentTimeMillis());
+        progress.append("\n");
+        System.out.append(progress);
     }
 
     @Override
