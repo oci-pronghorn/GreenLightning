@@ -26,6 +26,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 
 		builder.useHTTP1xServer(8080)
 		       .useInsecureServer()
+		       .setMaxRequestSize(200)
 		       .setDecryptionUnitsPerTrack(2)
 		       .setEncryptionUnitsPerTrack(2)
 		       .setHost("127.0.0.1");		
@@ -55,7 +56,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		
 		// "{\"key1\":\"value\",\"key2\":123}";
 		
-		builder.setGlobalSLALatencyNS(2_000_000);
+		builder.setGlobalSLALatencyNS(4_000_000);
 		
 		JSONExtractorCompleted extractor = 
 				new JSONExtractor()
@@ -63,7 +64,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		        .newPath(JSONType.TypeInteger).key("key2").completePath("b");
 		
 		
-		builder.defineRoute().path("/test").routeId();
+		builder.defineRoute(extractor).path("/test").routeId();
 		
 		//TODO: if the responder is found in the parallel section then mutate the name.
 		builder.definePrivateTopic(2000,100,"/send/200", "consumer", "responder");
