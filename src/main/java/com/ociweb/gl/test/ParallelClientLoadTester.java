@@ -379,6 +379,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private boolean makeCall() {
 			long now = System.nanoTime();
 			boolean wasSent;
+			sendAttempts++;
 			if (null==writer) {
 				wasSent = cmd2.httpGet(session[track], route);
 			} else if (header != null) {
@@ -388,7 +389,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 			
 			if (wasSent) {
-				sendAttempts++;
 				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
 			}
 			else {
