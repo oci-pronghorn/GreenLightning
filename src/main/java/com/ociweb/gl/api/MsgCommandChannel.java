@@ -40,6 +40,8 @@ import com.ociweb.pronghorn.util.field.MessageConsumer;
  */
 public class MsgCommandChannel<B extends BuilderImpl> {
 
+	private final TrieParserReader READER = new TrieParserReader(true);
+
 	private final static Logger logger = LoggerFactory.getLogger(MsgCommandChannel.class);
 	
 	private boolean isInit = false;
@@ -562,7 +564,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		/////////////////////
 		if (session.getConnectionId()<0) {
 			final long id = builder.getClientCoordinator().lookup(
-					                   ClientCoordinator.lookupHostId(session.host), 
+					                   ClientCoordinator.lookupHostId((CharSequence) session.host, READER), 
 					                   session.port, 
 					                   session.sessionId);
 		    if (id>=0) {

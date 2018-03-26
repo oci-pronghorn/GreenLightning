@@ -21,8 +21,11 @@ import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
+
+	private final TrieParserReader READER = new TrieParserReader(true);
 
 	private static final byte[] GET = "GET".getBytes();
 
@@ -319,6 +322,9 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	
 	}
 
+
+	private final TrieParserReader reader = new TrieParserReader(true); 
+	
 	private PipeUTF8MutableCharSquence mCharSequence = new PipeUTF8MutableCharSquence();
 	
 	//has side effect of storing the active connection as a member so it need not be looked up again later.
@@ -347,11 +353,11 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 			//assert(connectionId == ccm.lookup(mCharSeq, port, sessionId));
 			
 		} else {			
-			connectionId = ccm.lookup(ccm.lookupHostId(mCharSeq), port, sessionId);			
+			connectionId = ccm.lookup(ClientCoordinator.lookupHostId((CharSequence) mCharSeq, READER), port, sessionId);			
 		}
 		
 		ClientConnection activeConnection = ClientCoordinator.openConnection(
-				ccm, mCharSeq, port, sessionId, output, connectionId);
+				ccm, mCharSeq, port, sessionId, output, connectionId, reader);
 				
 		
 		if (null != activeConnection) {
