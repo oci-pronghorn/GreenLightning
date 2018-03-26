@@ -36,7 +36,6 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	public void setParseDetails(TrieParser extractionParser, 
 			                    IntHashTable table, 
 			                    int paraIndexCount, 
-			                    TrieParser headerTrieParser,
 			                    HTTPSpecification httpSpec,
 			                    //TODO: rename this, it should not be HTTP1.x specific but more general...
 			                    HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig) {
@@ -44,7 +43,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		this.paraIndexCount = paraIndexCount+1; //count of fields before headers which are before the payload
 		this.extractionParser = extractionParser;
 		this.headerHash = table;
-		this.headerTrieParser = headerTrieParser;
+		this.headerTrieParser = httpSpec.headerParser();
 		this.httpSpec = httpSpec;
 		this.payloadIndexOffset = paraIndexCount + IntHashTable.count(headerHash) + 1;
 		this.http1xRouterStageConfig = http1xRouterStageConfig;
@@ -108,7 +107,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	public void setRouteId(int pathId) {
 		
 		this.fieldDefs = this.http1xRouterStageConfig.extractionParser(pathId);
-		this.routeId = fieldDefs.groupId;
+		this.routeId = fieldDefs.routeId;
 		
 	}
 

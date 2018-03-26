@@ -17,12 +17,14 @@ public class ClientHostPortInstance {
 	public final int port;
 	public final int sessionId;
 	public final int uniqueId;
+	public final TrieParser headers = null; //
 	
 	public final JSONExtractor extractor;
 	
 	//cache
 	private long connectionId=-1;
 
+	//TODO: add method to limit headers
 	
 	
 	

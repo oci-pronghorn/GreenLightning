@@ -535,7 +535,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
  				  reader.setParseDetails( builder.routeExtractionParser(pathId),
  						                  builder.routeHeaderToPositionTable(pathId), 
  						                  builder.routeExtractionParserIndexCount(pathId),
- 						                  builder.routeHeaderTrieParser(pathId),
  						                  builder.httpSpec,
  						                  builder.routerConfig()
  						                 );

@@ -746,13 +746,11 @@ public class BuilderImpl implements Builder {
 		return routerConfig().extractionParser(route).getIndexCount();
 	}
 	
+	@Deprecated
 	public IntHashTable routeHeaderToPositionTable(int routeId) {
 		return routerConfig().headerToPositionTable(routeId);
 	}
 	
-	public TrieParser routeHeaderTrieParser(int routeId) {
-		return routerConfig().httpSpec.headerParser();
-	}
 
 	public final Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {
 		final boolean hasNoRoutes = (0==routerConfig().totalPathsCount());
