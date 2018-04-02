@@ -40,7 +40,7 @@ public class MathUnit implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeX = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(AppendableByteWriter writer, HTTPFieldReader source) {
+			public void render(AppendableByteWriter writer, HTTPFieldReader source) {
 				source.getText(fieldA, writer);
 			}
 			
@@ -49,7 +49,7 @@ public class MathUnit implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeY = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(AppendableByteWriter writer, HTTPFieldReader source) {
+			public void render(AppendableByteWriter writer, HTTPFieldReader source) {
 				source.getText(fieldB, writer);
 			}
 			
@@ -58,7 +58,7 @@ public class MathUnit implements RestListener {
 		StringTemplateScript<HTTPFieldReader> consumeSum = new StringTemplateScript<HTTPFieldReader>() {
 
 			@Override
-			public void fetch(final AppendableByteWriter writer, HTTPFieldReader source) {
+			public void render(final AppendableByteWriter writer, HTTPFieldReader source) {
 				 DecimalResult adder = new DecimalResult() {
 						@Override
 						public void result(long m, byte e) {
