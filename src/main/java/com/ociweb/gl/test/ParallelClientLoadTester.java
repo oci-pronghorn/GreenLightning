@@ -15,6 +15,8 @@ import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
+import com.ociweb.pronghorn.network.ClientConnection;
+import com.ociweb.pronghorn.network.ClientSocketWriterStage;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.pipe.ChannelReader;
@@ -32,7 +34,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final Long rate;
     private final int maxInFlight;
     private final int maxInFlightMask;
+    private int warmupCount = 20_000;
 
+	public static int LOG_LATENCY_LIMIT = 10_000_000;//10ms	
+    
 	private final ParallelClientLoadTesterOutput out;
 	private final Supplier<Writable> post;
     private final int maxPayloadSize;
@@ -105,8 +110,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.insecureClient = config.insecureClient;
         this.responseTimeoutNS = config.responseTimeoutNS;
         this.cyclesPerTrack = config.cyclesPerTrack;
-        this.rate = config.rate;
-
+        this.rate = config.cycleRate;
+        this.warmupCount = config.warmup;
+        
 		//bit  size   mask   pos
 		//0     1      0      0
 		//1     2      1      0,1
@@ -114,6 +120,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
         int maxInFlightBits = config.simultaneousRequestsPerTrackBits;
 		this.maxInFlight = 1<< maxInFlightBits;
 		this.maxInFlightMask = maxInFlight-1;
+		
+		if (maxInFlight==1) {
+			//these measurements are more accurate and smaller because the are taken when
+			//the data leaves and arrives without the additional cost of the tester application.
+			//
+			
+			//NOTE: the SocketWriter is NOT aware of message boundaries so these values are
+			//NOT individual call times unless we are sending 1 message at a time sequentially
+			ClientSocketWriterStage.logLatencyData = true; //for the group of connections used.
+			//ClientConnection.logLatencyData = true; //every individual connection			
+		}
+		
 		this.callTime = new long[parallelTracks][maxInFlight];
 		this.inFlightHead = new int[parallelTracks];
 		this.inFlightTail = new int[parallelTracks];
@@ -133,6 +151,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.validate = null==payload? null : payload.validate;
 
 		this.out = out;
+
+		
 	}
 
 	@Override
@@ -144,7 +164,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			builder.useNetClient();
 		}
 		
-		builder.setGlobalSLALatencyNS(100_000_000);
+		builder.setGlobalSLALatencyNS(20_000_000);
 
 		if (telemetryPort != null) {
 			if (null == this.telemetryHost) {
@@ -241,7 +261,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					while (--t >= 0) {
 						etr.add(elapsedTime[t]);
 					}
-
+					
+					//NOTE: these counts do include warmup
                     long totalMessages = parallelTracks * cyclesPerTrack;
                     long testDuration = System.nanoTime() - startupTime;
                     long serverCallsPerSecond = (1_000_000_000L * totalMessages) / testDuration;
@@ -390,8 +411,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			
 			if (wasSent) {
 				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
-			}
-			else {
+			} else {
 				sendFailures++;
 			}
 			return wasSent;
@@ -425,18 +445,41 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					out.connectionClosed(track);
 				}
 
-				long duration = System.nanoTime() - callTime[track][maxInFlightMask & inFlightTail[track]++];
-				/*
-				if (duration>20_000_000) {
+				long sentTime = callTime[track][maxInFlightMask & inFlightTail[track]++];
+				long arrivalTime = System.nanoTime();
+				long duration = arrivalTime - sentTime;
+								
+				//only done once to ensure the code remains the same
+				if (responsesReceived == (warmupCount-1)) {
+					//clear all values we are not doing the real deal
+					System.gc();//still in warmup so GC now quick
+					totalTime = 0;//reset
+					ElapsedTimeRecorder.clear(elapsedTime[track]);
+					System.err.println("---------------- finished warmup -------------");
+					
+				}
+							
+				//only log after warmup when the world is stable.
+				if (duration>LOG_LATENCY_LIMIT) {
+					long now = System.currentTimeMillis();
+					long start = now - (duration/1_000_000);
+					
+					Appendables.appendEpochTime(
+					Appendables.appendEpochTime(
 					Appendables.appendValue(
 							Appendables.appendNearestTimeUnit(System.err, duration)
 							.append(" long call detected for ")
-							,(inFlightTail[track]-1)).append("\n");
+							,(track)).append(" window :")
+							,start).append(" - ")
+							,now).append("\n");
 
 				}
-				*/
+				
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);
 				totalTime+=duration;
+			
+				
+				
 				responsesReceived++;
 				if (validator != null && !validator.responseHTTP(reader)) {
 					responsesInvalid++;
