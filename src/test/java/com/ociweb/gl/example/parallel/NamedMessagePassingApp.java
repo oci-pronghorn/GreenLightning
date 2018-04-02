@@ -6,11 +6,14 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
 public class NamedMessagePassingApp implements GreenAppParallel {
 
 	private boolean telemetry;
 	private long rate;
+	private long fieldA;
+	private long fieldB;
 	
 	public static void main(String[] args) {
 		GreenRuntime.run(new NamedMessagePassingApp(false,4000));
@@ -56,18 +59,26 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		
 		// "{\"key1\":\"value\",\"key2\":123}";
 		
-		builder.setGlobalSLALatencyNS(4_000_000);
+		builder.setGlobalSLALatencyNS(1_000_000);
+		
+		Object testObj = new Object();
 		
 		JSONExtractorCompleted extractor = 
 				new JSONExtractor()
-				.newPath(JSONType.TypeString).key("key1").completePath("a")
-		        .newPath(JSONType.TypeInteger).key("key2").completePath("b");
+				.newPath(JSONType.TypeString).key("key1").completePath("name_a")
+		        .newPath(JSONType.TypeInteger).key("key2").completePath("name_b",testObj);
 		
 		
-		builder.defineRoute(extractor).path("/test").routeId();
+		int aRouteId = builder.defineRoute(extractor).path("/test").routeId();
+		
+		fieldA  = builder.lookupFieldByName(aRouteId,"name_a");
+		fieldB  = builder.lookupFieldByName(aRouteId,"name_b");
+		long fieldB2 = builder.lookupFieldByIdentity(aRouteId, testObj);
+		assert(fieldB==fieldB2);
+		long fieldL  = builder.lookupFieldByIdentity(aRouteId, HTTPHeaderDefaults.CONTENT_LENGTH);
 		
 		//TODO: if the responder is found in the parallel section then mutate the name.
-		builder.definePrivateTopic(2000,100,"/send/200", "consumer", "responder");
+		builder.definePrivateTopic(1<<16,100,"/send/200", "consumer", "responder");
 		builder.usePrivateTopicsExclusively();
 
 	}
@@ -91,8 +102,9 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 //			
 //		});
 		
-		runtime.addRestListener("consumer",new RestConsumer(runtime))
+		runtime.addRestListener("consumer",new RestConsumer(runtime, fieldA, fieldB))
 		       .includeAllRoutes();
+		
 		runtime.addPubSubListener("responder",new RestResponder(runtime))
 		       .addSubscription("/send/200"); //add boolean for unscoped if required
 

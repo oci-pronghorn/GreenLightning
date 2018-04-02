@@ -3,6 +3,7 @@ package com.ociweb.gl.api;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.CompositePath;
 
 /**
@@ -102,5 +103,8 @@ public interface Builder extends ArgumentProvider {
 	HTTPClientConfig useInsecureNetClient();
 
 	void setGlobalSLALatencyNS(long ns);
+
+	long lookupFieldByName(int aRouteId, String name);
+	long lookupFieldByIdentity(int aRouteId, Object obj);
 
 }

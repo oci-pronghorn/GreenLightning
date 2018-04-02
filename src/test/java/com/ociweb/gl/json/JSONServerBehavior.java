@@ -18,7 +18,8 @@ public class JSONServerBehavior implements RestListener {
     private final JSONResponse response = new JSONResponse();
     private final JSONRequest jsonRequest = new JSONRequest();
     private final JSONReader jsonReader = JSONRequest.jsonExtractor.reader();
-
+    private final long flagsFieldId;
+    
     static int defineRoute(Builder builder) {
         return builder.defineRoute(JSONRequest.jsonExtractor)
         		.path("/test/path")
@@ -27,14 +28,15 @@ public class JSONServerBehavior implements RestListener {
                 .routeId();
     }
 
-    JSONServerBehavior(GreenRuntime runtime) {
-        channel = runtime.newCommandChannel(NET_RESPONDER);
+    JSONServerBehavior(GreenRuntime runtime, long flagsFieldId) {
+    	this.flagsFieldId = flagsFieldId;
+        this.channel = runtime.newCommandChannel(NET_RESPONDER);
         this.runtime = runtime;
     }
 
     @Override
     public boolean restRequest(HTTPRequestReader request) {
-        int f = request.getInt("flag".getBytes());
+        int f = request.structured().readInt(flagsFieldId);
 
         request.openPayloadData(reader -> {
             jsonRequest.reset();

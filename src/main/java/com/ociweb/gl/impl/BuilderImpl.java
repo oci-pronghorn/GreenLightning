@@ -79,6 +79,7 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
+import com.ociweb.pronghorn.struct.BStructSchema;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
@@ -86,6 +87,8 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class BuilderImpl implements Builder {
 
+
+	private static final int MIN_CYCLE_RATE = 1; //cycle rate can not be zero
 
 	protected static final int MINIMUM_TLS_BLOB_SIZE = 1<<15;
 
@@ -219,7 +222,7 @@ public class BuilderImpl implements Builder {
     
     private IntHashTable netPipeLookup = new IntHashTable(7);//Initial default size
 
-	public void registerHTTPClientId(int routeId, int pipeIdx) {
+	public void registerHTTPClientId(int uniqueId, int pipeIdx) {
 				
 		if ( (IntHashTable.count(netPipeLookup)<<1) >= IntHashTable.size(netPipeLookup) ) {
 			//must grow first since we are adding many entries
@@ -230,10 +233,10 @@ public class BuilderImpl implements Builder {
 		//      we need to stroe extracor so its done when we do the lookup.
 		
 		
-		boolean addedItem = IntHashTable.setItem(netPipeLookup, routeId, pipeIdx);
+		boolean addedItem = IntHashTable.setItem(netPipeLookup, uniqueId, pipeIdx);
         if (!addedItem) {
         	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"
-        			+ "Check that each HTTP Client consumer does not share an Id with any other.",routeId);
+        			+ "Check that each HTTP Client consumer does not share an Id with any other.",uniqueId);
         }
     }
     
@@ -745,12 +748,6 @@ public class BuilderImpl implements Builder {
 	public final int routeExtractionParserIndexCount(int route) {
 		return routerConfig().extractionParser(route).getIndexCount();
 	}
-	
-	@Deprecated
-	public IntHashTable routeHeaderToPositionTable(int routeId) {
-		return routerConfig().headerToPositionTable(routeId);
-	}
-	
 
 	public final Pipe<HTTPRequestSchema> newHTTPRequestPipe(PipeConfig<HTTPRequestSchema> restPipeConfig) {
 		final boolean hasNoRoutes = (0==routerConfig().totalPathsCount());
@@ -806,7 +803,7 @@ public class BuilderImpl implements Builder {
 	@Override
 	public final void setDefaultRate(long ns) {
 		//new Exception("setting new rate "+ns).printStackTrace();
-		defaultSleepRateNS = Math.max(ns, 1000); //protect against too small 
+		defaultSleepRateNS = Math.max(ns, MIN_CYCLE_RATE); //protect against negative and zero
 	}
 
 
@@ -938,7 +935,8 @@ public class BuilderImpl implements Builder {
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					
 			//BUILD GRAPH
-			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses, this.client.getCertificates());
+			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses,
+					                    this.client.getCertificates(), gm.recordTypeData);
 		
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;
@@ -1326,6 +1324,24 @@ public class BuilderImpl implements Builder {
 	@Override
 	public void setGlobalSLALatencyNS(long ns) {
 		GraphManager.addDefaultNota(gm, GraphManager.SLA_LATENCY, ns);
+	}
+
+	@Override
+	public long lookupFieldByName(int id, String name) {
+		if ((id & BStructSchema.IS_STRUCT_BIT) == 0) {
+			//this is a route so we must covert to struct
+			id = routerConfig.getStructIdForRouteId(id);
+		}
+		return gm.recordTypeData.fieldLookup(name, id);
+	}
+
+	@Override
+	public long lookupFieldByIdentity(int id, Object obj) {
+		if ((id & BStructSchema.IS_STRUCT_BIT) == 0) {
+			//this is a route so we must covert to struct
+			id = routerConfig.getStructIdForRouteId(id);
+		}
+		return gm.recordTypeData.fieldLookupByIdentity(obj, id);
 	}
 
 }

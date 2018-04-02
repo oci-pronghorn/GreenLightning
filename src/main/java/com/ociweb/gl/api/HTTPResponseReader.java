@@ -24,15 +24,13 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 		super(pipe);
 	}
 
-	public void setParseDetails(IntHashTable table, 
+	public void setParseDetails( 
 			                    TrieParser headerTrieParser,
 			                    HTTPSpecification<?,?,?,?> httpSpec) {
-		//there is 1 field which holds the index to where the payload begins, eg after the headers.
-		this.paraIndexCount = 1; //count of fields before headers which are before the payload
-		this.headerHash = table;
+
 		this.headerTrieParser = headerTrieParser;
 		this.httpSpec = httpSpec;
-		this.payloadIndexOffset = 1;
+
 		if (null==htc) {
 			this.htc  = new HeaderTypeCapture(httpSpec);
 		}
@@ -51,8 +49,8 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	}
 	
 	public HTTPContentType contentType() {
-		
-	   	 if (openHeaderData(HTTPHeaderDefaults.CONTENT_TYPE.ordinal(), htc)) {
+					
+	   	 if (structured().identityVisit(HTTPHeaderDefaults.CONTENT_TYPE, htc)) {
 			 return htc.type();
 		 } else {
 			 return HTTPContentTypeDefaults.UNKNOWN;

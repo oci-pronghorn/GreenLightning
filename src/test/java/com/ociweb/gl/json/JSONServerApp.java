@@ -5,6 +5,8 @@ import com.ociweb.gl.api.GreenRuntime;
 
 public class JSONServerApp implements GreenAppParallel {
     private int InventoryLocationOrgcodRouteId;
+    private long flagsFieldId;
+    
     // Declare connections
     @Override
     public void declareConfiguration(Builder builder) {
@@ -27,12 +29,16 @@ public class JSONServerApp implements GreenAppParallel {
         //builder.parallelism(4);
 
         builder.usePrivateTopicsExclusively();
+        
+        flagsFieldId = builder.lookupFieldByName(InventoryLocationOrgcodRouteId, "flag");
+        
+        
     }
 
     // Declare business logic
     @Override
     public void declareBehavior(GreenRuntime runtime) {
-        JSONServerBehavior restListener = new JSONServerBehavior(runtime);
+        JSONServerBehavior restListener = new JSONServerBehavior(runtime, flagsFieldId);
         runtime.registerListener(restListener).includeRoutes(InventoryLocationOrgcodRouteId);
 
     }

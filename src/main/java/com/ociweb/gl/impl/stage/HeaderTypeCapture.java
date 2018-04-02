@@ -7,7 +7,7 @@ import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 
-public class HeaderTypeCapture implements Headable{
+public class HeaderTypeCapture implements Headable {
 
 	private HTTPContentType type;
 	private HTTPSpecification<?, ?, ?, ?> httpSpec;

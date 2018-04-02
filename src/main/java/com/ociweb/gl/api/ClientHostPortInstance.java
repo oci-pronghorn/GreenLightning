@@ -15,8 +15,7 @@ public class ClientHostPortInstance {
 	public final int hostId;
 	public final byte[] hostBytes;
 	public final int port;
-	public final int sessionId;
-	public final int uniqueId;
+	public final int sessionId; 
 	public final TrieParser headers = null; //
 	
 	public final JSONExtractor extractor;
@@ -41,13 +40,12 @@ public class ClientHostPortInstance {
 	}
 	
 	public ClientHostPortInstance(String host, int port, JSONExtractor extractor, int sessionId) {
-		this.uniqueId = sessionCounter.incrementAndGet();
+		this.sessionId = sessionCounter.incrementAndGet();
 		this.host = host;
 		this.port = port;
 		if (port<=0 || port>65535) {
 			throw new UnsupportedOperationException("Invalid port "+port+" must be postive and <= 65535");
 		}
-		this.sessionId = sessionId;
 		this.extractor = null;
 		this.hostId = ClientCoordinator.registerDomain(host);
 		this.hostBytes = host.getBytes();
@@ -56,7 +54,7 @@ public class ClientHostPortInstance {
 
 	
 	public ClientHostPortInstance(String host, int port, JSONExtractor extractor) {
-		this.uniqueId = sessionCounter.incrementAndGet();
+		this.sessionId = sessionCounter.incrementAndGet();
 		this.host = host;
 		this.hostId = ClientCoordinator.registerDomain(host);
 		this.hostBytes = host.getBytes();
@@ -64,7 +62,6 @@ public class ClientHostPortInstance {
 		if (port<=0 || port>65535) {
 			throw new UnsupportedOperationException("Invalid port "+port+" must be postive and <= 65535");
 		}
-		this.sessionId = uniqueId;
 		this.extractor = null;
 	}
 	

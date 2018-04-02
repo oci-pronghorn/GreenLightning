@@ -11,6 +11,7 @@ import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
 import com.ociweb.pronghorn.network.ClientConnection;
 import com.ociweb.pronghorn.network.ClientCoordinator;
+import com.ociweb.pronghorn.network.http.HTTPClientConnectionFactory;
 import com.ociweb.pronghorn.network.http.HeaderUtil;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
@@ -21,6 +22,7 @@ import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import com.ociweb.pronghorn.struct.BStructSchema;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
@@ -73,12 +75,19 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "lavenderblush", this);
 		GraphManager.addNota(graphManager, GraphManager.LOAD_MERGE, GraphManager.LOAD_MERGE, this);
 		
+		recordTypeData = graphManager.recordTypeData;
 	}
 	
 	
+	private final BStructSchema recordTypeData;
+	private HTTPClientConnectionFactory ccf;
+	
 	@Override
 	public void startup() {
+		
 		super.startup();		
+		ccf = new HTTPClientConnectionFactory(recordTypeData);
+
 	}
 
 	
@@ -177,7 +186,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 					                	
 						                
 					                	assert(routeId>=0);
-					                	clientConnection.recordDestinationRouteId(routeId);// userId ??
+					                	clientConnection.recordDestinationRouteId(routeId);
 						        		
 					                	int outIdx = clientConnection.requestPipeLineIdx();
 					                					                  	
@@ -357,7 +366,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		}
 		
 		ClientConnection activeConnection = ClientCoordinator.openConnection(
-				ccm, mCharSeq, port, sessionId, output, connectionId, reader);
+				ccm, mCharSeq, port, sessionId,
+				output, connectionId, reader, ccf);
 				
 		
 		if (null != activeConnection) {
