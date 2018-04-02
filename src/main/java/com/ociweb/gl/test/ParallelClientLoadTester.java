@@ -121,7 +121,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.maxInFlight = 1<< maxInFlightBits;
 		this.maxInFlightMask = maxInFlight-1;
 		
-		if (false && maxInFlight==1) {
+		if (maxInFlight==1) {
 			//these measurements are more accurate and smaller because the are taken when
 			//the data leaves and arrives without the additional cost of the tester application.
 			//
@@ -164,7 +164,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			builder.useNetClient();
 		}
 		
-		builder.setGlobalSLALatencyNS(40_000_000);
+		builder.setGlobalSLALatencyNS(20_000_000);
 
 		if (telemetryPort != null) {
 			if (null == this.telemetryHost) {
