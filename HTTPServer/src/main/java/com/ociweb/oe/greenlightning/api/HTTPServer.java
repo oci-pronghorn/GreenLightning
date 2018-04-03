@@ -20,6 +20,9 @@ public class HTTPServer implements GreenApp
 	private final String host;
 	private final int port;
 	
+	private long keyFieldId;
+	private long nameFieldId;
+	
 	public HTTPServer(String host, int port, Appendable console) {
 		this.host = host;
 		this.console = Appendables.proxy(console);
@@ -50,13 +53,15 @@ public class HTTPServer implements GreenApp
 				
 		c.enableTelemetry();
 		
+		keyFieldId = c.lookupFieldByName(shutdownRouteId, "key");
+		nameFieldId = c.lookupFieldByName(emptyResponseRouteId, "myarg");
     }
 
 
     @Override
     public void declareBehavior(GreenRuntime runtime) {
     	
-        runtime.addRestListener(new RestBehaviorEmptyResponse(runtime, "myarg", console))
+        runtime.addRestListener(new RestBehaviorEmptyResponse(runtime, nameFieldId, console))
                  .includeRoutes(emptyResponseRouteId);
         
         runtime.addRestListener(new RestBehaviorSmallResponse(runtime, console))
@@ -76,7 +81,7 @@ public class HTTPServer implements GreenApp
         
         //splitResponseRouteId
         
-        runtime.addRestListener(new ShutdownRestListener(runtime))
+        runtime.addRestListener(new ShutdownRestListener(runtime, keyFieldId))
                   .includeRoutes(shutdownRouteId);
         
         //NOTE .includeAllRoutes() can be used to write a behavior taking all routes

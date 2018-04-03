@@ -11,7 +11,6 @@ import com.ociweb.pronghorn.util.AppendableProxy;
 
 public class RestBehaviorLargeResponse implements RestListener {
 
-	private final int cookieHeader = HTTPHeaderDefaults.COOKIE.ordinal();
 	private final GreenCommandChannel cmd;
 	private int partNeeded = 0;
 	private final AppendableProxy console;
@@ -36,13 +35,13 @@ public class RestBehaviorLargeResponse implements RestListener {
 			});
 		}
 		
-		request.openHeaderData(cookieHeader, (id,reader)-> {
+		request.structured().identityVisit(HTTPHeaderDefaults.COOKIE, (id,reader)-> {
 			
 			console.append("COOKIE: ");
 			reader.readUTF(console).append('\n');
 					
 		});
-		
+			
 		if (0 == partNeeded) {
 			boolean okA = cmd.publishHTTPResponse(request, 200, 
 									true,
