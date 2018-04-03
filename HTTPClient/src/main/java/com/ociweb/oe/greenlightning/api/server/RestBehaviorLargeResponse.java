@@ -2,7 +2,6 @@ package com.ociweb.oe.greenlightning.api.server;
 
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
@@ -36,7 +35,7 @@ public class RestBehaviorLargeResponse implements RestListener {
 			});
 		}
 		
-		request.openHeaderData(cookieHeader, (id,reader)-> {
+		request.structured().identityVisit(HTTPHeaderDefaults.COOKIE, (id,reader)-> {
 			
 			console.append("COOKIE: ");
 			reader.readUTF(console).append('\n');

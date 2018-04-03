@@ -11,12 +11,13 @@ import com.ociweb.pronghorn.util.Appendables;
 public class RestBehaviorEmptyResponse implements RestListener {
 
 	private final int cookieHeader = HTTPHeaderDefaults.COOKIE.ordinal();
-	private final byte[] fieldName;
 	private final GreenCommandChannel cmd;
 	private final AppendableProxy console;
+	private final long nameFieldId;
 	
-	public RestBehaviorEmptyResponse(GreenRuntime runtime, String myArgName, AppendableProxy console) {
-		this.fieldName = myArgName.getBytes();		
+	
+	public RestBehaviorEmptyResponse(GreenRuntime runtime, long nameFieldId, AppendableProxy console) {
+		this.nameFieldId = nameFieldId;		
 		this.cmd = runtime.newCommandChannel(NET_RESPONDER);
 		this.console = console;
 	}
@@ -24,10 +25,11 @@ public class RestBehaviorEmptyResponse implements RestListener {
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
-	    int argInt = request.getInt(fieldName);
+	    int argInt = request.structured().readInt(nameFieldId);
 	    Appendables.appendValue(console, "Arg Int: ", argInt, "\n");
 	    		
-		request.openHeaderData(cookieHeader, (id,reader)-> {
+	    
+	    request.structured().identityVisit(HTTPHeaderDefaults.COOKIE, (id,reader)-> {
 			
 			console.append("COOKIE: ");
 			reader.readUTF(console).append('\n');

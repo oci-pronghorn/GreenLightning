@@ -6,7 +6,6 @@
     <groupId>com.ociweb.oe.greenlightning.api</groupId>
     <version>1</version>
   </parent>
-  <groupId>com.ociweb.oe.greenlightning.api</groupId>
   <artifactId>HTTPClient</artifactId>
   <version>1.0-SNAPSHOT</version>
   

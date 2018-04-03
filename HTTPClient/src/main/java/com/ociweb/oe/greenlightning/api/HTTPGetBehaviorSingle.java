@@ -1,14 +1,13 @@
 package com.ociweb.oe.greenlightning.api;
 
+import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.StartupListener;
-import com.ociweb.gl.api.TimeListener;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.util.Appendables;
 

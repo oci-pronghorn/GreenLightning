@@ -1,14 +1,14 @@
 package com.ociweb.oe.greenlightning.api;
 
 import com.ociweb.gl.api.ClientHostPortInstance;
-import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.StartupListener;
 
 public class HTTPGetBehaviorChained implements StartupListener {
 	
 	private GreenCommandChannel cmd;
-	private int responseId;
+
     private ClientHostPortInstance session;
 	
 	public HTTPGetBehaviorChained(GreenRuntime runtime, ClientHostPortInstance session) {

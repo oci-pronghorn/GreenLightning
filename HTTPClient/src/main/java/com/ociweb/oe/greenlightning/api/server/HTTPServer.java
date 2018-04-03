@@ -20,6 +20,7 @@ public class HTTPServer implements GreenApp
 		
 	private AppendableProxy console;
 	private final String host;
+	private long keyFieldId;
 	
 	public HTTPServer(String host, Appendable console) {
 		this.host = host;
@@ -51,6 +52,7 @@ public class HTTPServer implements GreenApp
 		//in production it is a bad idea to let clients turn off server.
 		shutdownRouteId = c.defineRoute().path("/shutdown?key=${key}").routeId();
 				
+		keyFieldId = c.lookupFieldByName(shutdownRouteId, "key");
 		
     }
 
@@ -78,7 +80,7 @@ public class HTTPServer implements GreenApp
         
         //splitResponseRouteId
         
-        runtime.addRestListener(new ShutdownRestListener(runtime))
+        runtime.addRestListener(new ShutdownRestListener(runtime, keyFieldId))
                   .includeRoutes(shutdownRouteId);
         
         //NOTE .includeAllRoutes() can be used to write a behavior taking all routes
