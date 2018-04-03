@@ -22,7 +22,7 @@ import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import com.ociweb.pronghorn.struct.BStructSchema;
+import com.ociweb.pronghorn.struct.StructRegistry;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
@@ -79,7 +79,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	}
 	
 	
-	private final BStructSchema recordTypeData;
+	private final StructRegistry recordTypeData;
 	private HTTPClientConnectionFactory ccf;
 	
 	@Override

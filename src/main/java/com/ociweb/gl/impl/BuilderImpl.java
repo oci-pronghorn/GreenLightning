@@ -79,7 +79,8 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
-import com.ociweb.pronghorn.struct.BStructSchema;
+import com.ociweb.pronghorn.struct.StructBuilder;
+import com.ociweb.pronghorn.struct.StructRegistry;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.Blocker;
 import com.ociweb.pronghorn.util.TrieParser;
@@ -1328,7 +1329,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public long lookupFieldByName(int id, String name) {
-		if ((id & BStructSchema.IS_STRUCT_BIT) == 0) {
+		if ((id & StructRegistry.IS_STRUCT_BIT) == 0) {
 			//this is a route so we must covert to struct
 			id = routerConfig.getStructIdForRouteId(id);
 		}
@@ -1337,11 +1338,21 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public long lookupFieldByIdentity(int id, Object obj) {
-		if ((id & BStructSchema.IS_STRUCT_BIT) == 0) {
+		if ((id & StructRegistry.IS_STRUCT_BIT) == 0) {
 			//this is a route so we must covert to struct
 			id = routerConfig.getStructIdForRouteId(id);
 		}
 		return gm.recordTypeData.fieldLookupByIdentity(obj, id);
+	}
+
+	@Override
+	public StructBuilder defineStruct() {
+		return StructBuilder.newStruct(gm.recordTypeData);
+	}
+
+	@Override
+	public StructBuilder extendStruct(StructBuilder template) {
+		return StructBuilder.newStruct(gm.recordTypeData, template);
 	}
 
 }

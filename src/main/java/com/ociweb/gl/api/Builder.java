@@ -5,6 +5,7 @@ import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.CompositePath;
+import com.ociweb.pronghorn.struct.StructBuilder;
 
 /**
  * Base interface for an IoT device's hardware.
@@ -55,7 +56,10 @@ public interface Builder extends ArgumentProvider {
 	
 	CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers);
 	CompositePath defineRoute(HTTPHeader ... headers);
-	
+		
+	StructBuilder defineStruct();
+	StructBuilder extendStruct(StructBuilder template);
+		
 	HTTPServerConfig useHTTP1xServer(int bindPort);
 
 	TelemetryConfig enableTelemetry();
