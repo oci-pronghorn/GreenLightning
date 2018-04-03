@@ -13,7 +13,6 @@
     <module>PubSub</module>
     <module>HTTPClient</module>
     <module>HTTPServer</module>
-    <module>PubSubStructured</module>
     <module>Shutdown</module>
     <module>MQTTClient</module>
   </modules>
