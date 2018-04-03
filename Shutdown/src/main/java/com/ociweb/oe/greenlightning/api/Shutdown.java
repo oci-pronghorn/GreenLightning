@@ -10,6 +10,8 @@ import com.ociweb.pronghorn.network.NetGraphBuilder;
 public class Shutdown implements GreenApp
 {	
 	private final String host;
+	private long keyFieldId;
+	
 	public Shutdown(String host) {
 		this.host = host;
 	}
@@ -25,12 +27,14 @@ public class Shutdown implements GreenApp
     			.setHost(NetGraphBuilder.bindHost(host))
     			.setDefaultPath("");
     	    	
-    	c.defineRoute().path("/shutdown?key=${key}");
+    	int aRouteId = c.defineRoute().path("/shutdown?key=${key}").routeId();
+    	
+    	keyFieldId = c.lookupFieldByName(aRouteId, "key");
     }
   
     @Override
     public void declareBehavior(final GreenRuntime runtime) {
-    	runtime.registerListener(new ShutdownBehavior(runtime)).includeAllRoutes();	
+    	runtime.registerListener(new ShutdownBehavior(runtime, keyFieldId)).includeAllRoutes();	
     }          
           
 }
