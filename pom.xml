@@ -242,7 +242,8 @@
           </archive>
         </configuration>
       </plugin>
-      
+
+       <!--
        <plugin>
 	     
 	        <groupId>com.github.wvengen</groupId>
@@ -290,6 +291,7 @@
 	          </dependency>
 	        </dependencies>
         </plugin>
+        -->
 	<plugin>
 	    <groupId>com.excelsiorjet</groupId>
 	    <artifactId>excelsior-jet-maven-plugin</artifactId>
