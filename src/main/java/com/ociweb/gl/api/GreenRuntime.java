@@ -104,9 +104,28 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	}
 
 	public static boolean testUntilShutdownRequested(GreenApp app, long timeoutMS) {
-		return testConcurrentUntilShutdownRequested(app, timeoutMS);		
-	}
+		GreenRuntime runtime = new GreenRuntime(app.getClass().getSimpleName());
 		
+		ScriptedNonThreadScheduler s = test(app, runtime);
+ 
+        long limit = System.nanoTime() + (timeoutMS*1_000_000L);
+        boolean result = true;
+        s.startup(true);
+    	                
+		while (!ScriptedNonThreadScheduler.isShutdownRequested(s)) {
+
+				s.run();
+				if (System.nanoTime() > limit) {
+					System.err.println("exit due to timeout");
+					result = false;
+					break;
+				}
+		}		
+		
+		return result;
+	}
+	
+	
 	
 	private static ScriptedNonThreadScheduler test(GreenApp app, GreenRuntime runtime) {
 		//force hardware to TestHardware regardless of where or what platform its run on.
