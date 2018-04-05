@@ -10,9 +10,11 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class RestConsumer implements RestListener {
 	
-	private GreenCommandChannel cmd2;
-	
+	private GreenCommandChannel cmd2;	
 	private HTTPRequestReader requestW;
+	private final long fieldA;
+	private final long fieldB;
+	
 	
 	private Writable w = new Writable() {
 
@@ -25,11 +27,13 @@ public class RestConsumer implements RestListener {
 		}
 		
 	};
-	public RestConsumer(GreenRuntime runtime) {		
-		cmd2 = runtime.newCommandChannel();		
-		cmd2.ensureDynamicMessaging();
-		cmd2.ensureHTTPServerResponse();
-	
+	public RestConsumer(GreenRuntime runtime, long fieldA, long fieldB) {		
+		this.cmd2 = runtime.newCommandChannel();		
+		this.cmd2.ensureDynamicMessaging();
+		this.cmd2.ensureHTTPServerResponse();
+		this.fieldA = fieldA;
+		this.fieldB = fieldB;		
+				
 	}
 
 
@@ -40,6 +44,10 @@ public class RestConsumer implements RestListener {
 			cmd2.publishHTTPResponse(request, 404);
 		}
 		
+		int b = request.structured().readInt(fieldB);
+		if (b!=123) {
+			throw new UnsupportedOperationException();
+		}
 		
 		requestW = request;
 		return cmd2.publishTopic("/send/200", w);

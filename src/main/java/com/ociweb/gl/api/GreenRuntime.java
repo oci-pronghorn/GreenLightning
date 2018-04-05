@@ -83,13 +83,6 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		getScheduler().checkForException();
 	}
 	
-	@Deprecated
-    public static GreenRuntime test(GreenApp app) {
-    	GreenRuntime runtime = new GreenRuntime();
-        test(app, runtime);
-		return runtime;
-    }
-	
 	public static boolean testConcurrentUntilShutdownRequested(GreenApp app, long timeoutMS) {
 		
 		 long limit = System.nanoTime() + (timeoutMS*1_000_000L);
@@ -117,7 +110,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
  
         long limit = System.nanoTime() + (timeoutMS*1_000_000L);
         boolean result = true;
-        s.startup();
+        s.startup(true);
     	                
 		while (!ScriptedNonThreadScheduler.isShutdownRequested(s)) {
 

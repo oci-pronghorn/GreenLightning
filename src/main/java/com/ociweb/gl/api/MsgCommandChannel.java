@@ -555,7 +555,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
 	public boolean httpGet(ClientHostPortInstance session, CharSequence route, HeaderWritable headers) {
 
-		int routeId = session.uniqueId;
 		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 
@@ -579,8 +578,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			if (session.getConnectionId()<0) {
 		
 				if (PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
-					int pipeId = builder.lookupHTTPClientPipe(routeId);
-					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, pipeId);
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, builder.lookupHTTPClientPipe(session.sessionId));
 					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10, session.sessionId);
 					
 		    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1, session.port);
@@ -603,8 +601,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				}
 			} else {
 				if (PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200)) {
-					int pipeId = builder.lookupHTTPClientPipe(routeId);
-					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_DESTINATION_11, pipeId);
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_DESTINATION_11, builder.lookupHTTPClientPipe(session.sessionId));
 					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_SESSION_10, session.sessionId);
 					
 		    		PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PORT_1, session.port);
@@ -660,38 +657,74 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		
-		int routeId = session.uniqueId;
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
-		if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) 
-			&& PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
-
-			int pipeId = builder.lookupHTTPClientPipe(routeId);
-			//TODO: note many routes may all go to the same pipe so where is JSON extraction?
-			
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_DESTINATION_11, pipeId);
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_SESSION_10, session.sessionId);
-			PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, session.port);
-			PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, session.hostBytes);
-			PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
-
-			DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(httpRequest);
-		    DataOutputBlobWriter.openField(hw);
-		    if (null!=headers) {
-		    	headers.write(headerWriter.target(hw));
-		    }
-		    hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7);
-			
-		    DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(httpRequest);
-		    DataOutputBlobWriter.openField(pw);
-		    payload.write(pw);
-		    pw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5);
+		if (null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) { 
+						
+			if (session.getConnectionId()<0) {
+				if (PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
+					
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_DESTINATION_11, builder.lookupHTTPClientPipe(session.sessionId));
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_SESSION_10, session.sessionId);
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, session.port);
+					PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, session.hostBytes);
+					PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
+					
+					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(httpRequest);
+					DataOutputBlobWriter.openField(hw);
+					if (null!=headers) {
+						headers.write(headerWriter.target(hw));
+					}
+					hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7);
+					
+					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(httpRequest);
+					DataOutputBlobWriter.openField(pw);
+					payload.write(pw);
+					pw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5);
+					
+					PipeWriter.publishWrites(httpRequest);
+					
+					publishGo(1, builder.netIndex(), this);
+					
+					return true;
+				}
+				
+			} else {
+				
+				if (PipeWriter.tryWriteFragment(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201)) {
+					
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_DESTINATION_11, builder.lookupHTTPClientPipe(session.sessionId));
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_SESSION_10, session.sessionId);
+					PipeWriter.writeInt(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_PORT_1, session.port);
+					PipeWriter.writeBytes(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_HOST_2, session.hostBytes);
+					
+					PipeWriter.writeLong(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_CONNECTIONID_20, session.getConnectionId());
+										
+					PipeWriter.writeUTF8(httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_PATH_3, route);
+					
+					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(httpRequest);
+					DataOutputBlobWriter.openField(hw);
+					if (null!=headers) {
+						headers.write(headerWriter.target(hw));
+					}
+					hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_HEADERS_7);
+					
+					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(httpRequest);
+					DataOutputBlobWriter.openField(pw);
+					payload.write(pw);
+					pw.closeHighLevelField(ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_PAYLOAD_5);
+					
+					PipeWriter.publishWrites(httpRequest);
+					
+					publishGo(1, builder.netIndex(), this);
+					
+					return true;
+				}
+				
+				
+			}
 		    
-		    PipeWriter.publishWrites(httpRequest);
 		    
-		    publishGo(1, builder.netIndex(), this);
-		    
-		    return true;
 		} 
 		return false;
 	}
@@ -1317,20 +1350,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		Pipe.releaseReadLock(tempTopicPipe);
 		return token;
 	}
-    
-
-	public void presumePublishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
-		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-
-		if (publishStructuredTopic(topic, writable)) {
-			return;
-		} else { 
-			logger.warn("unable to publish on topic {} must wait.",topic);
-			while (!publishStructuredTopic(topic, writable)) {
-				Thread.yield();
-			}
-		}
-    }
         
 	//returns consumed boolean
 	public boolean copyStructuredTopic(CharSequence topic, 
@@ -1379,40 +1398,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		return true;
     	}
     }
-    
-    public boolean publishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable) {
-    	return publishStructuredTopic(topic, writable, WaitFor.All);
-    }
-    
-    public boolean publishStructuredTopic(CharSequence topic, PubSubStructuredWritable writable, WaitFor ap) {
- 	    assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-     	assert(writable != null);
-       
-        assert(null != messagePubSub);
-        if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) 
-        	&& PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-    		
-    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-        	PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
-                    	           
-            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-           
-        	DataOutputBlobWriter.openField(pw);
-        	writable.write(pw);
-            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-            
-            PipeWriter.publishWrites(messagePubSub);
-
-            publishGo(1,builder.pubSubIndex(), this);
-           	
-    
-            return true;
-            
-        } else {
-            return false;
-        }
-    }
-
 
     
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, int statusCode) {

@@ -136,7 +136,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private PayloadReader payloadReader;
     
     private HTTPSpecification httpSpec;
-    private IntHashTable headerToPositionTable; //for HTTPClient
+
     private TrieParser headerTrieParser; //for HTTPClient
        
     protected ReactiveManagerPipeConsumer consumer;
@@ -147,6 +147,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     private final ArrayList<ReactiveManagerPipeConsumer> consumers;
 	private String behaviorName;
+    
     
     //////////////////////////////////////////////////
     ///NOTE: keep all the work here to a minimum, we should just
@@ -173,7 +174,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         this.supportsBatchedPublish = false;
         this.supportsBatchedRelease = false;
         /////////////////////////////////
-        
+      
         this.states = builder.getStates();
         this.graphManager = graphManager;
 
@@ -386,8 +387,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	
     	//////////////////
     	///HTTPClient support
-    	TrieParserReader parserReader = new TrieParserReader(2, true);
-	    headerToPositionTable = httpSpec.headerTable(parserReader);
 	    headerTrieParser = httpSpec.headerParser();
     	//////////////////
 	    //////////////////
@@ -408,7 +407,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
         	runStartupListener((StartupListenerBase)listener);
         }        
         startupCompleted=true;
-        
+       
     }
 
 	private void runStartupListener(StartupListenerBase startupListener) {
@@ -464,20 +463,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	        if (timeEvents) {         	
 				processTimeEvents(timeListener, timeTrigger);            
 			}
-	        
-	        //NOTE: still testing this idea 2018/03/09
-	        int repeat = Math.max(1, inputPipes.length);
-	        do {
-		        //behaviors
-		        consumer.process(this);
-		        
-		        //all transducers
-		        int j = consumers.size();
-		        while(--j>=0) {
-		        	consumers.get(j).process(this);
-		        }
-	        } while (--repeat>0);
-	  
+	     
+		    //all local behaviors
+		    consumer.process(this);
+		    
+		    //each transducer
+		    int j = consumers.size();
+		    while(--j>=0) {
+		    	consumers.get(j).process(this);
+		    }
+			
     	} else {
     		//shutdown in progress logic
     		int i = outputPipes.length;    		
@@ -491,7 +486,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     		return;
     	}
     }
-
 
 	@Override    
     public void shutdown() {
@@ -532,9 +526,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
    	    	
     	    	  //logger.trace("route path selected {}",pathId);	    	  
     	    	  
- 				  reader.setParseDetails( builder.routeExtractionParser(pathId),
- 						                  builder.routeHeaderToPositionTable(pathId), 
- 						                  builder.routeExtractionParserIndexCount(pathId),
+ 				  reader.setParseDetails(
  						                  builder.httpSpec,
  						                  builder.routerConfig()
  						                 );
@@ -615,7 +607,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	
 	            	 final short statusId = reader.readShort();	
-				     reader.setParseDetails(headerToPositionTable, 
+				     reader.setParseDetails( 
 				    		                headerTrieParser, 
 				    		                builder.httpSpec);
 
@@ -1240,8 +1232,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			//register listener will set these values before we use include
 		    int pipeIdx = builder.lookupHTTPClientPipe(builder.behaviorId(listener));
 		    //we added one more uniqueId to the same pipeIdx given this listeners id
-		    builder.registerHTTPClientId(httpSessions[j].uniqueId, pipeIdx);   
-		    logger.trace("register session {} with pipe {}",httpSessions[j].uniqueId,pipeIdx);
+		    builder.registerHTTPClientId(httpSessions[j].sessionId, pipeIdx);   
+		    logger.trace("register session {} with pipe {}",httpSessions[j].sessionId,pipeIdx);
 		}
 		
 		return this;

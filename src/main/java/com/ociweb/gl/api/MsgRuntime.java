@@ -657,23 +657,27 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe<ServerResponseSchema>[][] fromModulesToOrderSuper = new Pipe[routerCount][];
 		Pipe<ServerResponseSchema>[] errorResponsePipes = new Pipe[routerCount];
 		PipeConfig<ServerResponseSchema> errConfig = ServerResponseSchema.instance.newPipeConfig(4, 512);
-		int r = routerCount;
-		while (--r>=0) {
-			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
-			Pipe<ServerResponseSchema>[] temp = 
-				   fromModulesToOrderSuper[r] = PronghornStage.join(errorResponsePipes[r], builder.buildToOrderArray(r));
-			
+		
+		final boolean catchAll = builder.routerConfig().totalPathsCount()==0;
+				
+		int j = routerCount;
+		while (--j>=0) {
+			Pipe<ServerResponseSchema>[] temp = fromModulesToOrderSuper[j] = builder.buildToOrderArray(j);			
 			//this block is required to make sure the ordering stage has room
 			int c = temp.length;
 			while (--c>=0) {
 				//ensure that the ordering stage can consume messages of this size
 				serverConfig.ensureServerCanWrite(temp[c].config().maxVarLenSize());
-			}			
-			
+			}		
 		}
-				
+		serverConfig.ensureServerCanWrite(errConfig.maxVarLenSize());
 		
-		boolean catchAll = builder.routerConfig().totalPathsCount()==0;
+		
+		int r = routerCount;
+		while (--r>=0) {
+			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
+			fromModulesToOrderSuper[r] = PronghornStage.join(errorResponsePipes[r], fromModulesToOrderSuper[r]);
+		}
 		NetGraphBuilder.buildRouters(gm, planIncomingGroup, acks, fromRouterToModules, 
 				                     errorResponsePipes, routerConfig, serverCoord,
 				                     catchAll);

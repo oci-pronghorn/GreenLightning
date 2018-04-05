@@ -22,15 +22,27 @@ public class ReactiveManagerPipeConsumer {
 		}
 	}
 	
-	public void process(ReactiveListenerStage r) {
-		Pipe[] localInputs = inputs;
-		Object localObj = obj;
-		ReactiveOperator[] localOperators = operators;
+	public final void process(ReactiveListenerStage r) {
+		applyReactiveOperators(r, inputs, obj, operators, inputs.length);
+	}
+
+	private static void applyReactiveOperators(ReactiveListenerStage r, Pipe[] localInputs, Object localObj,
+			ReactiveOperator[] localOperators, int count) {
 		
-		int i = localInputs.length;
-		while (--i>=0) {
-			localOperators[i].apply(i, localObj, localInputs[i], r);
-		}
+		int hasMoreWork;
+		do {
+			hasMoreWork = 0;
+			int i = count;
+			while (--i>=0) {
+				Pipe localPipe = localInputs[i];
+				if (Pipe.contentRemaining(localPipe)>0) {
+					localOperators[i].apply(i, localObj, localPipe, r);
+					if (Pipe.contentRemaining(localPipe)>0) {
+						hasMoreWork++;
+					}
+				}			
+			}
+		} while (--hasMoreWork>=0);
 	}
 
 	public boolean swapIfFound(Pipe oldPipe, Pipe newPipe) {		
