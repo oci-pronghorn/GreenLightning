@@ -121,17 +121,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.maxInFlight = 1<< maxInFlightBits;
 		this.maxInFlightMask = maxInFlight-1;
 		
-		if (maxInFlight==1) {
-			//these measurements are more accurate and smaller because the are taken when
-			//the data leaves and arrives without the additional cost of the tester application.
-			//
-			
-			//NOTE: the SocketWriter is NOT aware of message boundaries so these values are
-			//NOT individual call times unless we are sending 1 message at a time sequentially
-			ClientSocketWriterStage.logLatencyData = true; //for the group of connections used.
-			//ClientConnection.logLatencyData = true; //every individual connection			
-		}
-		
 		this.callTime = new long[parallelTracks][maxInFlight];
 		this.inFlightHead = new int[parallelTracks];
 		this.inFlightTail = new int[parallelTracks];
