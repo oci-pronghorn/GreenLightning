@@ -137,8 +137,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     private HTTPSpecification httpSpec;
 
-    private TrieParser headerTrieParser; //for HTTPClient
-       
     protected ReactiveManagerPipeConsumer consumer;
 
 	protected static final long MS_to_NS = 1_000_000;
@@ -383,14 +381,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	}
     	
     	httpSpec = HTTPSpecification.defaultSpec();   	 
-		
-	
-    	//////////////////
-    	///HTTPClient support
-	    headerTrieParser = httpSpec.headerParser();
-    	//////////////////
-	    //////////////////
-	    
 	    
         stageRate = (Number)GraphManager.getNota(graphManager, this.stageId,  GraphManager.SCHEDULE_RATE, null);
         
@@ -520,17 +510,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  int routeVerb = Pipe.takeInt(p);
     	    	  int pathId = routeVerb>>>HTTPVerb.BITS;
     	    	  int verbId = HTTPVerb.MASK & routeVerb;
-    	    	  
-    	    	      	    	  
+    	    	      	    	      	    	  
     	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.openInputStream(p);
-   	    	
-    	    	  //logger.trace("route path selected {}",pathId);	    	  
-    	    	  
- 				  reader.setParseDetails(
- 						                  builder.httpSpec,
- 						                  builder.routerConfig()
- 						                 );
- 				  
+   	  				  
     	    	  int parallelRevision = Pipe.takeInt(p);
     	    	  int parallelIdx = parallelRevision >>> HTTPRevision.BITS;
     	    	  int revision = HTTPRevision.MASK & parallelRevision;
@@ -607,9 +589,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	
 	            	 final short statusId = reader.readShort();	
-				     reader.setParseDetails( 
-				    		                headerTrieParser, 
-				    		                builder.httpSpec);
 
 				     reader.setStatusCode(statusId);
 				     

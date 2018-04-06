@@ -1,5 +1,9 @@
 package com.ociweb.gl.impl;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -76,6 +80,12 @@ import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
+import com.ociweb.pronghorn.stage.file.FileGraphBuilder;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadProducerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
@@ -83,11 +93,12 @@ import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructRegistry;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.Blocker;
+import com.ociweb.pronghorn.util.CharSequenceToUTF8;
+import com.ociweb.pronghorn.util.CharSequenceToUTF8Local;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class BuilderImpl implements Builder {
-
 
 	private static final int MIN_CYCLE_RATE = 1; //cycle rate can not be zero
 
@@ -756,7 +767,7 @@ public class BuilderImpl implements Builder {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<HTTPRequestSchema> createNewBlobReader() {
-				return new HTTPRequestReader(this, hasNoRoutes);
+				return new HTTPRequestReader(this, hasNoRoutes, httpSpec, routerConfig());
 			}
 		};
 		return pipe;
@@ -1052,6 +1063,84 @@ public class BuilderImpl implements Builder {
 		mqtt = mqttBridge;
 		mqttBridge.beginDeclarations();
 		return mqtt;
+	}
+	
+	@Override
+	public void useInsecureSerialStores(int instances, int largestBlock) {
+		logger.warn("Non encrypted serial stores are in use. Please call useSerialStores with a passphrase to ensure data is encrypted.");
+		
+		int j = instances;
+		while (--j>=0) {					
+			buildSerialStore(j, null, largestBlock);
+		}
+	}
+	
+	@Override
+	public void useSerialStores(int instances, int largestBlock, String passphrase) {
+			
+		CharSequenceToUTF8 charSequenceToUTF8 = CharSequenceToUTF8Local.get();
+		SecureRandom sr = new SecureRandom(charSequenceToUTF8.convert(passphrase).asBytes());
+		charSequenceToUTF8.clear();
+		
+		int j = instances;
+		while (--j>=0) {
+			//each must have its own cypher block
+			byte[] cypherBlock = new byte[16];
+			sr.nextBytes(cypherBlock);						
+			buildSerialStore(j, cypherBlock, largestBlock);
+		}
+	}
+	
+	@Override
+	public void useSerialStores(int instances, int largestBlock, byte[] passphrase) {
+		
+		SecureRandom sr = new SecureRandom(passphrase);	
+		
+		for(int j=0; j<instances; j++) {
+			//each must have its own cypher block
+			byte[] cypherBlock = new byte[16];
+			sr.nextBytes(cypherBlock);						
+			buildSerialStore(j, cypherBlock, largestBlock);
+		}
+	}
+
+	
+	private void buildSerialStore(int id, 
+			                      byte[] cypherBlock,
+			                      int largestBlock) {
+		
+		final short maxInFlightCount = 4;
+		
+		Pipe<PersistedBlobLoadReleaseSchema> fromStoreRelease = 
+			 PersistedBlobLoadReleaseSchema.instance.newPipe(maxInFlightCount, 0);
+		Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer =
+			 PersistedBlobLoadConsumerSchema.instance.newPipe(maxInFlightCount, largestBlock);
+		Pipe<PersistedBlobLoadProducerSchema> fromStoreProducer =
+			 PersistedBlobLoadProducerSchema.instance.newPipe(maxInFlightCount, 0);
+		Pipe<PersistedBlobStoreConsumerSchema> toStoreConsumer =
+			 PersistedBlobStoreConsumerSchema.instance.newPipe(maxInFlightCount, 0);
+		Pipe<PersistedBlobStoreProducerSchema> toStoreProducer =
+			 PersistedBlobStoreProducerSchema.instance.newPipe(maxInFlightCount, largestBlock);
+	
+		//NOTE: the above pipes will dangle but will remain in the created order so that
+		//      they can be attached to the right command channels upon definition
+		
+		File targetDirectory = null;
+		try {
+			targetDirectory = new File(Files.createTempDirectory("serialStore"+id).toString());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}		
+	
+		long rate=-1;//do not set so we will use the system default.
+		String backgroundColor="cornsilk2";
+				
+		FileGraphBuilder.buildSequentialReplayer(gm, 
+				fromStoreRelease, fromStoreConsumer, fromStoreProducer, 
+				toStoreConsumer, toStoreProducer, 
+				maxInFlightCount, largestBlock, targetDirectory, 
+				cypherBlock, rate, backgroundColor);
+		
 	}
 	
 	///////////////////////////////////
@@ -1355,4 +1444,6 @@ public class BuilderImpl implements Builder {
 		return StructBuilder.newStruct(gm.recordTypeData, template);
 	}
 
+	
+	
 }

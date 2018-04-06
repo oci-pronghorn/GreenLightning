@@ -67,6 +67,12 @@ public interface Builder extends ArgumentProvider {
 	TelemetryConfig enableTelemetry(String host);
 	TelemetryConfig enableTelemetry(String host, int port);
 	
+	
+	void useInsecureSerialStores(int instances, int largestBlock);
+	void useSerialStores(int instances, int largestBlock, String passphrase);
+	void useSerialStores(int instances, int largestBlock, byte[] passphrase);
+	
+	
 	void setDefaultRate(long ns);
 	
 	long fieldId(int routeId, byte[] fieldName);

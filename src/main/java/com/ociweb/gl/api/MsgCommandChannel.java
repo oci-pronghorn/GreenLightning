@@ -28,6 +28,7 @@ import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.RawDataSchema;
+import com.ociweb.pronghorn.stage.file.FileGraphBuilder;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.BloomFilter;
@@ -74,10 +75,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     public static final int DYNAMIC_MESSAGING = 1<<0;
     public static final int STATE_MACHINE = DYNAMIC_MESSAGING;//state machine is based on DYNAMIC_MESSAGING;    
    
-    public static final int NET_REQUESTER     = 1<<1;
-    public static final int NET_RESPONDER     = 1<<2;
-    public static final int USE_DELAY         = 1<<3;
-    public static final int ALL = DYNAMIC_MESSAGING | NET_REQUESTER | NET_RESPONDER;
+    public static final int NET_REQUESTER      = 1<<1;//HTTP client requests
+    public static final int NET_RESPONDER      = 1<<2;//HTTP server responder
+    public static final int USE_DELAY          = 1<<3;//support for delay between commands
+    public static final int USE_SERIAL_STORE   = 1<<4;//support to store identified ChannelWriter blocks
+    
+    public static final int ALL = DYNAMIC_MESSAGING | NET_REQUESTER | NET_RESPONDER | USE_SERIAL_STORE;
       
     protected final B builder;
 
@@ -85,6 +88,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	
 	protected Pipe<?>[] optionalOutputPipes;
 	public int initFeatures; //this can be modified up to the moment that we build the pipes.
+	private int serialStoreId = -1;//optionally set  when we have external listeners
+	private SerialStoreMode serialStoreMode = null;
 	
 	private PublishPrivateTopics publishPrivateTopics;	
 
@@ -155,7 +160,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
 		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
 	}
-    
+	
+	public void ensureSerialStore(SerialStoreMode mode, int id) {
+	  	if (isInit) {
+    		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
+    	}
+    	this.initFeatures |= USE_SERIAL_STORE;
+    	this.serialStoreId = id;
+    	this.serialStoreMode = mode;
+	}
+	
     public void ensureHTTPClientRequesting() {
     	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
@@ -233,6 +247,24 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   } else {
 				   assert(null==goPipe);
 			   }
+			   
+			   //////////////////////////
+			   //
+			   //////////////////////////
+			   if ((this.initFeatures & USE_SERIAL_STORE) != 0) {
+				   
+				   //TODO: lookup the dangling pipe for this instance.
+				 
+				   //p c or both p and c ??
+//				   Object myPipe = GraphManager.allPipesOfTypeWithNoProducer(
+//						   builder.gm, targetSchema)[serialStoreId];
+				   
+				   
+				  //TODO: file store the index data with the body?
+				   
+				   
+			   }
+			   
 			   
 			   
 			   /////////////////////////
@@ -1350,55 +1382,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		Pipe.releaseReadLock(tempTopicPipe);
 		return token;
 	}
-        
-	//returns consumed boolean
-	public boolean copyStructuredTopic(CharSequence topic, 
-			ChannelReader reader, 
-            MessageConsumer consumer) {
-		return copyStructuredTopic(topic, reader, consumer, WaitFor.All);
-	}
-	
-	//returns consumed boolean
-    public boolean copyStructuredTopic(CharSequence topic, 
-    								   ChannelReader inputReader, 
-    		                           MessageConsumer consumer,
-    		                           WaitFor ap) {
-    	DataInputBlobReader<?> reader = (DataInputBlobReader<?>)inputReader;
-    	
-    	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-    	
-    	int pos = reader.absolutePosition();    	
-    	if (consumer.process(reader)) {
-    		
-    		if ((null==goPipe || PipeWriter.hasRoomForWrite(goPipe)) 
-        	    && PipeWriter.tryWriteFragment(messagePubSub, MessagePubSub.MSG_PUBLISH_103)  ) {
-    
-	    		PipeWriter.writeInt(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-	    		
-	    		PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);            
-	        	
-	            PubSubWriter pw = (PubSubWriter) Pipe.outputStream(messagePubSub);
-	            DataOutputBlobWriter.openField(pw);
-	            reader.absolutePosition(pos);//restore position as unread
-	            //direct copy from one to the next
-	            reader.readInto(pw, reader.available());
-	
-	            DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-	            PipeWriter.publishWrites(messagePubSub);
-	 
-	           	publishGo(1,builder.pubSubIndex(), this);  		
-	    		
-	    		return true;
-    		} else {
-    			reader.absolutePosition(pos);//restore position as unread
-    			return false;//needed to consume but no place to go.
-    		}
-    	
-    	} else {
-    		return true;
-    	}
-    }
-
+     
     
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, int statusCode) {
 		
@@ -1729,5 +1713,28 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return (null==goPipe) || (target==goPipe);
 	}
 
+	
+	//put under a single object asked for by ID
+	// .sequentialStore(id).append(id,w);
+	
+	public boolean sequentialStoreAppend(long id, Writable writable) {
 		
+		return false;
+	}
+	
+	public boolean sequentialStoreRelease(long id) {
+		
+		return false;
+	}
+	
+	public boolean sequentialStoreReplay() {
+		
+		return false;
+	}
+	
+	public boolean sequentialStoreClear() {
+		
+		return false;
+	}
+	
 }

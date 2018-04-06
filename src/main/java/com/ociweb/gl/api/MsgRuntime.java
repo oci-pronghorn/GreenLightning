@@ -434,7 +434,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
-				return new HTTPResponseReader(this);//, gm.recordTypeData);
+				return new HTTPResponseReader(this, builder.httpSpec);
 			}
 		};
 		return netResponsePipe;
@@ -551,11 +551,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				"Server",
 				config.defaultHostPath());
 		
-		final int routerCount = builder.parallelTracks();
+		final int parallelTrackCount = builder.parallelTracks();
 		
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
 		
-		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, routerCount, serverConfig, encryptedIncomingGroup);
+		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, serverConfig, encryptedIncomingGroup);
 		               
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
@@ -572,12 +572,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//Must call here so the beginning stages of the graph are drawn first when exporting graph.
 		app.declareBehavior(this);
 		
-		buildLastHalfOfGraphForServer(app, serverConfig, serverCoord, routerCount, 
+		buildLastHalfOfGraphForServer(app, serverConfig, serverCoord, parallelTrackCount, 
 				                      acks, handshakeIncomingGroup, planIncomingGroup);
 	}
 
 	private void buildLastHalfOfGraphForServer(MsgApp app, ServerPipesConfig serverConfig,
-			ServerCoordinator serverCoord, final int routerCount, Pipe[] acks, 
+			ServerCoordinator serverCoord, final int trackCounts, Pipe[] acks, 
 			Pipe[] handshakeIncomingGroup,
 			Pipe[] planIncomingGroup) {
 		////////////////////////
@@ -604,43 +604,42 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		HTTP1xRouterStageConfig routerConfig = builder.routerConfig();
 				
 		ArrayList<Pipe> forPipeCleaner = new ArrayList<Pipe>();
-		Pipe<HTTPRequestSchema>[][] fromRouterToModules = new Pipe[routerCount][];	
-		int t = routerCount;
+		Pipe<HTTPRequestSchema>[][] fromRouterToModules = new Pipe[trackCounts][];	
+		int t = trackCounts;
 		int totalRequestPipes = 0;
 		while (--t>=0) {
-			//[router/parallel] then [parser/routes] 
-			int path = routerConfig.totalPathsCount();
+			int routeIndex = routerConfig.totalRoutesCount();
 
-			/////////////////
+			////////////////
 			///for catch all
 			///////////////
-			if (path==0) {
-				path=1;
+			if (routeIndex==0) {
+				routeIndex=1;
 			}
 			/////////////
 			
-			fromRouterToModules[t] = new Pipe[path]; 
-		    while (--path >= 0) {
+			fromRouterToModules[t] = new Pipe[routeIndex]; 
+		    while (--routeIndex >= 0) {
 		    	
-		    	ArrayList<Pipe<HTTPRequestSchema>> requestPipes = builder.buildFromRequestArray(t, path);
+		    	ArrayList<Pipe<HTTPRequestSchema>> requestPipes = builder.buildFromRequestArray(t, routeIndex);
 		    	
 		    	//with a single pipe just pass it one, otherwise use the replicator to fan out from a new single pipe.
 		    	int size = requestPipes.size();
 		    	totalRequestPipes += size;
 		    	
 				if (1==size) {
-		    		fromRouterToModules[t][path] = 
+		    		fromRouterToModules[t][routeIndex] = 
 		    				requestPipes.get(0);
 		    	} else {
 		    		//we only create a pipe when we are about to use the replicator
-		    		fromRouterToModules[t][path] =  
+		    		fromRouterToModules[t][routeIndex] =  
 		    				builder.newHTTPRequestPipe(builder.pcm.getConfig(HTTPRequestSchema.class));		    		
 		    		if (0==size) {
 		    			logger.info("warning there are routes without any consumers");
 		    			//we have no consumer so tie it to pipe cleaner		    		
-		    			forPipeCleaner.add(fromRouterToModules[t][path]);
+		    			forPipeCleaner.add(fromRouterToModules[t][routeIndex]);
 		    		} else {
-		    			ReplicatorStage.newInstance(gm, fromRouterToModules[t][path], requestPipes.toArray(new Pipe[requestPipes.size()]));	
+		    			ReplicatorStage.newInstance(gm, fromRouterToModules[t][routeIndex], requestPipes.toArray(new Pipe[requestPipes.size()]));	
 		    		}
 		    	}
 		    }
@@ -654,13 +653,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 		
 		//NOTE: building arrays of pipes grouped by parallel/routers heading out to order supervisor		
-		Pipe<ServerResponseSchema>[][] fromModulesToOrderSuper = new Pipe[routerCount][];
-		Pipe<ServerResponseSchema>[] errorResponsePipes = new Pipe[routerCount];
+		Pipe<ServerResponseSchema>[][] fromModulesToOrderSuper = new Pipe[trackCounts][];
+		Pipe<ServerResponseSchema>[] errorResponsePipes = new Pipe[trackCounts];
 		PipeConfig<ServerResponseSchema> errConfig = ServerResponseSchema.instance.newPipeConfig(4, 512);
 		
 		final boolean catchAll = builder.routerConfig().totalPathsCount()==0;
 				
-		int j = routerCount;
+		int j = trackCounts;
 		while (--j>=0) {
 			Pipe<ServerResponseSchema>[] temp = fromModulesToOrderSuper[j] = builder.buildToOrderArray(j);			
 			//this block is required to make sure the ordering stage has room
@@ -673,7 +672,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		serverConfig.ensureServerCanWrite(errConfig.maxVarLenSize());
 		
 		
-		int r = routerCount;
+		int r = trackCounts;
 		while (--r>=0) {
 			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
 			fromModulesToOrderSuper[r] = PronghornStage.join(errorResponsePipes[r], fromModulesToOrderSuper[r]);
@@ -688,7 +687,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
 		
-		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, routerCount, 
+		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, trackCounts, 
 				                            fromModulesToOrderSuper, fromOrderedContent);
 	}
 	//////////////////
