@@ -357,6 +357,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return ReactiveListenerStage.isShutdownRequested(builder);
 	}
     
+	public boolean isShutdownComplete() {
+		return ReactiveListenerStage.isShutdownComplete(builder);
+	}
 
 	//////////
     //only build this when assertions are on
@@ -950,5 +953,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	public static IntHashTable getSubPipeLookup(MsgRuntime runtime) {
 		return runtime.subscriptionPipeLookup;
 	}
+
     
 }

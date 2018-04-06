@@ -332,6 +332,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	return builder.shutdownRequsted.get();
     }
     
+    public static boolean isShutdownComplete(BuilderImpl builder) {    	
+    	return builder.shutdownIsComplete;
+    }
+    
+    
     public static void requestSystemShutdown(BuilderImpl builder, Runnable shutdownRunnable) {
     	builder.lastCall = shutdownRunnable;
     	builder.shutdownRequsted.set(true);
@@ -482,13 +487,21 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		assert(!shutdownCompleted) : "already shut down why was this called a second time?";
 
-		Pipe.publishEOF(outputPipes);
-				
+		Pipe.publishEOF(outputPipes);	
 
 		if (builder.totalLiveReactors.decrementAndGet()==0) {
 			//ready for full system shutdown.
 			if (null!=builder.lastCall) {				
-				new Thread(builder.lastCall).start();
+				new Thread(
+						new Runnable() {							
+							public void run() {
+								builder.lastCall.run();
+								builder.shutdownIsComplete = true;
+							}
+						}
+						).start();
+			} else {
+				builder.shutdownIsComplete = true;
 			}
 		}
 		shutdownCompleted = true;

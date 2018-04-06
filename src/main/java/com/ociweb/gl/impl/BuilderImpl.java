@@ -135,6 +135,7 @@ public class BuilderImpl implements Builder {
     public AtomicInteger liveShutdownListeners = new AtomicInteger();
     public AtomicInteger totalLiveReactors = new AtomicInteger();    
     public AtomicBoolean shutdownRequsted = new AtomicBoolean(false);
+    public boolean shutdownIsComplete = false;
     public Runnable lastCall; //TODO: group these into an object for ReactiveListenerStage to use...
     /////////////////////////////////////////////
 

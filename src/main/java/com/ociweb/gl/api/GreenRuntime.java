@@ -89,7 +89,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		 
 		 MsgRuntime runtime = run(app);
 
-    	 while (!runtime.isShutdownRequested()) {
+    	 while (!runtime.isShutdownComplete()) {
     		if (System.nanoTime() > limit) {
 				System.err.println("exit due to timeout");
 				return false;
