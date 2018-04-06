@@ -70,6 +70,14 @@
     </repository>
   </distributionManagement>
 
+<!-- TODO: Remove once the Maven Javadoc 3.0.1 plugin is released as non-SNAPSHOT -->
+<pluginRepositories>
+    <pluginRepository>
+        <id>apache.snapshots</id>
+        <url>http://repository.apache.org/snapshots/</url>
+    </pluginRepository>
+</pluginRepositories>
+
   <repositories>
     
     <repository>
@@ -159,7 +167,9 @@
           <plugin>
 	        <groupId>org.apache.maven.plugins</groupId>
 		    <artifactId>maven-javadoc-plugin</artifactId>
-		    <version>2.9</version>
+
+		    <!-- TODO: Change to stable Javadoc plugin after official release. -->
+		    <version>3.0.1-SNAPSHOT</version>
 		    <executions>
 		        <execution>
 		            <id>attach-javadocs</id>
@@ -219,7 +229,7 @@
      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>2.6</version>
+        <version>3.0.0</version>
         <configuration>
           <archive>
             <manifest>
@@ -232,7 +242,8 @@
           </archive>
         </configuration>
       </plugin>
-      
+
+       <!--
        <plugin>
 	     
 	        <groupId>com.github.wvengen</groupId>
@@ -280,6 +291,7 @@
 	          </dependency>
 	        </dependencies>
         </plugin>
+        -->
 	<plugin>
 	    <groupId>com.excelsiorjet</groupId>
 	    <artifactId>excelsior-jet-maven-plugin</artifactId>
