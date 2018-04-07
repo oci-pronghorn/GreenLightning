@@ -1445,8 +1445,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			
 		Pipe<ServerResponseSchema> pipe = netResponse.length>1 ? netResponse[parallelIndex] : netResponse[0];
 		
-		//logger.trace("try new publishHTTPResponse");
-		if (!Pipe.hasRoomForWrite(pipe, 2*Pipe.sizeOf(pipe, ServerResponseSchema.MSG_TOCHANNEL_100))) {
+		//logger.info("try new publishHTTPResponse "+pipe);
+		if (!Pipe.hasRoomForWrite(pipe, 
+				2*Pipe.sizeOf(pipe, ServerResponseSchema.MSG_TOCHANNEL_100))) {
 			return false;
 		}		
 		//simple check to ensure we have room.
@@ -1464,7 +1465,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         assert(Pipe.workingHeadPosition(pipe)<(Pipe.tailPosition(pipe)+ pipe.sizeOfSlabRing  /*    pipe.slabMask*/  )) : "Working position is now writing into published(unreleased) tail "+
         Pipe.workingHeadPosition(pipe)+"<"+Pipe.tailPosition(pipe)+"+"+pipe.sizeOfSlabRing /*pipe.slabMask*/+" total "+((Pipe.tailPosition(pipe)+pipe.slabMask));
 
-		
 		//////////////////////////////////////////
 		//begin message 2 which contains the body
 		//////////////////////////////////////////

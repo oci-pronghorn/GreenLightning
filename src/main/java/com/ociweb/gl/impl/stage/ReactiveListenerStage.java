@@ -424,7 +424,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
     @Override
     public void run() {
-        
+ 
     	if (!shutdownInProgress) {
 	    	if (builder.shutdownRequsted.get()) {
 	    		if (!shutdownCompleted) {
@@ -458,16 +458,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	        if (timeEvents) {         	
 				processTimeEvents(timeListener, timeTrigger);            
 			}
-	     
+	
 		    //all local behaviors
 		    consumer.process(this);
-		    
+	
 		    //each transducer
 		    int j = consumers.size();
 		    while(--j>=0) {
 		    	consumers.get(j).process(this);
 		    }
-			
+
     	} else {
     		//shutdown in progress logic
     		int i = outputPipes.length;    		

@@ -29,7 +29,7 @@ public class RestResponder implements PubSubListener{
 
 	public RestResponder(GreenRuntime runtime) {
 		cmd = runtime.newCommandChannel();
-		cmd.ensureHTTPServerResponse();
+		cmd.ensureHTTPServerResponse(128,400);
 	}
 	
 	@Override

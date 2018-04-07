@@ -52,17 +52,15 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
     
 	public static GreenRuntime run(GreenApp app, String[] args) {
 		GreenRuntime runtime = new GreenRuntime(args, app.getClass().getSimpleName());
- 
-    	app.declareConfiguration(runtime.getBuilder());
+		app.declareConfiguration(runtime.getBuilder());
+
 	    GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
 
 	    runtime.declareBehavior(app);
-	    
-	    System.out.println("To exit app press Ctrl-C");
 
 		runtime.builder.buildStages(runtime);
-
-	    runtime.logStageScheduleRates();
+		
+	    //runtime.logStageScheduleRates();
 
 		TelemetryConfig telemetryConfig = runtime.builder.getTelemetryConfig();
 		if (telemetryConfig != null) {
@@ -73,6 +71,9 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		//runtime.scheduler = StageScheduler.threadPerStage(runtime.gm);//hack test.				
 		runtime.setScheduler(runtime.builder.createScheduler(runtime));
 	    
+
+		System.out.println("To exit app press Ctrl-C");
+		
 		System.gc();
 		runtime.getScheduler().startup();
 
