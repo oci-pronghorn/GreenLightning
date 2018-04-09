@@ -81,6 +81,7 @@ import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.file.FileGraphBuilder;
+import com.ociweb.pronghorn.stage.file.NoiseProducer;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadProducerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
@@ -1071,13 +1072,11 @@ public class BuilderImpl implements Builder {
 		CharSequenceToUTF8 charSequenceToUTF8 = CharSequenceToUTF8Local.get();
 		SecureRandom sr = new SecureRandom(charSequenceToUTF8.convert(passphrase).asBytes());
 		charSequenceToUTF8.clear();
-		
+		NoiseProducer noiseProducer = new NoiseProducer(sr);
+				
 		int j = instances;
-		while (--j>=0) {
-			//each must have its own cypher block
-			byte[] cypherBlock = new byte[16];
-			sr.nextBytes(cypherBlock);						
-			buildSerialStore(j, cypherBlock, largestBlock);
+		while (--j>=0) {					
+			buildSerialStore(j, noiseProducer, largestBlock);
 		}
 	}
 	
@@ -1085,18 +1084,16 @@ public class BuilderImpl implements Builder {
 	public void useSerialStores(int instances, int largestBlock, byte[] passphrase) {
 		
 		SecureRandom sr = new SecureRandom(passphrase);	
-		
-		for(int j=0; j<instances; j++) {
-			//each must have its own cypher block
-			byte[] cypherBlock = new byte[16];
-			sr.nextBytes(cypherBlock);						
-			buildSerialStore(j, cypherBlock, largestBlock);
+		NoiseProducer noiseProducer = new NoiseProducer(sr);
+				
+		for(int j=0; j<instances; j++) {					
+			buildSerialStore(j, noiseProducer, largestBlock);
 		}
 	}
 
 	
 	private void buildSerialStore(int id, 
-			                      byte[] cypherBlock,
+			                      NoiseProducer noiseProducer,
 			                      int largestBlock) {
 		
 		final short maxInFlightCount = 4;
@@ -1129,7 +1126,7 @@ public class BuilderImpl implements Builder {
 				fromStoreRelease, fromStoreConsumer, fromStoreProducer, 
 				toStoreConsumer, toStoreProducer, 
 				maxInFlightCount, largestBlock, targetDirectory, 
-				cypherBlock, rate, backgroundColor);
+				noiseProducer, rate, backgroundColor);
 		
 	}
 	
