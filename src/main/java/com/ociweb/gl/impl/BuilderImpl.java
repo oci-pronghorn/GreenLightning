@@ -80,6 +80,7 @@ import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
+import com.ociweb.pronghorn.stage.PronghornStageProcessor;
 import com.ociweb.pronghorn.stage.file.FileGraphBuilder;
 import com.ociweb.pronghorn.stage.file.NoiseProducer;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
@@ -1122,11 +1123,19 @@ public class BuilderImpl implements Builder {
 		long rate=-1;//do not set so we will use the system default.
 		String backgroundColor="cornsilk2";
 				
+		PronghornStageProcessor proc = new PronghornStageProcessor() {
+			@Override
+			public void process(GraphManager gm, PronghornStage stage) {
+				GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, rate, stage);
+				GraphManager.addNota(gm, GraphManager.DOT_BACKGROUND, backgroundColor, stage);
+			}			
+		};
+		
 		FileGraphBuilder.buildSequentialReplayer(gm, 
 				fromStoreRelease, fromStoreConsumer, fromStoreProducer, 
 				toStoreConsumer, toStoreProducer, 
 				maxInFlightCount, largestBlock, targetDirectory, 
-				noiseProducer, rate, backgroundColor);
+				noiseProducer, proc);
 		
 	}
 	
