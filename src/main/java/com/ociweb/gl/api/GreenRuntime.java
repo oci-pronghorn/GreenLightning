@@ -111,7 +111,8 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
  
         long limit = System.nanoTime() + (timeoutMS*1_000_000L);
         boolean result = true;
-        s.startup(true);
+        boolean hangDectection = false;
+		s.startup(hangDectection);
     	                
 		while (!ScriptedNonThreadScheduler.isShutdownRequested(s)) {
 
