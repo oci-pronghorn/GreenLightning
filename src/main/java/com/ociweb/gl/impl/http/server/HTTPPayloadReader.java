@@ -17,7 +17,6 @@ import com.ociweb.pronghorn.util.TrieParser;
 
 public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader<S> implements HeaderReader {
 
-	protected TrieParser headerTrieParser; //look up header id from the header string bytes
 
 	protected HTTPSpecification<
 			? extends Enum<? extends HTTPContentType>,

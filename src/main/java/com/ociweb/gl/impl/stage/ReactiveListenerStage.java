@@ -137,8 +137,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     private HTTPSpecification httpSpec;
 
-    private TrieParser headerTrieParser; //for HTTPClient
-       
     protected ReactiveManagerPipeConsumer consumer;
 
 	protected static final long MS_to_NS = 1_000_000;
@@ -334,6 +332,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	return builder.shutdownRequsted.get();
     }
     
+    public static boolean isShutdownComplete(BuilderImpl builder) {    	
+    	return builder.shutdownIsComplete;
+    }
+    
+    
     public static void requestSystemShutdown(BuilderImpl builder, Runnable shutdownRunnable) {
     	builder.lastCall = shutdownRunnable;
     	builder.shutdownRequsted.set(true);
@@ -383,14 +386,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	}
     	
     	httpSpec = HTTPSpecification.defaultSpec();   	 
-		
-	
-    	//////////////////
-    	///HTTPClient support
-	    headerTrieParser = httpSpec.headerParser();
-    	//////////////////
-	    //////////////////
-	    
 	    
         stageRate = (Number)GraphManager.getNota(graphManager, this.stageId,  GraphManager.SCHEDULE_RATE, null);
         
@@ -429,7 +424,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 
     @Override
     public void run() {
-        
+ 
     	if (!shutdownInProgress) {
 	    	if (builder.shutdownRequsted.get()) {
 	    		if (!shutdownCompleted) {
@@ -463,16 +458,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	        if (timeEvents) {         	
 				processTimeEvents(timeListener, timeTrigger);            
 			}
-	     
+	
 		    //all local behaviors
 		    consumer.process(this);
-		    
+	
 		    //each transducer
 		    int j = consumers.size();
 		    while(--j>=0) {
 		    	consumers.get(j).process(this);
 		    }
-			
+
     	} else {
     		//shutdown in progress logic
     		int i = outputPipes.length;    		
@@ -492,13 +487,21 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		assert(!shutdownCompleted) : "already shut down why was this called a second time?";
 
-		Pipe.publishEOF(outputPipes);
-				
+		Pipe.publishEOF(outputPipes);	
 
 		if (builder.totalLiveReactors.decrementAndGet()==0) {
 			//ready for full system shutdown.
 			if (null!=builder.lastCall) {				
-				new Thread(builder.lastCall).start();
+				new Thread(
+						new Runnable() {							
+							public void run() {
+								builder.lastCall.run();
+								builder.shutdownIsComplete = true;
+							}
+						}
+						).start();
+			} else {
+				builder.shutdownIsComplete = true;
 			}
 		}
 		shutdownCompleted = true;
@@ -520,17 +523,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  int routeVerb = Pipe.takeInt(p);
     	    	  int pathId = routeVerb>>>HTTPVerb.BITS;
     	    	  int verbId = HTTPVerb.MASK & routeVerb;
-    	    	  
-    	    	      	    	  
+    	    	      	    	      	    	  
     	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.openInputStream(p);
-   	    	
-    	    	  //logger.trace("route path selected {}",pathId);	    	  
-    	    	  
- 				  reader.setParseDetails(
- 						                  builder.httpSpec,
- 						                  builder.routerConfig()
- 						                 );
- 				  
+   	  				  
     	    	  int parallelRevision = Pipe.takeInt(p);
     	    	  int parallelIdx = parallelRevision >>> HTTPRevision.BITS;
     	    	  int revision = HTTPRevision.MASK & parallelRevision;
@@ -607,9 +602,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	
 	            	 final short statusId = reader.readShort();	
-				     reader.setParseDetails( 
-				    		                headerTrieParser, 
-				    		                builder.httpSpec);
 
 				     reader.setStatusCode(statusId);
 				     

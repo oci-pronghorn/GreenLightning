@@ -8,29 +8,19 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
-import com.ociweb.pronghorn.util.TrieParser;
 
 public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 
 	private short status;
-	private HTTPContentType httpContentType;
 	private int flags;
 	private long connectionId;
 	private HeaderTypeCapture htc;
 	 
     	
-	public HTTPResponseReader(Pipe<NetResponseSchema> pipe) {
+	public HTTPResponseReader(Pipe<NetResponseSchema> pipe, HTTPSpecification<?,?,?,?> httpSpec) {
 		super(pipe);
-	}
-
-	public void setParseDetails( 
-			                    TrieParser headerTrieParser,
-			                    HTTPSpecification<?,?,?,?> httpSpec) {
-
-		this.headerTrieParser = headerTrieParser;
 		this.httpSpec = httpSpec;
-
+		
 		if (null==htc) {
 			this.htc  = new HeaderTypeCapture(httpSpec);
 		}

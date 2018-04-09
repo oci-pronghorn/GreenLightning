@@ -24,24 +24,18 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	private int requestContext;
 	private HTTPVerbDefaults verb;
 	private final boolean hasNoRoutes;
+
+	//TODO: rename this, it should not be HTTP1.x specific but more general...
 	private HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig;
 	
 	
-	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe, boolean hasNoRoutes) {
+	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe, boolean hasNoRoutes,
+			                 HTTPSpecification httpSpec,
+			                 HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig) {
 		super(pipe);
 		this.hasNoRoutes = hasNoRoutes;
-	}
-
-	
-	public void setParseDetails(
-			                    HTTPSpecification httpSpec,
-			                    //TODO: rename this, it should not be HTTP1.x specific but more general...
-			                    HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig) {
-		
-		this.headerTrieParser = httpSpec.headerParser();
 		this.httpSpec = httpSpec;
 		this.http1xRouterStageConfig = http1xRouterStageConfig;
-		
 	}
 	
 	public void setVerb(HTTPVerbDefaults verb) {

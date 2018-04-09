@@ -36,7 +36,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final int maxInFlightMask;
     private int warmupCount = 20_000;
 
-	public static int LOG_LATENCY_LIMIT = 10_000_000;//10ms	
+	public static int LOG_LATENCY_LIMIT = 1_000_000_000;//1sec	
     
 	private final ParallelClientLoadTesterOutput out;
 	private final Supplier<Writable> post;
@@ -120,17 +120,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
         int maxInFlightBits = config.simultaneousRequestsPerTrackBits;
 		this.maxInFlight = 1<< maxInFlightBits;
 		this.maxInFlightMask = maxInFlight-1;
-		
-		if (maxInFlight==1) {
-			//these measurements are more accurate and smaller because the are taken when
-			//the data leaves and arrives without the additional cost of the tester application.
-			//
-			
-			//NOTE: the SocketWriter is NOT aware of message boundaries so these values are
-			//NOT individual call times unless we are sending 1 message at a time sequentially
-			ClientSocketWriterStage.logLatencyData = true; //for the group of connections used.
-			//ClientConnection.logLatencyData = true; //every individual connection			
-		}
 		
 		this.callTime = new long[parallelTracks][maxInFlight];
 		this.inFlightHead = new int[parallelTracks];
@@ -316,8 +305,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 			long now = 0;
 
-			//updates every half a second
-			if ((percentDone != lastPercent && ((now = System.nanoTime()) - lastTime) > 500_000_000L)
+			//updates every 2 seconds
+			if ((percentDone != lastPercent && ((now = System.nanoTime()) - lastTime) > 2_000_000_000L)
 					|| 100L == percentDone) {
 			    out.progress(percentDone, sumTimeouts, sumResponsesInvalid);
 
@@ -489,7 +478,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 
 		private boolean nextCall() {
-			if ((0xFFFF & countDown) == 0) {
+			if ((0x1FFFF & countDown) == 0) {
 				cmd3.publishTopic(PROGRESS_TOPIC, writer-> {
 					writer.writePackedInt(track);
 					writer.writePackedLong(countDown);
