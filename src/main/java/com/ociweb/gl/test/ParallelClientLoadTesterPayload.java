@@ -1,5 +1,6 @@
 package com.ociweb.gl.test;
 
+import com.ociweb.gl.api.ArgumentProvider;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.Writable;
@@ -8,10 +9,9 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import java.util.function.Supplier;
 
 public class ParallelClientLoadTesterPayload {
-    public HTTPContentTypeDefaults contentType = null;
+    public int maxPayloadSize = 1024;
+    public HTTPContentTypeDefaults contentType = HTTPContentTypeDefaults.JSON;
     public Supplier<Writable> post = null;
-    public int maxPayloadSize = 512;
-
     public Supplier<HTTPResponseListener> validate = new Supplier<HTTPResponseListener>() {
         @Override
         public HTTPResponseListener get() {
@@ -26,6 +26,20 @@ public class ParallelClientLoadTesterPayload {
     };
 
     public ParallelClientLoadTesterPayload() {
+    }
+
+    public ParallelClientLoadTesterPayload(ArgumentProvider args) {
+        inject(args);
+    }
+
+    public void inject(ArgumentProvider args) {
+        maxPayloadSize = args.getArgumentValue("--maxPayloadSize", "-mps", maxPayloadSize);
+        contentType = args.getArgumentValue("--contrentType", "-ct", HTTPContentTypeDefaults.class, contentType);
+        String scriptFile = args.getArgumentValue("--script", "-s", (String)null);
+        if (scriptFile != null) {
+            ParallelClientLoadTesterPayloadScript script = new ParallelClientLoadTesterPayloadScript(scriptFile);
+            post = ()->script;
+        }
     }
 
     public ParallelClientLoadTesterPayload(String payload) {
