@@ -140,8 +140,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.validate = null==payload? null : payload.validate;
 
 		this.out = out;
-
-		
 	}
 
 	@Override
@@ -176,7 +174,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		builder.defineUnScopedTopic(PROGRESS_TOPIC);
 
 		if (responseTimeoutNS > 0) {
-			Appendables.appendNearestTimeUnit(System.out.append("Checking for timeouts at this rate: "), responseTimeoutNS).append('\n');
 			builder.setTimerPulseRate(responseTimeoutNS / 1_000_000);
 		}
 	}
@@ -221,7 +218,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			startupTime = System.nanoTime();
 			out.progress(0, 0, 0);
 		}
-		
 
 		boolean enderMessage(CharSequence topic, ChannelReader payload) {
 			if (topic.equals(ENDERS_TOPIC)) {
@@ -233,8 +229,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					long timeouts = payload.readPackedLong();
 					long responsesReceived = payload.readPackedLong();
 					long responsesInvalid = payload.readPackedLong();
-
-					//System.err.println("end of track:"+track);
 
 					totalTimeSum += totalTime;
 					sendAttemptsSum += sendAttempts;
@@ -315,8 +309,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 
 			if (100 == percentDone) {
-				//System.err.println(Arrays.toString(finished)+" "+cyclesPerTrack+" "+parallelTracks);
-				//System.err.println();
 				return cmd4.publishTopic(ENDERS_TOPIC);
 			}
 			return true;
@@ -444,7 +436,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					System.gc();//still in warmup so GC now quick
 					totalTime = 0;//reset
 					ElapsedTimeRecorder.clear(elapsedTime[track]);
-					System.err.println("---------------- finished warmup -------------");
+					out.finishedWarmup();
 					
 				}
 							
@@ -452,23 +444,13 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				if (duration>LOG_LATENCY_LIMIT) {
 					long now = System.currentTimeMillis();
 					long start = now - (duration/1_000_000);
-					
-					Appendables.appendEpochTime(
-					Appendables.appendEpochTime(
-					Appendables.appendValue(
-							Appendables.appendNearestTimeUnit(System.err, duration)
-							.append(" long call detected for ")
-							,(track)).append(" window :")
-							,start).append(" - ")
-							,now).append("\n");
 
+					out.longCallDetected(track, duration, now, start);
 				}
 				
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);
 				totalTime+=duration;
-			
-				
-				
+
 				responsesReceived++;
 				if (validator != null && !validator.responseHTTP(reader)) {
 					responsesInvalid++;
@@ -511,8 +493,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 						writer.writePackedLong(responsesReceived);
 						writer.writePackedLong(responsesInvalid);
 					});
-					//System.err.println("publish end of "+track);
-				} 
+				}
 			}
 
 			//upon failure should not count down
@@ -529,9 +510,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if (callTimeValue != 0) {
 				long duration = System.nanoTime() - callTimeValue;
 				if (duration > responseTimeoutNS) {
-					
-					Appendables.appendNearestTimeUnit(System.out.append("Failed response detected after timeout of: "), responseTimeoutNS).append('\n');
-										
+
+					out.timout(responseTimeoutNS);
+
 					timeouts++;
 					while (!nextCall()) {//must run now.
 						Thread.yield();

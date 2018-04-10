@@ -24,6 +24,11 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
     }
 
     @Override
+    public void timout(long responseTimeoutNS) {
+        Appendables.appendNearestTimeUnit(System.out.append("Failed response detected after timeout of: "), responseTimeoutNS).append('\n');
+    }
+
+    @Override
     public void end(
             ElapsedTimeRecorder etr, long testDuration, long totalMessages, long totalTimeSumNS, long serverCallsPerSecond,
             long sendAttempts, long sendFailures, long timeouts, long responsesReceived, long invalidResponses) {
@@ -52,6 +57,23 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
         System.out.println("Timeouts: " + timeouts);
         System.out.println("Responses invalid: " + invalidResponses + " out of " + responsesReceived);
         System.out.println();
+    }
+
+    @Override
+    public void finishedWarmup() {
+        System.err.println("---------------- finished warmup -------------");
+    }
+
+    @Override
+    public void longCallDetected(int track, long duration, long now, long start) {
+        Appendables.appendEpochTime(
+                Appendables.appendEpochTime(
+                        Appendables.appendValue(
+                                Appendables.appendNearestTimeUnit(System.err, duration)
+                                        .append(" long call detected for ")
+                                ,(track)).append(" window :")
+                        ,start).append(" - ")
+                ,now).append("\n");
     }
 
     @Override
