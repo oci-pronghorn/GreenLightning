@@ -1380,6 +1380,11 @@ public class BuilderImpl implements Builder {
 		return args.getArgumentValue(longName, shortName, defaultValue);
 	}
 
+	@Override
+	public <T extends Enum<T>> T getArgumentValue(String longName, String shortName, Class<T> c, T defaultValue) {
+		return args.getArgumentValue(longName, shortName, c, defaultValue);
+	}
+
 	public void blockChannelDuration(long durationNanos, int pipeId) {
 		final long durationMills = durationNanos/1_000_000;
 		final long remaningNanos = durationNanos%1_000_000;		

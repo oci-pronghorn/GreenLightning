@@ -22,6 +22,8 @@ public interface ArgumentProvider {
 
     String getArgumentValue(String longName, String shortName, String defaultValue);
 
+    <T extends Enum<T>> T getArgumentValue(String longName, String shortName, Class<T> c, T defaultValue);
+
     boolean hasArgument(String longName, String shortName);
 }
 

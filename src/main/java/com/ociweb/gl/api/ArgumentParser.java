@@ -54,6 +54,13 @@ public class ArgumentParser implements ArgumentProvider {
     }
 
     @Override
+    public <T extends Enum<T>> T getArgumentValue(String longName, String shortName, Class<T> c, T defaultValue) {
+        String value = getOptArg(longName, shortName, defaultValue!=null?defaultValue.toString():null);
+        return value!=null?Enum.valueOf(c, value):null;
+    }
+
+
+    @Override
     public boolean hasArgument(String longName, String shortName) {
         return hasArg(longName, shortName);
     }
