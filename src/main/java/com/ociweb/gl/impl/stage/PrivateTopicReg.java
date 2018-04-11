@@ -24,7 +24,7 @@ class PrivateTopicReg implements ChildClassScannerVisitor<MsgCommandChannel> {
 	   }
 	   
 	   public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {		
-		    cmdChnl.setPrivateTopics(reactiveListenerStage.publishPrivateTopics);	
+		    MsgCommandChannel.setPrivateTopics(cmdChnl, reactiveListenerStage.publishPrivateTopics);	
 			return true;//keep going
 	   }
 

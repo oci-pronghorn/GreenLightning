@@ -26,7 +26,7 @@ class GatherAllFeaturesAndSetReactor implements ChildClassScannerVisitor<MsgComm
 	   }
 	   
 	   public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {	
-			if (cmdChnl.isGoPipe(target)) {
+			if (MsgCommandChannel.isGoPipe(cmdChnl, target)) {
 				features |= cmdChnl.initFeatures;
 			}
 			return true;//keep going

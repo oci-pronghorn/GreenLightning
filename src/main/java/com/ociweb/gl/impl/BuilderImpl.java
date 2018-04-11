@@ -1075,6 +1075,12 @@ public class BuilderImpl implements Builder {
 		charSequenceToUTF8.clear();
 		NoiseProducer noiseProducer = new NoiseProducer(sr);
 				
+		serialStoreReleaseAck = new Pipe[instances];
+		serialStoreReplay = new Pipe[instances];
+		serialStoreWriteAck = new Pipe[instances];
+		serialStoreRequestReplay = new Pipe[instances];
+		serialStoreWrite = new Pipe[instances];
+		
 		int j = instances;
 		while (--j>=0) {					
 			buildSerialStore(j, noiseProducer, largestBlock);
@@ -1087,31 +1093,30 @@ public class BuilderImpl implements Builder {
 		SecureRandom sr = new SecureRandom(passphrase);	
 		NoiseProducer noiseProducer = new NoiseProducer(sr);
 				
+		serialStoreReleaseAck = new Pipe[instances];
+		serialStoreReplay = new Pipe[instances];
+		serialStoreWriteAck = new Pipe[instances];
+		serialStoreRequestReplay = new Pipe[instances];
+		serialStoreWrite = new Pipe[instances];
+		
 		for(int j=0; j<instances; j++) {					
 			buildSerialStore(j, noiseProducer, largestBlock);
 		}
 	}
 
+	/////////////////////////
+	//holding these for build lookup
+	/////////////////////////
+	public Pipe<PersistedBlobLoadReleaseSchema>[] serialStoreReleaseAck;
+	public Pipe<PersistedBlobLoadConsumerSchema>[] serialStoreReplay;
+	public Pipe<PersistedBlobLoadProducerSchema>[] serialStoreWriteAck;
+	public Pipe<PersistedBlobStoreConsumerSchema>[] serialStoreRequestReplay;
+	public Pipe<PersistedBlobStoreProducerSchema>[] serialStoreWrite;
+	
 	
 	private void buildSerialStore(int id, 
 			                      NoiseProducer noiseProducer,
 			                      int largestBlock) {
-		
-		final short maxInFlightCount = 4;
-		
-		Pipe<PersistedBlobLoadReleaseSchema> fromStoreRelease = 
-			 PersistedBlobLoadReleaseSchema.instance.newPipe(maxInFlightCount, 0);
-		Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer =
-			 PersistedBlobLoadConsumerSchema.instance.newPipe(maxInFlightCount, largestBlock);
-		Pipe<PersistedBlobLoadProducerSchema> fromStoreProducer =
-			 PersistedBlobLoadProducerSchema.instance.newPipe(maxInFlightCount, 0);
-		Pipe<PersistedBlobStoreConsumerSchema> toStoreConsumer =
-			 PersistedBlobStoreConsumerSchema.instance.newPipe(maxInFlightCount, 0);
-		Pipe<PersistedBlobStoreProducerSchema> toStoreProducer =
-			 PersistedBlobStoreProducerSchema.instance.newPipe(maxInFlightCount, largestBlock);
-	
-		//NOTE: the above pipes will dangle but will remain in the created order so that
-		//      they can be attached to the right command channels upon definition
 		
 		File targetDirectory = null;
 		try {
@@ -1119,6 +1124,35 @@ public class BuilderImpl implements Builder {
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}		
+		
+		final short maxInFlightCount = 4;
+		
+		buildSerialStore(id, noiseProducer, largestBlock, targetDirectory, maxInFlightCount);
+		
+	}
+
+	private void buildSerialStore(int id, NoiseProducer noiseProducer, int largestBlock, File targetDirectory,
+			final short maxInFlightCount) {
+		Pipe<PersistedBlobLoadReleaseSchema> fromStoreRelease = 
+				PersistedBlobLoadReleaseSchema.instance.newPipe(maxInFlightCount, 0);
+		Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer =
+				PersistedBlobLoadConsumerSchema.instance.newPipe(maxInFlightCount, largestBlock);
+		Pipe<PersistedBlobLoadProducerSchema> fromStoreProducer =
+				PersistedBlobLoadProducerSchema.instance.newPipe(maxInFlightCount, 0);
+		Pipe<PersistedBlobStoreConsumerSchema> toStoreConsumer =
+				PersistedBlobStoreConsumerSchema.instance.newPipe(maxInFlightCount, 0);
+		Pipe<PersistedBlobStoreProducerSchema> toStoreProducer =
+				PersistedBlobStoreProducerSchema.instance.newPipe(maxInFlightCount, largestBlock);
+	
+		serialStoreReleaseAck[id] = fromStoreRelease;
+		serialStoreReplay[id] = fromStoreConsumer;
+		serialStoreWriteAck[id] = fromStoreProducer;
+		serialStoreRequestReplay[id] = toStoreConsumer;
+		serialStoreWrite[id] = toStoreProducer;
+		
+		//NOTE: the above pipes will dangle but will remain in the created order so that
+		//      they can be attached to the right command channels upon definition
+		
 	
 		long rate=-1;//do not set so we will use the system default.
 		String backgroundColor="cornsilk2";
@@ -1136,7 +1170,6 @@ public class BuilderImpl implements Builder {
 				toStoreConsumer, toStoreProducer, 
 				maxInFlightCount, largestBlock, targetDirectory, 
 				noiseProducer, proc);
-		
 	}
 	
 	///////////////////////////////////

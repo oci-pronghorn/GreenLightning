@@ -7,6 +7,8 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.PubSubMethodListenerBase;
+import com.ociweb.gl.impl.file.SerialStoreConsumer;
+import com.ociweb.gl.impl.file.SerialStoreProducer;
 import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
@@ -19,8 +21,6 @@ import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.ChannelReader;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -28,12 +28,13 @@ import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.RawDataSchema;
-import com.ociweb.pronghorn.stage.file.FileGraphBuilder;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.BloomFilter;
 import com.ociweb.pronghorn.util.TrieParserReader;
-import com.ociweb.pronghorn.util.field.MessageConsumer;
+import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 
 /**
  * Represents a dedicated channel for communicating with a single device
@@ -41,27 +42,27 @@ import com.ociweb.pronghorn.util.field.MessageConsumer;
  */
 public class MsgCommandChannel<B extends BuilderImpl> {
 
-	private final TrieParserReader READER = new TrieParserReader(true);
+	final TrieParserReader READER = new TrieParserReader(true);
 
 	private final static Logger logger = LoggerFactory.getLogger(MsgCommandChannel.class);
 	
 	private boolean isInit = false;
-    private Pipe<TrafficOrderSchema> goPipe;
+    Pipe<TrafficOrderSchema> goPipe;
     
     ///////////////////////////All the known data pipes
-    private Pipe<MessagePubSub> messagePubSub;
-    private Pipe<ClientHTTPRequestSchema> httpRequest;
-    private Pipe<ServerResponseSchema>[] netResponse;
-    
-    
-    public TrieParserReader unScopedReader = null; //only build when needed in this instance.
-    private final byte[] track;
+    Pipe<MessagePubSub> messagePubSub;
+    Pipe<ClientHTTPRequestSchema> httpRequest;
+    Pipe<ServerResponseSchema>[] netResponse;
+	private Pipe<PersistedBlobStoreProducerSchema>[] serialStoreProdPipes;
+	private Pipe<PersistedBlobStoreConsumerSchema>[] serialStoreConsPipes;
+	
+	private final byte[] track;
     
     private Pipe<MessagePubSub>[] exclusivePubSub;
 
-	private static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
+	static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
        
-    private int lastResponseWriterFinished = 1;//starting in the "end" state
+    int lastResponseWriterFinished = 1;//starting in the "end" state
     
     private String[] exclusiveTopics =  new String[0];
     
@@ -69,7 +70,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
     protected static final long MS_TO_NS = 1_000_000;
          
-    private Behavior listener;
+    Behavior listener;
     
     //TODO: add GreenService class for getting API specific objects.
     public static final int DYNAMIC_MESSAGING = 1<<0;
@@ -88,10 +89,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	
 	protected Pipe<?>[] optionalOutputPipes;
 	public int initFeatures; //this can be modified up to the moment that we build the pipes.
-	private int serialStoreId = -1;//optionally set  when we have external listeners
-	private SerialStoreMode serialStoreMode = null;
-	
-	private PublishPrivateTopics publishPrivateTopics;	
+
+	PublishPrivateTopics publishPrivateTopics;	
 
 	protected PipeConfigManager pcm;
 	private final int parallelInstanceId;
@@ -117,22 +116,77 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.track = parallelInstanceId<0 ? null : trackNameBuilder(parallelInstanceId);
     }
 
+    ////////////////////////////////////
+    //new method API
+    ////////////////////////////////////
+
+	public SerialStoreProducer newSerialStoreProducer(int id) {
+	  	if (isInit) {
+    		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
+    	}
+    	this.initFeatures |= USE_SERIAL_STORE;	
+    	
+    	Pipe<PersistedBlobStoreProducerSchema> myPipe = builder.serialStoreWrite[id];
+    	if (null==myPipe) {
+    		throw new UnsupportedOperationException("only 1 command channel can write into this store "+id);    		
+    	} 
+    	builder.serialStoreWrite[id]=null;    	
+    	serialStoreProdPipes = growP(serialStoreProdPipes, myPipe);    	
+    	return new SerialStoreProducer(myPipe);
+	}
+    
+	public SerialStoreConsumer newSerialStoreConsumer(int id) {
+	  	if (isInit) {
+    		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
+    	}
+    	this.initFeatures |= USE_SERIAL_STORE;
+    	
+    	Pipe<PersistedBlobStoreConsumerSchema> myPipe = builder.serialStoreRequestReplay[id];
+    	if (null==myPipe) {
+    		throw new UnsupportedOperationException("only 1 command channel can request replay for this store "+id);    		
+    	}
+    	builder.serialStoreRequestReplay[id] = null;
+    	serialStoreConsPipes = growC(serialStoreConsPipes,myPipe);    	
+    	return new SerialStoreConsumer(myPipe);
+	}
+	
+	public PubSubService newPubSubService() {
+		return new PubSubService(this);
+	}
+	
+	public HTTPPublishService newHTTPClientService() {
+		return new HTTPPublishService(this);
+	}
+	
+	public HTTPResponseService newHTTPResponseService() {
+		return new HTTPResponseService(this);
+	}	
+	
+	public DelayService newDelayService() {
+		return new DelayService(this);
+	}
+	
+    
+    ////////////////////////////////////
+    ////////////////////////////////////
+    
+    
     //common method for building topic suffix
 	static byte[] trackNameBuilder(int parallelInstanceId) {		
 		return ('/'+Integer.toString(parallelInstanceId)).getBytes();
 	}
 
-    public boolean hasRoomFor(int messageCount) {
-		return null==goPipe || Pipe.hasRoomForWrite(goPipe, 
-    			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(goPipe))*messageCount);
+    public static boolean hasRoomFor(MsgCommandChannel<?> cmd, int messageCount) {
+		return null==cmd.goPipe || Pipe.hasRoomForWrite(cmd.goPipe, 
+    			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(cmd.goPipe))*messageCount);
     }
     
-    public boolean hasRoomForHTTP(int messageCount) {
-		return Pipe.hasRoomForWrite(httpRequest, 
-    			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(httpRequest))*messageCount);
+    public static boolean hasRoomForHTTP(MsgCommandChannel<?> cmd, int messageCount) {
+		return Pipe.hasRoomForWrite(cmd.httpRequest, 
+    			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(cmd.httpRequest))*messageCount);
     }
     
-    
+    @Deprecated
     public void ensureDynamicMessaging() {
     	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureDynamicMessaging method must be called in define behavior.");
@@ -140,6 +194,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	this.initFeatures |= DYNAMIC_MESSAGING;
     }
     
+    @Deprecated
     public void ensureDynamicMessaging(int queueLength, int maxMessageSize) {
     	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureDynamicMessaging method must be called in define behavior.");
@@ -157,26 +212,48 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	
     }
 
-	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
+	protected static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
 		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
 	}
+
 	
-	public void ensureSerialStore(SerialStoreMode mode, int id) {
-	  	if (isInit) {
-    		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
-    	}
-    	this.initFeatures |= USE_SERIAL_STORE;
-    	this.serialStoreId = id;
-    	this.serialStoreMode = mode;
+	private Pipe<PersistedBlobStoreProducerSchema>[] growP(Pipe<PersistedBlobStoreProducerSchema>[] source,
+													      Pipe<PersistedBlobStoreProducerSchema> myPipe) {
+		Pipe[] result;
+		if (null==source) {
+			result = new Pipe[1];	
+		} else {
+			result = new Pipe[source.length+1];		
+			System.arraycopy(source, 0, result, 0, source.length);
+		}
+		result[result.length-1]=myPipe;		
+		return (Pipe<PersistedBlobStoreProducerSchema>[])result;
 	}
-	
-    public void ensureHTTPClientRequesting() {
+
+
+			
+    private Pipe<PersistedBlobStoreConsumerSchema>[] growC(Pipe<PersistedBlobStoreConsumerSchema>[] source,
+													     Pipe<PersistedBlobStoreConsumerSchema> myPipe) {
+		Pipe[] result;
+		if (null==source) {
+			result = new Pipe[1];	
+		} else {
+			result = new Pipe[source.length+1];		
+			System.arraycopy(source, 0, result, 0, source.length);
+		}
+		result[result.length-1]=myPipe;		
+		return (Pipe<PersistedBlobStoreConsumerSchema>[])result;
+	}
+
+    @Deprecated
+	public void ensureHTTPClientRequesting() {
     	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
     	}
     	this.initFeatures |= NET_REQUESTER;
     }
     
+    @Deprecated
     public void ensureHTTPClientRequesting(int queueLength, int maxMessageSize) {
     	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
@@ -195,6 +272,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	this.initFeatures |= USE_DELAY;
     }
     
+    @Deprecated
     public void ensureHTTPServerResponse() {
     	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPServerResponse method must be called in define behavior.");
@@ -202,6 +280,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	this.initFeatures |= NET_RESPONDER;
     }
     
+    @Deprecated
     public void ensureHTTPServerResponse(int queueLength, int maxMessageSize) {
     	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPServerResponse method must be called in define behavior.");
@@ -247,25 +326,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   } else {
 				   assert(null==goPipe);
 			   }
-			   
-			   //////////////////////////
-			   //
-			   //////////////////////////
-			   if ((this.initFeatures & USE_SERIAL_STORE) != 0) {
-				   
-				   //TODO: lookup the dangling pipe for this instance.
-				 
-				   //p c or both p and c ??
-//				   Object myPipe = GraphManager.allPipesOfTypeWithNoProducer(
-//						   builder.gm, targetSchema)[serialStoreId];
-				   
-				   
-				  //TODO: file store the index data with the body?
-				   
-				   
-			   }
-			   
-			   
 			   
 			   /////////////////////////
 			   //build pipes for sending out the REST server responses
@@ -342,7 +402,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	 
     	int length = 0;
     	
-    	if (null != messagePubSub) { //Index needed plust i2c index needed.
+    	if (null != messagePubSub) { //Index needed i2c index needed.
     		length++;
     	}
     	
@@ -369,6 +429,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	if (null!=publishPrivateTopics) {
     		length+=publishPrivateTopics.count();
     	}
+    	
+    	//NOTE: serial store does not use GO release
+    	
+    	if (null!=serialStoreConsPipes) {
+    		length+=serialStoreConsPipes.length;    		
+    	}
+    	
+    	if (null!=serialStoreProdPipes) {
+    		length+=serialStoreProdPipes.length;    		
+    	}
+    	
   
     	int idx = 0;
     	Pipe<?>[] results = new Pipe[length];
@@ -398,6 +469,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		publishPrivateTopics.copyPipes(results, idx);
     		idx+=publishPrivateTopics.count();
     	}
+    	
+    	if (null!=serialStoreConsPipes) {
+    		System.arraycopy(serialStoreConsPipes, 0, results, idx, serialStoreConsPipes.length);
+    		idx+=serialStoreConsPipes.length; 		
+    	}
+    	
+    	if (null!=serialStoreProdPipes) {
+    		System.arraycopy(serialStoreProdPipes, 0, results, idx, serialStoreProdPipes.length);
+    		idx+=serialStoreProdPipes.length;  		
+    	}    	
     	
     	if (hasGoSpace) {//last pipe for go, may be null
     		results[idx++] = goPipe;
@@ -492,7 +573,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	
 	}
 
-	private boolean sentEOFPrivate() {
+	boolean sentEOFPrivate() {
 		boolean ok = false;
 		if (null!=publishPrivateTopics) {
 			int c = publishPrivateTopics.count();
@@ -545,6 +626,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if blocking was successful, and false otherwise.
      */
+    @Deprecated
     public boolean delay(long durationNanos) {
         assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
         try {
@@ -565,6 +647,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if blocking was successful, and false otherwise.
      */
+    @Deprecated
     public boolean delayUntil(long msTime) {
         assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
         try {
@@ -580,11 +663,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
     //TODO: update the httpRequest to use the low level API.
  
+    @Deprecated
     public boolean httpGet(ClientHostPortInstance session, CharSequence route) {
     	return httpGet(session,route,null);
     }
     
-    
+    @Deprecated
 	public boolean httpGet(ClientHostPortInstance session, CharSequence route, HeaderWritable headers) {
 
 		assert(builder.getHTTPClientConfig() != null);
@@ -594,7 +678,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		//get the cached connection ID so we need not deal with the host again
 		/////////////////////
 		if (session.getConnectionId()<0) {
-			final long id = builder.getClientCoordinator().lookup(
+			builder.getClientCoordinator();
+			final long id = ClientCoordinator.lookup(
 					                   ClientCoordinator.lookupHostId((CharSequence) session.host, READER), 
 					                   session.port, 
 					                   session.sessionId);
@@ -661,6 +746,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return false;
 	}
 
+    @Deprecated
 	public boolean httpClose(ClientHostPortInstance session) {
 		assert(builder.getHTTPClientConfig() != null);
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
@@ -681,12 +767,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return false;
 	}
 	
-	private final HeaderWriter headerWriter = new HeaderWriter();//used in each post call.
+	final HeaderWriter headerWriter = new HeaderWriter();//used in each post call.
 	
+	@Deprecated
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, Writable payload) {
 		return httpPost(session, route, null, payload);
 	}	
-    
+   
+	@Deprecated
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		
 		assert((this.initFeatures & NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
@@ -770,6 +858,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the topic was successfully subscribed to, and false
      *         otherwise.
      */
+	@Deprecated
     public boolean subscribe(CharSequence topic) {
     			
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
@@ -790,6 +879,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      * @return True if the topic was successfully subscribed to, and false
      *         otherwise.
      */
+	@Deprecated
     public boolean subscribe(CharSequence topic, PubSubMethodListenerBase listener) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
@@ -824,6 +914,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the topic was successfully unsubscribed from, and false otherwise.
      */
+	@Deprecated
     public boolean unsubscribe(CharSequence topic) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
@@ -838,6 +929,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the topic was successfully unsubscribed from, and false otherwise.
      */
+	@Deprecated
     public boolean unsubscribe(CharSequence topic, PubSubMethodListenerBase listener) {
 		 assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
@@ -870,6 +962,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return True if the state was successfully transitioned, and false otherwise.
      */
+	@Deprecated
     public <E extends Enum<E>> boolean changeStateTo(E state) {
 		 assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
@@ -892,16 +985,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	
     }
 
+    @Deprecated
     public void presumePublishTopic(CharSequence topic, Writable writable) {
     	presumePublishTopic(topic, writable, WaitFor.All);
     }
     
+    @Deprecated
     public void presumePublishTopic(CharSequence topic, Writable writable, WaitFor ap) {
     	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
     	
-    	if (publishTopic(topic, writable, ap)) {
-			return;
-		} else { 
+    	if (!publishTopic(topic, writable, ap)) {
 			logger.warn("unable to publish on topic {} must wait.",topic);
 			while (!publishTopic(topic, writable, ap)) {
 				Thread.yield();
@@ -916,6 +1009,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     String cachedTopic="";
     int    cachedTopicToken=-2;
     
+    @Deprecated
     public boolean publishTopic(CharSequence topic, Writable writable) {
     	return publishTopic(topic, writable, WaitFor.All);
     }
@@ -926,6 +1020,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      *
      * @return {@link PayloadWriter} attached to the given topic.
      */
+    @Deprecated
     public boolean publishTopic(CharSequence topic, Writable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
@@ -982,10 +1077,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
 
+    @Deprecated
 	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable) {
     	return publishFailableTopic(topic, writable, WaitFor.All);
 	}
 
+    @Deprecated
 	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
@@ -1031,10 +1128,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 	}
 
+    @Deprecated
     public boolean publishTopic(CharSequence topic) {
     	return publishTopic(topic, WaitFor.All);
     }
     
+    @Deprecated
     public boolean publishTopic(CharSequence topic, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
@@ -1083,7 +1182,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
     
-    private static final void publicTrackedTopicSuffix(MsgCommandChannel cmd, DataOutputBlobWriter<MessagePubSub> output) {
+    static final void publicTrackedTopicSuffix(MsgCommandChannel cmd, DataOutputBlobWriter<MessagePubSub> output) {
     	if (null==cmd.track) { //most command channels are assumed to be un tracked
     		//nothing to do.
     	} else {
@@ -1101,15 +1200,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	private static void unScopedCheckForTrack(MsgCommandChannel cmd, DataOutputBlobWriter<MessagePubSub> output) {
 		boolean addSuffix=false;
-		
-		if (null!=cmd.unScopedReader) {
-			//only do this if 1. we are tracked & 2. there are unscoped topics
-			addSuffix = BuilderImpl.notUnscoped(cmd.unScopedReader, output);
-		} else {
-			cmd.unScopedReader = new TrieParserReader(0, true);			
-			//only do this if 1. we are tracked & 2. there are unscoped topics
-			addSuffix = BuilderImpl.notUnscoped(cmd.unScopedReader, output);
-		}
+				
+		addSuffix = BuilderImpl.notUnscoped(TrieParserReaderLocal.get(), output);
 		
 		if (addSuffix) {
 			output.write(cmd.track);			
@@ -1117,6 +1209,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		
 	}
 
+	@Deprecated
 	public boolean publishTopic(byte[] topic, Writable writable) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
@@ -1156,6 +1249,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
     }
 
+	@Deprecated
     public boolean publishTopic(byte[] topic) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
  
@@ -1191,7 +1285,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         }
     }
     
-	private boolean publishOnPrivateTopic(int token, Writable writable) {
+	boolean publishOnPrivateTopic(int token, Writable writable) {
 		//this is a private topic            
 		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
 		if (Pipe.hasRoomForWrite(output)) {
@@ -1210,7 +1304,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 	}
 
-	private FailableWrite publishFailableOnPrivateTopic(int token, FailableWritable writable) {
+	FailableWrite publishFailableOnPrivateTopic(int token, FailableWritable writable) {
 		//this is a private topic
 		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
 		if (Pipe.hasRoomForWrite(output)) {
@@ -1231,7 +1325,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 	}
     
-	private boolean publishOnPrivateTopic(int token) {
+	boolean publishOnPrivateTopic(int token) {
 		//this is a private topic            
 		Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
 		if (Pipe.hasRoomForWrite(output)) {
@@ -1256,13 +1350,15 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     		logger.info("full pipe {}",p);
     		logger.info("the private topic '{}' has become backed up, it may be too short. When it was defined it should be made to be longer.", topic);
     		topicsTooShort.addValue(topic);
-    	} 
-		
+    	}
 	}
 
+    @Deprecated
 	public void presumePublishTopic(TopicWritable topic, Writable writable) {
     	presumePublishTopic(topic,writable,WaitFor.All);
-    }        
+    }    
+    
+    @Deprecated
     public void presumePublishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
     	assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 
@@ -1276,10 +1372,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
     
+    @Deprecated
     public boolean publishTopic(TopicWritable topic, Writable writable) {
     	return publishTopic(topic, writable, WaitFor.All);    	
     }
     
+    @Deprecated
     public boolean publishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         assert(writable != null);
@@ -1322,10 +1420,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     private final int maxDynamicTopicLength = 128;
     private Pipe<RawDataSchema> tempTopicPipe;
         
+    @Deprecated
     public boolean publishTopic(TopicWritable topic) {
     	return publishTopic(topic, WaitFor.All);
     }
     
+    @Deprecated
     public boolean publishTopic(TopicWritable topic, WaitFor ap) {
 		assert((0 != (initFeatures & DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
         
@@ -1358,7 +1458,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
     }
 
-	private int tokenForPrivateTopic(TopicWritable topic) {
+	int tokenForPrivateTopic(TopicWritable topic) {
 		if (null==publishPrivateTopics) {
 			return -1;
 		}
@@ -1383,7 +1483,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return token;
 	}
      
-    
+    @Deprecated
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, int statusCode) {
 		
 		 assert((0 != (initFeatures & NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
@@ -1394,6 +1494,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				statusCode,false,null,Writable.NO_OP); //no type and no body so use null
 	}
 
+    @Deprecated
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
             							int statusCode,
 									    HTTPContentType contentType,
@@ -1405,6 +1506,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 									statusCode, false, contentType, writable);
 	}	
 
+    @Deprecated
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
 									   int statusCode, boolean hasContinuation,
 									   HTTPContentType contentType,
@@ -1416,6 +1518,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				                statusCode, hasContinuation, contentType, writable);
 	}	
 
+    @Deprecated
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, int statusCode) {
 		return publishHTTPResponse(connectionId, sequenceCode, statusCode, false, null, Writable.NO_OP);
 	}
@@ -1424,11 +1527,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	//these fields are needed for holding the position data for the first block of two
 	//this is required so we can go back to fill in length after the second block
 	//length is known
-	private long block1PositionOfLen;
-	private int block1HeaderBlobPosition;
+	long block1PositionOfLen;
+	int block1HeaderBlobPosition;
 	//this is not thread safe but works because command channels are only used by same thread
 	////////////////////////////////////
 	
+	@Deprecated
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
 			                           int statusCode, 
 			                           boolean hasContinuation,
@@ -1500,6 +1604,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	}
 
+	@Deprecated
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
 							           boolean hasContinuation,
 							           CharSequence headers,
@@ -1580,7 +1685,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	}
 	
-	private void holdEmptyBlock(long connectionId, final int sequenceNo, Pipe<ServerResponseSchema> pipe) {
+	void holdEmptyBlock(long connectionId, final int sequenceNo, Pipe<ServerResponseSchema> pipe) {
 	
 			Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
 			Pipe.addLongValue(connectionId, pipe);
@@ -1610,11 +1715,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			//logger.info("new empty block at {} {} ",block1HeaderBlobPosition, block1PositionOfLen);
 	}
 	
+	@Deprecated
 	public boolean publishHTTPResponseContinuation(HTTPFieldReader<?> w, 
 										boolean hasContinuation, Writable writable) {
 		return publishHTTPResponseContinuation(w.getConnectionId(),w.getSequenceCode(), hasContinuation, writable);
 	}
 
+	@Deprecated
 	public boolean publishHTTPResponseContinuation(long connectionId, long sequenceCode, 
 												   boolean hasContinuation, Writable writable) {
 		
@@ -1705,36 +1812,17 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		}
 	}
 	
-	public void setPrivateTopics(PublishPrivateTopics publishPrivateTopics) {
-		this.publishPrivateTopics = publishPrivateTopics;
+	public static void setPrivateTopics(
+			MsgCommandChannel<?> cmd,
+			PublishPrivateTopics publishPrivateTopics) {
+		cmd.publishPrivateTopics = publishPrivateTopics;
 	}
 	
-	public boolean isGoPipe(Pipe<TrafficOrderSchema> target) {
-		return (null==goPipe) || (target==goPipe);
+	public static boolean isGoPipe(MsgCommandChannel<?> cmd, Pipe<TrafficOrderSchema> target) {
+		return (null==cmd.goPipe) || (target==cmd.goPipe);
 	}
 
-	
-	//put under a single object asked for by ID
-	// .sequentialStore(id).append(id,w);
-	
-	public boolean sequentialStoreAppend(long id, Writable writable) {
-		
-		return false;
-	}
-	
-	public boolean sequentialStoreRelease(long id) {
-		
-		return false;
-	}
-	
-	public boolean sequentialStoreReplay() {
-		
-		return false;
-	}
-	
-	public boolean sequentialStoreClear() {
-		
-		return false;
-	}
+
+
 	
 }

@@ -6,7 +6,6 @@ import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.pipe.ChannelReader;
-import com.ociweb.pronghorn.util.parse.JSONReader;
 
 public class JSONRequest {
     private final StringBuilder id1 = new StringBuilder();
@@ -36,11 +35,15 @@ public class JSONRequest {
             .integer("Value", o -> o.value)
             .endObject();
 
+    public enum Fields {
+    	ID1, ID2, TimeStamp, Value;
+    }
+    
     public static final JSONExtractorCompleted jsonExtractor = new JSONExtractor()
-            .newPath(JSONType.TypeString).key("ID1").completePath("ID1")
-            .newPath(JSONType.TypeString).key("ID2").completePath("ID2")
-            .newPath(JSONType.TypeString).key("TimeStamp").completePath("TimeStamp")
-            .newPath(JSONType.TypeInteger).key("Value").completePath("Value");
+            .newPath(JSONType.TypeString).key("ID1").completePath("ID1",Fields.ID1)
+            .newPath(JSONType.TypeString).key("ID2").completePath("ID2",Fields.ID2)
+            .newPath(JSONType.TypeString).key("TimeStamp").completePath("TimeStamp",Fields.TimeStamp)
+            .newPath(JSONType.TypeInteger).key("Value").completePath("Value",Fields.Value);
 
     public JSONRequest() {
         this.timestamp = -1;
@@ -71,20 +74,11 @@ public class JSONRequest {
         return value;
     }
 
-    public static JSONReader createReader() {
-        return jsonExtractor.reader();
-    }
-
-    public boolean readFromJSON(JSONReader jsonReader, ChannelReader channelReader) {
-
-    	jsonReader.clear();
-    	
-//    	jsonReader.dump(channelReader, System.err);
-    	
-        jsonReader.getText(0, channelReader, id1);
-        jsonReader.getText(1, channelReader, id2);
-        jsonReader.getText(2, channelReader, extractTemp);
-        value = (int) jsonReader.getLong(3, channelReader);
+    public boolean readFromJSON(ChannelReader channelReader) {    	
+    	channelReader.structured().readText(Fields.ID1, id1);
+    	channelReader.structured().readText(Fields.ID2, id2);
+    	channelReader.structured().readText(Fields.TimeStamp, extractTemp);
+        value = (int) channelReader.structured().readLong(Fields.Value);
         return true;
     }
 

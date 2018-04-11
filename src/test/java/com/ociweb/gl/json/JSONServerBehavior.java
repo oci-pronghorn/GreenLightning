@@ -10,14 +10,12 @@ import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
-import com.ociweb.pronghorn.util.parse.JSONReader;
 
 public class JSONServerBehavior implements RestListener {
     private final GreenRuntime runtime;
     private final GreenCommandChannel channel;
     private final JSONResponse response = new JSONResponse();
     private final JSONRequest jsonRequest = new JSONRequest();
-    private final JSONReader jsonReader = JSONRequest.jsonExtractor.reader();
     private final long flagsFieldId;
     
     static int defineRoute(Builder builder) {
@@ -40,7 +38,7 @@ public class JSONServerBehavior implements RestListener {
 
         request.openPayloadData(reader -> {
             jsonRequest.reset();
-            jsonRequest.readFromJSON(jsonReader, reader);
+            jsonRequest.readFromJSON(reader);
         });
 
         System.out.println("Server: " + f + " " + jsonRequest);

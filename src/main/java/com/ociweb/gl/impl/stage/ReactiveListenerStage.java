@@ -20,6 +20,9 @@ import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.api.SerialStoreProducerAckListener;
+import com.ociweb.gl.api.SerialStoreReleaseAckListener;
+import com.ociweb.gl.api.SerialStoreReplayListener;
 import com.ociweb.gl.api.ShutdownListener;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.StateChangeListener;
@@ -34,6 +37,7 @@ import com.ociweb.gl.impl.PubSubListenerBase;
 import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.RestMethodListenerBase;
 import com.ociweb.gl.impl.StartupListenerBase;
+import com.ociweb.gl.impl.file.SerialStoreConsumer;
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -50,6 +54,9 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadProducerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
@@ -293,6 +300,31 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     public static ReactiveOperators reactiveOperators() {
 		return new ReactiveOperators()
+	
+				                .addOperator(SerialStoreReplayListener.class,				                		
+				                		PersistedBlobLoadConsumerSchema.instance,					                	 
+					               		 new ReactiveOperator() {
+										@Override
+										public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
+											r.consumeStoreReplay(index, target, input);										
+										}        		                	 
+					                 })
+				                .addOperator(SerialStoreReleaseAckListener.class,				                		
+				                		PersistedBlobLoadReleaseSchema.instance,					                	 
+					               		 new ReactiveOperator() {
+										@Override
+										public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
+											r.consumeStoreReleaseAck(index, target, input);										
+										}        		                	 
+					                 })
+				                .addOperator(SerialStoreProducerAckListener.class,				                		
+				                		PersistedBlobLoadProducerSchema.instance,					                	 
+					               		 new ReactiveOperator() {
+										@Override
+										public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
+											r.consumeStoreWriteAck(index, target, input);										
+										}        		                	 
+					                 })
 				                .addOperator(PubSubMethodListenerBase.class, 
 				                	 MessagePrivate.instance,
 				               		 new ReactiveOperator() {
@@ -328,7 +360,111 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 
     
-    public static boolean isShutdownRequested(BuilderImpl builder) {
+    protected void consumeStoreWriteAck(int index, Object target, Pipe<PersistedBlobLoadProducerSchema> p) {
+	   	
+		final int store = IntHashTable.getItem(serialStoreProdAckPipeMap, NON_ZERO_BASE+p.id)-NON_ZERO_BASE;
+		    	
+    	while (Pipe.hasContentToRead(p)) {                
+	         
+	   		 Pipe.markTail(p);
+			 
+	         int msgIdx = Pipe.takeMsgIdx(p);
+	         
+	         if (msgIdx  == PersistedBlobLoadProducerSchema.MSG_ACKWRITE_11) {
+	        	 
+	        	 long value = Pipe.takeLong(p);
+	        	 
+	        	 if (!((SerialStoreProducerAckListener)target).producerAck(store, value)) {
+            		 Pipe.resetTail(p);
+            		 return;//continue later and repeat this same value.
+	        	 }
+	        	 
+	         } else {
+	          	  logger.error("unrecognized message on {} ",p);
+    	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);
+	         }
+	         
+   	      	 Pipe.confirmLowLevelRead(p, Pipe.sizeOf(p,msgIdx));
+             Pipe.releaseReadLock(p);
+	   	 }
+	}
+
+	protected void consumeStoreReleaseAck(int index, Object target, Pipe<PersistedBlobLoadReleaseSchema> p) {
+	   	
+		  final int store = IntHashTable.getItem(serialStoreRelAckPipeMap, NON_ZERO_BASE+p.id)-NON_ZERO_BASE;
+				
+		  while (Pipe.hasContentToRead(p)) { 
+	   		 Pipe.markTail(p);
+	         int msgIdx = Pipe.takeMsgIdx(p);
+	         
+	         if (msgIdx  == PersistedBlobLoadReleaseSchema.MSG_ACKRELEASE_10) {
+	        	 
+	        	 long value = Pipe.takeLong(p);
+	        	 
+	        	 if (!((SerialStoreReleaseAckListener)target).releaseAck(store, value)) {
+            		 Pipe.resetTail(p);
+            		 return;//continue later and repeat this same value.
+	        	 }
+	        	 
+	         } else {
+	          	  logger.error("unrecognized message on {} ",p);
+    	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);
+	         }
+	         
+   	      	 Pipe.confirmLowLevelRead(p, Pipe.sizeOf(p,msgIdx));
+             Pipe.releaseReadLock(p);
+	   	 }
+	}
+
+	protected void consumeStoreReplay(int index, Object target, 
+			                            Pipe<PersistedBlobLoadConsumerSchema> p) {
+		
+		final int store = IntHashTable.getItem(serialStoreReplayPipeMap, NON_ZERO_BASE+p.id)-NON_ZERO_BASE;
+		 
+		SerialStoreReplayListener listener = (SerialStoreReplayListener)target;
+		while (Pipe.hasContentToRead(p)) {                
+	         
+	   		 Pipe.markTail(p);			 
+	         int msgIdx = Pipe.takeMsgIdx(p);
+	         
+	         if (msgIdx  == PersistedBlobLoadConsumerSchema.MSG_BEGINREPLAY_8) {
+	        	 
+	        	if (!listener.replayBegin(store)) {
+            		 Pipe.resetTail(p);
+            		 return;//continue later and repeat this same value.
+	        	}
+	        	 
+	         } else if (msgIdx  == PersistedBlobLoadConsumerSchema.MSG_FINISHREPLAY_9) {
+	        	 
+	        	if (!listener.replayFinish(store)) {
+            		 Pipe.resetTail(p);
+            		 return;//continue later and repeat this same value.
+	        	}
+	        	 
+	         } else if (msgIdx  == PersistedBlobLoadConsumerSchema.MSG_BLOCK_1) {
+	        	 
+	        	 long value = Pipe.takeLong(p);
+	        	 
+	        	 //byte array
+	        	 DataInputBlobReader<PersistedBlobLoadConsumerSchema> stream = Pipe.openInputStream(p);
+	        	 
+	        	if (!listener.replay(store, value, stream)) {
+            		 Pipe.resetTail(p);
+            		 return;//continue later and repeat this same value.
+	        	}   	 
+	        	 
+	        	 
+	         } else {
+	          	  logger.error("unrecognized message on {} ",p);
+    	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);        	 
+	         }
+	         
+   	      	 Pipe.confirmLowLevelRead(p, Pipe.sizeOf(p,msgIdx));
+             Pipe.releaseReadLock(p);
+	   	 }
+	}
+
+	public static boolean isShutdownRequested(BuilderImpl builder) {
     	return builder.shutdownRequsted.get();
     }
     
@@ -977,14 +1113,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	}
 	
 
-	
-//	@Override
-//	public void includeHTTPClientId(int id) {
-//		assert(id >= 0) : "Id must be zero or greater but less than "+MAX_HTTP_CLIENT_ID;
-//		assert(id < MAX_HTTP_CLIENT_ID) : "Id must be less than or equal to "+MAX_HTTP_CLIENT_ID;		
-//		builder.registerHTTPClientId(MAX_HTTP_CLIENT_ID&id, httpClientPipeId);
-//	}
-
 	@SuppressWarnings("unchecked")
 	public final ListenerFilter addSubscription(CharSequence topic, 
 		                                    	final CallableMethod callable) {
@@ -998,6 +1126,56 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			}
 		});
 	}
+	
+	private static final int NON_ZERO_BASE = 111;
+	private IntHashTable serialStoreProdAckPipeMap; //TODO: could use perfect hash in the future.
+	private IntHashTable serialStoreRelAckPipeMap;  //TODO: could use perfect hash in the future.
+	private IntHashTable serialStoreReplayPipeMap;  //TODO: could use perfect hash in the future.
+	
+	public final ListenerFilter includeSerialStoreWriteAck(int ... id) {		
+		serialStoreProdAckPipeMap = new IntHashTable(IntHashTable.computeBits(id.length*3));		
+		int i = id.length;
+		while (--i>=0) {
+			Pipe<PersistedBlobLoadProducerSchema> pipe = builder.serialStoreWriteAck[i];
+			if (pipe==null) {
+				 throw new UnsupportedOperationException("The id "+id+" write ack has already been assined to another behavior.\n Only 1 behavior may consume this message");
+			} else {
+				 IntHashTable.setItem(serialStoreProdAckPipeMap, NON_ZERO_BASE+pipe.id, NON_ZERO_BASE+i);
+				 builder.serialStoreWriteAck[i] = null;
+			}			
+		}	
+		return this;
+	}
+	
+	public final ListenerFilter includeSerialStoreReleaseAck(int ... id) {
+		serialStoreRelAckPipeMap = new IntHashTable(IntHashTable.computeBits(id.length*3));	
+		int i = id.length;
+		while (--i>=0) {
+			Pipe<PersistedBlobLoadReleaseSchema> pipe = builder.serialStoreReleaseAck[i];
+			if (pipe==null) {
+				 throw new UnsupportedOperationException("The id "+id+" release ack has already been assined to another behavior.\n Only 1 behavior may consume this message");
+			} else {
+				 IntHashTable.setItem(serialStoreRelAckPipeMap, NON_ZERO_BASE+pipe.id, NON_ZERO_BASE+i);
+				 builder.serialStoreReleaseAck[i] = null;
+			}			
+		}	
+		return this;
+	}
+	
+	public final ListenerFilter includeSerialStoreReplay(int ... id) {
+		serialStoreReplayPipeMap = new IntHashTable(IntHashTable.computeBits(id.length*3));		
+		int i = id.length;
+		while (--i>=0) {
+			Pipe<PersistedBlobLoadConsumerSchema> pipe = builder.serialStoreReplay[i];
+			if (pipe==null) {
+				 throw new UnsupportedOperationException("The id "+id+" replay has already been assined to another behavior.\n Only 1 behavior may consume this message");
+			} else {
+				 IntHashTable.setItem(serialStoreReplayPipeMap, NON_ZERO_BASE+pipe.id, NON_ZERO_BASE+i);
+				 builder.serialStoreReplay[i] = null;
+			}
+		}
+		return this;
+	}	
 	
 	public final ListenerFilter includeRoute(int routeId, final CallableRestRequestReader callable) {
 		

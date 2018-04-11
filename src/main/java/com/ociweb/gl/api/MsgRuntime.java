@@ -430,6 +430,34 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         		inputPipes[--pipesCount] = httpRequestPipes[i];                		
         	}
         }
+		
+		////////////////
+		////////////////
+		
+		
+		if (listener instanceof SerialStoreProducerAckListener) {
+			//TODO: I am an ack listener but to which serial ID?
+			
+			// inputPipes[--pipesCount] =
+			
+		}
+		
+		
+		if (listener instanceof SerialStoreReleaseAckListener) {
+			//TODO: I am an ack listener but to which serial ID?
+			
+			// inputPipes[--pipesCount] =
+			
+		}
+		
+		if (listener instanceof SerialStoreReplayListener) {
+			//TODO: I am an ack listener but to which serial ID?
+			
+			// inputPipes[--pipesCount] =
+			
+		}
+		
+		
 	}
 
 	private Pipe<NetResponseSchema> buildNetResponsePipe() {
