@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.RestListener;
 
 public class ShutdownRestListener implements RestListener{
@@ -27,7 +28,7 @@ public class ShutdownRestListener implements RestListener{
 		
 		if (request.structured().isEqual(keyFieldId, pass)) {
 			
-			if (!cmd.hasRoomFor(2)) {//reponse then shutdown
+			if (!MsgCommandChannel.hasRoomFor(cmd,2)) {//reponse then shutdown
 				return false;
 			}
 			

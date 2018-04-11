@@ -24,7 +24,7 @@ public class AppTest {
 		    //System.out.println("starting up client");
 	   	    
 	   	    //this test will hit the above server until it calls shutdown.
-		    GreenRuntime.testUntilShutdownRequested(new HTTPClient(), timeoutMS);
+		    GreenRuntime.testConcurrentUntilShutdownRequested(new HTTPClient(), timeoutMS);
 		
 		    
 	 }
