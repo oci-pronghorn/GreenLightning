@@ -3,29 +3,35 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPPublishService;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.api.PubSubListener;
+import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListener, PubSubListener {
-
 	
-	private final GreenCommandChannel cmd;
 	private ClientHostPortInstance session;
+	private final HTTPPublishService clientService;
+	private final PubSubService pubSubService;
 	 
 	public HTTPGetBehaviorSingle(GreenRuntime runtime, ClientHostPortInstance session) {
 		this.session = session;
-		cmd = runtime.newCommandChannel(NET_REQUESTER | DYNAMIC_MESSAGING);
+		GreenCommandChannel cmd = runtime.newCommandChannel();
+		clientService = cmd.newHTTPClientService();
+		pubSubService = cmd.newPubSubService();
+		
+		
 	}
 
 
 	@Override
 	public void startup() {
-	    cmd.publishTopic("next");
+		pubSubService.publishTopic("next");
 	}
 	
 	long d = 0;
@@ -56,7 +62,7 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 		
 		reader.openPayloadData( payload );
 		
-		cmd.publishTopic("next");
+		pubSubService.publishTopic("next");
 		
 		return true;
 	}
@@ -69,12 +75,12 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 	public boolean message(CharSequence topic, ChannelReader payload) {
 		
 		if (--countDown<=0) {
-			cmd.httpGet(session, "/shutdown?key=shutdown");
-			cmd.publishTopic("shutdown");
+			clientService.httpGet(session, "/shutdown?key=shutdown");
+			pubSubService.publishTopic("shutdown");
 		}
 		
 		reqTime = System.nanoTime();
-		return cmd.httpGet(session, "/testPageB");
+		return clientService.httpGet(session, "/testPageB");
 
 	}
 
