@@ -193,8 +193,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
     
     public static boolean hasRoomForHTTP(MsgCommandChannel<?> cmd, int messageCount) {
+    	assert(cmd.httpRequest!=null) : "Client side HTTP Request must be enabled";    	
 		return Pipe.hasRoomForWrite(cmd.httpRequest, 
-    			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(cmd.httpRequest))*messageCount);
+    			FieldReferenceOffsetManager.maxFragmentSize(
+    					Pipe.from(cmd.httpRequest))*messageCount);
     }
     
     @Deprecated
