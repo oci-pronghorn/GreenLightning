@@ -37,7 +37,7 @@ public class NamedMessagePassingTest {
 		//HTTP1xRouterStage.showHeader=true;
 		
 		boolean telemetry = false;
-		long cycleRate = 1200;  
+		long cycleRate = 1000;
 		
 		
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
@@ -48,26 +48,17 @@ public class NamedMessagePassingTest {
 		
 		//spikes are less frequent when the wifi network is off...
 		
-//		FileOutputStream hold = null;
-//		try {//this piles up work and makes it worse? try short runs?
-//			File f = new File("/dev/cpu_dma_latency");
-//			hold = new FileOutputStream(f);
-//			hold.write(new byte[] {0,0,0,1});
-//		} catch(Exception e) {
-//			e.printStackTrace(System.err);
-//		}
-		
 		//10*  8min
-		//50* 40min		
-		int cyclesPerTrack =  10_000;// 1+99_9999;
+		//50*  50min		
+		int cyclesPerTrack =  10 * (1+99_9999);
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 0;  //4 for max volume
+		config2.simultaneousRequestsPerTrackBits  = 0;  //7 126k for max volume
 		config2.responseTimeoutNS = 0L;
-	
+		
 		//For low latency
 		config2.cycleRate = cycleRate; //TODO: may need to be bigger for slow windows boxes.
 			
@@ -81,30 +72,7 @@ public class NamedMessagePassingTest {
 		//for 100 calls we expect the slowest to be 100 micros
 		//to load this page 100 times we expect to find 1 load of 2 ms
 		//to load this pate 1000 times all times are under 40 which is human perception
-//		Total:1000000
-//		0035 µs 25 percentile
-//		0046 µs 50 percentile
-//		0058 µs 80 percentile
-//		0063 µs 90 percentile
-//		0065 µs 95 percentile
-//		0100 µs 98 percentile
-//		0116 µs 99 percentile
-//		0175 µs 99.9 percentile
-//		0002 ms 99.99 percentile
-//		0013 ms 99.999 percentile
-//		0021 ms 99.9999 percentile
-//		0021 ms max update
-		
-//		if (null!=hold) {
-//			System.err.println("done xxxxxxxxxxxxxxxx ");
-//			
-//			try {
-//				hold.close();
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//		}
+
 		
 	}
 }

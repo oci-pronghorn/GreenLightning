@@ -6,17 +6,18 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class JSONServerBehavior implements RestListener {
-    private final GreenRuntime runtime;
-    private final GreenCommandChannel channel;
+
     private final JSONResponse response = new JSONResponse();
     private final JSONRequest jsonRequest = new JSONRequest();
     private final long flagsFieldId;
+	private final HTTPResponseService channel;
     
     static int defineRoute(Builder builder) {
         return builder.defineRoute(JSONRequest.jsonExtractor)
@@ -28,8 +29,8 @@ public class JSONServerBehavior implements RestListener {
 
     JSONServerBehavior(GreenRuntime runtime, long flagsFieldId) {
     	this.flagsFieldId = flagsFieldId;
-        this.channel = runtime.newCommandChannel(NET_RESPONDER);
-        this.runtime = runtime;
+        this.channel = runtime.newCommandChannel().newHTTPResponseService();
+      
     }
 
     @Override
@@ -62,7 +63,7 @@ public class JSONServerBehavior implements RestListener {
                         
                     }
                 });
-        //runtime.shutdownRuntime();
+        
         return true;
     }
 }

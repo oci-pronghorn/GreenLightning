@@ -37,7 +37,9 @@ public class MQTTApp implements GreenApp {
 		runtime.bridgeSubscription("topic/ingress", mqttConfig); //optional 2 topics, optional transform lambda
 		runtime.bridgeTransmission("topic/egress", mqttConfig); //optional 2 topics, optional transform lambda
 		
-		final MsgCommandChannel cmdChnl = runtime.newCommandChannel(DYNAMIC_MESSAGING);		
+		final MsgCommandChannel cmdChnl = runtime.newCommandChannel();	
+		final PubSubService pubSubService = cmdChnl.newPubSubService();
+		
 		TimeListener timeListener = new TimeListener() {
 			@Override
 			public void timeEvent(long time, int iteration) {
@@ -51,13 +53,14 @@ public class MQTTApp implements GreenApp {
 
 					}
 				};
-				cmdChnl.publishTopic("topic/egress", writable);
+				pubSubService.publishTopic("topic/egress", writable);
 			}
 		};
 		runtime.addTimePulseListener(timeListener);
 		
 		
-		final MsgCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		final MsgCommandChannel cmd = runtime.newCommandChannel();
+		final PubSubService pubSubService2 = cmd.newPubSubService();
 		
 		PubSubListener listener = new PubSubListener() {
 			
@@ -79,7 +82,7 @@ public class MQTTApp implements GreenApp {
 					}
 					
 				};
-				cmd.publishTopic("localtest", writable);
+				pubSubService2.publishTopic("localtest", writable);
 				
 				return true;
 			}

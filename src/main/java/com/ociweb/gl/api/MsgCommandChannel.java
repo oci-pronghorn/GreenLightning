@@ -154,19 +154,30 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return new PubSubService(this);
 	}
 	
+	public PubSubService newPubSubService(int queueLength, int maxMessageSize) {
+		return new PubSubService(this,queueLength,maxMessageSize);
+	}
+	
 	public HTTPPublishService newHTTPClientService() {
 		return new HTTPPublishService(this);
+	}
+	
+	public HTTPPublishService newHTTPClientService(int queueLength, int maxMessageSize) {
+		return new HTTPPublishService(this,queueLength,maxMessageSize);
 	}
 	
 	public HTTPResponseService newHTTPResponseService() {
 		return new HTTPResponseService(this);
 	}	
 	
+	public HTTPResponseService newHTTPResponseService(int queueLength, int maxMessageSize) {
+		return new HTTPResponseService(this,queueLength,maxMessageSize);
+	}
+	
 	public DelayService newDelayService() {
 		return new DelayService(this);
 	}
-	
-    
+
     ////////////////////////////////////
     ////////////////////////////////////
     
@@ -538,6 +549,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return aBool.compareAndSet(true, false);
     }
 
+    @Deprecated
     public final boolean shutdown() {
         assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
         try {

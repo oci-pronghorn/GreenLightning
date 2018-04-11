@@ -24,7 +24,9 @@ public class MassiveBehavior implements GreenApp {
 		
 		int i = 7;
 		while (--i>=0) {
-			final GreenCommandChannel cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+			final GreenCommandChannel cmd = runtime.newCommandChannel();
+			final PubSubService pubSubServce = cmd.newPubSubService();
+			
 			final String topic = "topic"+i;
 			final int value = i;
 			
@@ -41,7 +43,7 @@ public class MassiveBehavior implements GreenApp {
 
 				@Override
 				public void timeEvent(long time, int iteration) {
-					if (!cmd.publishTopic(topic, writable)) {
+					if (!pubSubServce.publishTopic(topic, writable)) {
 						System.out.println("overloaded can not publish "+value);
 					}
 				}

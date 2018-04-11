@@ -5,6 +5,7 @@ import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.RestListener;
 
 public class AllRoutesExample2 implements GreenApp {
@@ -27,7 +28,8 @@ public class AllRoutesExample2 implements GreenApp {
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
 		
-		final GreenCommandChannel cmd = runtime.newCommandChannel(NET_RESPONDER);
+		final GreenCommandChannel cmd = runtime.newCommandChannel();	
+		final HTTPResponseService responseService = cmd.newHTTPResponseService();
 		
 		RestListener listener = new RestListener() {
 			@Override
@@ -38,7 +40,7 @@ public class AllRoutesExample2 implements GreenApp {
 				System.out.println(id);
 			//	request.getText("value".getBytes(), System.out);
 				
-				return cmd.publishHTTPResponse(request, 200);				
+				return responseService.publishHTTPResponse(request, 200);				
 			}			
 		};
 		runtime.addRestListener(listener).includeAllRoutes();

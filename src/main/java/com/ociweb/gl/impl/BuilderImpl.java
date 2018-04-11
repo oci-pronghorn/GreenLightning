@@ -507,6 +507,7 @@ public class BuilderImpl implements Builder {
     			                             consumers, this, parallelInstance, nameId);
     }
 
+    @Deprecated
 	public <G extends MsgCommandChannel> G newCommandChannel(
 												int features,
 			                                    int parallelInstanceId,
