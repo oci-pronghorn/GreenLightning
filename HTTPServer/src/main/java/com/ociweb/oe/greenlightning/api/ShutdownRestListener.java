@@ -6,20 +6,21 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.RestListener;
 
 public class ShutdownRestListener implements RestListener{
 
-	public GreenRuntime runtime;
-	private GreenCommandChannel cmd;
+	private HTTPResponseService responseService;
+	private GreenCommandChannel newCommandChannel;
 	private final long keyFieldId;
 	private final byte[] pass = "shutdown".getBytes();
 	private static final Logger logger = LoggerFactory.getLogger(ShutdownRestListener.class);
 	
 	public ShutdownRestListener(GreenRuntime runtime, long keyFieldId) {
-		this.runtime = runtime;
-		this.cmd = runtime.newCommandChannel(NET_RESPONDER);		
+		this.newCommandChannel = runtime.newCommandChannel();
+		this.responseService = newCommandChannel.newHTTPResponseService();		
 		this.keyFieldId = keyFieldId;
 	}
 
@@ -28,13 +29,13 @@ public class ShutdownRestListener implements RestListener{
 		
 		if (request.structured().isEqual(keyFieldId, pass)) {
 			
-			if (!MsgCommandChannel.hasRoomFor(cmd,2)) {//reponse then shutdown
+			if (!MsgCommandChannel.hasRoomFor(newCommandChannel,2)) {//reponse then shutdown
 				return false;
 			}
 			
-			if (cmd.publishHTTPResponse(request, 200)) {		
+			if (responseService.publishHTTPResponse(request, 200)) {		
 				
-				while (!cmd.shutdown()){
+				while (!responseService.shutdown()){
 					logger.error("Checked for room yet the shutdown was blocked...");
 				}
 				
@@ -42,7 +43,7 @@ public class ShutdownRestListener implements RestListener{
 			} 
 			return false;
 		} else {
-			if (cmd.publishHTTPResponse(request, 404)) {	
+			if (responseService.publishHTTPResponse(request, 404)) {	
 				return true;
 			} 
 			return false;

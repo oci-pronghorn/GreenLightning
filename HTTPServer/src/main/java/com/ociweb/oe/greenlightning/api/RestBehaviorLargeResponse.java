@@ -4,6 +4,7 @@ import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
@@ -11,12 +12,12 @@ import com.ociweb.pronghorn.util.AppendableProxy;
 
 public class RestBehaviorLargeResponse implements RestListener {
 
-	private final GreenCommandChannel cmd;
+	private final HTTPResponseService cmd;
 	private int partNeeded = 0;
 	private final AppendableProxy console;
 	
 	public RestBehaviorLargeResponse(GreenRuntime runtime, AppendableProxy console) {	
-		this.cmd = runtime.newCommandChannel(NET_RESPONDER);
+		this.cmd = runtime.newCommandChannel().newHTTPResponseService();
 		this.console = console;
 	}
 	
