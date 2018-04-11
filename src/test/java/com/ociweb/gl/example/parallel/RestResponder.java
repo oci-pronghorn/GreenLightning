@@ -2,6 +2,8 @@ package com.ociweb.gl.example.parallel;
 
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPResponseService;
+import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.json.encode.JSONRenderer;
@@ -11,7 +13,10 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class RestResponder implements PubSubListener{
 
-	private final GreenCommandChannel cmd;
+	private final HTTPResponseService cmd;
+	private final GreenCommandChannel newCommandChannel;
+	private final boolean useChunked;
+	
 	
     private static final JSONRenderer<ChannelReader> jsonRenderer = new JSONRenderer<ChannelReader>()
             .beginObject()
@@ -27,19 +32,45 @@ public class RestResponder implements PubSubListener{
 		}
 	};
 
-	public RestResponder(GreenRuntime runtime) {
-		cmd = runtime.newCommandChannel();
-		cmd.ensureHTTPServerResponse(128,400);
+	public RestResponder(GreenRuntime runtime, boolean chunked) {
+		newCommandChannel = runtime.newCommandChannel();
+		cmd = newCommandChannel.newHTTPResponseService(128,400);
+		useChunked = chunked;
 	}
 	
 	@Override
 	public boolean message(CharSequence topic, ChannelReader payload) {
-		
 		payloadW = payload;
-		return cmd.publishHTTPResponse(
-				payload.readPackedLong(), 
-				payload.readPackedLong(), 
-				200, false, HTTPContentTypeDefaults.JSON, w);
+		
+		if (useChunked) {
+			if (MsgCommandChannel.hasRoomFor(newCommandChannel, 2)) {
+						
+				long connectionId = payload.readPackedLong();
+				long sequenceCode = payload.readPackedLong();
+				
+				cmd.publishHTTPResponse(
+						connectionId, 
+						sequenceCode, 
+						200, true, HTTPContentTypeDefaults.JSON, w);
+							
+				//TODO: another issue, The end of the continuation MUST be non zero length!!.
+				cmd.publishHTTPResponseContinuation(
+						connectionId, 
+						sequenceCode, 
+						false, (w)->{w.append("hello");});
+				
+				   
+				return true;
+			} else {
+				return false;
+			}
+		
+		} else {
+			return cmd.publishHTTPResponse(
+					payload.readPackedLong(), 
+					payload.readPackedLong(), 
+					200, false, HTTPContentTypeDefaults.JSON, w);
+		}
 	}
 
 }

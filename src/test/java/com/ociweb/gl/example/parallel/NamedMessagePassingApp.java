@@ -15,6 +15,9 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 	private long fieldA;
 	private long fieldB;
 	
+	public enum Fields {nameB , urlArg;}
+	
+	
 	public static void main(String[] args) {
 		GreenRuntime.run(new NamedMessagePassingApp(false,4000));
 	}
@@ -60,20 +63,22 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		// "{\"key1\":\"value\",\"key2\":123}";
 		
 		builder.setGlobalSLALatencyNS(1_000_000);
+
 		
-		Object testObj = new Object();
 		
 		JSONExtractorCompleted extractor = 
 				new JSONExtractor()
 				.newPath(JSONType.TypeString).key("key1").completePath("name_a")
-		        .newPath(JSONType.TypeInteger).key("key2").completePath("name_b",testObj);
+		        .newPath(JSONType.TypeInteger).key("key2").completePath("name_b",Fields.nameB);
 		
 		
-		int aRouteId = builder.defineRoute(extractor).path("/test").routeId();
+		int aRouteId = builder.defineRoute(extractor).path("/te${value}")
+				        .associatedObject("value", Fields.urlArg)
+				        .routeId();
 		
 		fieldA  = builder.lookupFieldByName(aRouteId,"name_a");
 		fieldB  = builder.lookupFieldByName(aRouteId,"name_b");
-		long fieldB2 = builder.lookupFieldByIdentity(aRouteId, testObj);
+		long fieldB2 = builder.lookupFieldByIdentity(aRouteId, Fields.nameB);
 		assert(fieldB==fieldB2);
 		long fieldL  = builder.lookupFieldByIdentity(aRouteId, HTTPHeaderDefaults.CONTENT_LENGTH);
 		
@@ -102,10 +107,12 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 //			
 //		});
 		
-		runtime.addRestListener("consumer",new RestConsumer(runtime, fieldA, fieldB))
+		runtime.addRestListener("consumer",new RestConsumer(runtime, fieldA, fieldB, Fields.urlArg))
 		       .includeAllRoutes();
+				
+		boolean chunked = false;
 		
-		runtime.addPubSubListener("responder",new RestResponder(runtime))
+		runtime.addPubSubListener("responder",new RestResponder(runtime, chunked))
 		       .addSubscription("/send/200"); //add boolean for unscoped if required
 
 	}

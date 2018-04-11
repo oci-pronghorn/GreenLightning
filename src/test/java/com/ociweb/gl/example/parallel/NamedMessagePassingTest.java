@@ -48,7 +48,7 @@ public class NamedMessagePassingTest {
 		
 		//spikes are less frequent when the wifi network is off...
 		
-		//10*  8min
+		//10*   8min
 		//50*  50min		
 		int cyclesPerTrack =  (1+99_9999) / 10;
 		

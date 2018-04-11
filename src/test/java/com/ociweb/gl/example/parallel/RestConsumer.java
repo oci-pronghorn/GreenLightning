@@ -14,7 +14,7 @@ public class RestConsumer implements RestListener {
 	private HTTPRequestReader requestW;
 	private final long fieldA;
 	private final long fieldB;
-	
+	private final Object valueObject;
 	
 	private Writable w = new Writable() {
 
@@ -27,12 +27,13 @@ public class RestConsumer implements RestListener {
 		}
 		
 	};
-	public RestConsumer(GreenRuntime runtime, long fieldA, long fieldB) {		
+	public RestConsumer(GreenRuntime runtime, long fieldA, long fieldB, Object valueObj) {		
 		this.cmd2 = runtime.newCommandChannel();		
 		this.cmd2.ensureDynamicMessaging();
 		this.cmd2.ensureHTTPServerResponse();
 		this.fieldA = fieldA;
-		this.fieldB = fieldB;		
+		this.fieldB = fieldB;	
+		this.valueObject = valueObj;
 				
 	}
 
@@ -44,6 +45,8 @@ public class RestConsumer implements RestListener {
 			cmd2.publishHTTPResponse(request, 404);
 		}
 		
+		assert(request.structured().isEqual(valueObject, "st".getBytes())) : "found "+request.structured().readText(valueObject);
+				
 		int b = request.structured().readInt(fieldB);
 		if (b!=123) {
 			throw new UnsupportedOperationException();
