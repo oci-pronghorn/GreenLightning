@@ -28,24 +28,34 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
      }
      
      public GreenCommandChannel newCommandChannel() { 
-    	 return newCommandChannel(0);
+
+      	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
+      			                                         defaultCommandChannelMaxPayload);
+
+      	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
+      	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
+      	
+      	return this.builder.newCommandChannel(  				
+  				parallelInstanceUnderActiveConstruction,
+  				pcm
+  		  );    
      }
      
-     @Deprecated
-     public GreenCommandChannel newCommandChannel(int features) { 
-         
-     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
-     			                                         defaultCommandChannelMaxPayload);
-
-     	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
-     	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
-     	
-     	return this.builder.newCommandChannel(
- 				features,
- 				parallelInstanceUnderActiveConstruction,
- 				pcm
- 		  );    	
-     }
+//     @Deprecated
+//     private GreenCommandChannel newCommandChannel(int features) { 
+//         
+//     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
+//     			                                         defaultCommandChannelMaxPayload);
+//
+//     	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
+//     	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
+//     	
+//     	return this.builder.newCommandChannel(
+// 				features,
+// 				parallelInstanceUnderActiveConstruction,
+// 				pcm
+// 		  );    	
+//     }
      
     public static GreenRuntime run(GreenApp app) {
     	return run(app,new String[0]);

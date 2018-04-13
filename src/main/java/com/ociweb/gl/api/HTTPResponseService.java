@@ -5,6 +5,7 @@ import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.util.Appendables;
@@ -26,6 +27,12 @@ public class HTTPResponseService {
 		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, queueLength, maxMessageSize);
 	}
+	
+	public boolean hasRoomFor(int messageCount) {
+		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
+		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
+	}
+	
 
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, int statusCode) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";

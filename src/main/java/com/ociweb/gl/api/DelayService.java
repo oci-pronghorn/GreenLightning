@@ -1,13 +1,23 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
+import com.ociweb.pronghorn.pipe.Pipe;
+
 public class DelayService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
 	
 	public DelayService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
+		msgCommandChannel.initFeatures |= MsgCommandChannel.USE_DELAY;
 	}
 
+	public boolean hasRoomFor(int messageCount) {
+		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
+		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
+	}
+	
+	
 	 public boolean delay(long durationNanos) {
 		 assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {

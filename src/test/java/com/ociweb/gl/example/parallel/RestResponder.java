@@ -43,7 +43,7 @@ public class RestResponder implements PubSubListener{
 		payloadW = payload;
 		
 		if (useChunked) {
-			if (MsgCommandChannel.hasRoomFor(newCommandChannel, 2)) {
+			if (cmd.hasRoomFor(2)) {
 						
 				long connectionId = payload.readPackedLong();
 				long sequenceCode = payload.readPackedLong();

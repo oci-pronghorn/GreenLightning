@@ -3,25 +3,35 @@ package com.ociweb.gl.api;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 
-public class HTTPPublishService {
+public class HTTPRequestService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
 	
-	public HTTPPublishService(MsgCommandChannel<?> msgCommandChannel) {
+	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;		
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
 	}
 	
-	public HTTPPublishService(MsgCommandChannel<?> msgCommandChannel, int queueLength, int maxMessageSize) {
+	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel, int queueLength, int maxMessageSize) {
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.growCommandCountRoom(queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
 		
 		msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
 	}
+	
+	public boolean hasRoomFor(int messageCount) {		
+		assert(msgCommandChannel.httpRequest!=null) : "Client side HTTP Request must be enabled";    	
+		return Pipe.hasRoomForWrite(msgCommandChannel.httpRequest, 
+				FieldReferenceOffsetManager.maxFragmentSize(
+						Pipe.from(msgCommandChannel.httpRequest))*messageCount);
+	}
+	
+	
 	
 	public boolean httpClose(ClientHostPortInstance session) {
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);

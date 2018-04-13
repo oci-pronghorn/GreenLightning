@@ -8,6 +8,7 @@ import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 
@@ -37,6 +38,12 @@ public class PubSubService {
 		//IngressMessages Confirm that MQTT ingress is big enough as well			
 		msgCommandChannel.pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
 	}
+	
+	public boolean hasRoomFor(int messageCount) {
+		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
+		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
+	}
+	
 	
 	public boolean subscribe(CharSequence topic) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";

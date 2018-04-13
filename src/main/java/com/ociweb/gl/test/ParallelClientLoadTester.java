@@ -7,11 +7,13 @@ import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenAppParallel;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPRequestService;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.HeaderWritable;
 import com.ociweb.gl.api.HeaderWriter;
 import com.ociweb.gl.api.PubSubMethodListener;
+import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
@@ -188,7 +190,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	}
 
 	private class Progress implements PubSubMethodListener, StartupListener {
-		private final GreenCommandChannel cmd4;
+		private final PubSubService cmd4;
 
 		private final long[] finished = new long[parallelTracks];
 		//private final long[] sendAttempts = new long[parallelTracks];
@@ -209,8 +211,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private int enderCounter;
 
 		Progress(GreenRuntime runtime) {
-			this.cmd4 = runtime.newCommandChannel();
-			this.cmd4.ensureDynamicMessaging(Math.max(PUB_MSGS, maxInFlight), PUB_MSGS_SIZE);
+			this.cmd4 = runtime.newCommandChannel().newPubSubService(Math.max(PUB_MSGS, maxInFlight), PUB_MSGS_SIZE);
 		}
 
 		@Override
@@ -327,10 +328,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 
 	private class TrackHTTPResponseListener implements HTTPResponseListener, TimeListener, StartupListener, PubSubMethodListener {
-		private final GreenCommandChannel cmd3;
+		private final PubSubService cmd3;
 		private final int track;
 		private final HTTPResponseListener validator;
-		private final GreenCommandChannel cmd2;
+		private final HTTPRequestService cmd2;
 		private final HeaderWritable header;
 		private final Writable writer;
 
@@ -346,11 +347,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
 			countDown = cyclesPerTrack;
-			cmd3 = runtime.newCommandChannel();
-			cmd3.ensureDynamicMessaging(Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
-			if (durationNanos > 0) {
-				cmd3.ensureDelaySupport();
-			}
+			cmd3 = runtime.newCommandChannel().newPubSubService(Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
 
 			this.header = contentType != null ?
 					new HeaderWritable() {
@@ -366,12 +363,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			this.writer = post != null ? post.get() : null;
 			this.validator = validate != null ? validate.get() : null;
 
-			this.cmd2 = runtime.newCommandChannel();
-			if (post != null) {
-				cmd2.ensureHTTPClientRequesting(2+maxInFlight, maxPayloadSize + 1024);
-			} else {
-				cmd2.ensureHTTPClientRequesting(2+maxInFlight, 0);
-			}
+			this.cmd2 = runtime.newCommandChannel().newHTTPClientService(
+					2+maxInFlight, post!=null ? maxPayloadSize + 1024 : 0);
+			
 		}
 
 		boolean callMessage(CharSequence topic, ChannelReader payload) {
@@ -419,12 +413,17 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
+			
 			//if false we already closed this one and need to skip this part
 			if (lastResponseOk) {
 				boolean connectionClosed = reader.isConnectionClosed();
 				if (connectionClosed) {
 					out.connectionClosed(track);
 				}
+				if (!reader.isEndOfResponse()) {
+					return true;//just toss all the early chunks we only want the very end.
+				}
+				
 
 				long sentTime = callTime[track][maxInFlightMask & inFlightTail[track]++];
 				long arrivalTime = System.nanoTime();
@@ -452,9 +451,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				totalTime+=duration;
 
 				responsesReceived++;
-				if (validator != null && !validator.responseHTTP(reader)) {
-					responsesInvalid++;
-				}
+				
+				//due to chunks this needs to be disabled until we can add support.
+//				if (validator != null && !validator.responseHTTP(reader)) {
+//					responsesInvalid++;
+//				}
 			}
 			return lastResponseOk = nextCall();
 		}

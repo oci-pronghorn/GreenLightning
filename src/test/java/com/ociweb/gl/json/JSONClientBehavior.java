@@ -8,12 +8,12 @@ public class JSONClientBehavior implements HTTPResponseListener, StartupListener
     private final GreenRuntime runtime;
     private final GreenCommandChannel command;
     private final ClientHostPortInstance session;
+	private HTTPRequestService clientService;
 
     JSONClientBehavior(GreenRuntime runtime, ClientHostPortInstance session) {
         this.runtime = runtime;
         this.command = runtime.newCommandChannel();
-        this.command.ensureHTTPClientRequesting();
-        this.command.ensureDynamicMessaging();
+        this.clientService = this.command.newHTTPClientService();
         this.session = session;
     }
 
@@ -37,8 +37,8 @@ public class JSONClientBehavior implements HTTPResponseListener, StartupListener
         JSONRequest.renderer.render(out, request2);
         System.out.println("Client JSON 2:" + out);
 
-        command.httpPost(session, "/test/path?flag=42", writer -> JSONRequest.renderer.render(writer, request1));
-        command.httpPost(session, "/test/path", writer -> JSONRequest.renderer.render(writer, request2));
+        clientService.httpPost(session, "/test/path?flag=42", writer -> JSONRequest.renderer.render(writer, request1));
+        clientService.httpPost(session, "/test/path", writer -> JSONRequest.renderer.render(writer, request2));
     }
 
     @Override

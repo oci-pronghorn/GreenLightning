@@ -14,8 +14,10 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 	private long rate;
 	private long fieldA;
 	private long fieldB;
-	
-	public enum Fields {nameB , urlArg;}
+		
+    private boolean chunked = true;
+
+	public enum Fields {nameA, nameB , urlArg;}
 	
 	
 	public static void main(String[] args) {
@@ -60,16 +62,15 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		builder.setDefaultRate(rate);
 
 		
-		// "{\"key1\":\"value\",\"key2\":123}";
+		// "{\"key1\":\"789\",\"key2\":123}";
 		
 		builder.setGlobalSLALatencyNS(1_000_000);
-
 		
 		
 		JSONExtractorCompleted extractor = 
 				new JSONExtractor()
-				.newPath(JSONType.TypeString).key("key1").completePath("name_a")
-		        .newPath(JSONType.TypeInteger).key("key2").completePath("name_b",Fields.nameB);
+				.newPath(JSONType.TypeString).key("key1").completePath("name_a", Fields.nameA)
+		        .newPath(JSONType.TypeInteger).key("key2").completePath("name_b", Fields.nameB);
 		
 		
 		int aRouteId = builder.defineRoute(extractor).path("/te${value}")
@@ -107,10 +108,12 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 //			
 //		});
 		
-		runtime.addRestListener("consumer",new RestConsumer(runtime, fieldA, fieldB, Fields.urlArg))
+		runtime.addRestListener("consumer",new RestConsumer(runtime, fieldA, fieldB, 
+				Fields.nameA,
+				Fields.nameB,
+				Fields.urlArg))
 		       .includeAllRoutes();
-				
-		boolean chunked = false;
+
 		
 		runtime.addPubSubListener("responder",new RestResponder(runtime, chunked))
 		       .addSubscription("/send/200"); //add boolean for unscoped if required

@@ -10,7 +10,7 @@ import com.ociweb.pronghorn.pipe.RawDataSchema;
 
 public class HTTPResponder {
 
-	private final MsgCommandChannel commandChannel;
+	private final HTTPResponseService commandChannel;
 	
 	private long connectionId;
 	private long sequenceCode;
@@ -24,14 +24,14 @@ public class HTTPResponder {
 	private final Writable writable;	
 	
 	public HTTPResponder(MsgCommandChannel commandChannel, int maximumPayloadSize) {
-		this.commandChannel = commandChannel;
 	    this.connectionId = -1;
 	    this.sequenceCode = -1;
 	    
 	    int maximumMessages = 4;
 	    
-	    commandChannel.ensureHTTPServerResponse(maximumMessages, maximumPayloadSize);
-	    
+       // responseRelayChannel.ensureHTTPServerResponse(500, 1024);
+	    this.commandChannel = commandChannel.newHTTPResponseService(maximumMessages, maximumPayloadSize);
+	    	    
 	    //temp space for only if they appear out of order.
 		this.pipe = RawDataSchema.instance.newPipe(maximumMessages, maximumPayloadSize);
 		this.pipe.initBuffers();
