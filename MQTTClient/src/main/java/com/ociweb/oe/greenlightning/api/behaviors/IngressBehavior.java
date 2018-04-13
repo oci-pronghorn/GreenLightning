@@ -1,18 +1,18 @@
 package com.ociweb.oe.greenlightning.api.behaviors;
 
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.PubSubMethodListener;
+import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.WaitFor;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 
 public class IngressBehavior implements PubSubMethodListener {
-	private final GreenCommandChannel cmd;
+	private final PubSubService cmd;
 	private final String publishTopic;
 
 	public IngressBehavior(GreenRuntime runtime, String publishTopic) {
-		cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		cmd = runtime.newCommandChannel().newPubSubService();
 		this.publishTopic = publishTopic;
 	}
 

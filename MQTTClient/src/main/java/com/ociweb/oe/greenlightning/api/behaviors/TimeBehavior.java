@@ -2,20 +2,20 @@ package com.ociweb.oe.greenlightning.api.behaviors;
 
 import java.util.Date;
 
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.WaitFor;
 import com.ociweb.gl.api.Writable;
 
 public class TimeBehavior implements TimeListener {
 	private int droppedCount = 0;
-    private final GreenCommandChannel cmdChnl;
+    private final PubSubService cmdChnl;
 	private final String publishTopic;
 	private long total = 0;
 
 	public TimeBehavior(GreenRuntime runtime, String publishTopic) {
-		cmdChnl = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		cmdChnl = runtime.newCommandChannel().newPubSubService();
 		this.publishTopic = publishTopic;
 	}
 

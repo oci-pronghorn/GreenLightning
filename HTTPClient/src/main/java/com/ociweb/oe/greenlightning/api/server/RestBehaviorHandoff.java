@@ -1,18 +1,18 @@
 package com.ociweb.oe.greenlightning.api.server;
 
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.RestListener;
 
 public class RestBehaviorHandoff implements RestListener {
 
 		
-	private final GreenCommandChannel cmd;
+	private final PubSubService cmd;
     private final String topic;
     
 	public RestBehaviorHandoff(GreenRuntime runtime, String topic) {
-		this.cmd = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		this.cmd = runtime.newCommandChannel().newPubSubService();
 		this.topic = topic;
 	}
 

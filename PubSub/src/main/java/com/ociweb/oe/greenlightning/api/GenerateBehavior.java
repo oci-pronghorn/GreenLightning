@@ -5,6 +5,7 @@ import java.util.Random;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.PubSubListener;
+import com.ociweb.gl.api.PubSubService;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
@@ -13,13 +14,13 @@ public class GenerateBehavior implements PubSubListener {
 
 	private Random rand;
     private final CharSequence publishTopic;
-	private final GreenCommandChannel channel;
+	private final PubSubService channel;
 	private final AppendableProxy target;
 	
 	public GenerateBehavior(GreenRuntime runtime, CharSequence publishTopic, AppendableProxy target, int seed) {
 		
 		this.target = target;
-		this.channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		this.channel = runtime.newCommandChannel().newPubSubService();
 		
 		this.publishTopic = publishTopic;
 		this.rand = new Random(seed);

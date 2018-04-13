@@ -1,7 +1,7 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.oe.greenlightning.api.StateMachine.StopLight;
 import com.ociweb.pronghorn.util.AppendableProxy;
@@ -11,12 +11,12 @@ public class TimingBehavior implements TimeListener {
 
 	private static final long fullCycle = 20; //from one red light to the next in iterations
     
-	private final GreenCommandChannel channel;
+	private final PubSubService channel;
 	private final AppendableProxy console;
 	private final GreenRuntime runtime;
 
 	public TimingBehavior(GreenRuntime runtime, AppendableProxy console) {
-		this.channel = runtime.newCommandChannel(DYNAMIC_MESSAGING);
+		this.channel = runtime.newCommandChannel().newPubSubService();
 		this.console = console;
 		this.runtime = runtime;
 	}

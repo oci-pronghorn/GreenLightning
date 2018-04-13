@@ -3,6 +3,7 @@ package com.ociweb.oe.greenlightning.api.server;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.util.AppendableProxy;
@@ -11,14 +12,14 @@ import com.ociweb.pronghorn.util.Appendables;
 public class RestBehaviorEmptyResponse implements RestListener {
 
 	private final int cookieHeader = HTTPHeaderDefaults.COOKIE.ordinal();
-	private final GreenCommandChannel cmd;
+	private final HTTPResponseService cmd;
 	private final AppendableProxy console;
 	private final long nameFieldId;
 	
 	
 	public RestBehaviorEmptyResponse(GreenRuntime runtime, long nameFieldId, AppendableProxy console) {
 		this.nameFieldId = nameFieldId;		
-		this.cmd = runtime.newCommandChannel(NET_RESPONDER);
+		this.cmd = runtime.newCommandChannel().newHTTPResponseService();
 		this.console = console;
 	}
 

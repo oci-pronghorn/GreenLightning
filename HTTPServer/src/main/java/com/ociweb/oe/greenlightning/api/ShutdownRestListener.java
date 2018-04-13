@@ -29,7 +29,7 @@ public class ShutdownRestListener implements RestListener{
 		
 		if (request.structured().isEqual(keyFieldId, pass)) {
 			
-			if (!MsgCommandChannel.hasRoomFor(newCommandChannel,2)) {//reponse then shutdown
+			if (!responseService.hasRoomFor(2)) {//reponse then shutdown
 				return false;
 			}
 			

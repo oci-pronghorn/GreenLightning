@@ -3,12 +3,13 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.ShutdownListener;
 
 public class ShutdownBehavior implements ShutdownListener, RestListener{
 
-	private final GreenCommandChannel channel;
+	private final HTTPResponseService channel;
 	private final long keyFieldId;
 	private final byte[] PASS1 = "2709843294721594".getBytes();
 	private final byte[] PASS2 = "A5E8F4D8C1B987EFCC00A".getBytes();
@@ -18,7 +19,7 @@ public class ShutdownBehavior implements ShutdownListener, RestListener{
 	
     public ShutdownBehavior(GreenRuntime runtime, long keyFieldId) {
     	this.keyFieldId = keyFieldId;
-		this.channel = runtime.newCommandChannel(NET_RESPONDER);
+		this.channel = runtime.newCommandChannel().newHTTPResponseService();
 
 	}
 	    	

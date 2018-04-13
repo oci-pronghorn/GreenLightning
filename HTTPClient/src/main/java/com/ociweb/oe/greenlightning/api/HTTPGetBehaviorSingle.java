@@ -3,7 +3,7 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.HTTPPublishService;
+import com.ociweb.gl.api.HTTPRequestService;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.Payloadable;
@@ -16,7 +16,7 @@ import com.ociweb.pronghorn.util.Appendables;
 public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListener, PubSubListener {
 	
 	private ClientHostPortInstance session;
-	private final HTTPPublishService clientService;
+	private final HTTPRequestService clientService;
 	private final PubSubService pubSubService;
 	 
 	public HTTPGetBehaviorSingle(GreenRuntime runtime, ClientHostPortInstance session) {
