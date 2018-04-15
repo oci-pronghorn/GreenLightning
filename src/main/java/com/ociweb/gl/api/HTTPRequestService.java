@@ -18,7 +18,7 @@ public class HTTPRequestService {
 	
 	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel, int queueLength, int maxMessageSize) {
 		this.msgCommandChannel = msgCommandChannel;
-		msgCommandChannel.growCommandCountRoom(queueLength);
+		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
 		
 		msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);

@@ -22,7 +22,7 @@ public class HTTPResponseService {
 	public HTTPResponseService(MsgCommandChannel<?> msgCommandChannel,
 			int queueLength, int maxMessageSize) {
 		this.msgCommandChannel = msgCommandChannel;
-		msgCommandChannel.growCommandCountRoom(queueLength);
+		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;    	
 		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, queueLength, maxMessageSize);

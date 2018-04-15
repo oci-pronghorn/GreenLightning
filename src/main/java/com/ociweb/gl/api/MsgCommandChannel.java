@@ -84,7 +84,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     public static final int ALL = DYNAMIC_MESSAGING | NET_REQUESTER | NET_RESPONDER | USE_SERIAL_STORE;
       
-    protected final B builder;
+    public final B builder;
 
 	public int maxHTTPContentLength;
 	
@@ -95,6 +95,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	protected PipeConfigManager pcm;
 	private final int parallelInstanceId;
+
 	
     public MsgCommandChannel(GraphManager gm, B hardware,
 				  		    int parallelInstanceId,
@@ -153,6 +154,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	
 	public PubSubService newPubSubService() {
 		return new PubSubService(this);
+	}
+	
+	public static PipeConfigManager PCM(MsgCommandChannel cmd) {
+		return cmd.pcm;
 	}
 	
 	public PubSubService newPubSubService(int queueLength, int maxMessageSize) {
@@ -230,7 +235,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 //	
 //    }
 
-	protected static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
+	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
 		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
 	}
 
@@ -312,15 +317,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 //    }
     
     
-    protected void growCommandCountRoom(int count) {
-    	if (isInit) {
+    public static void growCommandCountRoom(MsgCommandChannel<?> cmd, int count) {
+		if (cmd.isInit) {
     		throw new UnsupportedOperationException("Too late, growCommandCountRoom method must be called in define behavior.");
     	}
     	
-    	PipeConfig<TrafficOrderSchema> goConfig = this.pcm.getConfig(TrafficOrderSchema.class);
-    	this.pcm.addConfig(count + goConfig.minimumFragmentsOnPipe(), 0, TrafficOrderSchema.class);
-
-    }
+    	PipeConfig<TrafficOrderSchema> goConfig = cmd.pcm.getConfig(TrafficOrderSchema.class);
+    	cmd.pcm.addConfig(count + goConfig.minimumFragmentsOnPipe(), 0, TrafficOrderSchema.class);
+	}
     
     
 	@SuppressWarnings("unchecked")
@@ -408,7 +412,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		   }
 	}
     
-	protected boolean goHasRoom() {
+	public boolean goHasRoom() {
 		return null==goPipe || PipeWriter.hasRoomForWrite(goPipe);
 	}
 

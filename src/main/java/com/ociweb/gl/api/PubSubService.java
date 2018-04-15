@@ -27,7 +27,7 @@ public class PubSubService {
 		
 		this.msgCommandChannel = msgCommandChannel;
 
-		msgCommandChannel.growCommandCountRoom(queueLength);
+		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;  
 		
 		msgCommandChannel.pcm.ensureSize(MessagePubSub.class, queueLength, maxMessageSize);
