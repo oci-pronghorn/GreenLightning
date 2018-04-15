@@ -36,7 +36,7 @@ public class NamedMessagePassingTest {
 		//HTTP1xResponseParserStage.showData = true;
 		//HTTP1xRouterStage.showHeader=true;
 		
-		boolean telemetry = true;
+		boolean telemetry = false;
 		long cycleRate = 1000;
 		
 		
@@ -50,7 +50,7 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack =  10000;///(1+99_9999) / 10;
+		int cyclesPerTrack =  10*10000;///(1+99_9999) / 10;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
