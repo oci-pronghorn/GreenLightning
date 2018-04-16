@@ -12,6 +12,8 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class RestConsumer implements RestListener {
 	
+	private static final byte[] v2 = "st".getBytes();
+	private static final byte[] v1 = "value".getBytes();
 	private GreenCommandChannel cmd2;	
 	private HTTPRequestReader requestW;
 	private final long fieldA;
@@ -51,11 +53,10 @@ public class RestConsumer implements RestListener {
 		if (!( request.isVerbPost() || request.isVerbGet() )) {
 			responseService.publishHTTPResponse(request, 404);
 		}
-		
-		String valueA = request.structured().readText(fieldA);
-		assert(valueA.equals("value")) : "found "+valueA;
 
-		assert(request.structured().isEqual(valueObject, "st".getBytes())) : "found "+request.structured().readText(valueObject);
+		assert(request.structured().isEqual(fieldA, v1));
+		
+		assert(request.structured().isEqual(valueObject, v2)) : "found "+request.structured().readText(valueObject);
 				
 		int b = request.structured().readInt(fieldB);
 		if (b!=123) {

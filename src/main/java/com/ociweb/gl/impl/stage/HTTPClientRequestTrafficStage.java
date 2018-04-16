@@ -356,11 +356,10 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		PipeUTF8MutableCharSquence mCharSeq = mCharSequence.setToField(requestPipe, hostMeta, hostLen);				
 		long connectionId;
 		
-		if (ClientHTTPRequestSchema.MSG_FASTHTTPGET_200 == msgIdx) {
-			
+		if (ClientHTTPRequestSchema.MSG_FASTHTTPGET_200 == msgIdx) {			
 			connectionId = PipeReader.peekLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20);
-			//assert(connectionId == ccm.lookup(mCharSeq, port, sessionId));
-			
+		} else if (ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201 == msgIdx) {			
+			connectionId = PipeReader.peekLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_CONNECTIONID_20);
 		} else {			
 			connectionId = ccm.lookup(ClientCoordinator.lookupHostId((CharSequence) mCharSeq, READER), port, sessionId);			
 		}

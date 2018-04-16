@@ -1,6 +1,9 @@
 package com.ociweb.gl.impl.stage;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipePublishListener;
 import com.ociweb.pronghorn.stage.PronghornStage;
 
 public class ReactiveManagerPipeConsumer {
@@ -9,6 +12,15 @@ public class ReactiveManagerPipeConsumer {
 	private final ReactiveOperator[] operators;
 	public final Object obj;
 	
+	private AtomicBoolean newWork = new AtomicBoolean(true);
+	private final PipePublishListener newWorkListener = new PipePublishListener() {
+		@Override
+		public void published() {
+			newWork.set(true);
+		}
+	};
+	
+
 	public ReactiveManagerPipeConsumer(Object obj, ReactiveOperators operators, Pipe[] inputs) {
 		
 		this.obj = obj;
@@ -20,33 +32,54 @@ public class ReactiveManagerPipeConsumer {
 		while (--i>=0) {
 			this.operators[i] = operators.getOperator(inputs[i]);
 		}
+		
+		//for the inputs register the head listener
+		int j = inputs.length;
+		while (--j>=0) {
+			Pipe.addPubListener(inputs[j], newWorkListener);
+		}
 	}
 	
 	public final void process(ReactiveListenerStage r) {
-		applyReactiveOperators(r, inputs, obj, operators, inputs.length);
+		applyReactiveOperators(this, r, inputs, obj, operators, inputs.length);
 	}
 
-	private static void applyReactiveOperators(ReactiveListenerStage r,
+	private static void applyReactiveOperators(
+			ReactiveManagerPipeConsumer that,
+			ReactiveListenerStage r,
 			Pipe[] localInputs, Object localObj,
 			ReactiveOperator[] localOperators, int count) {
-		
-		int passes = 0;
-		int countDown = -2;
-		do {
-			int i = count;
-			while (--i>=0) {
-				Pipe localPipe = localInputs[i];
-				if (Pipe.contentRemaining(localPipe)>0) {
-					localOperators[i].apply(i, localObj, localPipe, r);
-					if (Pipe.contentRemaining(localPipe)>0) {
-						passes++;
-					}
-				}			
-			}
-			if (-2==countDown) {
-				countDown = passes;
-			}
-		} while (--countDown>=0);
+
+		//only run if one of the inputs has received new data or have data.
+		if (that.newWork.getAndSet(false)) {
+			
+			int passes = 0;
+			int countDown = -2;
+			int temp = 0;
+			
+			do {
+				temp = 0;
+				int i = count;
+				while (--i >= 0) {
+					if (Pipe.contentRemaining(localInputs[i])<=0) {
+						//most calls are stopping on this if
+					} else {
+						localOperators[i].apply(i, localObj, localInputs[i], r);
+						if (Pipe.contentRemaining(localInputs[i])>0) {
+							temp++;
+							passes++;
+						}
+					}			
+				}
+				if (-2==countDown) {
+					countDown = passes;
+				}
+			} while (--countDown>=0);
+			
+			if (temp>0) {
+				that.newWork.set(true);
+			} 
+		}
 	}
 
 	public boolean swapIfFound(Pipe oldPipe, Pipe newPipe) {		

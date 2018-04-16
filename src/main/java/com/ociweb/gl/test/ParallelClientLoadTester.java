@@ -419,6 +419,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				boolean connectionClosed = reader.isConnectionClosed();
 				if (connectionClosed) {
 					out.connectionClosed(track);
+					//connection should be re-opened to continue test.
 				}
 				if (!reader.isEndOfResponse()) {
 					return true;//just toss all the early chunks we only want the very end.
@@ -452,10 +453,13 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 				responsesReceived++;
 				
-				//due to chunks this needs to be disabled until we can add support.
-//				if (validator != null && !validator.responseHTTP(reader)) {
-//					responsesInvalid++;
-//				}
+				//only checks if valid when the entire message is present				
+				if (validator != null
+					&& reader.isBeginningOfResponse() 
+					&& reader.isEndOfResponse()	
+					&& !validator.responseHTTP(reader)) {
+					responsesInvalid++;
+				} 
 			}
 			return lastResponseOk = nextCall();
 		}
