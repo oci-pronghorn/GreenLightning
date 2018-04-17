@@ -943,8 +943,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     }
 
 	private final int methodLookup(Pipe<MessageSubscription> p, final int len, final int pos) {
-		return (int)TrieParserReader.query(methodReader, methodLookup,
+		int result = (int)TrieParserReader.query(methodReader, methodLookup,
 				Pipe.blob(p), pos, len, Pipe.blobMask(p));
+		assert(result!=-1) : "requested method was not found in: "+methodReader.debugAsUTF8(methodReader, new StringBuilder());
+		return result;
 	}        
 
 	

@@ -414,13 +414,17 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
 			
+			if (reader.isConnectionClosed()) {
+				
+				out.connectionClosed(track);
+				//this is a different message than the load
+				//it is for notification only and has no data.
+				
+				return true;
+			}
+
 			//if false we already closed this one and need to skip this part
 			if (lastResponseOk) {
-				boolean connectionClosed = reader.isConnectionClosed();
-				if (connectionClosed) {
-					out.connectionClosed(track);
-					//connection should be re-opened to continue test.
-				}
 				if (!reader.isEndOfResponse()) {
 					return true;//just toss all the early chunks we only want the very end.
 				}
