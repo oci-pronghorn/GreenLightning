@@ -17,7 +17,8 @@ public class ParallelClientLoadTesterConfig {
     public int warmup = 0;
     public Long cycleRate = 4000L; //very fast rate
 	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests on a track
-
+	public Appendable target = System.out;
+	
     public ParallelClientLoadTesterConfig() {
     }
 
@@ -66,4 +67,20 @@ public class ParallelClientLoadTesterConfig {
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
         this.responseTimeoutNS = 0;
     }
+    
+    public ParallelClientLoadTesterConfig(
+            int parallelTracks,
+            int cyclesPerTrack,
+            int port,
+            String route,
+            boolean enableTelemetry, Appendable target) {
+        this.parallelTracks = parallelTracks;
+        this.cyclesPerTrack = cyclesPerTrack;
+        this.port = port;
+        this.route = route;
+        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
+        this.responseTimeoutNS = 0;
+        this.target = target;
+    }
+    
 }

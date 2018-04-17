@@ -1,31 +1,41 @@
 package com.ociweb.gl.test;
 
+import java.io.IOException;
+
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoadTesterOutput {
 
-	StringBuilder progress = new StringBuilder();
+	private final Appendable target;
+	public DefaultParallelClientLoadTesterOutput(Appendable target) {
+		this.target = target;
+	}
 	
     @Override
     public void progress(int percentDone, long sumTimeouts, long sumInvalid) {
     	
-    	progress.setLength(0);
-    	
-        Appendables.appendValue(progress, percentDone);
-        progress.append("% complete  ");
-        Appendables.appendValue(progress, sumTimeouts);
-        progress.append(" failed  ");
-        Appendables.appendValue(progress, sumInvalid);
-        progress.append(" invalid ");
-        Appendables.appendEpochTime(progress, System.currentTimeMillis());
-        progress.append("\n");
-        System.out.append(progress);
+        try {
+        	Appendables.appendValue(target, percentDone);
+			target.append("% complete  ");
+			Appendables.appendValue(target, sumTimeouts);
+			target.append(" failed  ");
+			Appendables.appendValue(target, sumInvalid);
+			target.append(" invalid ");
+			Appendables.appendEpochTime(target, System.currentTimeMillis());
+			target.append("\n");
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
     }
 
     @Override
     public void timout(long responseTimeoutNS) {
-        Appendables.appendNearestTimeUnit(System.out.append("Failed response detected after timeout of: "), responseTimeoutNS).append('\n');
+    	try {
+    		Appendables.appendNearestTimeUnit(target.append("Failed response detected after timeout of: "), responseTimeoutNS).append('\n');
+    	} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
     }
 
     @Override
@@ -34,34 +44,41 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
             long sendAttempts, long sendFailures, long timeouts, long responsesReceived, long invalidResponses) {
         try {
             Thread.sleep(100); //fixing system out IS broken problem.
-        }
-        catch (InterruptedException e) {
+        } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
         }
 
-        Appendables.appendNearestTimeUnit(System.out, testDuration).append(" test duration\n");
-        Appendables.appendValue(System.out, serverCallsPerSecond).append(" total calls per second against server\n");
-
-        System.out.println();
-        etr.report(System.out).append("\n");
-             
-        if (totalMessages>0) {
-        	long avgLatencyNS = totalTimeSumNS/(long)totalMessages;
-        	Appendables.appendNearestTimeUnit(System.out, avgLatencyNS).append(" average\n");
-        } else {
-        	System.out.println("warning: zero messages tested");
-        }
-
-        System.out.println("Total messages: " + totalMessages);
-        System.out.println("Send failures: " + sendFailures + " out of " + sendAttempts);
-        System.out.println("Timeouts: " + timeouts);
-        System.out.println("Responses invalid: " + invalidResponses + " out of " + responsesReceived);
-        System.out.println();
+        try {
+	        Appendables.appendNearestTimeUnit(target, testDuration).append(" test duration\n");
+	        Appendables.appendValue(target, serverCallsPerSecond).append(" total calls per second against server\n");
+	
+	        target.append("\n");
+	        etr.report(target).append("\n");
+	             
+	        if (totalMessages>0) {
+	        	long avgLatencyNS = totalTimeSumNS/(long)totalMessages;
+	        	Appendables.appendNearestTimeUnit(target, avgLatencyNS).append(" average\n");
+	        } else {
+	        	target.append("warning: zero messages tested\n");
+	        }
+	
+	        target.append("Total messages: " + totalMessages+"\n");
+	        target.append("Send failures: " + sendFailures + " out of " + sendAttempts+"\n");
+	        target.append("Timeouts: " + timeouts+"\n");
+	        target.append("Responses invalid: " + invalidResponses + " out of " + responsesReceived+"\n");
+	        target.append("\n");
+	    } catch (IOException e) {
+			throw new RuntimeException(e);
+		}
     }
 
     @Override
     public void finishedWarmup() {
-        System.err.println("---------------- finished warmup -------------");
+    	try {
+    		target.append("---------------- finished warmup -------------\n");
+    	} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
     }
 
     @Override
@@ -78,7 +95,11 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
 
     @Override
     public void connectionClosed(int track) {
-        System.out.println("Connection Closed: " + track);
+    	try {
+    		target.append("Connection Closed: " + track + "\n");
+    	} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
     }
 
     @Override
