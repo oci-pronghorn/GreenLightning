@@ -596,12 +596,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			}
 	
 		    //all local behaviors
-		    consumer.process(this);
+		    ReactiveManagerPipeConsumer.process(consumer, this);
 	
 		    //each transducer
 		    int j = consumers.size();
 		    while(--j>=0) {
-		    	consumers.get(j).process(this);
+		    	ReactiveManagerPipeConsumer.process(consumers.get(j),this);
 		    }
 
     	} else {
