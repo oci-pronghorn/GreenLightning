@@ -926,9 +926,10 @@ public class BuilderImpl implements Builder {
 		//create the network client stages
 		////////
 		if (useNetClient(netRequestPipes)) {
-			
-			int maxPartialResponses = Math.max(2,ClientHostPortInstance.getSessionCount());	
-			int connectionsInBits = (int)Math.ceil(Math.log(maxPartialResponses)/Math.log(2));
+			int tracks = Math.max(1, runtime.getBuilder().parallelTracks());			
+			int maxPartialResponses = Math.max(2,ClientHostPortInstance.getSessionCount());
+			int maxClientConnections = 4*(maxPartialResponses*tracks);
+			int connectionsInBits = (int)Math.ceil(Math.log(maxClientConnections)/Math.log(2));
 
 			int netResponseCount = 8;
 			int responseQueue = 10;

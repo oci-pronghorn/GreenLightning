@@ -37,7 +37,7 @@ public class OpenCloseConnections {
 		assertTrue(captured, captured.contains("Timeouts: 0"));
 				
 	}
-	
+
 	@Test
 	public void testConnectionCloses() {
 		
@@ -48,7 +48,7 @@ public class OpenCloseConnections {
 		
 		StringBuilder target = new StringBuilder();
 		
-		GreenRuntime.run(new OpenCloseTestServer(8089, true, target));
+		GreenRuntime.run(new OpenCloseTestServer(8089, false, target));
 						
 		StringBuilder results = new StringBuilder();
 		ParallelClientLoadTesterConfig config = new ParallelClientLoadTesterConfig(
@@ -64,6 +64,13 @@ public class OpenCloseConnections {
 		assertTrue(captured, captured.contains("Timeouts: 0"));
 				
 	}
+	
+	//add test for a server where the clients keep connecting and the old one must be dropped.
+	//we only have 5 connections in the server now..
+	
+	
+	
+	
 	
 	
 }

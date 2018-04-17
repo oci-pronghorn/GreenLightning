@@ -6,6 +6,9 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
+import com.ociweb.pronghorn.network.ServerSocketReaderStage;
+import com.ociweb.pronghorn.network.http.HTTP1xResponseParserStage;
+import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 
 public class NamedMessagePassingTest {
 	///////////-XX:+UseLargePages 
@@ -50,13 +53,24 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack =  100;//10*10000;///(1+99_9999) / 10;
+		int cyclesPerTrack =  100;///(1+99_9999) / 10;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 0;  //7 126k for max volume
+		config2.simultaneousRequestsPerTrackBits  = 1;//7;  //7 126k for max volume
+		
+		//TODO: chunked with simlutanious requests is broken, client side issue
+		//      HTTP1xResponseParserStage needs research for multiple post responses.
+		
+		//Cases using pipe listener:
+		// OrderSuper - was scanning could hold head values
+		// Reactor    - was scanning could hold head values
+		// Scheduler  - was scanning list was too long to check.
+		
+		
+		
 		config2.responseTimeoutNS = 0L;
 		
 		//For low latency

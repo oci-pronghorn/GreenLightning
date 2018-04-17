@@ -15,7 +15,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 	private long fieldA;
 	private long fieldB;
 		
-    private boolean chunked = true;
+    private boolean chunked = false;
 
 	public enum Fields {nameA, nameB , urlArg;}
 	
