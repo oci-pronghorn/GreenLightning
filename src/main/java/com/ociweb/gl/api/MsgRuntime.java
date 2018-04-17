@@ -702,24 +702,23 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 		serverConfig.ensureServerCanWrite(errConfig.maxVarLenSize());
 		
-		
-		int r = trackCounts;
-		while (--r>=0) {
-			errorResponsePipes[r] = new Pipe<ServerResponseSchema>(errConfig);
-			fromModulesToOrderSuper[r] = PronghornStage.join(errorResponsePipes[r], fromModulesToOrderSuper[r]);
-		}
-		NetGraphBuilder.buildRouters(gm, planIncomingGroup, acks, fromRouterToModules, 
-				                     errorResponsePipes, routerConfig, serverCoord,
-				                     catchAll);
+		NetGraphBuilder.buildRouters(
+				gm, serverCoord, 
+				acks, planIncomingGroup,
+				fromModulesToOrderSuper, fromRouterToModules,
+				routerConfig, errConfig,
+				catchAll);
 		
 	
 		//NOTE: this array populated here must be equal or larger than the fromModules..
 		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup);
 		
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
-		
-		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, trackCounts, 
-				                            fromModulesToOrderSuper, fromOrderedContent);
+				
+		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, 
+				                            trackCounts, 
+				                            fromModulesToOrderSuper, 
+				                            fromOrderedContent);
 	}
 	//////////////////
 	//end of server and other behavior
