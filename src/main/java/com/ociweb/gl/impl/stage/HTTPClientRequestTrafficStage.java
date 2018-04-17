@@ -124,7 +124,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 						                int userId = PipeReader.readInt(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_SESSION_10);
 		                						                
 						                long connectionId = PipeReader.readLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20);
-						                
+
 						                ClientConnection clientConnection;
 						                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId) ) ) {
 							               
@@ -135,6 +135,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 													   clientConnection, 
 													   ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PATH_3, 
 													   ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HEADERS_7);
+						                } else {
+						                	logger.warn("Unable to http get, connection is not established");
 						                }
 				                	}
 								break;
@@ -164,6 +166,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 												   clientConnection, 
 												   ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, 
 												   ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7);
+					                } else {
+					                	logger.warn("Unable to http get, connection is not established");
 					                }
 			                	}
 	            		break;
@@ -233,6 +237,8 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 						                	PipeWriter.publishWrites(outputPipe);
 						       										
 										
+					                } else {
+					                	logger.warn("Unable to http post, connection is not established");
 					                }
 		            		
 				                }

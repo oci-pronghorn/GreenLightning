@@ -65,7 +65,7 @@ public class HTTPRequestService {
 		//get the cached connection ID so we need not deal with the host again
 		/////////////////////
 		if (session.getConnectionId()<0) {
-			msgCommandChannel.builder.getClientCoordinator();
+			
 			final long id = ClientCoordinator.lookup(
 					                   ClientCoordinator.lookupHostId((CharSequence) session.host, msgCommandChannel.READER), 
 					                   session.port, 
@@ -73,7 +73,6 @@ public class HTTPRequestService {
 		    if (id>=0) {
 		    	session.setConnectionId(id);
 		    }
-			
 			
 		} 
 		
