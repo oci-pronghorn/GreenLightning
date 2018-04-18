@@ -2,10 +2,12 @@ package com.ociweb.gl.test;
 
 import java.util.function.Supplier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenAppParallel;
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestService;
 import com.ociweb.gl.api.HTTPResponseListener;
@@ -17,15 +19,15 @@ import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
-import com.ociweb.pronghorn.network.ClientConnection;
-import com.ociweb.pronghorn.network.ClientSocketWriterStage;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
-import com.ociweb.pronghorn.util.Appendables;
 
 public class ParallelClientLoadTester implements GreenAppParallel {
+	
+	private final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
+	
     private final String route;
 	private final boolean insecureClient;
     private final int parallelTracks;
@@ -374,20 +376,24 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		private boolean makeCall() {
 			long now = System.nanoTime();
-			boolean wasSent;
 			sendAttempts++;
+			boolean wasSent = doHTTPCall();			
+			if (wasSent) {
+				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
+			} else {
+				sendFailures++;
+			}
+			return wasSent;
+		}
+
+		private boolean doHTTPCall() {
+			boolean wasSent;
 			if (null==writer) {
 				wasSent = cmd2.httpGet(session[track], route);
 			} else if (header != null) {
 				wasSent = cmd2.httpPost(session[track], route, header, writer);
 			} else {
 				wasSent = cmd2.httpPost(session[track], route, writer);
-			}
-			
-			if (wasSent) {
-				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
-			} else {
-				sendFailures++;
 			}
 			return wasSent;
 		}
@@ -416,9 +422,25 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			
 			if (reader.isConnectionClosed()) {
 				
+				//server just axed connection and we got no notice..
 				out.connectionClosed(track);
-				//this is a different message than the load
-				//it is for notification only and has no data.
+				
+				if (inFlightHead[track]>inFlightTail[track]) {
+					
+					int totalMissing = inFlightHead[track]-inFlightTail[track];
+					timeouts+=totalMissing;
+					
+					logger.info("Connection closed, Expecting {} responses which will never arrive, resending http call(s)",totalMissing);
+				    //we must re-request the call
+					//keep the clock rolling since this is a penalty against the server
+					int i = totalMissing;
+					while (--i>=0) {
+						boolean ok = doHTTPCall();
+						if (!ok) {
+							throw new RuntimeException("internal error, channels must be large enough to hold backed up reqeusts.");
+						}
+					}
+				}				
 				
 				return true;
 			}
