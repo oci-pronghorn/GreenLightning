@@ -1,6 +1,7 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -131,10 +132,35 @@ public class HTTPResponseService {
 			outputStream.write(MsgCommandChannel.RETURN_NEWLINE);
 		}
 		
+		assert(isValidContent(contentType,outputStream)) : "content type is not matching payload";
+				
+		
 		outputStream.publishWithHeader(msgCommandChannel.block1HeaderBlobPosition, msgCommandChannel.block1PositionOfLen); //closeLowLevelField and publish 
 		
 		return true;
 				
+	}
+
+	private boolean isValidContent(HTTPContentType contentType, NetResponseWriter outputStream) {
+		StringBuilder target = new StringBuilder();
+		
+		if (HTTPContentTypeDefaults.JSON == contentType ||
+			HTTPContentTypeDefaults.TXT == contentType) {		
+			//simple check to make sure JSON starts with text not the length
+			outputStream.debugAsUTF8(target);
+			if (target.length()>0) {
+				if (target.charAt(0)<32) {
+					return false;
+				}
+				if (target.length()>1) {
+					if (target.charAt(1)<32) {
+						return false;
+					}	
+				}
+			}
+		}
+		
+		return true;
 	}
 
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
