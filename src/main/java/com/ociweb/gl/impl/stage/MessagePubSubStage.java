@@ -886,7 +886,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             		
             PipeWriter.publishWrites(outPipe);
         } else {
-        	System.err.println("xxxxxxxxxxxxxxxxxxxxxxxxx stored for later");
+        	//System.err.println("xxxxxxxxxxxxxxxxxxxxxxxxx stored for later");
         	pendingPublish[pendingPublishCount++] = pipeIdx;
         	pendingIngress = false;
         }

@@ -83,15 +83,6 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		return HTTPVerbDefaults.TRACE == verb;
 	}
 
-
-	public void setRequestContext(int value) {
-		requestContext = value;
-	}
-	
-	public int getRequestContext() {
-		return requestContext;
-	}
-
 	public void setRouteId(int pathId) {
 		this.http1xRouterStageConfig.getRouteIdForPathId(pathId);		
 	}

@@ -10,7 +10,6 @@ public interface HTTPFieldReader<S extends MessageSchema<S>> {
 	public static final int CLOSE_CONNECTION = ServerCoordinator.CLOSE_CONNECTION_MASK;
 
 	public int getRevisionId();
-	public int getRequestContext();
 
 	public boolean isVerbGet();	
 	public boolean isVerbConnect();	

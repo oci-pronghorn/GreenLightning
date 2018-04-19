@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
 
@@ -28,6 +29,8 @@ public interface HTTPServerConfig {
 	boolean isTLS();
 
 	TLSCertificates getCertificates();
+	
+	ServerConnectionStruct connectionStruct();
 
 	String bindHost();
 

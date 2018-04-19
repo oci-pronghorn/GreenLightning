@@ -49,6 +49,7 @@ public class OpenCloseTestServer implements GreenApp {
 			HeaderWritable headers = (w)->{
 				w.write(HTTPHeaderDefaults.CONNECTION, "close");
 			};
+			
 			return respClose.publishHTTPResponse(r, headers, Writable.NO_OP);
 
 		}).includeRoutes(alwaysCloseRoute);

@@ -390,16 +390,20 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		};
 		
 		private boolean doHTTPCall() {
-			
-			boolean wasSent;
-			if (null==writer) {
-				wasSent = httpGet();
-			} else if (header != null) {
-				wasSent = httpPostWithHeader();
+			if (cmd2.hasRoomFor(2)) {
+				boolean wasSent;
+				if (null==writer) {
+					wasSent = httpGet();
+				} else if (header != null) {
+					wasSent = httpPostWithHeader();
+				} else {
+					wasSent = httpPost();
+				}
+				return wasSent;
 			} else {
-				wasSent = httpPost();
+				return false;
 			}
-			return wasSent;
+			
 		}
 
 		private boolean httpPost() {
@@ -408,16 +412,25 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				wasSent = cmd2.httpPost(session[track], route, writer);
 			} else {
 				wasSent = cmd2.httpPost(session[track], route, writeClose, writer);
+				cmd2.httpClose(session[track]);
 			}
 			return wasSent;
 		}
 
 		private boolean httpGet() {
 			boolean wasSent;
+			
+			//Hack test
+			//if we close every call this should work fine but it does not
+			//this can be either side causing the issue and must be resolved.
+			
+			
 			if (callCounter<cyclesPerTrack) {
 				wasSent = cmd2.httpGet(session[track], route);					
 			} else {
 				wasSent = cmd2.httpGet(session[track], route, writeClose);	
+				//add boolean for easier time of this.. :TODO: API change.
+				cmd2.httpClose(session[track]);//we wrote the close header must follow with close.
 			}
 			return wasSent;
 		}
@@ -435,6 +448,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					}		
 				};
 				wasSent = cmd2.httpPost(session[track], route, allHeaders, writer);
+				cmd2.httpClose(session[track]);
 			}
 			return wasSent;
 		}

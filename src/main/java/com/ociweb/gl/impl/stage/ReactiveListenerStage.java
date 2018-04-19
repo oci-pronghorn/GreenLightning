@@ -42,6 +42,7 @@ import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
+import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
@@ -667,12 +668,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  int revision = HTTPRevision.MASK & parallelRevision;
     	    	  
 				  reader.setRevisionId(revision);
-    	    	  reader.setRequestContext(Pipe.takeInt(p));  
-    	    
+    	    	  final int context = Pipe.takeInt(p);   	    	  
+    	    	  
     	    	  reader.setRouteId(pathId);
     	    	  
-    	    	  //both these values are required in order to ensure the right sequence order once processed.
-    	    	  long sequenceCode = (((long)parallelIdx)<<32) | ((long)sequenceNo);
+    	    	  assert(parallelIdx<OrderSupervisorStage.CLOSE_CONNECTION_MASK);
+    	    	  
+    	    	  //all these values are required in order to ensure the right sequence order once processed.
+    	    	  long sequenceCode = (((long)(parallelIdx|(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context))  )<<32) | ((long)sequenceNo);
     	    	  
     	    	  //System.err.println("Reader is given seuqence code of "+sequenceNo);
     	    	  reader.setConnectionId(connectionId, sequenceCode);

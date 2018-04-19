@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
@@ -77,11 +78,12 @@ public class HTTPResponseService {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
-		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
+		final int trackIdx   = 0xFFFFFFFF & (int)(sequenceCode>>32);
+		final int isClosed   = OrderSupervisorStage.CLOSE_CONNECTION_MASK & (int)(sequenceCode>>32);
 		
 		assert(1==msgCommandChannel.lastResponseWriterFinished) : "Previous write was not ended can not start another.";
 			
-		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[parallelIndex] : msgCommandChannel.netResponse[0];
+		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[trackIdx] : msgCommandChannel.netResponse[0];
 		
 		//logger.info("try new publishHTTPResponse "+pipe);
 		if (!Pipe.hasRoomForWrite(pipe, 
@@ -120,7 +122,12 @@ public class HTTPResponseService {
 		} else {
 			context = HTTPFieldReader.END_OF_RESPONSE;
 			msgCommandChannel.lastResponseWriterFinished = 1;	
-		}
+			if (0!=isClosed) {
+				//only do this when we received a close from client
+				context |= HTTPFieldReader.CLOSE_CONNECTION;
+			}
+		}		
+		
 		
 		//NB: context passed in here is looked at to know if this is END_RESPONSE and if so
 		//then the length is added if not then the header will designate chunked.
@@ -242,6 +249,7 @@ public class HTTPResponseService {
 		if (null!=headers) {
 			headers.write(msgCommandChannel.headerWriter.target(outputStream));	
 		}
+	
 		outputStream.append("Content-Length: "+len+"\r\n");
 		outputStream.append("\r\n");
 		

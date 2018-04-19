@@ -568,13 +568,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	private void buildGraphForServer(MsgApp app) {
 
 		HTTPServerConfig config = builder.getHTTPServerConfig();
-		
+				
 		ServerPipesConfig serverConfig = config.buildServerConfig(builder.parallelTracks());
 
 		ServerCoordinator serverCoord = new ServerCoordinator(
 				config.getCertificates(),
 				config.bindHost(), 
 				config.bindPort(),
+				config.connectionStruct(),				
 				serverConfig.maxConnectionBitsOnServer,
 				serverConfig.maxConcurrentInputs,
 				serverConfig.maxConcurrentOutputs,

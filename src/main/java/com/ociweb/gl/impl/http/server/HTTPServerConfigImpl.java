@@ -3,13 +3,16 @@ package com.ociweb.gl.impl.http.server;
 import com.ociweb.gl.api.HTTPServerConfig;
 import com.ociweb.gl.impl.BridgeConfigStage;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
+import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
+import com.ociweb.pronghorn.struct.StructRegistry;
 
 public class HTTPServerConfigImpl implements HTTPServerConfig {
+	
 	private String defaultHostPath = "";
 	private String bindHost = null;
 	private int bindPort = -1;
@@ -23,8 +26,11 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	private int maxRequestSize = 1<<9;//default of 512 bytes
 	private final PipeConfigManager pcm;
 	
+	private final ServerConnectionStruct scs;
 	
-	public HTTPServerConfigImpl(int bindPort, PipeConfigManager pcm) {
+	public HTTPServerConfigImpl(int bindPort, 
+			                    PipeConfigManager pcm, 
+			                    StructRegistry recordTypeData) {
 		this.bindPort = bindPort;
 		if (bindPort<=0 || (bindPort>=(1<<16))) {
 			throw new UnsupportedOperationException("invalid port "+bindPort);
@@ -35,6 +41,12 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 		this.bindHost = null;
 		this.maxConnectionBits = 12;
 		this.pcm = pcm;
+		this.scs = new ServerConnectionStruct(recordTypeData);
+
+	}
+	
+	public ServerConnectionStruct connectionStruct() {
+		return scs;
 	}
 
 	public void beginDeclarations() {
