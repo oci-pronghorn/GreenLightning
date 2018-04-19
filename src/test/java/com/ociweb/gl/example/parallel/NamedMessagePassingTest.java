@@ -39,8 +39,8 @@ public class NamedMessagePassingTest {
 		//HTTP1xResponseParserStage.showData = true;
 		//HTTP1xRouterStage.showHeader=true;
 		
-		boolean telemetry = false;
-		long cycleRate = 1000;
+		boolean telemetry = true;
+		long cycleRate = 10000;
 		
 		
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
@@ -53,7 +53,7 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack =  100;///(1+99_9999) / 10;
+		int cyclesPerTrack =  2000;///(1+99_9999) / 10;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
@@ -69,9 +69,6 @@ public class NamedMessagePassingTest {
 		// Reactor    - was scanning could hold head values
 		// Scheduler  - was scanning list was too long to check.
 		
-		
-		
-		config2.responseTimeoutNS = 0L;
 		
 		//For low latency
 		config2.cycleRate = cycleRate; //TODO: may need to be bigger for slow windows boxes.
