@@ -236,7 +236,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					responsesReceivedSum += responsesReceived;
 					responsesInvalidSum += responsesInvalid;
 				}
-
 				if (++enderCounter == (parallelTracks + 1)) { //we add 1 for the progress of 100%
 					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
 					int t = elapsedTime.length;
@@ -253,7 +252,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 							etr, testDuration, totalMessages, totalTimeSum, serverCallsPerSecond,
 							sendAttemptsSum, sendFailuresSum, timeoutsSum, responsesReceivedSum, responsesInvalidSum
 					);
-
 					return cmd4.shutdown();
 				}
 			}

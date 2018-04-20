@@ -162,8 +162,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   //until this is resolved this stage must be isolated
 	   GraphManager.addNota(gm, GraphManager.ISOLATE, GraphManager.ISOLATE, this);
 	   
-	   
-	   
     }
 
     
@@ -221,8 +219,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     		}
     	}
 	}
-    
-    
+	
+   
     @Override
     public void startup() {
         super.startup();

@@ -322,7 +322,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 		} else {				
 			if (PipeReader.tryReadFragment(pipe)) {
 				PipeReader.releaseReadLock(pipe);
-			}				
+			}
 			runtime.shutdownRuntime();
 		}
 	}

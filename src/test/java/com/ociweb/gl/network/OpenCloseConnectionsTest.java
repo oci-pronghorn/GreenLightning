@@ -21,15 +21,15 @@ public class OpenCloseConnectionsTest {
 //		boolean telemetry = false;
 //		StringBuilder target = new StringBuilder();
 //		
-//		GreenRuntime.run(new OpenCloseTestServer(8078, telemetry, target));
-//				
+//		GreenRuntime.run(new OpenCloseTestServer(8078, telemetry, target));		
 //		
 //		StringBuilder results = new StringBuilder();
 //		ParallelClientLoadTesterConfig config = new ParallelClientLoadTesterConfig(
 //				1, 100, 8078, "neverclose", telemetry, results);
+//		
 //		GreenRuntime.testConcurrentUntilShutdownRequested(
 //				new ParallelClientLoadTester(config, null),
-//			20 * 20_000);
+//			   20* 10_000);
 //		
 //		String captured = results.toString();
 //		
@@ -54,9 +54,10 @@ public class OpenCloseConnectionsTest {
 		StringBuilder results = new StringBuilder();
 		ParallelClientLoadTesterConfig config = new ParallelClientLoadTesterConfig(
 				1, 100, 8089, "alwaysclose", false, results);
+		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config, null),
-			10000*	20_000);
+				10_000);
 		
 		String captured = results.toString();
 		

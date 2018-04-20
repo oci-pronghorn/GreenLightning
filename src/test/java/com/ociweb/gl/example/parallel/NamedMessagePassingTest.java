@@ -39,8 +39,8 @@ public class NamedMessagePassingTest {
 		//HTTP1xResponseParserStage.showData = true;
 		//HTTP1xRouterStage.showHeader=true;
 		
-		boolean telemetry = true;
-		long cycleRate = 10000;
+		boolean telemetry = false;  //must not be true when checked in.
+		long cycleRate = 1000;
 		
 		
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
@@ -53,7 +53,7 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack =  200;///(1+99_9999) / 10;
+		int cyclesPerTrack = 100_000;///(1+99_9999) / 10;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
@@ -77,7 +77,7 @@ public class NamedMessagePassingTest {
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),
-				20_000_000);
+				240_000);
 		
 		//average resources per page is about 100
 		//for 100 calls we expect the slowest to be 100 micros

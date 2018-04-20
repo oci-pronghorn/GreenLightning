@@ -6,7 +6,9 @@ import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoadTesterOutput {
-
+  	
+	private boolean recordEveryDisconnect = false;
+  	
 	private final Appendable target;
 	public DefaultParallelClientLoadTesterOutput(Appendable target) {
 		this.target = target;
@@ -95,11 +97,14 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
 
     @Override
     public void connectionClosed(int track) {
-    	try {
-    		target.append("Connection Closed: " + track + "\n");
-    	} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+  
+    	if (recordEveryDisconnect) {
+	    	try {
+	    		target.append("Connection Closed on track: " + track + "\n");
+	    	} catch (IOException e) {
+				throw new RuntimeException(e);
+			}
+    	}
     }
 
     @Override

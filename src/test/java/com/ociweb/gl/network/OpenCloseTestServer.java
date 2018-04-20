@@ -26,7 +26,7 @@ public class OpenCloseTestServer implements GreenApp {
 	public void declareConfiguration(Builder builder) {
 		
 		if (telemetry) {
-			builder.enableTelemetry();
+			builder.enableTelemetry(8076);
 		}
 		
 		builder.useHTTP1xServer(port)

@@ -323,6 +323,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
     
     public void shutdownRuntime(final int secondsTimeout) {
+    
     	//only do if not already done.
     	if (!isShutdownRequested()) {
     	
@@ -345,8 +346,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	
 				@Override
 				public void run() {
+					
 					scheduler.shutdown();
+				
 					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCall, lastCall);
+					
 				}
 	    		
 	    	});

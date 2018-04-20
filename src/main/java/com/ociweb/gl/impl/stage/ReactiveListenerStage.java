@@ -478,7 +478,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	builder.lastCall = shutdownRunnable;
     	builder.shutdownRequsted.set(true);
     	    	
-    	logger.trace("shutdown requested");
+    	//logger.info("shutdown requested");
     }
 
 
@@ -625,7 +625,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		assert(!shutdownCompleted) : "already shut down why was this called a second time?";
 
 		Pipe.publishEOF(outputPipes);	
-
+		
 		if (builder.totalLiveReactors.decrementAndGet()==0) {
 			//ready for full system shutdown.
 			if (null!=builder.lastCall) {				
@@ -790,6 +790,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            		 return;//continue later and repeat this same value.
 	            	 }	            	 
 	            	 
+	            	 break;
+	             case -1:
+	            	 //shutdown request, just consume at this point.	            	 
 	            	 break;
 	             default:
 	                 throw new UnsupportedOperationException("Unknown id: "+msgIdx);
