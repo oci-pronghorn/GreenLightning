@@ -35,6 +35,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final Integer telemetryPort;
     private final String telemetryHost;
     private final Long rate;
+    private final int inFlightHTTPs;
     private final int maxInFlight;
     private final int maxInFlightMask;
     private int warmupCount = 20_000;
@@ -120,8 +121,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		//0     1      0      0
 		//1     2      1      0,1
 		//2     4      3      0,1,2,3
-        int maxInFlightBits = config.simultaneousRequestsPerTrackBits+1;//add one for close message
-		this.maxInFlight = 1<< maxInFlightBits;
+        //add one for close message
+		this.maxInFlight = 1<< config.simultaneousRequestsPerTrackBits+1;
+		this.inFlightHTTPs = 1<<config.simultaneousRequestsPerTrackBits;
 		this.maxInFlightMask = maxInFlight-1;
 		
 		this.callTime = new long[parallelTracks][maxInFlight];
@@ -461,14 +463,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		@Override
 		public void startup() {
 			long now = System.currentTimeMillis();
-			int i = maxInFlight;
+			int i = inFlightHTTPs;
 			while (--i>=0) {
 								
 				while(!cmd3.publishTopic(CALL_TOPIC)) {
 					//must publish this many to get the world moving
 					Thread.yield();
 					if ((System.currentTimeMillis()-now) > 10_000) {
-						out.failedToStart(maxInFlight);
+						out.failedToStart(inFlightHTTPs);
 						cmd3.shutdown();
 					}
 				}
@@ -566,7 +568,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 
 			boolean isOk = true;
-			if (countDown >= maxInFlight) { //others are still in flight
+			if (countDown >= inFlightHTTPs) { //others are still in flight
 				if (durationNanos > 0) {
 					isOk = cmd3.delay(durationNanos);
 				}
