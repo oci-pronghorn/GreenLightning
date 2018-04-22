@@ -613,10 +613,12 @@ public class PubSubService {
 
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
-		    if (hasRoomFor(1)) {            	
+		    if (hasRoomFor(1)) { 
+		    	//logger.info("shutting down runtime.");
 		    	if (null!=msgCommandChannel.goPipe) {
 		    		PipeWriter.publishEOF(msgCommandChannel.goPipe);            		
 		    	} else {
+		    		//logger.info("sending EOF to cause shutdown");
 		    		msgCommandChannel.sentEOF(msgCommandChannel.messagePubSub);
 		    	}
 		        return true;

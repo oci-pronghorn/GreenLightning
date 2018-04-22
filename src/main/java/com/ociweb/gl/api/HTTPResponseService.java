@@ -1,6 +1,7 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
+import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
@@ -120,11 +121,11 @@ public class HTTPResponseService {
 			context = 0;
 			msgCommandChannel.lastResponseWriterFinished = 0;
 		} else {
-			context = HTTPFieldReader.END_OF_RESPONSE;
+			context = ServerCoordinator.END_RESPONSE_MASK;
 			msgCommandChannel.lastResponseWriterFinished = 1;	
 			if (0!=isClosed) {
 				//only do this when we received a close from client
-				context |= HTTPFieldReader.CLOSE_CONNECTION;
+				context |= ServerCoordinator.CLOSE_CONNECTION_MASK;
 			}
 		}		
 		
@@ -213,7 +214,7 @@ public class HTTPResponseService {
 			context = 0;
 			msgCommandChannel.lastResponseWriterFinished = 0;
 		} else {
-			context = HTTPFieldReader.END_OF_RESPONSE;
+			context = ServerCoordinator.END_RESPONSE_MASK;
 			msgCommandChannel.lastResponseWriterFinished = 1;	
 		}	
 		
@@ -305,7 +306,7 @@ public class HTTPResponseService {
 			context = 0;
 			msgCommandChannel.lastResponseWriterFinished = 0;
 		} else {
-			context = HTTPFieldReader.END_OF_RESPONSE;
+			context = ServerCoordinator.END_RESPONSE_MASK;
 			msgCommandChannel.lastResponseWriterFinished = 1;	
 		}	
 		
@@ -383,7 +384,7 @@ public class HTTPResponseService {
 		Pipe.addIntValue(sequenceNo, pipe);	
 		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 		
-		outputStream.openField(hasContinuation? 0: HTTPFieldReader.END_OF_RESPONSE);
+		outputStream.openField(hasContinuation? 0: ServerCoordinator.END_RESPONSE_MASK);
 		msgCommandChannel.lastResponseWriterFinished = hasContinuation ? 0 : 1;		
 		
 		writable.write(outputStream); 

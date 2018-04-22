@@ -11,7 +11,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Behavior;
-import com.ociweb.gl.api.HTTPFieldReader;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
@@ -43,6 +42,7 @@ import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
+import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
@@ -476,9 +476,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     
     public static void requestSystemShutdown(BuilderImpl builder, Runnable shutdownRunnable) {
     	builder.lastCall = shutdownRunnable;
+    	//Note: begin shutdown only when all the shutdown vetos are taken into account
+    	//      setting this boolean triggers all the reactors to begin shutdown
     	builder.shutdownRequsted.set(true);
     	    	
-    	//logger.info("shutdown requested");
+    	//TODO: we should add a timeout, to force shutdown if some reactor does not respond.    	
+    	    	
     }
 
 
@@ -563,28 +566,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     public void run() {
  
     	if (!shutdownInProgress) {
-	    	if (builder.shutdownRequsted.get()) {
+    		
+	    	if (isShutdownRequested(builder)) {
+	    		
 	    		if (!shutdownCompleted) {
-	    			
-	    			if (listener instanceof ShutdownListener) {    				
-	    				if (((ShutdownListener)listener).acceptShutdown()) {
-	    					int remaining = builder.liveShutdownListeners.decrementAndGet();
-	    					assert(remaining>=0);
-	    					shutdownInProgress = true;
-	    					return;
-	    				}
-	    				//else continue with normal run processing
-	    				
-	    			} else {
-	    				//this one is not a listener so we must wait for all the listeners to close first
-	    				
-	    				if (0 == builder.liveShutdownListeners.get()) {    					
-	    					shutdownInProgress = true;
-	    					return;
-	    				}
-	    				//else continue with normal run processing.
-	    				
+	    			beginShutdownIfNotVetoed();
+	    			if (shutdownInProgress) {
+	    				return;
 	    			}
+	    			
 	    		} else {
 	    			assert(shutdownCompleted);
 	    			assert(false) : "run should not have been called if this stage was shut down.";
@@ -606,6 +596,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		    }
 
     	} else {
+    		
     		//shutdown in progress logic
     		int i = outputPipes.length;    		
     		while (--i>=0) {
@@ -615,9 +606,27 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     		}		
     		//now free to shut down, we know there is room to do so.
     		requestShutdown();
+    		
     		return;
     	}
     }
+
+	private void beginShutdownIfNotVetoed() {
+		if (listener instanceof ShutdownListener) {    				
+			if (((ShutdownListener)listener).acceptShutdown()) {
+				int remaining = builder.liveShutdownListeners.decrementAndGet();
+				assert(remaining>=0);
+				shutdownInProgress = true;
+			}
+			//else continue with normal run processing	    				
+		} else {
+			//this one is not a listener so we must wait for all the listeners to close first	    				
+			if (0 == builder.liveShutdownListeners.get()) {    					
+				shutdownInProgress = true;
+			}
+			//else continue with normal run processing.	    				
+		}
+	}
 
 	@Override    
     public void shutdown() {
@@ -780,8 +789,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	            	 HTTPResponseReader hostReader = (HTTPResponseReader)Pipe.inputStream(p);
 	            	 hostReader.openLowLevelAPIField();
 	            	 
-	            	 hostReader.setFlags(HTTPFieldReader.END_OF_RESPONSE | 
-	            			             HTTPFieldReader.CLOSE_CONNECTION);
+	            	 hostReader.setFlags(ServerCoordinator.END_RESPONSE_MASK | 
+	            			             ServerCoordinator.CLOSE_CONNECTION_MASK);
 	            	 
 	            	 int port = Pipe.takeInt(p);//the caller does not care which port we were on.
 					
@@ -935,7 +944,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                         Pipe.confirmLowLevelRead(p, SIZE_OF_MSG_STATECHANGE);
                     break;
                 case -1:
-                	shutdownInProgress = true;
+                	beginShutdownIfNotVetoed();
+                	
                     Pipe.confirmLowLevelRead(p, Pipe.EOF_SIZE);
                     Pipe.releaseReadLock(p);
                     return;

@@ -7,57 +7,33 @@ import org.junit.Test;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
+import com.ociweb.pronghorn.network.ClientSocketReaderStage;
+import com.ociweb.pronghorn.network.ServerSocketReaderStage;
+import com.ociweb.pronghorn.network.ServerSocketWriterStage;
+import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 
 public class OpenCloseConnectionsTest {
 
-//	@Test
-//	public void testConnectionRemainsOpen() {
-//		
-//		//ClientSocketWriterStage.showWrites = true; 
-//		//ServerSocketReaderStage.showRequests = true; 
-//		//ServerSocketWriterStage.showWrites = true;
-//		//ClientSocketReaderStage.showResponse = true; 
-//
-//		boolean telemetry = false;
-//		StringBuilder target = new StringBuilder();
-//		
-//		GreenRuntime.run(new OpenCloseTestServer(8078, telemetry, target));		
-//		
-//		StringBuilder results = new StringBuilder();
-//		ParallelClientLoadTesterConfig config = new ParallelClientLoadTesterConfig(
-//				1, 100, 8078, "neverclose", telemetry, results);
-//		
-//		GreenRuntime.testConcurrentUntilShutdownRequested(
-//				new ParallelClientLoadTester(config, null),
-//			   20* 10_000);
-//		
-//		String captured = results.toString();
-//		
-//		assertTrue(captured, captured.contains("Total messages: 100"));
-//		assertTrue(captured, captured.contains("Send failures: 0 out of 100"));
-//		assertTrue(captured, captured.contains("Timeouts: 0"));
-//				
-//	}
-
 	@Test
-	public void testConnectionCloses() {
+	public void testConnectionRemainsOpen() {
 		
-		//ServerSocketReaderStage.showRequests = true;
-		//ClientSocketReaderStage.showResponse = true;
-		//ClientSocketWriterStage.showWrites = true;
+		//ClientSocketWriterStage.showWrites = true; 
+		//ServerSocketReaderStage.showRequests = true; 
 		//ServerSocketWriterStage.showWrites = true;
-		
+		//ClientSocketReaderStage.showResponse = true; 
+
+		boolean telemetry = false;
 		StringBuilder target = new StringBuilder();
 		
-		GreenRuntime.run(new OpenCloseTestServer(8089, false, target));
-						
+		GreenRuntime.run(new OpenCloseTestServer(8078, telemetry, target));		
+		
 		StringBuilder results = new StringBuilder();
 		ParallelClientLoadTesterConfig config = new ParallelClientLoadTesterConfig(
-				1, 100, 8089, "alwaysclose", false, results);
+				1, 100, 8078, "neverclose", telemetry, results);
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config, null),
-				10_000);
+			   20* 10_000);
 		
 		String captured = results.toString();
 		
@@ -66,6 +42,35 @@ public class OpenCloseConnectionsTest {
 		assertTrue(captured, captured.contains("Timeouts: 0"));
 				
 	}
+
+//	@Test
+//	public void testConnectionCloses() {
+//		
+//		//HTTP1xRouterStage.showHeader = true;
+//		//ServerSocketReaderStage.showRequests = true;
+//		//ClientSocketReaderStage.showResponse = true;
+//		//ClientSocketWriterStage.showWrites = true;
+//		//ServerSocketWriterStage.showWrites = true;
+//		
+//		StringBuilder target = new StringBuilder();
+//		
+//		GreenRuntime.run(new OpenCloseTestServer(8089, false, target));
+//						
+//		StringBuilder results = new StringBuilder();
+//		ParallelClientLoadTesterConfig config = new ParallelClientLoadTesterConfig(
+//				1, 100, 8089, "alwaysclose", false, results);
+//		
+//		GreenRuntime.testConcurrentUntilShutdownRequested(
+//				new ParallelClientLoadTester(config, null),
+//				10_000);
+//		
+//		String captured = results.toString();
+//		
+//		assertTrue(captured, captured.contains("Total messages: 100"));
+//		assertTrue(captured, captured.contains("Send failures: 0 out of 100"));
+//		assertTrue(captured, captured.contains("Timeouts: 0"));
+//				
+//	}
 	
 	//add test for a server where the clients keep connecting and the old one must be dropped.
 	//we only have 5 connections in the server now..

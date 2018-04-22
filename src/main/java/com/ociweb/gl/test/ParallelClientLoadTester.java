@@ -120,7 +120,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		//0     1      0      0
 		//1     2      1      0,1
 		//2     4      3      0,1,2,3
-        int maxInFlightBits = config.simultaneousRequestsPerTrackBits;
+        int maxInFlightBits = config.simultaneousRequestsPerTrackBits+1;//add one for close message
 		this.maxInFlight = 1<< maxInFlightBits;
 		this.maxInFlightMask = maxInFlight-1;
 		
@@ -235,7 +235,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					timeoutsSum += timeouts;
 					responsesReceivedSum += responsesReceived;
 					responsesInvalidSum += responsesInvalid;
+					
+					//logger.info("Finished track {} remaining {}",track,(parallelTracks-enderCounter));
 				}
+				
+				
 				if (++enderCounter == (parallelTracks + 1)) { //we add 1 for the progress of 100%
 					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
 					int t = elapsedTime.length;
@@ -252,6 +256,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 							etr, testDuration, totalMessages, totalTimeSum, serverCallsPerSecond,
 							sendAttemptsSum, sendFailuresSum, timeoutsSum, responsesReceivedSum, responsesInvalidSum
 					);
+					//logger.info("shutting down load test");
 					return cmd4.shutdown();
 				}
 			}
@@ -405,6 +410,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 
 		private boolean httpPost() {
+			
 			boolean wasSent;
 			if (callCounter<cyclesPerTrack) {
 				wasSent = cmd2.httpPost(session[track], route, writer);
@@ -438,6 +444,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if (callCounter<cyclesPerTrack) {
 				wasSent = cmd2.httpPost(session[track], route, header, writer);
 			} else {
+
 				HeaderWritable allHeaders = new HeaderWritable() {
 					@Override
 					public void write(HeaderWriter writer) {
@@ -484,10 +491,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					timeouts+=totalMissing;
 					
 					logger.info("Connection closed, Expecting {} responses which will never arrive, resending http call(s)",totalMissing);
-				    //we must re-request the call
+					callCounter-=totalMissing;
+					//we must re-request the call
 					//keep the clock rolling since this is a penalty against the server
 					int i = totalMissing;
 					while (--i>=0) {
+						++callCounter;
 						boolean ok = doHTTPCall();
 						if (!ok) {
 							throw new RuntimeException("internal error, channels must be large enough to hold backed up reqeusts.");

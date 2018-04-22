@@ -324,10 +324,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     public void shutdownRuntime(final int secondsTimeout) {
     
+    	//logger.info("shutdownRuntime({})",secondsTimeout);
+    	
     	//only do if not already done.
     	if (!isShutdownRequested()) {
     	
 	    	if (null == scheduler || null == builder) {
+	    		//logger.warn("No runtime activity was detected.");
 	    		System.exit(0);
 	    		return;
 	    	}
@@ -347,6 +350,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				@Override
 				public void run() {
 					
+					logger.info("Scheduler {} shutdown ", scheduler.getClass().getSimpleName());
 					scheduler.shutdown();
 				
 					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCall, lastCall);

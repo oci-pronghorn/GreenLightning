@@ -53,13 +53,13 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack = 100_000;///(1+99_9999) / 10;
+		int cyclesPerTrack = 200;///(1+99_9999) / 10;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 0;//7;  //7 126k for max volume
+		config2.simultaneousRequestsPerTrackBits  = 3;  //7 126k for max volume
 		
 		//TODO: chunked with simlutanious requests is broken, client side issue
 		//      HTTP1xResponseParserStage needs research for multiple post responses.
