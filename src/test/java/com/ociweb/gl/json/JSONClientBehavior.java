@@ -1,8 +1,8 @@
 package com.ociweb.gl.json;
 
 import com.ociweb.gl.api.*;
-import com.ociweb.json.appendable.StringBuilderWriter;
 import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.util.StringBuilderWriter;
 
 public class JSONClientBehavior implements HTTPResponseListener, StartupListener {
     private final GreenRuntime runtime;

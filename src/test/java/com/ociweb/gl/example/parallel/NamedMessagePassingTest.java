@@ -53,13 +53,13 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack = 200;///(1+99_9999) / 10;
+		int cyclesPerTrack = 1_000; //*(1+99_9999);// / 10;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 3;  //7 126k for max volume
+		config2.simultaneousRequestsPerTrackBits  = 0;  //7 126k for max volume
 		
 		//TODO: chunked with simlutanious requests is broken, client side issue
 		//      HTTP1xResponseParserStage needs research for multiple post responses.
@@ -77,7 +77,7 @@ public class NamedMessagePassingTest {
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),
-				240_000);
+				480_000);
 		
 		//average resources per page is about 100
 		//for 100 calls we expect the slowest to be 100 micros

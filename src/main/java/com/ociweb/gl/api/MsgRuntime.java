@@ -12,6 +12,8 @@ import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
+import com.ociweb.pronghorn.network.schema.HTTPLogRequestSchema;
+import com.ociweb.pronghorn.network.schema.HTTPLogResponseSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
@@ -710,24 +712,26 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			}		
 		}
 		serverConfig.ensureServerCanWrite(errConfig.maxVarLenSize());
+		final HTTP1xRouterStageConfig routerConfig1 = routerConfig;
 		
-		NetGraphBuilder.buildRouters(
-				gm, serverCoord, 
-				acks, planIncomingGroup,
-				fromModulesToOrderSuper, fromRouterToModules,
-				routerConfig, errConfig,
-				catchAll);
-		
-	
-		//NOTE: this array populated here must be equal or larger than the fromModules..
+		//TODO: use ServerCoordinator to hold information about log?
+		Pipe<HTTPLogRequestSchema>[][] log = new Pipe[trackCounts][0];
+		Pipe<HTTPLogResponseSchema>[][] log2 = new Pipe[trackCounts][0];
+		Pipe[][] perTrackFromNet = Pipe.splitPipes(trackCounts, planIncomingGroup);
+
 		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup);
-		
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
+		assert(fromOrderedContent.length >= trackCounts) : "reduce track count since we only have "+fromOrderedContent.length+" pipes";
+		
+		Pipe<NetPayloadSchema>[][] perTrackFromSuper = Pipe.splitPipes(trackCounts, fromOrderedContent);
 				
-		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, 
-				                            trackCounts, 
-				                            fromModulesToOrderSuper, 
-				                            fromOrderedContent);
+		NetGraphBuilder.buildLogging(serverCoord,log,log2,perTrackFromNet,perTrackFromSuper);
+				
+		NetGraphBuilder.buildRouters(gm, serverCoord, acks,
+				fromModulesToOrderSuper, fromRouterToModules, routerConfig1, errConfig,
+				catchAll, log, perTrackFromNet);
+				
+		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, fromModulesToOrderSuper, log2, perTrackFromSuper);
 	}
 	//////////////////
 	//end of server and other behavior

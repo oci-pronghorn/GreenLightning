@@ -108,7 +108,7 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
     }
 
     @Override
-    public void failedToStart(int maxInFlight) {
-        System.err.println("Unable to send "+maxInFlight+" messages to start up.");
+    public void failedToStart(int inFlight) {
+        System.err.println("Unable to send "+inFlight+" messages to start up.");
     }
 }

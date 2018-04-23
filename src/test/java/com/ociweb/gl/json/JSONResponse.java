@@ -3,9 +3,9 @@ package com.ociweb.gl.json;
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
-import com.ociweb.json.appendable.AppendableByteWriter;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.util.AppendableByteWriter;
 
 public class JSONResponse {
     private int status = 0;
