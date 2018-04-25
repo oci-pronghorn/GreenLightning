@@ -1,5 +1,6 @@
 package com.ociweb.gl.test;
 
+import java.util.Random;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -23,6 +24,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
+import com.ociweb.pronghorn.util.Appendables;
 
 public class ParallelClientLoadTester implements GreenAppParallel {
 	
@@ -346,7 +348,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private long responsesInvalid;
 		private long responsesReceived;
 		private boolean lastResponseOk=true;
+		private final int cookieSize = 10;//00;
 
+		private final String largeCookie = buildLargeCookie(cookieSize);
+		
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
 			countDown = cyclesPerTrack;
@@ -356,8 +361,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					new HeaderWritable() {
 						@Override
 						public void write(HeaderWriter writer) {
-							writer.writeUTF8(HTTPHeaderDefaults.CONTENT_TYPE,
-									         contentType.getBytes());
+							writer.write(HTTPHeaderDefaults.COOKIE, 
+									largeCookie);
+							
+							writer.write(HTTPHeaderDefaults.CONTENT_TYPE,
+									         contentType.contentType());
 						}
 					}				
 					
@@ -368,6 +376,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 			this.cmd2 = runtime.newCommandChannel().newHTTPClientService(
 					2+maxInFlight, post!=null ? maxPayloadSize + 1024 : 0);
+			
+		}
+
+		private String buildLargeCookie(int size) {
+			StringBuilder builder  = new StringBuilder();
+			Random r = new Random();
+			byte[] target = new byte[size];
+			r.nextBytes(target);
+			
+			Appendables.appendBase64Encoded(builder, target, 0, target.length, Integer.MAX_VALUE);
+			
+			return builder.toString();
 			
 		}
 
@@ -443,7 +463,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		private boolean httpPostWithHeader() {
 			boolean wasSent;
+		
+			
 			if (callCounter<cyclesPerTrack) {
+		
+				
 				wasSent = cmd2.httpPost(session[track], route, header, writer);
 			} else {
 

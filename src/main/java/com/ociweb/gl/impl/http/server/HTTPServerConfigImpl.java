@@ -24,7 +24,7 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	private int concurrentChannelsPerDecryptUnit = 1; //default 1, for low memory usage
 	private TLSCertificates serverTLS;
 	private BridgeConfigStage configStage = BridgeConfigStage.Construction;
-	private int maxRequestSize = 1<<9;//default of 512 bytes
+	private int maxRequestSize = 1<<16;//default of 64K
 	private final PipeConfigManager pcm;
 
 	private LogFileConfig logFile;
