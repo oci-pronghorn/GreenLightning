@@ -2,6 +2,7 @@ package com.ociweb.gl.impl.http.server;
 
 import com.ociweb.gl.api.HTTPServerConfig;
 import com.ociweb.gl.impl.BridgeConfigStage;
+import com.ociweb.pronghorn.network.LogFileConfig;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
@@ -25,6 +26,8 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	private BridgeConfigStage configStage = BridgeConfigStage.Construction;
 	private int maxRequestSize = 1<<9;//default of 512 bytes
 	private final PipeConfigManager pcm;
+
+	private LogFileConfig logFile;
 	
 	private final ServerConnectionStruct scs;
 	
@@ -188,6 +191,7 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 				getMaxRequestSize()));
 				
 		return new ServerPipesConfig(
+				logFile,
 				isTLS(),
 				getMaxConnectionBits(),
 		   		tracks,
@@ -207,5 +211,17 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 
 	public int getMaxRequestSize() {
 		return this.maxRequestSize;
+	}
+
+	@Override
+	public HTTPServerConfig logTraffic() {
+		logFile = new LogFileConfig();
+		return this;
+	}
+	
+	@Override
+	public HTTPServerConfig logTraffic(String basePath, int fileCount, long fileSizeLimit) {
+		logFile = new LogFileConfig(basePath,fileCount,fileSizeLimit);
+		return this;
 	}
 }

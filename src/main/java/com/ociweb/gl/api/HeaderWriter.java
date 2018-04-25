@@ -1,7 +1,5 @@
 package com.ociweb.gl.api;
 
-import java.io.IOException;
-
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.pipe.ChannelReader;
@@ -9,6 +7,8 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class HeaderWriter {
 
+	private static final byte[] BYTES_EOL = "\r\n".getBytes();
+	private static final byte[] BYTES_COLON_SPACE = ": ".getBytes();
 	private ChannelWriter activeTarget;
 	
 	HeaderWriter(){		
@@ -20,35 +20,50 @@ public class HeaderWriter {
 	}
 
 	public void write(CharSequence header, CharSequence value) {
-		try {
-			activeTarget.append(header).append(": ").append(value).append("\r\n");
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+
+			activeTarget.append(header);
+			activeTarget.write(BYTES_COLON_SPACE);
+			activeTarget.append(value);
+			activeTarget.write(BYTES_EOL);
+
+	}
+	
+	public void writeUTF8(CharSequence header, byte[] value) {	
+			activeTarget.append(header);
+			activeTarget.write(BYTES_COLON_SPACE);
+			activeTarget.write(value);
+			activeTarget.write(BYTES_EOL);
 	}
 	
 	public void write(HTTPHeader header, CharSequence value) {		
-		try {
-			activeTarget.append(header.writingRoot()).append(value).append("\r\n");
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+
+			activeTarget.append(header.writingRoot());
+			activeTarget.append(value);
+			activeTarget.write(BYTES_EOL);
+
 	}
+	
+	public void writeUTF8(HTTPHeader header, byte[] value) {		
+
+		activeTarget.write(header.rootBytes());//still testing this...
+		activeTarget.write(value);
+		activeTarget.write(BYTES_EOL);
+
+}
 	
 	public void write(HTTPHeader header, HTTPSpecification<?,?,?,?> httpSpec, ChannelReader reader) {		
 		
 			activeTarget.append(header.writingRoot());
 			header.writeValue(activeTarget, httpSpec, reader);
-			activeTarget.append("\r\n");
+			activeTarget.write(BYTES_EOL);
 
 	}
 	
 	public void write(HTTPHeader header, HeaderValue value) {		
-		try {			
-			value.appendTo(activeTarget.append(header.writingRoot())).append("\r\n");
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+	
+			value.appendTo(activeTarget.append(header.writingRoot()));
+			activeTarget.write(BYTES_EOL);
+
 	}
 	
 }

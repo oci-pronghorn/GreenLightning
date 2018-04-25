@@ -40,7 +40,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final int maxInFlightMask;
     private int warmupCount = 20_000;
 
-	public static int LOG_LATENCY_LIMIT = 1_000_000_000;//1sec	
+	public static long LOG_LATENCY_LIMIT = 3_000_000_000L;//3sec	
     
 	private final ParallelClientLoadTesterOutput out;
 	private final Supplier<Writable> post;
@@ -356,8 +356,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					new HeaderWritable() {
 						@Override
 						public void write(HeaderWriter writer) {
-							writer.write(HTTPHeaderDefaults.CONTENT_TYPE,
-									     contentType.contentType());
+							writer.writeUTF8(HTTPHeaderDefaults.CONTENT_TYPE,
+									         contentType.getBytes());
 						}
 					}				
 					

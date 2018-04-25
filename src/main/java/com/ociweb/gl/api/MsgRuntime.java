@@ -326,10 +326,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     public void shutdownRuntime(final int secondsTimeout) {
     
-    	//logger.info("shutdownRuntime({})",secondsTimeout);
     	
     	//only do if not already done.
     	if (!isShutdownRequested()) {
+    		logger.info("shutdownRuntime({}) with timeout",secondsTimeout);
     	
 	    	if (null == scheduler || null == builder) {
 	    		//logger.warn("No runtime activity was detected.");
@@ -591,7 +591,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				serverConfig.maxConcurrentOutputs,
 				builder.parallelTracks(), false,
 				"Server",
-				config.defaultHostPath());
+				config.defaultHostPath(), 
+				serverConfig.logFile);
 		
 		final int parallelTrackCount = builder.parallelTracks();
 		
@@ -715,9 +716,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		final HTTP1xRouterStageConfig routerConfig1 = routerConfig;
 		
 		//TODO: use ServerCoordinator to hold information about log?
-		Pipe<HTTPLogRequestSchema>[][] log = new Pipe[trackCounts][0];
-		Pipe<HTTPLogResponseSchema>[][] log2 = new Pipe[trackCounts][0];
+		Pipe<HTTPLogRequestSchema>[] log = new Pipe[trackCounts];
+		Pipe<HTTPLogResponseSchema>[] log2 = new Pipe[trackCounts];
 		Pipe[][] perTrackFromNet = Pipe.splitPipes(trackCounts, planIncomingGroup);
+
+		NetGraphBuilder.buildLogging(gm, serverCoord, log, log2);
+		
+		NetGraphBuilder.buildRouters(gm, serverCoord, acks,
+				fromModulesToOrderSuper, fromRouterToModules, routerConfig1, errConfig,
+				catchAll, log, perTrackFromNet);
 
 		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup);
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
@@ -725,11 +732,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		Pipe<NetPayloadSchema>[][] perTrackFromSuper = Pipe.splitPipes(trackCounts, fromOrderedContent);
 				
-		NetGraphBuilder.buildLogging(serverCoord,log,log2,perTrackFromNet,perTrackFromSuper);
-				
-		NetGraphBuilder.buildRouters(gm, serverCoord, acks,
-				fromModulesToOrderSuper, fromRouterToModules, routerConfig1, errConfig,
-				catchAll, log, perTrackFromNet);
 				
 		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, fromModulesToOrderSuper, log2, perTrackFromSuper);
 	}

@@ -6,11 +6,9 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
-import com.ociweb.pronghorn.network.ServerSocketReaderStage;
-import com.ociweb.pronghorn.network.http.HTTP1xResponseParserStage;
-import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 
 public class NamedMessagePassingTest {
+	
 	///////////-XX:+UseLargePages 
 	//          -verbose:gc -Xloggc:gc.log -XX:+PrintGCTimeStamps -XX:+PrintGCDetails
 	
@@ -59,7 +57,7 @@ public class NamedMessagePassingTest {
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 0;  //7 126k for max volume
+		config2.simultaneousRequestsPerTrackBits  = 2;  //7 126k for max volume
 		
 		//TODO: chunked with simlutanious requests is broken, client side issue
 		//      HTTP1xResponseParserStage needs research for multiple post responses.
@@ -77,7 +75,7 @@ public class NamedMessagePassingTest {
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),
-				480_000);
+				600_000);
 		
 		//average resources per page is about 100
 		//for 100 calls we expect the slowest to be 100 micros

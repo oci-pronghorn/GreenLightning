@@ -89,8 +89,8 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
                 Appendables.appendEpochTime(
                         Appendables.appendValue(
                                 Appendables.appendNearestTimeUnit(System.err, duration)
-                                        .append(" long call detected for ")
-                                ,(track)).append(" window :")
+                                        .append(" long call detected for track:")
+                                ,(track)).append(" happend in window :")
                         ,start).append(" - ")
                 ,now).append("\n");
     }
