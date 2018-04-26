@@ -2,6 +2,7 @@ package com.ociweb.gl.api;
 
 import com.ociweb.gl.api.blocking.BlockableStageFactory;
 import com.ociweb.gl.api.blocking.BlockingBehavior;
+import com.ociweb.gl.api.blocking.BlockingBehaviorProducer;
 import com.ociweb.gl.impl.*;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -847,7 +848,26 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//adding support for blocking
 	public <T extends BlockingBehavior> void registerBlockingListener(
 			String behaviorName,
-			Class<T> clazz, 
+			Class<T> clazz,
+			int threadsCount,
+			long timeoutNS,
+			long chooserLongFieldId) {
+		registerBlockingListener(behaviorName, new BlockingBehaviorProducer() {
+			@Override
+			public BlockingBehavior produce() {
+				try {
+					return clazz.newInstance();
+				} catch (InstantiationException | IllegalAccessException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}, threadsCount, timeoutNS, chooserLongFieldId);
+	}
+
+	//adding support for blocking
+	public <T extends BlockingBehavior> void registerBlockingListener(
+			String behaviorName,
+			BlockingBehaviorProducer producer,
 			int threadsCount,
 			long timeoutNS,
 			long chooserLongFieldId) {
@@ -871,7 +891,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe<MessagePrivate> timeout = output;
 		
 		BlockableStageFactory.buildStage(gm, timeoutNS, threadsCount, chooserLongFieldId,
-	    		   						input, output, timeout, clazz);
+	    		   						input, output, timeout, producer);
 	
 	}
 	

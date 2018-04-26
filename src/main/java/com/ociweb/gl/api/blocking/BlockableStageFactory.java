@@ -19,8 +19,8 @@ public class BlockableStageFactory {
 	    		   long chooserLongFieldId,
 	    		   Pipe<T> input,
 	    		   Pipe<P> output, 
-	    		   Pipe<Q> timeout, 
-	    		   Class<B> clazz  ) {
+	    		   Pipe<Q> timeout,
+				   BlockingBehaviorProducer producer  ) {
 
 	   Choosable<T> chooser = new ChoosableLongField<T>(chooserLongFieldId, threadsCount, streamOffset(input));
 	   
@@ -31,14 +31,8 @@ public class BlockableStageFactory {
 			   if (Pipe.isForSchema(timeout, MessagePrivate.class)) {
 				   int c = threadsCount;
 				   while (--c >= 0) {
-					   try {
-							blockables[c] = (Blockable<T, P, Q>)
-									        new BlockingBehaviorBridgePPP(clazz.newInstance());
-						} catch (InstantiationException e) {
-							throw new RuntimeException(e);
-						} catch (IllegalAccessException e) {
-							throw new RuntimeException(e);
-						}
+					   blockables[c] = (Blockable<T, P, Q>)
+                                       new BlockingBehaviorBridgePPP(producer.produce());
 				   }
 			   } else {
 				   throw new UnsupportedOperationException("Not yet implemented");
