@@ -330,8 +330,8 @@ public class BuilderImpl implements Builder {
 	}
 	
 	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int r, int p) {
-		assert(r<collectedHTTPRequstPipes.length);
-		assert(p<collectedHTTPRequstPipes[r].length) : "p "+p+" vs "+collectedHTTPRequstPipes[r].length;
+		assert(null==collectedHTTPRequstPipes || r<collectedHTTPRequstPipes.length);
+		assert(null==collectedHTTPRequstPipes || p<collectedHTTPRequstPipes[r].length) : "p "+p+" vs "+collectedHTTPRequstPipes[r].length;
 		return null!=collectedHTTPRequstPipes ? collectedHTTPRequstPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>();
 	}
 	

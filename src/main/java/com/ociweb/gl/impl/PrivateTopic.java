@@ -56,7 +56,7 @@ public class PrivateTopic {
 		
 		Pipe<MessagePrivate> result = p[activeIndex];
 		if (null == result) {
-			result = p[activeIndex] = PipeConfig.pipe(config);	
+			result = p[activeIndex] = PipeConfig.pipe(config);
 		}
 		return result;
 

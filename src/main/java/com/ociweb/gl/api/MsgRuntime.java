@@ -875,20 +875,23 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		if (null==behaviorName) {
 			throw new UnsupportedOperationException("All blocking behaviors must be named.");
 		}
+		String behaviorNameLocal = builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);
 				
 		List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(behaviorName);
 		if (1 != sourceTopics.size()) {
-			throw new UnsupportedOperationException("Blocking behavior only supports 1 private source topic at this time.");
+			throw new UnsupportedOperationException("Blocking behavior only supports 1 private source topic at this time. found:"+sourceTopics.size());
 		}
-		Pipe<MessagePrivate> input = sourceTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);				
-		
-		
 		List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(behaviorName);
 		if (1 != targetTopics.size()) {
-			throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time.");
+			throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
 		}
-		Pipe<MessagePrivate> output = targetTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);
+		
+		Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);				
+		assert(null!=input);		
+		Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);
+		assert(null!=output);
 		Pipe<MessagePrivate> timeout = output;
+		assert(input!=output);
 		
 		BlockableStageFactory.buildStage(gm, timeoutNS, threadsCount, chooserLongFieldId,
 	    		   						input, output, timeout, producer);

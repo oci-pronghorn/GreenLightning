@@ -309,8 +309,9 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	}
 
 	private void noGoDoSingles(final int a, Pipe<?> pipe) {
-		if (Pipe.isEmpty(pipe)) {
+		if (Pipe.isEmpty(pipe) || !Pipe.hasContentToRead(pipe)) {
 		} else {
+			//only go if we have a full message
 			noGoProcessSingleMessage(a, pipe);
 		}
 	}
