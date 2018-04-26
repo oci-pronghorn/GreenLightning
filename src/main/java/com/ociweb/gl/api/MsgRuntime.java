@@ -1,6 +1,9 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.gl.api.blocking.BlockableStageFactory;
+import com.ociweb.gl.api.blocking.BlockingBehavior;
 import com.ociweb.gl.impl.*;
+import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.EgressConverter;
@@ -841,6 +844,39 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//end of file server
 	///////////////////////////
 
+	//adding support for blocking
+	public <T extends BlockingBehavior> void registerBlockingListener(
+			String behaviorName,
+			Class<T> clazz, 
+			int threadsCount,
+			long timeoutNS,
+			long chooserLongFieldId) {
+	
+		if (null==behaviorName) {
+			throw new UnsupportedOperationException("All blocking behaviors must be named.");
+		}
+				
+		List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(behaviorName);
+		if (1 != sourceTopics.size()) {
+			throw new UnsupportedOperationException("Blocking behavior only supports 1 private source topic at this time.");
+		}
+		Pipe<MessagePrivate> input = sourceTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);				
+		
+		
+		List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(behaviorName);
+		if (1 != targetTopics.size()) {
+			throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time.");
+		}
+		Pipe<MessagePrivate> output = targetTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);
+		Pipe<MessagePrivate> timeout = output;
+		
+		BlockableStageFactory.buildStage(gm, timeoutNS, threadsCount, chooserLongFieldId,
+	    		   						input, output, timeout, clazz);
+	
+	}
+	
+	
+	///////////////////////////
 	
 	
     public Builder getBuilder(){

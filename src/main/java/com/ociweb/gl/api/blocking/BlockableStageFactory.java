@@ -1,0 +1,76 @@
+package com.ociweb.gl.api.blocking;
+
+import com.ociweb.gl.impl.schema.MessagePrivate;
+import com.ociweb.gl.impl.schema.MessageSubscription;
+import com.ociweb.pronghorn.pipe.MessageSchema;
+import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.stage.blocking.Blockable;
+import com.ociweb.pronghorn.stage.blocking.BlockingSupportStage;
+import com.ociweb.pronghorn.stage.blocking.Choosable;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+
+public class BlockableStageFactory {
+
+   public <T extends MessageSchema<T>, P extends MessageSchema<P>, Q extends MessageSchema<Q>> 
+       BlockingSupportStage<T, P, Q> buildStage(
+	    		   GraphManager graphManager, 
+	    		   long timeoutNS, 
+	    		   int threadsCount,
+	    		   long chooserLongFieldId,
+	    		   Pipe<T> input,
+	    		   Pipe<P> output, 
+	    		   Pipe<Q> timeout, 
+	    		   Class<BlockingBehavior> clazz
+    		   ) {
+
+	   Choosable<T> chooser = new ChoosableLongField<T>(chooserLongFieldId, threadsCount, streamOffset(input));
+	   
+	   Blockable<T,P,Q>[] blockables = new Blockable[threadsCount];
+	   //8 choices and put them into an array, only supporting 1 today, do rest later
+	   if (Pipe.isForSchema(input, MessagePrivate.class)) {
+		   if (Pipe.isForSchema(output, MessagePrivate.class)) {
+			   if (Pipe.isForSchema(timeout, MessagePrivate.class)) {
+				   int c = threadsCount;
+				   while (--c >= 0) {
+					   try {
+							blockables[c] = (Blockable<T, P, Q>)
+									        new BlockingBehaviorBridgePPP(clazz.newInstance());
+						} catch (InstantiationException e) {
+							throw new RuntimeException(e);
+						} catch (IllegalAccessException e) {
+							throw new RuntimeException(e);
+						}
+				   }
+			   } else {
+				   throw new UnsupportedOperationException("Not yet implemented");
+			   }
+		   } else {
+			   throw new UnsupportedOperationException("Not yet implemented");
+		   }
+	   } else {
+		   throw new UnsupportedOperationException("Not yet implemented");
+	   }
+	   
+	   
+	   
+	   
+	   return new BlockingSupportStage<T,P,Q>(graphManager, input, output, timeout, timeoutNS, chooser, blockables);
+	   
+   }
+
+private <T extends MessageSchema<T>> int streamOffset(Pipe<T> input) {
+	////////////////////
+	   //lookup the position of the stream 
+	   int offsetToStream = -1;
+	   if (Pipe.isForSchema(input, MessagePrivate.class)) {
+		   offsetToStream = 0xFF & MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3;
+	   } else if (Pipe.isForSchema(input, MessageSubscription.class)) {
+		   offsetToStream = 0xFF & MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3;
+	   } else {
+		   throw new UnsupportedOperationException("Schema not supported: "+Pipe.schemaName(input));
+	   }
+	   ////////////////////
+	return offsetToStream;
+}
+	
+}
