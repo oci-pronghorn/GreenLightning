@@ -13,6 +13,7 @@ import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.StructuredReader;
 import com.ociweb.pronghorn.util.TrieParser;
 
 public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader<S> implements HeaderReader {
@@ -24,7 +25,6 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 			? extends Enum<? extends HTTPVerb>,
 			? extends Enum<? extends HTTPHeader>> httpSpec;
 
-	private static final int PAYLOAD_INDEX_LOCATION = 1;
 	
 	private static final Logger logger = LoggerFactory.getLogger(HTTPPayloadReader.class);
 	
@@ -44,8 +44,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	
 	public boolean openPayloadData(Payloadable reader) {
 		if (hasRemainingBytes()) {
-			
-			position(this, readFromEndLastInt(PAYLOAD_INDEX_LOCATION));
+			position(this, readFromEndLastInt(StructuredReader.PAYLOAD_INDEX_LOCATION));
 			reader.read(this);//even when we have zero length...
 			return true;
 		} else {
@@ -56,7 +55,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 
 	public boolean openPayloadDataFailable(FailablePayloadReading reader) {
 		if (hasRemainingBytes()) {
-			position(this, readFromEndLastInt(PAYLOAD_INDEX_LOCATION));
+			position(this, readFromEndLastInt(StructuredReader.PAYLOAD_INDEX_LOCATION));
 			return reader.read(this);//even when we have zero length...
 		} else {
 			return false;

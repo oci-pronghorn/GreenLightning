@@ -162,8 +162,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   //until this is resolved this stage must be isolated
 	   GraphManager.addNota(gm, GraphManager.ISOLATE, GraphManager.ISOLATE, this);
 	   
-	   
-	   
     }
 
     
@@ -221,8 +219,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     		}
     	}
 	}
-    
-    
+	
+   
     @Override
     public void startup() {
         super.startup();
@@ -886,7 +884,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
             		
             PipeWriter.publishWrites(outPipe);
         } else {
-        	System.err.println("xxxxxxxxxxxxxxxxxxxxxxxxx stored for later");
+        	//System.err.println("xxxxxxxxxxxxxxxxxxxxxxxxx stored for later");
         	pendingPublish[pendingPublishCount++] = pipeIdx;
         	pendingIngress = false;
         }

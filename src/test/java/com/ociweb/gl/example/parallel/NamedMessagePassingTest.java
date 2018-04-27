@@ -8,6 +8,7 @@ import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
 
 public class NamedMessagePassingTest {
+	
 	///////////-XX:+UseLargePages 
 	//          -verbose:gc -Xloggc:gc.log -XX:+PrintGCTimeStamps -XX:+PrintGCDetails
 	
@@ -36,7 +37,7 @@ public class NamedMessagePassingTest {
 		//HTTP1xResponseParserStage.showData = true;
 		//HTTP1xRouterStage.showHeader=true;
 		
-		boolean telemetry = false;
+		boolean telemetry = false;  //must not be true when checked in.
 		long cycleRate = 1000;
 		
 		
@@ -50,14 +51,22 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack =  100;//10*10000;///(1+99_9999) / 10;
+		int cyclesPerTrack = 1_000; //*(1+99_9999);// / 10;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 0;  //7 126k for max volume
-		config2.responseTimeoutNS = 0L;
+		config2.simultaneousRequestsPerTrackBits  = 2;  //7 126k for max volume
+		
+		//TODO: chunked with simlutanious requests is broken, client side issue
+		//      HTTP1xResponseParserStage needs research for multiple post responses.
+		
+		//Cases using pipe listener:
+		// OrderSuper - was scanning could hold head values
+		// Reactor    - was scanning could hold head values
+		// Scheduler  - was scanning list was too long to check.
+		
 		
 		//For low latency
 		config2.cycleRate = cycleRate; //TODO: may need to be bigger for slow windows boxes.
@@ -66,7 +75,7 @@ public class NamedMessagePassingTest {
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),
-				20_000_000);
+				600_000);
 		
 		//average resources per page is about 100
 		//for 100 calls we expect the slowest to be 100 micros

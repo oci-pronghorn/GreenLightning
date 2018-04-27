@@ -689,22 +689,16 @@ public class PubSubService {
 	 * @return true if msgCommandChannel.goHasRoom else false
 	 */
 	public boolean shutdown() {
+
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
-		    if (msgCommandChannel.goHasRoom()) {            	
+		    if (hasRoomFor(1)) { 
+		    	//logger.info("shutting down runtime.");
 		    	if (null!=msgCommandChannel.goPipe) {
 		    		PipeWriter.publishEOF(msgCommandChannel.goPipe);            		
 		    	} else {
-		    		//must find one of these outputs to shutdown
-		    		if (!msgCommandChannel.sentEOF(msgCommandChannel.messagePubSub)) {
-		    			if (!msgCommandChannel.sentEOF(msgCommandChannel.httpRequest)) {
-		    				if (!msgCommandChannel.sentEOF(msgCommandChannel.netResponse)) {
-		    					if (!msgCommandChannel.sentEOFPrivate()) {
-		    						msgCommandChannel.secondShutdownMsg();
-		    					}
-		    				}            				
-		    			}
-		    		}
+		    		//logger.info("sending EOF to cause shutdown");
+		    		msgCommandChannel.sentEOF(msgCommandChannel.messagePubSub);
 		    	}
 		        return true;
 		    } else {

@@ -18,7 +18,7 @@ public class HTTPResponder {
 	private boolean hasContinuation;
 	private int statusCode;
 	private HTTPContentType contentType;
-	private CharSequence headers;
+	private HeaderWritable headers;
 	
 	private final Pipe<RawDataSchema> pipe;
 	private final Writable writable;
@@ -71,7 +71,7 @@ public class HTTPResponder {
 			} else {
 				//full headers call
 				commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
-                        						   hasContinuation, headers, writable);
+                        						   hasContinuation, headers, 200, writable);
 			}
 			connectionId = -1;
 			sequenceCode = -1;	
@@ -94,20 +94,19 @@ public class HTTPResponder {
 		}
 		
 	}
-
 	/**
 	 *
 	 * @param hasContinuation boolean arg determining if continuation exists
-	 * @param headers String arg used in commandChannel.publishHTTPResponse
+	 * @param headers HeaderWritable arg used in commandChannel.publishHTTPResponse
 	 * @param writable Writable arg used in commandChannel.publishHTTPResponse
 	 * @return <code>true</code> if connectionId >= 0 && sequenceCode >= 0 else <code>false</code> <p> <code>false</code> if Pipe.contentRemaning(pipe) != 0 else <code>true</code>
 	 */
-	public boolean respondWith(boolean hasContinuation, String headers, Writable writable) {
-		
+	public boolean respondWith(boolean hasContinuation, HeaderWritable headers, Writable writable) {
+
 		if (connectionId>=0 && sequenceCode>=0) {
 			
 			if (commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
-				                           hasContinuation, headers, writable)) {
+				                           hasContinuation, headers, 200, writable)) {
 			    connectionId = -1;
 			    sequenceCode = -1;
 			    return true;

@@ -11,13 +11,14 @@ public class ParallelClientLoadTesterConfig {
     public int parallelTracks = 4;
     public int cyclesPerTrack = 1;
     public long durationNanos = 0;
-    public long responseTimeoutNS = 0;
+ 
     public Integer telemetryPort = null;
     public String telemetryHost = null;
     public int warmup = 0;
     public Long cycleRate = 4000L; //very fast rate
 	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests on a track
-
+	public Appendable target = System.out;
+	
     public ParallelClientLoadTesterConfig() {
     }
 
@@ -33,7 +34,7 @@ public class ParallelClientLoadTesterConfig {
         parallelTracks = args.getArgumentValue("--tracks", "-t", parallelTracks);
         cyclesPerTrack = args.getArgumentValue("--cycles", "-c", cyclesPerTrack);
         durationNanos = args.getArgumentValue("--duration", "-d", durationNanos);
-        responseTimeoutNS = args.getArgumentValue("--timeout", "-to", responseTimeoutNS);
+    
         telemetryPort = args.getArgumentValue("--telemPort", "-tp", telemetryPort);
         telemetryHost = args.getArgumentValue("--telemHost", "-th", telemetryHost);
         warmup = args.getArgumentValue("--warmup", "-wu", warmup);
@@ -50,7 +51,7 @@ public class ParallelClientLoadTesterConfig {
         this.port = port;
         this.route = route;
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
-        this.responseTimeoutNS = 0;
+
     }
 
     public ParallelClientLoadTesterConfig(
@@ -64,6 +65,22 @@ public class ParallelClientLoadTesterConfig {
         this.port = port;
         this.route = route;
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
-        this.responseTimeoutNS = 0;
+
     }
+    
+    public ParallelClientLoadTesterConfig(
+            int parallelTracks,
+            int cyclesPerTrack,
+            int port,
+            String route,
+            boolean enableTelemetry, Appendable target) {
+        this.parallelTracks = parallelTracks;
+        this.cyclesPerTrack = cyclesPerTrack;
+        this.port = port;
+        this.route = route;
+        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
+
+        this.target = target;
+    }
+    
 }

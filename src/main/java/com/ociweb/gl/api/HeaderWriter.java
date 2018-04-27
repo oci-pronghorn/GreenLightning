@@ -9,6 +9,8 @@ import java.io.IOException;
 
 public class HeaderWriter {
 
+	private static final byte[] BYTES_EOL = "\r\n".getBytes();
+	private static final byte[] BYTES_COLON_SPACE = ": ".getBytes();
 	private ChannelWriter activeTarget;
 	
 	HeaderWriter(){		
@@ -25,11 +27,19 @@ public class HeaderWriter {
 	 * @param value CharSequence to append to activeTarget
 	 */
 	public void write(CharSequence header, CharSequence value) {
-		try {
-			activeTarget.append(header).append(": ").append(value).append("\r\n");
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+
+			activeTarget.append(header);
+			activeTarget.write(BYTES_COLON_SPACE);
+			activeTarget.append(value);
+			activeTarget.write(BYTES_EOL);
+
+	}
+	
+	public void writeUTF8(CharSequence header, byte[] value) {	
+			activeTarget.append(header);
+			activeTarget.write(BYTES_COLON_SPACE);
+			activeTarget.write(value);
+			activeTarget.write(BYTES_EOL);
 	}
 
 	/**
@@ -38,26 +48,21 @@ public class HeaderWriter {
 	 * @param value CharSequence to append to activeTarget
 	 */
 	public void write(HTTPHeader header, CharSequence value) {		
-		try {
-			activeTarget.append(header.writingRoot()).append(value).append("\r\n");
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
 
-	/**
-	 *
-	 * @param header
-	 * @param httpSpec
-	 * @param reader
-	 */
-	public void write(HTTPHeader header, HTTPSpecification<?,?,?,?> httpSpec, ChannelReader reader) {		
-		
 			activeTarget.append(header.writingRoot());
-			header.writeValue(activeTarget, httpSpec, reader);
-			activeTarget.append("\r\n");
+			activeTarget.append(value);
+			activeTarget.write(BYTES_EOL);
 
 	}
+
+	public void writeUTF8(HTTPHeader header, byte[] value) {
+
+		activeTarget.write(header.rootBytes());//still testing this...
+		activeTarget.write(value);
+		activeTarget.write(BYTES_EOL);
+
+}
+
 
 	/**
 	 *
@@ -65,11 +70,10 @@ public class HeaderWriter {
 	 * @param value HeaderValue to append HTTPHeader to
 	 */
 	public void write(HTTPHeader header, HeaderValue value) {		
-		try {			
-			value.appendTo(activeTarget.append(header.writingRoot())).append("\r\n");
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
+	
+			value.appendTo(activeTarget.append(header.writingRoot()));
+			activeTarget.write(BYTES_EOL);
+
 	}
 	
 }

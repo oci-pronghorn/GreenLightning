@@ -1,6 +1,9 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.OrderSupervisorStage;
+import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
@@ -126,11 +129,12 @@ public class HTTPResponseService {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
-		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
+		final int trackIdx   = 0xFFFFFFFF & (int)(sequenceCode>>32);
+		final int isClosed   = OrderSupervisorStage.CLOSE_CONNECTION_MASK & (int)(sequenceCode>>32);
 		
 		assert(1==msgCommandChannel.lastResponseWriterFinished) : "Previous write was not ended can not start another.";
 			
-		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[parallelIndex] : msgCommandChannel.netResponse[0];
+		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[trackIdx] : msgCommandChannel.netResponse[0];
 		
 		//logger.info("try new publishHTTPResponse "+pipe);
 		if (!Pipe.hasRoomForWrite(pipe, 
@@ -167,9 +171,14 @@ public class HTTPResponseService {
 			context = 0;
 			msgCommandChannel.lastResponseWriterFinished = 0;
 		} else {
-			context = HTTPFieldReader.END_OF_RESPONSE;
+			context = ServerCoordinator.END_RESPONSE_MASK;
 			msgCommandChannel.lastResponseWriterFinished = 1;	
-		}
+			if (0!=isClosed) {
+				//only do this when we received a close from client
+				context |= ServerCoordinator.CLOSE_CONNECTION_MASK;
+			}
+		}		
+		
 		
 		//NB: context passed in here is looked at to know if this is END_RESPONSE and if so
 		//then the length is added if not then the header will designate chunked.
@@ -181,25 +190,46 @@ public class HTTPResponseService {
 			outputStream.write(MsgCommandChannel.RETURN_NEWLINE);
 		}
 		
+		assert(isValidContent(contentType,outputStream)) : "content type is not matching payload";
+				
+		
 		outputStream.publishWithHeader(msgCommandChannel.block1HeaderBlobPosition, msgCommandChannel.block1PositionOfLen); //closeLowLevelField and publish 
 		
 		return true;
 				
 	}
 
-	/**
-	 *
-	 * @param connectionId long value used as arg for msgCommandChannel.holdEmptyBlock and Pipe.addLongValue
-	 * @param sequenceCode long value used as arg in Pipe.addIntValue
-	 * @param hasContinuation if <code>true</code> context = 0 && msgCommandChannel.lastResponseWriterFinished = 0 else context = HTTPFieldReader.END_OF_RESPONSE &&
-	 * msgCommandChannel.lastResponseWriterFinished = 1
-	 * @param headers CharSequence used to append to outputStream
-	 * @param writable Writable used to write outputStream
-	 * @return <code>false</code> if !Pipe.hasRoomForWrite(pipe) else <code>true</code>
-	 */
+	private boolean isValidContent(HTTPContentType contentType, NetResponseWriter outputStream) {
+		StringBuilder target = new StringBuilder();
+		
+		if (HTTPContentTypeDefaults.JSON == contentType ||
+			HTTPContentTypeDefaults.TXT == contentType) {		
+			//simple check to make sure JSON starts with text not the length
+			outputStream.debugAsUTF8(target);
+			if (target.length()>0) {
+				if (target.charAt(0)<32) {
+					return false;
+				}
+				if (target.length()>1) {
+					if (target.charAt(1)<32) {
+						return false;
+					}	
+				}
+			}
+		}
+		
+		return true;
+	}
+
+	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
+	           HeaderWritable headers, Writable writable) {
+		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
+				false, headers, 200, writable
+				);
+	}
+	
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
-	           boolean hasContinuation,
-	           CharSequence headers,
+	           boolean hasContinuation, HeaderWritable headers, int statusCode,
 	           Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
@@ -234,7 +264,7 @@ public class HTTPResponseService {
 			context = 0;
 			msgCommandChannel.lastResponseWriterFinished = 0;
 		} else {
-			context = HTTPFieldReader.END_OF_RESPONSE;
+			context = ServerCoordinator.END_RESPONSE_MASK;
 			msgCommandChannel.lastResponseWriterFinished = 1;	
 		}	
 		
@@ -257,8 +287,20 @@ public class HTTPResponseService {
 		
 		//HACK TODO: must formalize response building..
 		outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());
-		outputStream.append(" 200 OK\r\n");
-		outputStream.append(headers);
+		
+		Appendables.appendValue(outputStream.append(" "),statusCode);
+		
+		if (200==statusCode) {
+			outputStream.append(" OK\r\n");
+		} else {
+			//TODO: should lookup the right name for this status code
+			//      add the right text here..
+			outputStream.append(" \r\n");
+		}		
+		if (null!=headers) {
+			headers.write(msgCommandChannel.headerWriter.target(outputStream));	
+		}
+	
 		outputStream.append("Content-Length: "+len+"\r\n");
 		outputStream.append("\r\n");
 		
@@ -274,7 +316,6 @@ public class HTTPResponseService {
 		
 		return true;
 	}
-
 
 	public boolean publishHTTPResponseContinuation(HTTPFieldReader<?> w, 
 			boolean hasContinuation, Writable writable) {
@@ -321,7 +362,7 @@ public class HTTPResponseService {
 		Pipe.addIntValue(sequenceNo, pipe);	
 		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 		
-		outputStream.openField(hasContinuation? 0: HTTPFieldReader.END_OF_RESPONSE);
+		outputStream.openField(hasContinuation? 0: ServerCoordinator.END_RESPONSE_MASK);
 		msgCommandChannel.lastResponseWriterFinished = hasContinuation ? 0 : 1;		
 		
 		writable.write(outputStream); 

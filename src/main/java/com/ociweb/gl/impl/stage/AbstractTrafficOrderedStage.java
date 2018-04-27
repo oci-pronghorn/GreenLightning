@@ -309,18 +309,22 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	}
 
 	private void noGoDoSingles(final int a, Pipe<?> pipe) {
-		if (Pipe.contentRemaining( pipe )>0) {
-			
-			//detect any request to begin the shutdown process
-			if (PipeReader.peekMsg(pipe, -1)) {					
-				
-				PipeReader.tryReadFragment(pipe);
+		if (Pipe.isEmpty(pipe) || !Pipe.hasContentToRead(pipe)) {
+		} else {
+			//only go if we have a full message
+			noGoProcessSingleMessage(a, pipe);
+		}
+	}
+
+	private void noGoProcessSingleMessage(final int a, Pipe<?> pipe) {
+		//detect any request to begin the shutdown process
+		if (!PipeReader.peekMsg(pipe, -1)) {					
+			activeCounts[a] = 1; //NOTE: only do 1 at a time
+		} else {				
+			if (PipeReader.tryReadFragment(pipe)) {
 				PipeReader.releaseReadLock(pipe);
-				
-				runtime.shutdownRuntime();
-			} else {
-				activeCounts[a] = 1; //NOTE: only do 1 at a time
 			}
+			runtime.shutdownRuntime();
 		}
 	}
 

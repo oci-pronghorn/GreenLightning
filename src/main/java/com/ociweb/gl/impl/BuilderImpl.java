@@ -259,7 +259,8 @@ public class BuilderImpl implements Builder {
 	@Override
 	public HTTPServerConfig useHTTP1xServer(int bindPort) {
 		if (server != null) throw new RuntimeException("Server already enabled");
-		this.server = new HTTPServerConfigImpl(bindPort,pcm);
+		
+		this.server = new HTTPServerConfigImpl(bindPort, pcm, gm.recordTypeData);
 		server.beginDeclarations();
 		return server;
 	}
@@ -307,8 +308,8 @@ public class BuilderImpl implements Builder {
 	}
 	
 	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int r, int p) {
-		assert(r<collectedHTTPRequstPipes.length);
-		assert(p<collectedHTTPRequstPipes[r].length) : "p "+p+" vs "+collectedHTTPRequstPipes[r].length;
+		assert(null==collectedHTTPRequstPipes || r<collectedHTTPRequstPipes.length);
+		assert(null==collectedHTTPRequstPipes || p<collectedHTTPRequstPipes[r].length) : "p "+p+" vs "+collectedHTTPRequstPipes[r].length;
 		return null!=collectedHTTPRequstPipes ? collectedHTTPRequstPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>();
 	}
 	
@@ -775,6 +776,7 @@ public class BuilderImpl implements Builder {
 		if (telemetry != null) {
 			throw new RuntimeException("Telemetry already enabled");
 		}
+
 		this.telemetry = new TelemetryConfigImpl(host, port);
 		this.telemetry.beginDeclarations();
 		
@@ -904,9 +906,10 @@ public class BuilderImpl implements Builder {
 		//create the network client stages
 		////////
 		if (useNetClient(netRequestPipes)) {
-			
-			int maxPartialResponses = Math.max(2,ClientHostPortInstance.getSessionCount());	
-			int connectionsInBits = (int)Math.ceil(Math.log(maxPartialResponses)/Math.log(2));
+			int tracks = Math.max(1, runtime.getBuilder().parallelTracks());			
+			int maxPartialResponses = Math.max(2,ClientHostPortInstance.getSessionCount());
+			int maxClientConnections = 4*(maxPartialResponses*tracks);
+			int connectionsInBits = (int)Math.ceil(Math.log(maxClientConnections)/Math.log(2));
 
 			int netResponseCount = 8;
 			int responseQueue = 10;

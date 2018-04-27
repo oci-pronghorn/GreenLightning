@@ -1,11 +1,14 @@
 package com.ociweb.gl.test;
 
+import java.util.Random;
 import java.util.function.Supplier;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenAppParallel;
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestService;
 import com.ociweb.gl.api.HTTPResponseListener;
@@ -17,8 +20,6 @@ import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
-import com.ociweb.pronghorn.network.ClientConnection;
-import com.ociweb.pronghorn.network.ClientSocketWriterStage;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.pipe.ChannelReader;
@@ -26,19 +27,22 @@ import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class ParallelClientLoadTester implements GreenAppParallel {
+	
+	private final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
+	
     private final String route;
 	private final boolean insecureClient;
     private final int parallelTracks;
     private final long cyclesPerTrack;
-    private final long responseTimeoutNS;
     private final Integer telemetryPort;
     private final String telemetryHost;
     private final Long rate;
+    private final int inFlightHTTPs;
     private final int maxInFlight;
     private final int maxInFlightMask;
     private int warmupCount = 20_000;
 
-	public static int LOG_LATENCY_LIMIT = 1_000_000_000;//1sec	
+	public static long LOG_LATENCY_LIMIT = 3_000_000_000L;//3sec	
     
 	private final ParallelClientLoadTesterOutput out;
 	private final Supplier<Writable> post;
@@ -76,7 +80,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this(
             new ParallelClientLoadTesterConfig(cyclesPerTrack, port, route, enableTelemetry),
             post != null ? new ParallelClientLoadTesterPayload(post) : null,
-            new DefaultParallelClientLoadTesterOutput());
+            new DefaultParallelClientLoadTesterOutput(System.out));
 	}
 
 	public ParallelClientLoadTester(
@@ -90,13 +94,13 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this(
             new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, port, route, enableTelemetry),
             post != null ? new ParallelClientLoadTesterPayload(post) : null,
-            new DefaultParallelClientLoadTesterOutput());
+            new DefaultParallelClientLoadTesterOutput(System.out));
 	}
 
 	public ParallelClientLoadTester(
 			ParallelClientLoadTesterConfig config,
 			ParallelClientLoadTesterPayload payload) {
-		this(config, payload, new DefaultParallelClientLoadTesterOutput());
+		this(config, payload, new DefaultParallelClientLoadTesterOutput(config.target));
 	}
 
 	public ParallelClientLoadTester(
@@ -110,7 +114,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.parallelTracks = config.parallelTracks;
 		this.durationNanos = config.durationNanos;
 		this.insecureClient = config.insecureClient;
-        this.responseTimeoutNS = config.responseTimeoutNS;
+
         this.cyclesPerTrack = config.cyclesPerTrack;
         this.rate = config.cycleRate;
         this.warmupCount = config.warmup;
@@ -119,8 +123,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		//0     1      0      0
 		//1     2      1      0,1
 		//2     4      3      0,1,2,3
-        int maxInFlightBits = config.simultaneousRequestsPerTrackBits;
-		this.maxInFlight = 1<< maxInFlightBits;
+        //add one for close message
+		this.maxInFlight = 1<< config.simultaneousRequestsPerTrackBits+1;
+		this.inFlightHTTPs = 1<<config.simultaneousRequestsPerTrackBits;
 		this.maxInFlightMask = maxInFlight-1;
 		
 		this.callTime = new long[parallelTracks][maxInFlight];
@@ -154,8 +159,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 		
 		builder.setGlobalSLALatencyNS(20_000_000);
-
+		
 		if (telemetryPort != null) {
+
 			if (null == this.telemetryHost) {
 				builder.enableTelemetry(telemetryPort);
 			}
@@ -175,9 +181,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
 		builder.defineUnScopedTopic(PROGRESS_TOPIC);
 
-		if (responseTimeoutNS > 0) {
-			builder.setTimerPulseRate(responseTimeoutNS / 1_000_000);
-		}
 	}
 
 	@Override
@@ -237,8 +240,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					timeoutsSum += timeouts;
 					responsesReceivedSum += responsesReceived;
 					responsesInvalidSum += responsesInvalid;
+					
+					//logger.info("Finished track {} remaining {}",track,(parallelTracks-enderCounter));
 				}
-
+				
+				
 				if (++enderCounter == (parallelTracks + 1)) { //we add 1 for the progress of 100%
 					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
 					int t = elapsedTime.length;
@@ -255,7 +261,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 							etr, testDuration, totalMessages, totalTimeSum, serverCallsPerSecond,
 							sendAttemptsSum, sendFailuresSum, timeoutsSum, responsesReceivedSum, responsesInvalidSum
 					);
-
+					//logger.info("shutting down load test");
 					return cmd4.shutdown();
 				}
 			}
@@ -327,7 +333,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	}
 
 
-	private class TrackHTTPResponseListener implements HTTPResponseListener, TimeListener, StartupListener, PubSubMethodListener {
+	private class TrackHTTPResponseListener implements HTTPResponseListener, StartupListener, PubSubMethodListener {
 		private final PubSubService cmd3;
 		private final int track;
 		private final HTTPResponseListener validator;
@@ -337,13 +343,16 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		private long countDown;
 		private long totalTime;
-		private long sendAttempts;
+		private long callCounter;
 		private long sendFailures;
 		private long timeouts;
 		private long responsesInvalid;
 		private long responsesReceived;
 		private boolean lastResponseOk=true;
+		private final int cookieSize = 10;//00;
 
+		private final String largeCookie = buildLargeCookie(cookieSize);
+		
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
 			countDown = cyclesPerTrack;
@@ -353,8 +362,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					new HeaderWritable() {
 						@Override
 						public void write(HeaderWriter writer) {
+							writer.write(HTTPHeaderDefaults.COOKIE, 
+									largeCookie);
+							
 							writer.write(HTTPHeaderDefaults.CONTENT_TYPE,
-									     contentType.contentType());
+									         contentType.contentType());
 						}
 					}				
 					
@@ -368,22 +380,26 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			
 		}
 
+		private String buildLargeCookie(int size) {
+			StringBuilder builder  = new StringBuilder();
+			Random r = new Random();
+			byte[] target = new byte[size];
+			r.nextBytes(target);
+			
+			Appendables.appendBase64Encoded(builder, target, 0, target.length, Integer.MAX_VALUE);
+			
+			return builder.toString();
+			
+		}
+
 		boolean callMessage(CharSequence topic, ChannelReader payload) {
 			return makeCall();
 		}
 
 		private boolean makeCall() {
 			long now = System.nanoTime();
-			boolean wasSent;
-			sendAttempts++;
-			if (null==writer) {
-				wasSent = cmd2.httpGet(session[track], route);
-			} else if (header != null) {
-				wasSent = cmd2.httpPost(session[track], route, header, writer);
-			} else {
-				wasSent = cmd2.httpPost(session[track], route, writer);
-			}
-			
+			callCounter++;			
+			boolean wasSent = doHTTPCall();			
 			if (wasSent) {
 				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
 			} else {
@@ -391,18 +407,95 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 			return wasSent;
 		}
+
+		private final HeaderWritable writeClose = new HeaderWritable() {
+			@Override
+			public void write(HeaderWriter writer) {
+				writer.write(HTTPHeaderDefaults.CONNECTION, "close");
+			}		
+		};
+		
+		private boolean doHTTPCall() {
+			if (cmd2.hasRoomFor(2)) {
+				boolean wasSent;
+				if (null==writer) {
+					wasSent = httpGet();
+				} else if (header != null) {
+					wasSent = httpPostWithHeader();
+				} else {
+					wasSent = httpPost();
+				}
+				return wasSent;
+			} else {
+				return false;
+			}
+			
+		}
+
+		private boolean httpPost() {
+			
+			boolean wasSent;
+			if (callCounter<cyclesPerTrack) {
+				wasSent = cmd2.httpPost(session[track], route, writer);
+			} else {
+				wasSent = cmd2.httpPost(session[track], route, writeClose, writer);
+				cmd2.httpClose(session[track]);
+			}
+			return wasSent;
+		}
+
+		private boolean httpGet() {
+			boolean wasSent;
+			
+			//Hack test
+			//if we close every call this should work fine but it does not
+			//this can be either side causing the issue and must be resolved.
+			
+			
+			if (callCounter<cyclesPerTrack) {
+				wasSent = cmd2.httpGet(session[track], route);					
+			} else {
+				wasSent = cmd2.httpGet(session[track], route, writeClose);	
+				//add boolean for easier time of this.. :TODO: API change.
+				cmd2.httpClose(session[track]);//we wrote the close header must follow with close.
+			}
+			return wasSent;
+		}
+
+		private boolean httpPostWithHeader() {
+			boolean wasSent;
+		
+			
+			if (callCounter<cyclesPerTrack) {
+		
+				
+				wasSent = cmd2.httpPost(session[track], route, header, writer);
+			} else {
+
+				HeaderWritable allHeaders = new HeaderWritable() {
+					@Override
+					public void write(HeaderWriter writer) {
+						header.write(writer);
+						writer.write(HTTPHeaderDefaults.CONNECTION, "close");
+					}		
+				};
+				wasSent = cmd2.httpPost(session[track], route, allHeaders, writer);
+				cmd2.httpClose(session[track]);
+			}
+			return wasSent;
+		}
 		
 		@Override
 		public void startup() {
 			long now = System.currentTimeMillis();
-			int i = maxInFlight;
+			int i = inFlightHTTPs;
 			while (--i>=0) {
 								
 				while(!cmd3.publishTopic(CALL_TOPIC)) {
 					//must publish this many to get the world moving
 					Thread.yield();
 					if ((System.currentTimeMillis()-now) > 10_000) {
-						out.failedToStart(maxInFlight);
+						out.failedToStart(inFlightHTTPs);
 						cmd3.shutdown();
 					}
 				}
@@ -414,13 +507,35 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
 			
+			if (reader.isConnectionClosed()) {
+				
+				//server just axed connection and we got no notice..
+				out.connectionClosed(track);
+				
+				if (inFlightHead[track]>inFlightTail[track]) {
+					
+					int totalMissing = inFlightHead[track]-inFlightTail[track];
+					timeouts+=totalMissing;
+					
+					logger.info("Connection closed, Expecting {} responses which will never arrive, resending http call(s)",totalMissing);
+					callCounter-=totalMissing;
+					//we must re-request the call
+					//keep the clock rolling since this is a penalty against the server
+					int i = totalMissing;
+					while (--i>=0) {
+						++callCounter;
+						boolean ok = doHTTPCall();
+						if (!ok) {
+							throw new RuntimeException("internal error, channels must be large enough to hold backed up reqeusts.");
+						}
+					}
+				}				
+				
+				return true;
+			}
+
 			//if false we already closed this one and need to skip this part
 			if (lastResponseOk) {
-				boolean connectionClosed = reader.isConnectionClosed();
-				if (connectionClosed) {
-					out.connectionClosed(track);
-					//connection should be re-opened to continue test.
-				}
 				if (!reader.isEndOfResponse()) {
 					return true;//just toss all the early chunks we only want the very end.
 				}
@@ -478,7 +593,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 
 			boolean isOk = true;
-			if (countDown >= maxInFlight) { //others are still in flight
+			if (countDown >= inFlightHTTPs) { //others are still in flight
 				if (durationNanos > 0) {
 					isOk = cmd3.delay(durationNanos);
 				}
@@ -488,11 +603,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 			else {
 				if (0==countDown) {
+					
+					logger.info("finished track {}",track);
+					
 					//only end after all the inFlightMessages have returned.
 					isOk = cmd3.publishTopic(ENDERS_TOPIC, writer -> {
 						writer.writePackedInt(track);
 						writer.writePackedLong(totalTime);
-						writer.writePackedLong(sendAttempts);
+						writer.writePackedLong(callCounter);
 						writer.writePackedLong(sendFailures);
 						writer.writePackedLong(timeouts);
 						writer.writePackedLong(responsesReceived);
@@ -509,21 +627,5 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			return isOk;
 		}
 
-		@Override
-		public void timeEvent(long time, int iteration) {
-			long callTimeValue = callTime[track][maxInFlightMask & inFlightTail[track]];
-			if (callTimeValue != 0) {
-				long duration = System.nanoTime() - callTimeValue;
-				if (duration > responseTimeoutNS) {
-
-					out.timout(responseTimeoutNS);
-
-					timeouts++;
-					while (!nextCall()) {//must run now.
-						Thread.yield();
-					}
-				}
-			}
-		}
 	}
 }

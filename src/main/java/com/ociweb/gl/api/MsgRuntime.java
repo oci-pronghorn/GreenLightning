@@ -1,6 +1,10 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.gl.api.blocking.BlockableStageFactory;
+import com.ociweb.gl.api.blocking.BlockingBehavior;
+import com.ociweb.gl.api.blocking.BlockingBehaviorProducer;
 import com.ociweb.gl.impl.*;
+import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.EgressConverter;
@@ -12,6 +16,8 @@ import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
+import com.ociweb.pronghorn.network.schema.HTTPLogRequestSchema;
+import com.ociweb.pronghorn.network.schema.HTTPLogResponseSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
@@ -323,10 +329,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
     
     public void shutdownRuntime(final int secondsTimeout) {
+    
+    	
     	//only do if not already done.
     	if (!isShutdownRequested()) {
+    		logger.info("shutdownRuntime({}) with timeout",secondsTimeout);
     	
 	    	if (null == scheduler || null == builder) {
+	    		//logger.warn("No runtime activity was detected.");
 	    		System.exit(0);
 	    		return;
 	    	}
@@ -345,8 +355,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	
 				@Override
 				public void run() {
+					
+					logger.info("Scheduler {} shutdown ", scheduler.getClass().getSimpleName());
 					scheduler.shutdown();
+				
 					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCall, lastCall);
+					
 				}
 	    		
 	    	});
@@ -568,19 +582,21 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	private void buildGraphForServer(MsgApp app) {
 
 		HTTPServerConfig config = builder.getHTTPServerConfig();
-		
+				
 		ServerPipesConfig serverConfig = config.buildServerConfig(builder.parallelTracks());
 
 		ServerCoordinator serverCoord = new ServerCoordinator(
 				config.getCertificates(),
 				config.bindHost(), 
 				config.bindPort(),
+				config.connectionStruct(),				
 				serverConfig.maxConnectionBitsOnServer,
 				serverConfig.maxConcurrentInputs,
 				serverConfig.maxConcurrentOutputs,
 				builder.parallelTracks(), false,
 				"Server",
-				config.defaultHostPath());
+				config.defaultHostPath(), 
+				serverConfig.logFile);
 		
 		final int parallelTrackCount = builder.parallelTracks();
 		
@@ -701,24 +717,27 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			}		
 		}
 		serverConfig.ensureServerCanWrite(errConfig.maxVarLenSize());
+		final HTTP1xRouterStageConfig routerConfig1 = routerConfig;
 		
-		NetGraphBuilder.buildRouters(
-				gm, serverCoord, 
-				acks, planIncomingGroup,
-				fromModulesToOrderSuper, fromRouterToModules,
-				routerConfig, errConfig,
-				catchAll);
+		//TODO: use ServerCoordinator to hold information about log?
+		Pipe<HTTPLogRequestSchema>[] log = new Pipe[trackCounts];
+		Pipe<HTTPLogResponseSchema>[] log2 = new Pipe[trackCounts];
+		Pipe[][] perTrackFromNet = Pipe.splitPipes(trackCounts, planIncomingGroup);
+
+		NetGraphBuilder.buildLogging(gm, serverCoord, log, log2);
 		
-	
-		//NOTE: this array populated here must be equal or larger than the fromModules..
+		NetGraphBuilder.buildRouters(gm, serverCoord, acks,
+				fromModulesToOrderSuper, fromRouterToModules, routerConfig1, errConfig,
+				catchAll, log, perTrackFromNet);
+
 		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup);
-		
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
+		assert(fromOrderedContent.length >= trackCounts) : "reduce track count since we only have "+fromOrderedContent.length+" pipes";
+		
+		Pipe<NetPayloadSchema>[][] perTrackFromSuper = Pipe.splitPipes(trackCounts, fromOrderedContent);
 				
-		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, 
-				                            trackCounts, 
-				                            fromModulesToOrderSuper, 
-				                            fromOrderedContent);
+				
+		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, fromModulesToOrderSuper, log2, perTrackFromSuper);
 	}
 	//////////////////
 	//end of server and other behavior
@@ -826,6 +845,61 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	//end of file server
 	///////////////////////////
 
+	//adding support for blocking
+	public <T extends BlockingBehavior> void registerBlockingListener(
+			String behaviorName,
+			Class<T> clazz,
+			int threadsCount,
+			long timeoutNS,
+			long chooserLongFieldId) {
+		registerBlockingListener(behaviorName, new BlockingBehaviorProducer() {
+			@Override
+			public BlockingBehavior produce() {
+				try {
+					return clazz.newInstance();
+				} catch (InstantiationException | IllegalAccessException e) {
+					throw new RuntimeException(e);
+				}
+			}
+		}, threadsCount, timeoutNS, chooserLongFieldId);
+	}
+
+	//adding support for blocking
+	public <T extends BlockingBehavior> void registerBlockingListener(
+			String behaviorName,
+			BlockingBehaviorProducer producer,
+			int threadsCount,
+			long timeoutNS,
+			long chooserLongFieldId) {
+	
+		if (null==behaviorName) {
+			throw new UnsupportedOperationException("All blocking behaviors must be named.");
+		}
+		String behaviorNameLocal = builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);
+				
+		List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(behaviorName);
+		if (1 != sourceTopics.size()) {
+			throw new UnsupportedOperationException("Blocking behavior only supports 1 private source topic at this time. found:"+sourceTopics.size());
+		}
+		List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(behaviorName);
+		if (1 != targetTopics.size()) {
+			throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
+		}
+		
+		Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);				
+		assert(null!=input);		
+		Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);
+		assert(null!=output);
+		Pipe<MessagePrivate> timeout = output;
+		assert(input!=output);
+		
+		BlockableStageFactory.buildStage(gm, timeoutNS, threadsCount, chooserLongFieldId,
+	    		   						input, output, timeout, producer);
+	
+	}
+	
+	
+	///////////////////////////
 	
 	
     public Builder getBuilder(){

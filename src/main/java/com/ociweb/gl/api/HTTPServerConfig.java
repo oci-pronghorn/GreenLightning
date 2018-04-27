@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
 
@@ -14,7 +15,9 @@ public interface HTTPServerConfig {
 	HTTPServerConfig setDecryptionUnitsPerTrack(int value);
 	HTTPServerConfig setConcurrentChannelsPerEncryptUnit(int value);
 	HTTPServerConfig setConcurrentChannelsPerDecryptUnit(int value);
-
+	HTTPServerConfig logTraffic(String basePath, int fileCount, long fileSizeLimit);
+	HTTPServerConfig logTraffic();
+	
 	int getMaxConnectionBits();
 
 	int getEncryptionUnitsPerTrack();
@@ -28,6 +31,8 @@ public interface HTTPServerConfig {
 	boolean isTLS();
 
 	TLSCertificates getCertificates();
+	
+	ServerConnectionStruct connectionStruct();
 
 	String bindHost();
 
@@ -38,5 +43,6 @@ public interface HTTPServerConfig {
 	int getMaxRequestSize();
 		
 	ServerPipesConfig buildServerConfig(int tracks);
+
 }
 

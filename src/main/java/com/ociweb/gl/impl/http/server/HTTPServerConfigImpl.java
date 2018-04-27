@@ -2,14 +2,18 @@ package com.ociweb.gl.impl.http.server;
 
 import com.ociweb.gl.api.HTTPServerConfig;
 import com.ociweb.gl.impl.BridgeConfigStage;
+import com.ociweb.pronghorn.network.LogFileConfig;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
+import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
+import com.ociweb.pronghorn.struct.StructRegistry;
 
 public class HTTPServerConfigImpl implements HTTPServerConfig {
+	
 	private String defaultHostPath = "";
 	private String bindHost = null;
 	private int bindPort = -1;
@@ -20,11 +24,16 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	private int concurrentChannelsPerDecryptUnit = 1; //default 1, for low memory usage
 	private TLSCertificates serverTLS;
 	private BridgeConfigStage configStage = BridgeConfigStage.Construction;
-	private int maxRequestSize = 1<<9;//default of 512 bytes
+	private int maxRequestSize = 1<<16;//default of 64K
 	private final PipeConfigManager pcm;
+
+	private LogFileConfig logFile;
 	
+	private final ServerConnectionStruct scs;
 	
-	public HTTPServerConfigImpl(int bindPort, PipeConfigManager pcm) {
+	public HTTPServerConfigImpl(int bindPort, 
+			                    PipeConfigManager pcm, 
+			                    StructRegistry recordTypeData) {
 		this.bindPort = bindPort;
 		if (bindPort<=0 || (bindPort>=(1<<16))) {
 			throw new UnsupportedOperationException("invalid port "+bindPort);
@@ -35,6 +44,12 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 		this.bindHost = null;
 		this.maxConnectionBits = 12;
 		this.pcm = pcm;
+		this.scs = new ServerConnectionStruct(recordTypeData);
+
+	}
+	
+	public ServerConnectionStruct connectionStruct() {
+		return scs;
 	}
 
 	public void beginDeclarations() {
@@ -176,6 +191,7 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 				getMaxRequestSize()));
 				
 		return new ServerPipesConfig(
+				logFile,
 				isTLS(),
 				getMaxConnectionBits(),
 		   		tracks,
@@ -195,5 +211,17 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 
 	public int getMaxRequestSize() {
 		return this.maxRequestSize;
+	}
+
+	@Override
+	public HTTPServerConfig logTraffic() {
+		logFile = new LogFileConfig();
+		return this;
+	}
+	
+	@Override
+	public HTTPServerConfig logTraffic(String basePath, int fileCount, long fileSizeLimit) {
+		logFile = new LogFileConfig(basePath,fileCount,fileSizeLimit);
+		return this;
 	}
 }

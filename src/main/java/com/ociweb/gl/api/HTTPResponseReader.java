@@ -2,6 +2,7 @@ package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.http.server.HTTPPayloadReader;
 import com.ociweb.gl.impl.stage.HeaderTypeCapture;
+import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
@@ -55,15 +56,15 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	}
 	
 	public final boolean isBeginningOfResponse() {
-		return 0 != (this.flags&HTTPFieldReader.BEGINNING_OF_RESPONSE);
+		return 0 != (this.flags&ServerCoordinator.BEGIN_RESPONSE_MASK);
 	}
 	
 	public final boolean isEndOfResponse() {
-		return 0 != (this.flags&HTTPFieldReader.END_OF_RESPONSE);
+		return 0 != (this.flags&ServerCoordinator.END_RESPONSE_MASK);
 	}
 	
 	public final boolean isConnectionClosed() {
-		return 0 != (this.flags&HTTPFieldReader.CLOSE_CONNECTION);
+		return 0 != (this.flags&ServerCoordinator.CLOSE_CONNECTION_MASK);
 	}
 
 	/**

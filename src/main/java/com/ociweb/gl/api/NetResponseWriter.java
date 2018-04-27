@@ -238,54 +238,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 		super.writeASCII(s);
 	}
 
-	@Override
-	public void writeByteArray(byte[] bytes) {
-		checkLimit(this,bytes.length);
-		super.writeByteArray(bytes);
-	}
-
-	@Override
-	public void writeCharArray(char[] chars) {
-		checkLimit(this,chars.length*2);
-		super.writeCharArray(chars);
-	}
-
-	@Override
-	public void writeIntArray(int[] ints) {
-		checkLimit(this,ints.length*4);
-		super.writeIntArray(ints);
-	}
-
-	@Override
-	public void writeLongArray(long[] longs) {
-		checkLimit(this,longs.length*8);
-		super.writeLongArray(longs);
-	}
-
-	@Override
-	public void writeDoubleArray(double[] doubles) {
-		checkLimit(this,doubles.length*8);
-		super.writeDoubleArray(doubles);
-	}
-
-	@Override
-	public void writeFloatArray(float[] floats) {
-		checkLimit(this,floats.length*4);
-		super.writeFloatArray(floats);
-	}
-
-	@Override
-	public void writeShortArray(short[] shorts) {
-		checkLimit(this,shorts.length*2);
-		super.writeShortArray(shorts);
-	}
-
-	@Override
-	public void writeBooleanArray(boolean[] booleans) {
-		checkLimit(this,booleans.length);
-		super.writeBooleanArray(booleans);
-	}
-
+	
 	@Override
 	public void writeUTFArray(String[] utfs) {
 		int i = utfs.length;
