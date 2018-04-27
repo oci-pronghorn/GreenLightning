@@ -8,7 +8,13 @@ import com.ociweb.pronghorn.pipe.PipeConfig;
 public class ListenerConfig {
 
 
-        
+	/**
+	 *
+	 * @param builder BuilderImpl that implements appendPipeMappingIncludingGroupIds
+	 * @param routes int[] used as arg in builder.appendPipeMappingIncludingGroupIds
+	 * @param parallelInstance int used as arg in ListenerConfig.computeParallel and builder.appendPipeMappingIncludingGroupIds
+	 * @param restRequests
+	 */
 	public static void recordPipeMapings(BuilderImpl builder, int[] routes, int parallelInstance,
 			Pipe<HTTPRequestSchema>[] restRequests) {
 		int r;
@@ -24,6 +30,12 @@ public class ListenerConfig {
 		}
 	}
 
+	/**
+	 *
+	 * @param builder BuilderImpl used to initialize pipe
+	 * @param parallelInstance int used to initialize new Pipe array
+	 * @return all the rest requests
+	 */
 	public static Pipe<HTTPRequestSchema>[] newHTTPRequestPipes(BuilderImpl builder, final int parallelInstance) {
 		Pipe<HTTPRequestSchema>[] restRequests = new Pipe[parallelInstance];
 				
@@ -36,6 +48,12 @@ public class ListenerConfig {
 		return restRequests;
 	}
 
+	/**
+	 *
+	 * @param builder BuilderImpl used to determine value of p
+	 * @param parallelInstance int used to determine value of p
+	 * @return p <p> p = builder.parallelTracks() if -1 == parallelInstance else p = 1
+	 */
 	public static int computeParallel(BuilderImpl builder, int parallelInstance) {
 		final int p;
 		if (-1 == parallelInstance) {

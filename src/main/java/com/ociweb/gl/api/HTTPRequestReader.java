@@ -7,13 +7,7 @@ import com.ociweb.pronghorn.network.http.FieldExtractionDefinitions;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
-import com.ociweb.pronghorn.util.Appendables;
-import com.ociweb.pronghorn.util.TrieParser;
-import com.ociweb.pronghorn.util.TrieParserReader;
-import com.ociweb.pronghorn.util.math.Decimal;
 
 public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> implements HTTPFieldReader<HTTPRequestSchema> {
 
@@ -27,8 +21,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 
 	//TODO: rename this, it should not be HTTP1.x specific but more general...
 	private HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig;
-	
-	
+
 	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe, boolean hasNoRoutes,
 			                 HTTPSpecification httpSpec,
 			                 HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig) {

@@ -15,8 +15,7 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	private int flags;
 	private long connectionId;
 	private HeaderTypeCapture htc;
-	 
-    	
+
 	public HTTPResponseReader(Pipe<NetResponseSchema> pipe, HTTPSpecification<?,?,?,?> httpSpec) {
 		super(pipe);
 		this.httpSpec = httpSpec;
@@ -37,7 +36,11 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	public short statusCode() {
 		return this.status;
 	}
-	
+
+	/**
+	 *
+	 * @return  HTTPContentTypeDefaults.UNKNOWN or htc.type
+	 */
 	public HTTPContentType contentType() {
 					
 	   	 if (structured().identityVisit(HTTPHeaderDefaults.CONTENT_TYPE, htc)) {
@@ -63,10 +66,18 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 		return 0 != (this.flags&HTTPFieldReader.CLOSE_CONNECTION);
 	}
 
+	/**
+	 *
+	 * @param ccId1 long arg to be used as connection id
+	 */
 	public void setConnectionId(long ccId1) {
 		connectionId = ccId1;
 	}
-	
+
+	/**
+	 *
+	 * @return connectionId
+	 */
 	public long connectionId() {
 		return connectionId;
 	}

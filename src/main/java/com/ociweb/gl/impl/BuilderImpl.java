@@ -1,36 +1,6 @@
 package com.ociweb.gl.impl;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.security.SecureRandom;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ociweb.gl.api.ArgumentParser;
-import com.ociweb.gl.api.Behavior;
-import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.ClientHostPortInstance;
-import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.HTTPClientConfig;
-import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.HTTPServerConfig;
-import com.ociweb.gl.api.ListenerTransducer;
-import com.ociweb.gl.api.MsgCommandChannel;
-import com.ociweb.gl.api.MsgRuntime;
-import com.ociweb.gl.api.NetResponseWriter;
-import com.ociweb.gl.api.TelemetryConfig;
-import com.ociweb.gl.api.TimeTrigger;
+import com.ociweb.gl.api.*;
 import com.ociweb.gl.api.transducer.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.transducer.PubSubListenerTransducer;
 import com.ociweb.gl.api.transducer.RestListenerTransducer;
@@ -39,66 +9,43 @@ import com.ociweb.gl.impl.http.client.HTTPClientConfigImpl;
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.http.server.HTTPServerConfigImpl;
 import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
-import com.ociweb.gl.impl.schema.IngressMessages;
-import com.ociweb.gl.impl.schema.MessagePrivate;
-import com.ociweb.gl.impl.schema.MessagePubSub;
-import com.ociweb.gl.impl.schema.MessageSubscription;
-import com.ociweb.gl.impl.schema.TrafficAckSchema;
-import com.ociweb.gl.impl.schema.TrafficOrderSchema;
-import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
-import com.ociweb.gl.impl.stage.HTTPClientRequestTrafficStage;
-import com.ociweb.gl.impl.stage.MessagePubSubStage;
-import com.ociweb.gl.impl.stage.ReactiveListenerStage;
-import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
-import com.ociweb.gl.impl.stage.ReactiveOperators;
-import com.ociweb.gl.impl.stage.TrafficCopStage;
+import com.ociweb.gl.impl.schema.*;
+import com.ociweb.gl.impl.stage.*;
 import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.config.HTTPHeader;
-import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
-import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
-import com.ociweb.pronghorn.network.config.HTTPSpecification;
-import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.config.*;
 import com.ociweb.pronghorn.network.http.CompositePath;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.http.HTTPClientRequestStage;
-import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
-import com.ociweb.pronghorn.network.schema.NetResponseSchema;
-import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
-import com.ociweb.pronghorn.pipe.MessageSchema;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeConfig;
-import com.ociweb.pronghorn.pipe.PipeConfigManager;
-import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.network.schema.*;
+import com.ociweb.pronghorn.pipe.*;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.PronghornStageProcessor;
 import com.ociweb.pronghorn.stage.file.FileGraphBuilder;
 import com.ociweb.pronghorn.stage.file.NoiseProducer;
-import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
-import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadProducerSchema;
-import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
-import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
-import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
+import com.ociweb.pronghorn.stage.file.schema.*;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructRegistry;
-import com.ociweb.pronghorn.util.Appendables;
-import com.ociweb.pronghorn.util.Blocker;
-import com.ociweb.pronghorn.util.CharSequenceToUTF8;
-import com.ociweb.pronghorn.util.CharSequenceToUTF8Local;
-import com.ociweb.pronghorn.util.TrieParser;
-import com.ociweb.pronghorn.util.TrieParserReader;
+import com.ociweb.pronghorn.util.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.security.SecureRandom;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class BuilderImpl implements Builder {
 
@@ -192,14 +139,18 @@ public class BuilderImpl implements Builder {
 	private HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
 	             routerConfig;	//////////////////////////////
 	//////////////////////////////
-	
+
 	public void usePrivateTopicsExclusively() {
 		if (hasPrivateTopicsChecked) {
 			throw new UnsupportedOperationException("Must set in declare configuration section before startup");
 		}
 		isAllPrivateTopics = true;
 	}
-	
+
+	/**
+	 *
+	 * @return false
+	 */
 	public boolean isAllPrivateTopics() {
 		hasPrivateTopicsChecked = true;
 		return isAllPrivateTopics;
@@ -208,8 +159,14 @@ public class BuilderImpl implements Builder {
     public final ReactiveOperators operators;
 
     private final Set<String> behaviorNames = new HashSet<String>();
-    
-    //will throw if a duplicate stage name is detected.
+
+	/**
+	 * a method to validate fullname and add it to behaviorNames
+	 * @param behaviorName String arg
+	 * @param trackId int arg
+	 * @return behaviorName + trackId
+	 */
+	//will throw if a duplicate stage name is detected.
     public String validateUniqueName(String behaviorName, int trackId) {
     	
     	String fullName = behaviorName;
@@ -237,6 +194,11 @@ public class BuilderImpl implements Builder {
     
     private IntHashTable netPipeLookup = new IntHashTable(7);//Initial default size
 
+	/**
+	 * a method that doubles IntHashTable if necessary and logs warning if !IntHashTable.setItem(netPipeLookup, uniqueId, pipeIdx)
+	 * @param uniqueId int id arg
+	 * @param pipeIdx int idx arg
+	 */
 	public void registerHTTPClientId(int uniqueId, int pipeIdx) {
 				
 		if ( (IntHashTable.count(netPipeLookup)<<1) >= IntHashTable.size(netPipeLookup) ) {
@@ -245,7 +207,7 @@ public class BuilderImpl implements Builder {
 		}
 				
 		//TODO: netPipeLookup is the entry point for JSON extraction??
-		//      we need to stroe extracor so its done when we do the lookup.
+		//      we need to store extractor so its done when we do the lookup.
 		
 		
 		boolean addedItem = IntHashTable.setItem(netPipeLookup, uniqueId, pipeIdx);
@@ -254,22 +216,38 @@ public class BuilderImpl implements Builder {
         			+ "Check that each HTTP Client consumer does not share an Id with any other.",uniqueId);
         }
     }
-    
-    public int lookupHTTPClientPipe(int routeId) {
+
+	/**
+	 *
+	 * @param routeId route to be looked for in pipe
+	 * @return IntHashTable.getItem(netPipeLookup, routeId)
+	 */
+	public int lookupHTTPClientPipe(int routeId) {
     	return IntHashTable.getItem(netPipeLookup, routeId);
     }
-    
-    
-    
-    
+
+
+	/**
+	 *
+	 * @return index message
+	 */
 	public int pubSubIndex() {
 		return IDX_MSG;
 	}
-	
+
+	/**
+	 *
+	 * @return net index
+	 */
 	public int netIndex() {
 		return IDX_NET;
 	}
-	
+
+	/**
+	 *
+	 * @param count
+	 * @param gcc
+	 */
 	public void releasePubSubTraffic(int count, MsgCommandChannel<?> gcc) {
 		MsgCommandChannel.publishGo(count, IDX_MSG, gcc);
 	}

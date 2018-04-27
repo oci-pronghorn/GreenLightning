@@ -21,8 +21,13 @@ public class HTTPResponder {
 	private CharSequence headers;
 	
 	private final Pipe<RawDataSchema> pipe;
-	private final Writable writable;	
-	
+	private final Writable writable;
+
+	/**
+	 *
+	 * @param commandChannel MsgCommandChannel arg used to make newHTTPResponseService
+	 * @param maximumPayloadSize int arg used in pipe and commandChannel to set max payload
+	 */
 	public HTTPResponder(MsgCommandChannel commandChannel, int maximumPayloadSize) {
 	    this.connectionId = -1;
 	    this.sequenceCode = -1;
@@ -48,7 +53,12 @@ public class HTTPResponder {
 			}
 		};
 	}
-		
+
+	/**
+	 *
+	 * @param reader ChannelReader arg used to set connectionId and sequenceCode
+	 * @return <code>true</code> if Pipe.hasContentToRead(pipe) <p> <code>false</code> if connectionId >= 0 && sequenceCode >= 0
+	 */
 	public boolean readReqesterData(ChannelReader reader) {
 		
 		if (Pipe.hasContentToRead(pipe)) {
@@ -84,7 +94,14 @@ public class HTTPResponder {
 		}
 		
 	}
-	
+
+	/**
+	 *
+	 * @param hasContinuation boolean arg determining if continuation exists
+	 * @param headers String arg used in commandChannel.publishHTTPResponse
+	 * @param writable Writable arg used in commandChannel.publishHTTPResponse
+	 * @return <code>true</code> if connectionId >= 0 && sequenceCode >= 0 else <code>false</code> <p> <code>false</code> if Pipe.contentRemaning(pipe) != 0 else <code>true</code>
+	 */
 	public boolean respondWith(boolean hasContinuation, String headers, Writable writable) {
 		
 		if (connectionId>=0 && sequenceCode>=0) {
@@ -126,7 +143,15 @@ public class HTTPResponder {
 		Pipe.confirmLowLevelWrite(pipe,Pipe.sizeOf(RawDataSchema.instance, RawDataSchema.MSG_CHUNKEDSTREAM_1));
 		Pipe.publishWrites(pipe);
 	}
-	
+
+	/**
+	 *
+	 * @param statusCode int arg used in commandChannel.publishHTTPResponse
+	 * @param hasContinuation boolean arg
+	 * @param contentType HTTPContentType arg used in commandChannel.publishHTTPResponse
+	 * @param writable Writable arg used in commandChannel.publishHTTPResponse
+	 * @return publishResult if connectionId >= 0 && sequenceCode >= 0 <p> <code>false</code> if Pipe.hasContentToRead(pipe) else <code>true</code>
+	 */
     public boolean respondWith(int statusCode, boolean hasContinuation, HTTPContentType contentType, Writable writable) {
 		
     	if (connectionId>=0 && sequenceCode>=0) {

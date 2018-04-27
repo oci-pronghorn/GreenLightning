@@ -1,16 +1,15 @@
 package com.ociweb.gl.api;
 
-import java.util.ArrayList;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
 
 public class Grouper {
 
@@ -27,10 +26,19 @@ public class Grouper {
 		this.groupedPipes = new Pipe[catagories.length][0];
 	}
 
+	/**
+	 *
+	 * @return count
+	 */
 	public int additions() {
 		return count;
 	}
-	
+
+	/**
+	 *
+	 * @param schema MessageSchema arg to used to check if there is a match
+	 * @return null if no match found <p> else inputPipes[i].config()
+	 */
 	public PipeConfig config(MessageSchema schema) {
 		int i = inputPipes.length;
 		
@@ -42,8 +50,11 @@ public class Grouper {
 		//may not find a match, if not return null.
 		return null;
 	}
-	
-	
+
+	/**
+	 *
+	 * @param pipes
+	 */
 	public void add(Pipe[] pipes) {
 
 		if (0==count) {

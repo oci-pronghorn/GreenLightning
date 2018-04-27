@@ -1,11 +1,10 @@
 package com.ociweb.gl.api;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.util.TrieParser;
-import com.ociweb.pronghorn.util.TrieParserReader;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientHostPortInstance {
 
@@ -24,21 +23,40 @@ public class ClientHostPortInstance {
 	private long connectionId=-1;
 
 	//TODO: add method to limit headers
-	
-	
-	
+
+
+	/**
+	 *
+	 * @return host and port num.
+	 */
 	public String toString() {
 		return host+":"+port;
 	}
-	
+
+	/**
+	 * @param host String arg specifying host
+	 * @param port int arg specifying port number
+	 * @param sessionId int arg specifying the sessionId
+	 */
 	public ClientHostPortInstance(String host, int port, int sessionId) {
 		this(host,port,null,sessionId);
 	}
-	
+
+	/**
+	 * @param host String arg specifying host
+	 * @param port int arg specifying port number
+	 */
 	public ClientHostPortInstance(String host, int port) {
 		this(host,port,null);
 	}
-	
+
+	/**
+	 *
+	 * @param host String arg specifying host
+	 * @param port int arg specifying port number
+	 * @param extractor JSON data to be extracted
+	 * @param sessionId int arg specifying the sessionId
+	 */
 	public ClientHostPortInstance(String host, int port, JSONExtractor extractor, int sessionId) {
 		this.sessionId = sessionCounter.incrementAndGet();
 		this.host = host;
@@ -52,7 +70,11 @@ public class ClientHostPortInstance {
 
 	}
 
-	
+	/**
+	 * @param host String arg specifying host
+	 * @param port int arg specifying port number
+	 * @param extractor JSON data to be extracted
+	 */
 	public ClientHostPortInstance(String host, int port, JSONExtractor extractor) {
 		this.sessionId = sessionCounter.incrementAndGet();
 		this.host = host;
@@ -64,15 +86,25 @@ public class ClientHostPortInstance {
 		}
 		this.extractor = null;
 	}
-	
+
+	/**
+	 *
+	 * @param id number to use for connection id
+	 */
 	void setConnectionId(long id) {
 		connectionId = id;		
 	}
-	
+
+	/**
+	 * @return long connectionId
+	 */
 	long getConnectionId() {
 		return connectionId;
 	}
 
+	/**
+	 * @return int sessionCount
+	 */
 	public static int getSessionCount() {
 		return sessionCounter.get();
 	}

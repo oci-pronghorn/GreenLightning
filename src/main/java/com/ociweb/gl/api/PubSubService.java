@@ -43,8 +43,12 @@ public class PubSubService {
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
 		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
 	}
-	
-	
+
+	/**
+	 *
+	 * @param topic 
+	 * @return
+	 */
 	public boolean subscribe(CharSequence topic) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
