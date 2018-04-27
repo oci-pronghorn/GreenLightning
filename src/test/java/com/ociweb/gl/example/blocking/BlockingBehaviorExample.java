@@ -25,7 +25,7 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 		connectionId = reader.structured().readLong(Fields.connectionId);
 		sequenceId = reader.structured().readLong(Fields.sequenceId);
 		key1Value.setLength(0);
-		reader.structured().readText(Fields.key1, key1Value);
+	//	reader.structured().readText(Fields.key1, key1Value);
 		key2 = reader.structured().readInt(Fields.key2);		
 		
 	}

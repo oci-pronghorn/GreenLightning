@@ -6,19 +6,25 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
+import com.ociweb.pronghorn.network.ClientSocketWriterStage;
 
 public class BlockingTaskTest {
-
 	
 	
 	@Test
 	public void runTest() {
-
+		
+		//ClientSocketWriterStage.showWrites = true;
+		//ServerSocketReaderStage.showRequests = true;
+		//HTTP1xRouterStage.showHeader = true;
+		
 		boolean telemetry = false;  //must not be true when checked in.
-		int cyclesPerTrack = 1000;
-		int parallelTracks = 1;//2;//4;
+		int cyclesPerTrack = 400;
+		int parallelTracks = 4;
 		int timeoutMS = 600_000;
 				
+		ClientSocketWriterStage.showWrites = false;
+		
 		GreenRuntime.run(new BlockingExampleApp(telemetry));
 		
 		ParallelClientLoadTesterPayload payload 
@@ -31,11 +37,20 @@ public class BlockingTaskTest {
 						cyclesPerTrack, 8083, "/test", telemetry);
 		
 		config2.simultaneousRequestsPerTrackBits  = 0;
+		config2.telemetryHost="127.0.0.1";
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),
 				timeoutMS);
 
+		//wait for telemetry to update
+		try {
+			Thread.sleep(2_000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 		//TODO: assert some things about these results.
 	}
 	

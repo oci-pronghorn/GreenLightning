@@ -1,7 +1,5 @@
 package com.ociweb.gl.example.blocking;
 
-import java.lang.reflect.Field;
-
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenAppParallel;
 import com.ociweb.gl.api.GreenRuntime;
@@ -10,8 +8,6 @@ import com.ociweb.gl.api.PubSubService;
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
-import com.ociweb.pronghorn.pipe.ChannelReader;
-import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.struct.StructTypes;
 
 public class BlockingExampleApp implements GreenAppParallel {
@@ -35,8 +31,9 @@ public class BlockingExampleApp implements GreenAppParallel {
 	public void declareConfiguration(Builder builder) {
 		builder.useHTTP1xServer(8083)
 	       .useInsecureServer()
-	       .setDecryptionUnitsPerTrack(4)
-	       .setEncryptionUnitsPerTrack(4)
+	       .logTraffic()
+	       .setDecryptionUnitsPerTrack(3)
+	       .setEncryptionUnitsPerTrack(3)
 	       .setHost("127.0.0.1");		
 		builder.parallelTracks(2);
 	

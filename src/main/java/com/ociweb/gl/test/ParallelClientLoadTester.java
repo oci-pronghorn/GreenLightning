@@ -161,6 +161,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		builder.setGlobalSLALatencyNS(20_000_000);
 		
 		if (telemetryPort != null) {
+
 			if (null == this.telemetryHost) {
 				builder.enableTelemetry(telemetryPort);
 			}

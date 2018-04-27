@@ -12,13 +12,13 @@ public class ReactiveManagerPipeConsumer {
 	private final ReactiveOperator[] operators;
 	public final Object obj;
 	
-	private AtomicBoolean newWork = new AtomicBoolean(true);
-	private final PipePublishListener newWorkListener = new PipePublishListener() {
-		@Override
-		public void published() {
-			newWork.set(true);
-		}
-	};
+//	private AtomicBoolean newWork = new AtomicBoolean(true);
+//	private final PipePublishListener newWorkListener = new PipePublishListener() {
+//		@Override
+//		public void published() {
+//			newWork.set(true);
+//		}
+//	};
 	
 
 	public ReactiveManagerPipeConsumer(Object obj, ReactiveOperators operators, Pipe[] inputs) {
@@ -33,18 +33,18 @@ public class ReactiveManagerPipeConsumer {
 			this.operators[i] = operators.getOperator(inputs[i]);
 		}
 		
-		//for the inputs register the head listener
-		int j = inputs.length;
-		while (--j>=0) {
-			Pipe.addPubListener(inputs[j], newWorkListener);
-		}
+//		//for the inputs register the head listener
+//		int j = inputs.length;
+//		while (--j>=0) {
+//			Pipe.addPubListener(inputs[j], newWorkListener);
+//		}
 	}
 	
 	public static final void process(ReactiveManagerPipeConsumer that, ReactiveListenerStage r) {
 		//only run if one of the inputs has received new data or have data.
-		if (that.newWork.getAndSet(false)) {			
+		//if (that.newWork.getAndSet(false)) {			
 			applyReactiveOperators(that, r, that.inputs, that.obj, that.operators, that.inputs.length); 
-		}
+		//}
 	}
 
 	private static void applyReactiveOperators(ReactiveManagerPipeConsumer that, ReactiveListenerStage r,
@@ -72,9 +72,9 @@ public class ReactiveManagerPipeConsumer {
 			}
 		} while (--countDown>=0);
 		
-		if (temp>0) {
-			that.newWork.set(true);
-		}
+		//if (temp>0) {
+		//	that.newWork.set(true);
+		//}
 	}
 
 	public boolean swapIfFound(Pipe oldPipe, Pipe newPipe) {		

@@ -798,6 +798,7 @@ public class BuilderImpl implements Builder {
 		if (telemetry != null) {
 			throw new RuntimeException("Telemetry already enabled");
 		}
+
 		this.telemetry = new TelemetryConfigImpl(host, port);
 		this.telemetry.beginDeclarations();
 		
