@@ -60,7 +60,7 @@ public class NamedMessagePassingTest {
 //		-XX:+UnlockDiagnosticVMOptions
 //		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9
 				
-		boolean telemetry = true;  //must not be true when checked in.
+		boolean telemetry = false;  //must not be true when checked in.
 		long cycleRate = 5000;
 		
 		
@@ -74,7 +74,7 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack = 1_000; //*(1+99_9999);// / 10;		
+		int cyclesPerTrack = 100_000; //*(1+99_9999);// / 10;		
 		int parallelTracks = 1;
 		
 		ParallelClientLoadTesterConfig config2 = 
