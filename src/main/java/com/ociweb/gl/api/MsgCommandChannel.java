@@ -186,45 +186,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		.append(Integer.toString(parallelInstanceId)).asBytes();
 	}
 
-//	@Deprecated
-//    public static boolean hasRoomFor(MsgCommandChannel<?> cmd, int messageCount) {
-//		return null==cmd.goPipe || Pipe.hasRoomForWrite(cmd.goPipe, 
-//    			FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(cmd.goPipe))*messageCount);
-//    }
-//    
-//    @Deprecated
-//    public static boolean hasRoomForHTTP(MsgCommandChannel<?> cmd, int messageCount) {
-//    	assert(cmd.httpRequest!=null) : "Client side HTTP Request must be enabled";    	
-//		return Pipe.hasRoomForWrite(cmd.httpRequest, 
-//    			FieldReferenceOffsetManager.maxFragmentSize(
-//    					Pipe.from(cmd.httpRequest))*messageCount);
-//    }
-//    
-//    @Deprecated
-//    public void ensureDynamicMessaging() {
-//    	if (isInit) {
-//    		throw new UnsupportedOperationException("Too late, ensureDynamicMessaging method must be called in define behavior.");
-//    	}
-//    	this.initFeatures |= DYNAMIC_MESSAGING;
-//    }
-//    
-//    @Deprecated
-//    public void ensureDynamicMessaging(int queueLength, int maxMessageSize) {
-//    	if (isInit) {
-//    		throw new UnsupportedOperationException("Too late, ensureDynamicMessaging method must be called in define behavior.");
-//    	}
-//    	growCommandCountRoom(queueLength);
-//    	this.initFeatures |= DYNAMIC_MESSAGING;  
-//    	
-//    	pcm.ensureSize(MessagePubSub.class, queueLength, maxMessageSize);
-//
-//		//also ensure consumers have pipes which can consume this.    		
-//		pcm.ensureSize(MessageSubscription.class, queueLength, maxMessageSize);
-//		
-//		//IngressMessages Confirm that MQTT ingress is big enough as well			
-//		pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
-//	
-//    }
+
 
 	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
 		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
@@ -402,10 +364,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   ///////////////////////////////////////
 		   }
 	}
-    
-	public boolean goHasRoom() {
-		return null==goPipe || PipeWriter.hasRoomForWrite(goPipe);
-	}
 
     
     public Pipe<?>[] getOutputPipes() {
@@ -558,7 +516,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         try {
             if (goHasRoom()) {            	
             	if (null!=goPipe) {
-            		PipeWriter.publishEOF(this.goPipe);            		
+            		Pipe.publishEOF(this.goPipe);            		
             	} else {
             		//must find one of these outputs to shutdown
             		if (!sentEOF(messagePubSub)) {
@@ -859,31 +817,47 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			//logger.info("new empty block at {} {} ",block1HeaderBlobPosition, block1PositionOfLen);
 	}
 
+    
+	public boolean goHasRoom() {
+		return null==goPipe || PipeWriter.hasRoomForWrite(goPipe);
+	}
 
 	public static void publishGo(int count, int pipeIdx, MsgCommandChannel<?> gcc) {				
 		if (null != gcc.goPipe) { //no 'go' needed if pipe is null
 			assert(pipeIdx>=0);
-			TrafficOrderSchema.publishGo(gcc.goPipe, pipeIdx, count);
+			
+			Pipe.presumeRoomForWrite(gcc.goPipe);
+			int size = Pipe.addMsgIdx(gcc.goPipe, TrafficOrderSchema.MSG_GO_10);
+			Pipe.addIntValue(pipeIdx, gcc.goPipe);
+			Pipe.addIntValue(count, gcc.goPipe);
+			Pipe.confirmLowLevelWrite(gcc.goPipe, size);
+			Pipe.publishWrites(gcc.goPipe);
+			
 		}
 	}
 	
 	public static void publishBlockChannel(long durationNanos, MsgCommandChannel<?> gcc) {
 		
 		if (null != gcc.goPipe) {
-			PipeWriter.presumeWriteFragment(gcc.goPipe, TrafficOrderSchema.MSG_BLOCKCHANNEL_22);
-			PipeWriter.writeLong(gcc.goPipe,TrafficOrderSchema.MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13, durationNanos);
-			PipeWriter.publishWrites(gcc.goPipe);
+			Pipe.presumeRoomForWrite(gcc.goPipe);
+			int size = Pipe.addMsgIdx(gcc.goPipe, TrafficOrderSchema.MSG_BLOCKCHANNEL_22);
+			Pipe.addLongValue(durationNanos, gcc.goPipe);
+			Pipe.confirmLowLevelRead(gcc.goPipe, size);
+			Pipe.publishWrites(gcc.goPipe);
 		} else {
 			logger.info("Unable to use block channel for ns without an additonal feature use or USE_DELAY can be added.");
 		}
 	}
+	
 
 	public static void publishBlockChannelUntil(long timeMS, MsgCommandChannel<?> gcc) {
 		
 		if (null != gcc.goPipe) {
-			PipeWriter.presumeWriteFragment(gcc.goPipe, TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23);
-			PipeWriter.writeLong(gcc.goPipe,TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14, timeMS);
-			PipeWriter.publishWrites(gcc.goPipe);
+			Pipe.presumeRoomForWrite(gcc.goPipe);
+			int size = Pipe.addMsgIdx(gcc.goPipe, TrafficOrderSchema.MSG_BLOCKCHANNELUNTIL_23);
+			Pipe.addLongValue(timeMS, gcc.goPipe);
+			Pipe.confirmLowLevelRead(gcc.goPipe, size);
+			Pipe.publishWrites(gcc.goPipe);
 		} else {
 			logger.info("Unable to use block channel for ns without an additonal feature or USE_DELAY can be added.");
 		}

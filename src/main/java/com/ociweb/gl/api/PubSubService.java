@@ -54,7 +54,7 @@ public class PubSubService {
 		
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
-		if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) 
+		if (msgCommandChannel.goHasRoom() 
 			&& PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100)) {
 		    
 		    PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, System.identityHashCode((PubSubMethodListenerBase)msgCommandChannel.listener));
@@ -80,7 +80,7 @@ public class PubSubService {
 	public boolean subscribe(CharSequence topic, PubSubMethodListenerBase listener) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
-		if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) 
+		if (msgCommandChannel.goHasRoom()  
 			&& PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100)) {
 		    
 		    PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, System.identityHashCode(listener));
@@ -108,7 +108,7 @@ public class PubSubService {
 		
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
-		if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) 
+		if (msgCommandChannel.goHasRoom()  
 			&& PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101)) {
 		    
 		    PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, System.identityHashCode((PubSubMethodListenerBase)msgCommandChannel.listener));
@@ -133,7 +133,7 @@ public class PubSubService {
 	public boolean unsubscribe(CharSequence topic, PubSubMethodListenerBase listener) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
-		if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) 
+		if (msgCommandChannel.goHasRoom()  
 			&& PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101)) {
 		    
 		    PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, System.identityHashCode(listener));
@@ -164,7 +164,7 @@ public class PubSubService {
 		if (token>=0) {
 			return msgCommandChannel.publishFailableOnPrivateTopic(token, writable);
 		} else {
-			if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && PipeWriter.hasRoomForWrite(msgCommandChannel.messagePubSub)) {
+			if (msgCommandChannel.goHasRoom() && PipeWriter.hasRoomForWrite(msgCommandChannel.messagePubSub)) {
 				PubSubWriter pw = (PubSubWriter) Pipe.outputStream(msgCommandChannel.messagePubSub);
 		
 				DataOutputBlobWriter.openField(pw);
@@ -209,7 +209,8 @@ public class PubSubService {
 		if (token>=0) {
 			return msgCommandChannel.publishFailableOnPrivateTopic(token, writable);
 		} else {
-			if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && PipeWriter.hasRoomForWrite(msgCommandChannel.messagePubSub)) {
+			if (msgCommandChannel.goHasRoom() 
+				&& PipeWriter.hasRoomForWrite(msgCommandChannel.messagePubSub)) {
 				PubSubWriter pw = (PubSubWriter) Pipe.outputStream(msgCommandChannel.messagePubSub);
 		
 				DataOutputBlobWriter.openField(pw);
@@ -256,7 +257,7 @@ public class PubSubService {
 			//should not be called when	DYNAMIC_MESSAGING is not on.
 			
 		    //this is a public topic
-			if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && 
+			if (msgCommandChannel.goHasRoom()  && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 		        
 				DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
@@ -292,7 +293,7 @@ public class PubSubService {
 			//should not be called when	DYNAMIC_MESSAGING is not on.
 			
 		    //this is a public topic
-			if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && 
+			if (msgCommandChannel.goHasRoom()  && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 		        
 				DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
@@ -335,7 +336,7 @@ public class PubSubService {
 				}
 			}
 			
-		    if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && 
+		    if (msgCommandChannel.goHasRoom()  && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 				
 				PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, WaitFor.All.policy());
@@ -381,7 +382,7 @@ public class PubSubService {
 				}
 			}
 			
-		    if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && 
+		    if (msgCommandChannel.goHasRoom()  && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 				
 				PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, waitFor.policy());
@@ -437,7 +438,7 @@ public class PubSubService {
 		if (token>=0) {
 			return msgCommandChannel.publishOnPrivateTopic(token, writable);
 		} else {
-		    if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && 
+		    if (msgCommandChannel.goHasRoom()  && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 				
 				PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, WaitFor.All.policy());
@@ -493,7 +494,7 @@ public class PubSubService {
 		if (token>=0) {
 			return msgCommandChannel.publishOnPrivateTopic(token, writable);
 		} else {
-		    if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && 
+		    if (msgCommandChannel.goHasRoom() && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 				
 				PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, waitFor.policy());
@@ -551,7 +552,7 @@ public class PubSubService {
 		if (token>=0) {
 			return msgCommandChannel.publishOnPrivateTopic(token, writable);
 		} else { 
-		    if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) && 
+		    if (msgCommandChannel.goHasRoom()  && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 		    	
 				
@@ -596,7 +597,7 @@ public class PubSubService {
 			 throw new UnsupportedOperationException("no match "+state.getClass());
 		 }
 		
-		 if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) 
+		 if (msgCommandChannel.goHasRoom()  
 		     && PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_CHANGESTATE_70)) {
 		
 			 PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_CHANGESTATE_70_FIELD_ORDINAL_7,  state.ordinal());
@@ -616,7 +617,7 @@ public class PubSubService {
 		    if (hasRoomFor(1)) { 
 		    	//logger.info("shutting down runtime.");
 		    	if (null!=msgCommandChannel.goPipe) {
-		    		PipeWriter.publishEOF(msgCommandChannel.goPipe);            		
+		    		Pipe.publishEOF(msgCommandChannel.goPipe);            		
 		    	} else {
 		    		//logger.info("sending EOF to cause shutdown");
 		    		msgCommandChannel.sentEOF(msgCommandChannel.messagePubSub);

@@ -65,21 +65,21 @@ public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
         long fieldTimeMS = PipeReader.readLong(input,MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14);
     }
 
-    public static void publishGo(Pipe<TrafficOrderSchema> output, int fieldPipeIdx, int fieldCount) {
-            PipeWriter.presumeWriteFragment(output, MSG_GO_10);
-            PipeWriter.writeInt(output,MSG_GO_10_FIELD_PIPEIDX_11, fieldPipeIdx);
-            PipeWriter.writeInt(output,MSG_GO_10_FIELD_COUNT_12, fieldCount);
-            PipeWriter.publishWrites(output);
-    }
-    public static void publishBlockChannel(Pipe<TrafficOrderSchema> output, long fieldDurationNanos) {
-            PipeWriter.presumeWriteFragment(output, MSG_BLOCKCHANNEL_22);
-            PipeWriter.writeLong(output,MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13, fieldDurationNanos);
-            PipeWriter.publishWrites(output);
-    }
-    public static void publishBlockChannelUntil(Pipe<TrafficOrderSchema> output, long fieldTimeMS) {
-            PipeWriter.presumeWriteFragment(output, MSG_BLOCKCHANNELUNTIL_23);
-            PipeWriter.writeLong(output,MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14, fieldTimeMS);
-            PipeWriter.publishWrites(output);
-    }
+//    public static void publishGo(Pipe<TrafficOrderSchema> output, int fieldPipeIdx, int fieldCount) {
+//            PipeWriter.presumeWriteFragment(output, MSG_GO_10);
+//            PipeWriter.writeInt(output,MSG_GO_10_FIELD_PIPEIDX_11, fieldPipeIdx);
+//            PipeWriter.writeInt(output,MSG_GO_10_FIELD_COUNT_12, fieldCount);
+//            PipeWriter.publishWrites(output);
+//    }
+//    public static void publishBlockChannel(Pipe<TrafficOrderSchema> output, long fieldDurationNanos) {
+//            PipeWriter.presumeWriteFragment(output, MSG_BLOCKCHANNEL_22);
+//            PipeWriter.writeLong(output,MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13, fieldDurationNanos);
+//            PipeWriter.publishWrites(output);
+//    }
+//    public static void publishBlockChannelUntil(Pipe<TrafficOrderSchema> output, long fieldTimeMS) {
+//            PipeWriter.presumeWriteFragment(output, MSG_BLOCKCHANNELUNTIL_23);
+//            PipeWriter.writeLong(output,MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14, fieldTimeMS);
+//            PipeWriter.publishWrites(output);
+//    }
         
 }

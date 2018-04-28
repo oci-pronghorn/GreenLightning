@@ -6,6 +6,7 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
+import com.ociweb.pronghorn.network.ServerSocketWriterStage;
 
 public class NamedMessagePassingTest {
 	
@@ -15,21 +16,34 @@ public class NamedMessagePassingTest {
 	// -XX:MaxGCPauseMillis=5 -XX:+UseG1GC
 	// -XX:MaxDirectMemorySize=256m
 
+//	@Test
+//	public void lowCPUUsage() {
+//		
+//		//run server
+//		
+//		boolean telemetry = true;  //must not be true when checked in.
+//		long cycleRate = 10_000;
+//		
+//		//cpu usage
+//		//default network size..
+//		
+//		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
+//		
+//		try {
+//			Thread.sleep(200_000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		
+//		//call cpu monior ...
+//		
+//	}
+	
 	@Test
 	public void runTest() {
 
-		//    cpupower frequency-info
-		//    sudo cpupower frequency-set -g performance
-		//    sudo x86_energy_perf_policy performance
-		//   
-        //monitor with
-		//    sudo turbostat --debug -P
-        //    sudo perf stat -a
-		
-		//open this location and write zero then hold it open value?
-		//try this  https://access.redhat.com/articles/65410
-		
-		//ScriptedNonThreadScheduler.debugStageOrder = System.out;
+		//ServerSocketWriterStage.showWrites = true;
 		
 		//ClientSocketWriterStage.logLatencyData = true; //for the group of connections used.
 		//ClientConnection.logLatencyData = true; //every individual connection
@@ -37,8 +51,17 @@ public class NamedMessagePassingTest {
 		//HTTP1xResponseParserStage.showData = true;
 		//HTTP1xRouterStage.showHeader=true;
 		
-		boolean telemetry = false;  //must not be true when checked in.
-		long cycleRate = 1000;
+//		-XX:+UnlockCommercialFeatures 
+//		-XX:+FlightRecorder
+//		-XX:CMSInitiatingOccupancyFraction=98  //fixed 99
+//		-XX:+UseCMSInitiatingOccupancyOnly
+//		-XX:+UseThreadPriorities 
+//		-XX:+UseNUMA
+//		-XX:+UnlockDiagnosticVMOptions
+//		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9
+				
+		boolean telemetry = true;  //must not be true when checked in.
+		long cycleRate = 5000;
 		
 		
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
@@ -51,27 +74,15 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack = 1_000; //*(1+99_9999);// / 10;
+		int cyclesPerTrack = 1_000; //*(1+99_9999);// / 10;		
+		int parallelTracks = 1;
 		
 		ParallelClientLoadTesterConfig config2 = 
-				new ParallelClientLoadTesterConfig(1, cyclesPerTrack, 8080, "/test", telemetry);
+				new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8080, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 2;  //7 126k for max volume
+		config2.simultaneousRequestsPerTrackBits  = 0;  //7 126k for max volume
 		
-		//TODO: chunked with simlutanious requests is broken, client side issue
-		//      HTTP1xResponseParserStage needs research for multiple post responses.
-		
-		//Cases using pipe listener:
-		// OrderSuper - was scanning could hold head values
-		// Reactor    - was scanning could hold head values
-		// Scheduler  - was scanning list was too long to check.
-		
-		
-		//For low latency
-		config2.cycleRate = cycleRate; //TODO: may need to be bigger for slow windows boxes.
-			
-		//TODO: ensure we have enough volume to make the optimization...
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),

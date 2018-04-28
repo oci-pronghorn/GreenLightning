@@ -34,31 +34,11 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 	
 	@Override
 	public void declareConfiguration(Builder builder) {
-		
-		File file = null;
-		try {
-			file = File.createTempFile("temp",".log");
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		//test with 0 -  1 
-		//20K  48mircos with logging on
-        //22K  42micros with logiing off
-		//slowdown of 14% for logging
-		
-		//test with 7 - 128 		
-		// 76K  1659micros with logging on
-		//113K  1114micros with logging off
-		//slowdown of 49% for logging
-		//this is faster than tomcat without any logging
-		
-		
+
 		builder.useHTTP1xServer(8080)
 		       .useInsecureServer()
-		       .logTraffic()
-		       .setMaxRequestSize(200)
+		       //.logTraffic(false)
+		       //TODO: confirm that 404 comes back when we get requests too large..
 		       .setDecryptionUnitsPerTrack(2)
 		       .setEncryptionUnitsPerTrack(2)
 		       .setHost("127.0.0.1");		
@@ -81,7 +61,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		//since they require a router to manage the interTrack communication.	
 		///////////////////////////
 				
-		builder.parallelTracks(2);
+		builder.parallelTracks(1);
 		
 		builder.setDefaultRate(rate);
 
