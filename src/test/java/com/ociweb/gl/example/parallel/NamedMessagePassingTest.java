@@ -78,7 +78,7 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack = 3_000_000; //*(1+99_9999);// / 10;		
+		int cyclesPerTrack = 30_000; //*(1+99_9999);// / 10;		
 		int parallelTracks = 1;
 		
 		ParallelClientLoadTesterConfig config2 = 
