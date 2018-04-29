@@ -341,11 +341,31 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	    		return;
 	    	}
 	    	
-	    	final Runnable lastCall = new Runnable() {    		
+	    	final Runnable lastCallClean = new Runnable() {    		
 	    		@Override
 	    		public void run() {
+	    			
 	    			//all the software has now stopped so shutdown the hardware now.
 	    			builder.shutdown();
+	    			
+	    			if (null!=cleanShutdownRunnable) {
+	    				cleanShutdownRunnable.run();
+	    			}
+	    				    			
+	    		}    		
+	    	};
+	    	
+	    	final Runnable lastCallDirty = new Runnable() {    		
+	    		@Override
+	    		public void run() {
+	    			
+	    			//all the software has now stopped so shutdown the hardware now.
+	    			builder.shutdown();
+	    			
+	    			if (null!=dirtyShutdownRunnable) {
+	    				dirtyShutdownRunnable.run();
+	    			}
+	    			
 	    			
 	    		}    		
 	    	};
@@ -359,7 +379,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					logger.info("Scheduler {} shutdown ", scheduler.getClass().getSimpleName());
 					scheduler.shutdown();
 				
-					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCall, lastCall);
+					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCallClean, lastCallDirty);
 					
 				}
 	    		
@@ -1055,6 +1075,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 	public static IntHashTable getSubPipeLookup(MsgRuntime runtime) {
 		return runtime.subscriptionPipeLookup;
+	}
+
+	private Runnable cleanShutdownRunnable;
+	private Runnable dirtyShutdownRunnable;
+	
+	
+	public void addCleanShutdownRunnable(Runnable cleanRunnable) {
+		this.cleanShutdownRunnable = cleanRunnable;
+	}
+
+	public void addDirtyShutdownRunnable(Runnable dirtyRunnable) {
+		this.dirtyShutdownRunnable = dirtyRunnable;
 	}
 
     

@@ -57,11 +57,15 @@ public class NamedMessagePassingTest {
 //		-XX:+UseCMSInitiatingOccupancyOnly
 //		-XX:+UseThreadPriorities 
 //		-XX:+UseNUMA
+//		-XX:+AlwaysPreTouch
+//		-XX:+UseConcMarkSweepGC 
+//		-XX:+CMSParallelRemarkEnabled 
+//		-XX:+ParallelRefProcEnabled
 //		-XX:+UnlockDiagnosticVMOptions
-//		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9
+//		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9 ??
 				
 		boolean telemetry = false;  //must not be true when checked in.
-		long cycleRate = 5000;
+		long cycleRate = 2000;
 		
 		
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
@@ -74,7 +78,7 @@ public class NamedMessagePassingTest {
 		
 		//10*   8min
 		//50*  50min		
-		int cyclesPerTrack = 100_000; //*(1+99_9999);// / 10;		
+		int cyclesPerTrack = 3_000_000; //*(1+99_9999);// / 10;		
 		int parallelTracks = 1;
 		
 		ParallelClientLoadTesterConfig config2 = 
