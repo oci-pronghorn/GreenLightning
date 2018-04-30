@@ -78,7 +78,7 @@ public class NamedMessagePassingTest {
 		
 		//2M is about 1 min
 		
-		int cyclesPerTrack =  1_000_000; //*(1+99_9999);// / 10;		
+		int cyclesPerTrack =  10_000; //*(1+99_9999);// / 10;		
 		int parallelTracks = 1;
 		
 		ParallelClientLoadTesterConfig config2 = 
