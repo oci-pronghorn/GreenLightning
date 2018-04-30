@@ -878,10 +878,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			//logger.info("new empty block at {} {} ",block1HeaderBlobPosition, block1PositionOfLen);
 	}
 
-    
-	public boolean goHasRoom() {
-		return null==goPipe || PipeWriter.hasRoomForWrite(goPipe);
-	}
 
 	/**
 	 *

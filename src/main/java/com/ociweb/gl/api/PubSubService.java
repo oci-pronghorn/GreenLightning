@@ -225,7 +225,7 @@ public class PubSubService {
 	 * @param topic CharSequence arg used in output.append
 	 * @param writable FailableWritable arg used in msgCommandChannel.publishPrivateTopics
 	 * @param ap WaitFor arg used in PipeWriter.writeInt
-	 * @return
+	 * @return failableWrite
 	 */
 	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";

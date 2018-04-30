@@ -24,10 +24,11 @@ public class HTTPRequestService {
 		msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
 	}
 
+
 	/**
 	 *
 	 * @param messageCount number to be multiplied by msgCommandChannel.httpRequest
-	 * @return
+	 * @return has room
 	 */
 	public boolean hasRoomFor(int messageCount) {		
 		assert(msgCommandChannel.httpRequest!=null) : "Client side HTTP Request must be enabled";    	
@@ -84,7 +85,7 @@ public class HTTPRequestService {
 		if (session.getConnectionId()<0) {
 			
 			final long id = ClientCoordinator.lookup(
-					                   ClientCoordinator.lookupHostId((CharSequence) session.host, msgCommandChannel.READER), 
+					                   ClientCoordinator.lookupHostId(session.hostBytes), 
 					                   session.port, 
 					                   session.sessionId);
 		    if (id>=0) {

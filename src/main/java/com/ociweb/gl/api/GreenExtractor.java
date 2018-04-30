@@ -21,8 +21,7 @@ public class GreenExtractor {
 	 *
 	 * @param idx int arg index number
 	 * @param writer arg of data type ChannelWriter
-	 * @see TrieParserReader/capturedFieldBytes
-	 * @return
+	 * @return length
 	 */
 	public int copyExtractedBytesToWriter(int idx, ChannelWriter writer) {
 		return TrieParserReader.capturedFieldBytes(tpr, idx, writer);
@@ -31,8 +30,7 @@ public class GreenExtractor {
 	/**
 	 *
 	 * @param idx int arg index number
-	 * @see TrieParserReader/capturedFieldBytesLength
-	 * @return
+	 * @return length
 	 */
 	public int copyExtractedBytesLength(int idx) {
 		return TrieParserReader.capturedFieldBytesLength(tpr, idx);
@@ -42,8 +40,7 @@ public class GreenExtractor {
 	 *
 	 * @param idx int arg index number
 	 * @param writer
-     * @see TrieParserReader/writeCapturedUTF8
-	 * @return
+	 * @return length
 	 */
 	public int copyExtractedUTF8ToWriter(int idx, ChannelWriter writer) {
 		return TrieParserReader.writeCapturedUTF8(tpr, idx, writer);
@@ -54,8 +51,7 @@ public class GreenExtractor {
      * @param idx int arg index number
      * @param target
      * @param <A>
-     * @see TrieParserReader/capturedFieldBytesAsUTF8
-     * @return
+     * @return length
      */
 	public <A extends Appendable> A copyExtractedUTF8ToAppendable(int idx, A target) {
 		return TrieParserReader.capturedFieldBytesAsUTF8(tpr, idx, target);
@@ -64,8 +60,7 @@ public class GreenExtractor {
     /**
      *
      * @param idx int arg index number
-     * @see TrieParserReader/capturedFieldBytesAsUTF8
-     * @return
+     * @return text
      */
 	public String extractedString(int idx) {
 		return TrieParserReader.capturedFieldBytesAsUTF8(tpr, idx, new StringBuilder()).toString();
@@ -74,8 +69,7 @@ public class GreenExtractor {
     /**
      *
      * @param idx int arg index number
-     * @see TrieParserReader/capturedLongField
-     * @return
+     * @return value
      */
 	public long extractedLong(int idx) {
 		return TrieParserReader.capturedLongField(tpr, idx);
@@ -84,19 +78,12 @@ public class GreenExtractor {
     /**
      *
      * @param idx int arg index number
-     * @see TrieParserReader/capturedDecimalMField
-     * @return
+     * @return value
      */
 	public long extractedDecimalMantissa(int idx) {
 		return TrieParserReader.capturedDecimalMField(tpr, idx);
 	}
 
-    /**
-     *
-     * @param idx int arg index number
-     * @see TrieParserReader/capturedDecimalEField
-     * @return
-     */
 	public long extractedDecimalExponent(int idx) {
 		return TrieParserReader.capturedDecimalEField(tpr, idx);
 	}

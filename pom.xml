@@ -191,7 +191,7 @@
                         <goal>shade</goal>
                     </goals>
                     <configuration>
-                        <finalName>gl_component</finalName>
+                        <finalName>gl</finalName>
                         <filters>
                             <filter>
                                 <artifact>*jnr-ffi:jnr-ffi*</artifact>
@@ -231,55 +231,8 @@
             </manifestEntries -->
           </archive>
         </configuration>
-      </plugin>
-      
-       <plugin>
-	     
-	        <groupId>com.github.wvengen</groupId>
-	        <artifactId>proguard-maven-plugin</artifactId>
-	        <version>2.0.13</version>
-	        <executions>
-	          <execution>
-	            <id>proguard</id>
-	            <phase>package</phase>
-	            <goals>
-	              <goal>proguard</goal>
-	            </goals>
-	          </execution>
-	        </executions>
-	        <configuration>
-	          <options>
-	            <option>-keep public class com.ociweb.GreenLightning {
-			    public static void main(java.lang.String[]);
-			}</option>
-				<option>-keep class jnr.ffi.** { *; }</option>
-				<option>-keep class com.kenai.jffi.** { *; }</option>				
-				<option>-keep class com.ociweb.pronghorn.network.config.** { *; }</option>
-				
-	            <option>-dontobfuscate</option>
-				<option>-ignorewarnings</option>
-			    <option>-dontnote</option>
-                <option>-dontwarn</option>
-				<option>-optimizations code/allocation/</option>
-	          </options>
-	          <obfuscate>false</obfuscate>
-	          <libs>
-	            <lib>${java.bootstrap.classes}</lib>
-	            <lib>${java.cryptographic.extension.classes}</lib>
-	            <lib>${java.secure.socket.extension.classes}</lib>
-	          </libs>
-	          <injar>gl_component.jar</injar>
-	          <outjar>gl.jar</outjar>
-	        </configuration>
-	        <dependencies>
-	          <dependency>
-	            <groupId>net.sf.proguard</groupId>
-	            <artifactId>proguard-base</artifactId>
-	            <version>5.1</version>
-	            <scope>runtime</scope>
-	          </dependency>
-	        </dependencies>
-        </plugin>
+      </plugin>            
+        
 	<plugin>
 	    <groupId>com.excelsiorjet</groupId>
 	    <artifactId>excelsior-jet-maven-plugin</artifactId>
@@ -303,6 +256,6 @@
     </build>
 
 
-    <description>Open Edge - Green Lightning Broker</description>
+    <description>Open Edge - Green Lightning Micro-Service Runtime</description>
     <url>https://github.com/oci-pronghorn/GreenLightning</url>
 </project>

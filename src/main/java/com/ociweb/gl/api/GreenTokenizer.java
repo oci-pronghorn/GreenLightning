@@ -16,7 +16,7 @@ public class GreenTokenizer extends GreenExtractor {
 	 *
 	 * @param value arg of data type CharSequence
 	 * @see TrieParserReader
-	 * @return
+	 * @return token
 	 */
 	public long tokenize(CharSequence value) {
 		return TrieParserReader.query(tpr, tp, value);
@@ -28,7 +28,7 @@ public class GreenTokenizer extends GreenExtractor {
 	 * @param position int arg
 	 * @param length int arg
 	 * @see TrieParserReader
-	 * @return
+	 * @return token
 	 */
 	public long tokenize(byte[] source, int position, int length) {
 		return TrieParserReader.query(tpr, tp, source, position, length, Integer.MAX_VALUE);
@@ -41,7 +41,7 @@ public class GreenTokenizer extends GreenExtractor {
 	 * @param length int arg
 	 * @param mask int arg
 	 * @see TrieParserReader
-	 * @return
+	 * @return token
 	 */
 	public long tokenize(byte[] source, int position, int length, int mask) {
 		return TrieParserReader.query(tpr, tp, source, position, length, mask);

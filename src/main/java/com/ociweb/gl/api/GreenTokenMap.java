@@ -36,7 +36,7 @@ public class GreenTokenMap {
 	 * 
 	 * @param id
 	 * @param template
-	 * @return
+	 * @return map
 	 */
 	public GreenTokenMap add(long id, CharSequence template) {
 		tp.setUTF8Value(template, id); 

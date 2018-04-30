@@ -40,7 +40,7 @@ public class HTTPResponseService {
 	/**
 	 *
 	 * @param messageCount int arg for number of messages
-	 * @return
+	 * @return has room for
 	 */
 	public boolean hasRoomFor(int messageCount) {
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 

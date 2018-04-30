@@ -65,7 +65,7 @@ public class NamedMessagePassingTest {
 //		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9 ??
 				
 		boolean telemetry = false;  //must not be true when checked in.
-		long cycleRate = 2000;
+		long cycleRate = 4000;
 		
 		
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
@@ -76,9 +76,9 @@ public class NamedMessagePassingTest {
 		
 		//spikes are less frequent when the wifi network is off...
 		
-		//10*   8min
-		//50*  50min		
-		int cyclesPerTrack = 30_000; //*(1+99_9999);// / 10;		
+		//2M is about 1 min
+		
+		int cyclesPerTrack =  10_000; //*(1+99_9999);// / 10;		
 		int parallelTracks = 1;
 		
 		ParallelClientLoadTesterConfig config2 = 
@@ -90,7 +90,7 @@ public class NamedMessagePassingTest {
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),
-				600_000);
+				5*60*60_000); //5 hours
 		
 		//average resources per page is about 100
 		//for 100 calls we expect the slowest to be 100 micros

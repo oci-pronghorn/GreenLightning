@@ -19,7 +19,7 @@ public class DelayService {
 	/**
 	 *
 	 * @param messageCount number of messages
-	 * @return
+	 * @return has rooom
 	 */
 	public boolean hasRoomFor(int messageCount) {
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
