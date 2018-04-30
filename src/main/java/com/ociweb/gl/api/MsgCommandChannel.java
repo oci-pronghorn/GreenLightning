@@ -234,7 +234,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 
-
 	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
 		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
 	}
@@ -913,7 +912,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			Pipe.confirmLowLevelRead(gcc.goPipe, size);
 			Pipe.publishWrites(gcc.goPipe);
 		} else {
-			logger.info("Unable to use block channel for ns without an additonal feature use or USE_DELAY can be added.");
+			logger.info("Unable to use block channel for ns without an additional feature use or USE_DELAY can be added.");
 		}
 	}
 	
@@ -932,16 +931,27 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			Pipe.confirmLowLevelRead(gcc.goPipe, size);
 			Pipe.publishWrites(gcc.goPipe);
 		} else {
-			logger.info("Unable to use block channel for ns without an additonal feature or USE_DELAY can be added.");
+			logger.info("Unable to use block channel for ns without an additional feature or USE_DELAY can be added.");
 		}
 	}
-	
+
+	/**
+	 *
+	 * @param cmd MsgCommandChannel <?> arg
+	 * @param publishPrivateTopics PublishPrivateTopics arg
+	 */
 	public static void setPrivateTopics(
 			MsgCommandChannel<?> cmd,
 			PublishPrivateTopics publishPrivateTopics) {
 		cmd.publishPrivateTopics = publishPrivateTopics;
 	}
 
+	/**
+	 *
+	 * @param cmd MsgCommandChannel<?> arg used for goPipe
+	 * @param target Pipe<TrafficOrderSchema> arg used for goPipe
+	 * @return null if cmd.goPipe == null else if target.cmd.goPipe target
+	 */
 	public static boolean isGoPipe(MsgCommandChannel<?> cmd, Pipe<TrafficOrderSchema> target) {
 		return (null==cmd.goPipe) || (target==cmd.goPipe);
 	}

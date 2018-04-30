@@ -9,11 +9,19 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
 public class SerialStoreProducer {
 
 	private final Pipe<PersistedBlobStoreProducerSchema> target;
-	
+
 	public SerialStoreProducer(Pipe<PersistedBlobStoreProducerSchema> target) {
 		this.target = target;
 	}
-	
+
+	/**
+	 *
+	 * @param blockId long arg used in PipeWriter.writeLong
+	 * @param backing byte[] arg used in PipeWriter.writeBytes
+	 * @param position int arg used in PipeWriter.writeBytes
+	 * @param length int arg used in PipeWriter.writeBytes
+	 * @return if (PipeWriter.tryWriteFragment(target, PersistedBlobStoreProducerSchema.MSG_BLOCK_1)) true else false
+	 */
 	public boolean store(long blockId, byte[] backing, int position, int length) {
 		if (PipeWriter.tryWriteFragment(target, PersistedBlobStoreProducerSchema.MSG_BLOCK_1)) {
 			
@@ -25,8 +33,14 @@ public class SerialStoreProducer {
 			return false;
 		}
 	}
-	
-	
+
+
+	/**
+	 *
+	 * @param blockId long arg used in PipeWriter.writeLong
+	 * @param w Writable arg used to write(stream)
+	 * @return if (PipeWriter.tryWriteFragment(target, PersistedBlobStoreProducerSchema.MSG_BLOCK_1)) true else false
+	 */
 	public boolean store(long blockId, Writable w) {
 		if (PipeWriter.tryWriteFragment(target, PersistedBlobStoreProducerSchema.MSG_BLOCK_1)) {
 			PipeWriter.writeLong(target,PersistedBlobStoreProducerSchema.MSG_BLOCK_1_FIELD_BLOCKID_3, blockId);

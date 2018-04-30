@@ -150,10 +150,19 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		return target;
 	}
 
+	/**
+	 *
+	 * @return useTLS(TLSCertificates.defaultCerts)
+	 */
 	public MQTTBridge useTLS() {
 		return useTLS(TLSCertificates.defaultCerts);
 	}
 
+	/**
+	 *
+	 * @param certificates TLSCertificates arg
+	 * @return this
+	 */
 	public MQTTBridge useTLS(TLSCertificates certificates) {
 		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 		assert(null != certificates);
@@ -161,11 +170,24 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		this.maximumLenghOfVariableLengthFields = Math.max(this.maximumLenghOfVariableLengthFields, 1<<15);
 		return this;
 	}
-	
+
+	/**
+	 *
+	 * @param user CharSequence arg to authenticate user
+	 * @param pass CharSequence arg to authenticate password
+	 * @return this.authentication(user, pass, null==this.certificates ? TLSCertificates.defaultCerts: this.certificates)
+	 */
 	public MQTTBridge authentication(CharSequence user, CharSequence pass) {
 		return this.authentication(user, pass, null==this.certificates ? TLSCertificates.defaultCerts: this.certificates);
 	}
 
+	/**
+	 *
+	 * @param user CharSequence arg to authenticate user
+	 * @param pass CharSequence arg to authenticate password
+	 * @param certificates TLSCertificates arg used to validate
+	 * @return if(user, pass, certificates !== null) return this
+	 */
 	public MQTTBridge authentication(CharSequence user, CharSequence pass, TLSCertificates certificates) {
 		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 		flags |= MQTTEncoder.CONNECT_FLAG_USERNAME_7;
@@ -187,6 +209,11 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		return this;
 	}
 
+	/**
+	 *
+	 * @param certificates TLSCertificates arg used to assert that certificates != null
+	 * @return this
+	 */
 	public MQTTBridge authentication(TLSCertificates certificates) {
 		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 
@@ -402,6 +429,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		return newArray;
 	}
 
+	/**
+	 *
+	 * @param msgRuntime MsgRuntime<?, ?> arg used in EgressMQTTStage
+	 */
 	public void finalizeDeclareConnections(MsgRuntime<?,?> msgRuntime) {
 		configStage = BridgeConfigStage.Finalized;
 		assert(internalTopicsXmit.length == externalTopicsXmit.length);

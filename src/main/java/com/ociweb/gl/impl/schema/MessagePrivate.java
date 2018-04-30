@@ -30,7 +30,10 @@ public class MessagePrivate extends MessageSchema<MessagePrivate> {
 		public static final int MSG_PUBLISH_1 = 0x00000000; //Group/OpenTempl/2
 		public static final int MSG_PUBLISH_1_FIELD_PAYLOAD_3 = 0x01c00001; //ByteVector/None/0
 
-
+	/**
+	 *
+	 * @param input Pipe<MessagePrivate> arg used for PipeReader.getMsgIdx and PipeReader.releaseReadLock
+	 */
 		public static void consume(Pipe<MessagePrivate> input) {
 		    while (PipeReader.tryReadFragment(input)) {
 		        int msgIdx = PipeReader.getMsgIdx(input);
@@ -46,10 +49,21 @@ public class MessagePrivate extends MessageSchema<MessagePrivate> {
 		    }
 		}
 
+	/**
+	 *
+	 * @param input Pipe<MessagePrivate> arg used in PipeReader.inputStream
+	 */
 		public static void consumePublish(Pipe<MessagePrivate> input) {
 		    DataInputBlobReader<MessagePrivate> fieldPayload = PipeReader.inputStream(input, MSG_PUBLISH_1_FIELD_PAYLOAD_3);
 		}
 
+	/**
+	 *
+	 * @param output Pipe<MessagePrivate> arg used for PipeWriter.presumeWriteFragment and PipeWriter.publishWrites
+	 * @param fieldPayloadBacking byte[] arg used for PipeWriter.writeBytes
+	 * @param fieldPayloadPosition int arg used for PipeWriter.writeBytes
+	 * @param fieldPayloadLength int arg used for PipeWriter.writeBytes
+	 */
 		public static void publishPublish(Pipe<MessagePrivate> output, byte[] fieldPayloadBacking, int fieldPayloadPosition, int fieldPayloadLength) {
 		        PipeWriter.presumeWriteFragment(output, MSG_PUBLISH_1);
 		        PipeWriter.writeBytes(output,MSG_PUBLISH_1_FIELD_PAYLOAD_3, fieldPayloadBacking, fieldPayloadPosition, fieldPayloadLength);
