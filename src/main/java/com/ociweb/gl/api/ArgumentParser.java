@@ -1,5 +1,7 @@
 package com.ociweb.gl.api;
 
+//import jdk.javadoc.internal.doclets.formats.html.Contents;
+
 public class ArgumentParser implements ArgumentProvider {
     private final String[] args;
 
@@ -58,7 +60,6 @@ public class ArgumentParser implements ArgumentProvider {
         String value = getOptArg(longName, shortName, defaultValue!=null?defaultValue.toString():null);
         return value!=null?Enum.valueOf(c, value):null;
     }
-
 
     @Override
     public boolean hasArgument(String longName, String shortName) {

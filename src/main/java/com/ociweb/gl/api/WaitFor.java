@@ -22,7 +22,7 @@ public enum WaitFor {
 	public int policy() {
 		return policy;
 	}
-	
+
 	public static final int computeRequiredCount(int policy, int totalCount) {
 		
 		if ((128&policy) == 0) {

@@ -16,12 +16,18 @@ import com.ociweb.pronghorn.util.Appendables;
 public class HTTPResponseService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
-	
+
 	public HTTPResponseService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;
 	}
-	
+
+	/**
+	 *
+	 * @param msgCommandChannel MsgCommandChannel arg used in
+	 * @param queueLength int arg specifying que length
+	 * @param maxMessageSize int arg specifying max message size
+	 */
 	public HTTPResponseService(MsgCommandChannel<?> msgCommandChannel,
 			int queueLength, int maxMessageSize) {
 		this.msgCommandChannel = msgCommandChannel;
@@ -30,46 +36,90 @@ public class HTTPResponseService {
 		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, queueLength, maxMessageSize);
 	}
-	
+
+	/**
+	 *
+	 * @param messageCount int arg for number of messages
+	 * @return
+	 */
 	public boolean hasRoomFor(int messageCount) {
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
 		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
 	}
-	
 
-	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, int statusCode) {
+	/**
+	 *
+	 * @param requestReader HTTPFieldReader arg used in publishHTTPResponse
+	 * @param statusCode int arg used in publishHTTPResponse
+	 * @return HTTPResponse with given args
+	 */
+	public boolean publishHTTPResponse(HTTPFieldReader<?> requestReader, int statusCode) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
 		//logger.info("Building response for connection {} sequence {} ",w.getConnectionId(),w.getSequenceCode());
 		
-		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
+		return publishHTTPResponse(requestReader.getConnectionId(), requestReader.getSequenceCode(),
 				statusCode,false,null,Writable.NO_OP); //no type and no body so use null
 	}
-	
-	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
+
+	/**
+	 *
+	 * @param requestReader HTTPFieldReader arg used in publishHTTPResponse
+	 * @param statusCode int used as arg in publishHTTPResponse
+	 * @param contentType HTTPContentType used as arg in publishHTTPResponse
+	 * @param writable Writable used as arg in publishHTTPResponse
+	 * @return HTTPResponse with given args
+	 */
+	public boolean publishHTTPResponse(HTTPFieldReader<?> requestReader,
 			int statusCode,
 		    HTTPContentType contentType,
 		   	Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
-		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
+		return publishHTTPResponse(requestReader.getConnectionId(), requestReader.getSequenceCode(),
 									statusCode, false, contentType, writable);
 	}
-	
-	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
+
+	/**
+	 *
+	 * @param requestReader HTTPFieldReader used as arg in publishHTTPResponse
+	 * @param statusCode int used as arg in publishHTTPResponse
+	 * @param hasContinuation boolean used as arg in publishHTTPResponse
+	 * @param contentType HTTPContentType used as arg in publishHTTPResponse
+	 * @param writable Writable used as arg in publishHTTPResponse
+	 * @return HTTPResponse with given args
+	 */
+	public boolean publishHTTPResponse(HTTPFieldReader<?> requestReader,
 			   int statusCode, boolean hasContinuation,
 			   HTTPContentType contentType,
 			   Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
-		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
+		return publishHTTPResponse(requestReader.getConnectionId(), requestReader.getSequenceCode(),
 				                statusCode, hasContinuation, contentType, writable);	
 	}
-	
+
+	/**
+	 *
+	 * @param connectionId long val used as arg in publishHTTPResponse
+	 * @param sequenceCode long val used as arg in publishHTTPResponse
+	 * @param statusCode int val used as arg in publishHTTPResponse
+	 * @return HTTPResponse with give args
+	 */
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, int statusCode) {
 		return publishHTTPResponse(connectionId, sequenceCode, statusCode, false, null, Writable.NO_OP);
 	}
-	
+
+	/**
+	 *
+	 * @param connectionId long val used as arg in @link <Pipe.addLongValue> //better to write like this?
+	 * @param sequenceCode long val used as arg in Pipe.addIntValue  //or this?
+	 * @param statusCode int val used as arg in outputField.openStream
+	 * @param hasContinuation boolean val used to determine if msgCommandChannel.lastResponseWriterFinished = 0 || 1
+	 * @param contentType HTTPContentType used as arg in outputField.openStream
+	 * @param writable Writable used to write outputStream
+	 * @return <code>false</code> if !Pipe.hasRoomForWrite else <code>true</code>
+	 */
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
             int statusCode, 
             boolean hasContinuation,
@@ -266,92 +316,20 @@ public class HTTPResponseService {
 		
 		return true;
 	}
-	
-	
-	@Deprecated
-	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
-	           boolean hasContinuation,
-	           CharSequence headers,
-	           Writable writable) {
-		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
-		
-		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
-		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
-		
-		assert(1==msgCommandChannel.lastResponseWriterFinished) : "Previous write was not ended can not start another.";
-		
-		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[parallelIndex] : msgCommandChannel.netResponse[0];
-		
-		if (!Pipe.hasRoomForWrite(pipe)) {
-			return false;
-		}		
-						
-		///////////////////////////////////////
-		//message 1 which contains the headers
-		//////////////////////////////////////		
-		msgCommandChannel.holdEmptyBlock(connectionId, sequenceNo, pipe);
-		
-		//////////////////////////////////////////
-		//begin message 2 which contains the body
-		//////////////////////////////////////////
-		
-		Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
-		Pipe.addLongValue(connectionId, pipe);
-		Pipe.addIntValue(sequenceNo, pipe);	
-		
-		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
-		
-		int context;
-		if (hasContinuation) {
-			context = 0;
-			msgCommandChannel.lastResponseWriterFinished = 0;
-		} else {
-			context = ServerCoordinator.END_RESPONSE_MASK;
-			msgCommandChannel.lastResponseWriterFinished = 1;	
-		}	
-		
-		DataOutputBlobWriter.openField(outputStream);
-		writable.write(outputStream); 
-		
-		if (hasContinuation) {
-			// for chunking we must end this block			
-			outputStream.write(MsgCommandChannel.RETURN_NEWLINE);
-		}
-		
-		int len = NetResponseWriter.closeLowLevelField(outputStream); //end of writing the payload    	
-		
-		Pipe.addIntValue(context, outputStream.getPipe());  //real context    	
-		Pipe.confirmLowLevelWrite(outputStream.getPipe());
-		   	
-		////////////////////Write the header
-		
-		DataOutputBlobWriter.openFieldAtPosition(outputStream, msgCommandChannel.block1HeaderBlobPosition);
-		
-		//HACK TODO: must formalize response building..
-		outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());
-		outputStream.append(" 200 OK\r\n");
-		outputStream.append(headers);
-		outputStream.append("Content-Length: "+len+"\r\n");
-		outputStream.append("\r\n");
-		
-		//outputStream.debugAsUTF8();
-		
-		int propperLength = DataOutputBlobWriter.length(outputStream);
-		Pipe.validateVarLength(outputStream.getPipe(), propperLength);
-		Pipe.setIntValue(propperLength, outputStream.getPipe(), msgCommandChannel.block1PositionOfLen); //go back and set the right length.
-		outputStream.getPipe().closeBlobFieldWrite();
-		
-		//now publish both header and payload
-		Pipe.publishWrites(outputStream.getPipe());
-		
-		return true;
-	}
-	
+
 	public boolean publishHTTPResponseContinuation(HTTPFieldReader<?> w, 
 			boolean hasContinuation, Writable writable) {
 		return publishHTTPResponseContinuation(w.getConnectionId(),w.getSequenceCode(), hasContinuation, writable);
 	}
-	
+
+	/**
+	 *
+	 * @param connectionId long value used as arg for msgCommandChannel.holdEmptyBlock and Pipe.addLongValue
+	 * @param sequenceCode long value used as arg in Pipe.addIntValue and msgCommandChannel.holdEmptyBlock
+	 * @param hasContinuation boolean used to make msgCommandChannel.lastResponseWriterFinished 0 if <code>true</code> else 1
+	 * @param writable Writable used to wrote outputStream
+	 * @return <code>false</code> if !Pipe.hasRoomForWrite(pipe) else <code>true</code>
+	 */
 	public boolean publishHTTPResponseContinuation(long connectionId, long sequenceCode, 
 			   boolean hasContinuation, Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
@@ -411,7 +389,11 @@ public class HTTPResponseService {
 		
 		return true;
 	}
-	
+
+	/**
+	 *
+	 * @return <code>false</code> if !msbCommandChannel.goHasRoom else <code>true</code>
+	 */
 	public boolean shutdown() {
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {

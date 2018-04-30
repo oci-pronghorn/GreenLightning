@@ -1,10 +1,5 @@
 package com.ociweb.gl.api;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.file.SerialStoreConsumer;
 import com.ociweb.gl.impl.file.SerialStoreProducer;
@@ -27,6 +22,10 @@ import com.ociweb.pronghorn.util.BloomFilter;
 import com.ociweb.pronghorn.util.CharSequenceToUTF8Local;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Represents a dedicated channel for communicating with a single device
@@ -87,7 +86,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	protected PipeConfigManager pcm;
 	private final int parallelInstanceId;
 
-	
     public MsgCommandChannel(GraphManager gm, B hardware,
 				  		    int parallelInstanceId,
 				  		    PipeConfigManager pcm
@@ -113,6 +111,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     //new method API
     ////////////////////////////////////
 
+	/**
+	 *
+	 * @param id int id to be passed to builder.serialStoreWrite
+	 * @return SerialStoreProducer(mypipe)
+	 */
 	public SerialStoreProducer newSerialStoreProducer(int id) {
 	  	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
@@ -127,7 +130,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	serialStoreProdPipes = growP(serialStoreProdPipes, myPipe);    	
     	return new SerialStoreProducer(myPipe);
 	}
-    
+
+	/**
+	 *
+	 * @param id int id be passed to builder.serialStoreRequestReplay
+	 * @return SerialStoreProducer(mypipe)
+	 */
 	public SerialStoreConsumer newSerialStoreConsumer(int id) {
 	  	if (isInit) {
     		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
@@ -142,35 +150,74 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	serialStoreConsPipes = growC(serialStoreConsPipes,myPipe);    	
     	return new SerialStoreConsumer(myPipe);
 	}
-	
+
+	/**
+	 *
+	 * @return PubSubService(this)
+	 */
 	public PubSubService newPubSubService() {
 		return new PubSubService(this);
 	}
-	
+
+	/**
+	 *
+	 * @param cmd MsgCommandChannel arg
+	 * @return cmd.pcm
+	 */
 	public static PipeConfigManager PCM(MsgCommandChannel cmd) {
 		return cmd.pcm;
 	}
-	
+
+	/**
+	 *
+	 * @param queueLength int to be passed to PubSubService
+	 * @param maxMessageSize int to be passed to PubSubService
+	 * @return PubSubService(this, queueLength, maxMessageSize)
+	 */
 	public PubSubService newPubSubService(int queueLength, int maxMessageSize) {
 		return new PubSubService(this,queueLength,maxMessageSize);
 	}
-	
+
+	/**
+	 *
+	 * @return HTTPRequestService(this)
+	 */
 	public HTTPRequestService newHTTPClientService() {
 		return new HTTPRequestService(this);
 	}
-	
+
+	/**
+	 *
+	 * @param queueLength int arg to be passed to HTTPRequestService
+	 * @param maxMessageSize int arg to be passed to HTTPRequestService
+	 * @return HTTPRequestService(this, queueLength, maxMessageSize)
+	 */
 	public HTTPRequestService newHTTPClientService(int queueLength, int maxMessageSize) {
 		return new HTTPRequestService(this,queueLength,maxMessageSize);
 	}
-	
+
+	/**
+	 *
+	 * @return HTTPResponseService
+	 */
 	public HTTPResponseService newHTTPResponseService() {
 		return new HTTPResponseService(this);
-	}	
-	
+	}
+
+	/**
+	 *
+	 * @param queueLength int arg to be passed to HTTPResponseService
+	 * @param maxMessageSize int arg to be passed to HTTPResponseService
+	 * @return HTTPResponseService(this, queueLength, maxMessageSize)
+	 */
 	public HTTPResponseService newHTTPResponseService(int queueLength, int maxMessageSize) {
 		return new HTTPResponseService(this,queueLength,maxMessageSize);
 	}
-	
+
+	/**
+	 *
+	 * @return new DelayService(this)
+	 */
 	public DelayService newDelayService() {
 		return new DelayService(this);
 	}
@@ -268,9 +315,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 //    	pcm.ensureSize(ServerResponseSchema.class, queueLength, maxMessageSize);
 //
 //    }
-    
-    
-    public static void growCommandCountRoom(MsgCommandChannel<?> cmd, int count) {
+
+	public static void growCommandCountRoom(MsgCommandChannel<?> cmd, int count) {
 		if (cmd.isInit) {
     		throw new UnsupportedOperationException("Too late, growCommandCountRoom method must be called in define behavior.");
     	}
@@ -365,8 +411,20 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		   }
 	}
 
-    
-    public Pipe<?>[] getOutputPipes() {
+	/**
+	 *
+	 * @return null if goPipe == null else PipeWriter.hasRoomForWrite(goPipe)
+	 */
+	public boolean goHasRoom() {
+		return null==goPipe || PipeWriter.hasRoomForWrite(goPipe);
+	}
+
+
+	/**
+	 *
+	 * @return results
+	 */
+	public Pipe<?>[] getOutputPipes() {
     	
     	//we wait till this last possible moment before building.
     	buildAllPipes();
@@ -491,10 +549,14 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	private Pipe<TrafficOrderSchema> newGoPipe(PipeConfig<TrafficOrderSchema> goPipeConfig) {
 		return new Pipe<TrafficOrderSchema>(goPipeConfig);
 	}
-        
-    
-    
-    public static void setListener(MsgCommandChannel<?> c, Behavior listener) {
+
+
+	/**
+	 *
+	 * @param c MsgCommandChannel arg
+	 * @param listener Behavior arg used to set c.listener
+	 */
+	public static void setListener(MsgCommandChannel<?> c, Behavior listener) {
         if (null != c.listener && c.listener!=listener) {
             throw new UnsupportedOperationException("Bad Configuration, A CommandChannel can only be held and used by a single listener lambda/class");
         }
@@ -822,6 +884,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return null==goPipe || PipeWriter.hasRoomForWrite(goPipe);
 	}
 
+	/**
+	 *
+	 * @param count int used as arg in TrafficOrderSchema.publishGo
+	 * @param pipeIdx int used as arg in TrafficOrderSchema.publishGo
+	 * @param gcc MsgCommandChannel arg used as arg in TrafficOrderSchema.publishGo
+	 */
 	public static void publishGo(int count, int pipeIdx, MsgCommandChannel<?> gcc) {				
 		if (null != gcc.goPipe) { //no 'go' needed if pipe is null
 			assert(pipeIdx>=0);
@@ -835,7 +903,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			
 		}
 	}
-	
+
+	/**
+	 *
+	 * @param durationNanos long arg used in PipeWriter.writeLong
+	 * @param gcc MsgCommandChannel used in PipeWriter.presumeWriteFragment and .publishWrites
+	 */
 	public static void publishBlockChannel(long durationNanos, MsgCommandChannel<?> gcc) {
 		
 		if (null != gcc.goPipe) {
@@ -850,6 +923,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 	
 
+	/**
+	 *
+	 * @param timeMS long arg used in PipeWriter.writeLong
+	 * @param gcc MsgCommandChannel used in PipeWriter.presumeWriteFragment and .publishWrites
+	 */
 	public static void publishBlockChannelUntil(long timeMS, MsgCommandChannel<?> gcc) {
 		
 		if (null != gcc.goPipe) {
@@ -868,7 +946,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			PublishPrivateTopics publishPrivateTopics) {
 		cmd.publishPrivateTopics = publishPrivateTopics;
 	}
-	
+
 	public static boolean isGoPipe(MsgCommandChannel<?> cmd, Pipe<TrafficOrderSchema> target) {
 		return (null==cmd.goPipe) || (target==cmd.goPipe);
 	}

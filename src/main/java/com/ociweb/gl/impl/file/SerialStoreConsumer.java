@@ -9,7 +9,11 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
 public class SerialStoreConsumer {
 
 	private final Pipe<PersistedBlobStoreConsumerSchema> target;
-	
+
+	/**
+	 *
+	 * @param target
+	 */
 	public SerialStoreConsumer(Pipe<PersistedBlobStoreConsumerSchema> target) {
 		this.target = target;
 	}
