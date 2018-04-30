@@ -23,16 +23,21 @@ public class HTTPRequestService {
 		
 		msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
 	}
-	
+
+
 	public boolean hasRoomFor(int messageCount) {		
 		assert(msgCommandChannel.httpRequest!=null) : "Client side HTTP Request must be enabled";    	
 		return Pipe.hasRoomForWrite(msgCommandChannel.httpRequest, 
 				FieldReferenceOffsetManager.maxFragmentSize(
 						Pipe.from(msgCommandChannel.httpRequest))*messageCount);
 	}
-	
-	
-	
+
+
+	/**
+	 *
+	 * @param session ClientHostPortInstance used as an arg for PipeWriter
+	 * @return true or false
+	 */
 	public boolean httpClose(ClientHostPortInstance session) {
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
@@ -68,7 +73,7 @@ public class HTTPRequestService {
 		if (session.getConnectionId()<0) {
 			
 			final long id = ClientCoordinator.lookup(
-					                   ClientCoordinator.lookupHostId((CharSequence) session.host, msgCommandChannel.READER), 
+					                   ClientCoordinator.lookupHostId(session.hostBytes), 
 					                   session.port, 
 					                   session.sessionId);
 		    if (id>=0) {
@@ -141,7 +146,15 @@ public class HTTPRequestService {
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, Writable payload) {
 		return httpPost(session, route, null, payload);
 	}
-	
+
+	/**
+	 *
+	 * @param session ClientHostPortInstance arg used in PipeWriter
+	 * @param route CharSequence arg used in PipeWriter
+	 * @param headers HeaderWritable arg used in PipeWriter
+	 * @param payload
+	 * @return true if session.getConnnectionId() < 0 <p> false otherwise
+	 */
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
@@ -215,7 +228,11 @@ public class HTTPRequestService {
 		} 
 		return false;
 	}
-	
+
+	/**
+	 *
+	 * @return true if msgCommandChannel.goHasRoom() <p> false otherwise
+	 */
 	public boolean shutdown() {
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
