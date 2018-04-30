@@ -33,7 +33,7 @@ public class ReactiveManagerPipeConsumer {
 			this.operators[i] = operators.getOperator(inputs[i]);
 		}
 		
-//		//for the inputs register the head listener
+		//for the inputs register the head listener
 //		int j = inputs.length;
 //		while (--j>=0) {
 //			Pipe.addPubListener(inputs[j], newWorkListener);

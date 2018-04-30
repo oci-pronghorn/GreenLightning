@@ -31,7 +31,13 @@ public class GreenTokenMap {
 	public int getSize() {
 		return tp.getLimit();
 	}
-	
+
+	/**
+	 * 
+	 * @param id
+	 * @param template
+	 * @return map
+	 */
 	public GreenTokenMap add(long id, CharSequence template) {
 		tp.setUTF8Value(template, id); 
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());		

@@ -10,7 +10,7 @@ import com.ociweb.pronghorn.pipe.Pipe;
 public class HTTPRequestService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
-	
+
 	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;		
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
@@ -25,6 +25,11 @@ public class HTTPRequestService {
 	}
 
 
+	/**
+	 *
+	 * @param messageCount number to be multiplied by msgCommandChannel.httpRequest
+	 * @return has room
+	 */
 	public boolean hasRoomFor(int messageCount) {		
 		assert(msgCommandChannel.httpRequest!=null) : "Client side HTTP Request must be enabled";    	
 		return Pipe.hasRoomForWrite(msgCommandChannel.httpRequest, 
@@ -58,11 +63,18 @@ public class HTTPRequestService {
 		}        
 		return false;
 	}
-	
+
 	public boolean httpGet(ClientHostPortInstance session, CharSequence route) {
 		return httpGet(session,route,null);
 	}
-	
+
+	/**
+	 *
+	 * @param session ClientHostPortInstance arg used in PipeWriter
+	 * @param route CharSequence arg used in PipeWriter
+	 * @param headers HeaderWritable arg used in PipeWriter
+	 * @return true or false
+	 */
 	public boolean httpGet(ClientHostPortInstance session, CharSequence route, HeaderWritable headers) {
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
@@ -142,7 +154,7 @@ public class HTTPRequestService {
 		}
 		return false;
 	}
-	
+
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, Writable payload) {
 		return httpPost(session, route, null, payload);
 	}

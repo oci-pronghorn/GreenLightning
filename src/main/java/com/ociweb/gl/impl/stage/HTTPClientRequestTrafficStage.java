@@ -337,9 +337,6 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	
 	}
 
-
-	private final TrieParserReader reader = new TrieParserReader(true); 
-	
 	private PipeUTF8MutableCharSquence mCharSequence = new PipeUTF8MutableCharSquence();
 	
 	//has side effect of storing the active connection as a member so it need not be looked up again later.
@@ -358,21 +355,29 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		int hostLen = PipeReader.peekDataLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
 		int port = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1);
 		int sessionId = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10);		
-
-		PipeUTF8MutableCharSquence mCharSeq = mCharSequence.setToField(requestPipe, hostMeta, hostLen);				
+		
+		
+		PipeUTF8MutableCharSquence mCharSeq = mCharSequence.setToField(requestPipe, hostMeta, hostLen);	
+		
+		
 		long connectionId;
 		
 		if (ClientHTTPRequestSchema.MSG_FASTHTTPGET_200 == msgIdx) {			
 			connectionId = PipeReader.peekLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20);
 		} else if (ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201 == msgIdx) {			
 			connectionId = PipeReader.peekLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_CONNECTIONID_20);
-		} else {			
-			connectionId = ccm.lookup(ClientCoordinator.lookupHostId((CharSequence) mCharSeq, READER), port, sessionId);			
+		} else {					
+			int hostPos = Pipe.convertToPosition(hostMeta, requestPipe);
+			byte[] backing = Pipe.byteBackingArray(hostMeta, requestPipe);
+									
+			connectionId = ccm.lookup(ClientCoordinator.lookupHostId(
+					backing, hostPos, hostLen, Pipe.blobMask(requestPipe)
+					), port, sessionId);			
 		}
 		
 		ClientConnection activeConnection = ClientCoordinator.openConnection(
 				ccm, mCharSeq, port, sessionId,
-				output, connectionId, reader, ccf);
+				output, connectionId, ccf);
 				
 		
 		if (null != activeConnection) {

@@ -18,7 +18,7 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     	super(p);
     	this.p = p;    
     }
-        
+
     public void writeString(CharSequence value) {
         writeUTF(value);
     }
@@ -29,9 +29,12 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
     
     //TODO: add method for wait on publish until this time.
     //public void publish(AtTime time);
-    
 
-    public boolean publish() {
+	/**
+	 *
+	 * @return true if loc!= 1 else false
+	 */
+	public boolean publish() {
         if (loc!=-1) {
 	        closeHighLevelField(loc);
 	        loc = -1;//clear field
@@ -42,7 +45,7 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
         return false;
     }
 
-    public void openField(int loc, MsgCommandChannel commandChannel) {
+	public void openField(int loc, MsgCommandChannel commandChannel) {
     	//assert(this.loc == -1) : "Already open for writing, can not open again.";
     	this.commandChannel = commandChannel;
         this.loc = loc;

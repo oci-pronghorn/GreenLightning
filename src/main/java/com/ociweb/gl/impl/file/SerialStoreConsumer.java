@@ -1,15 +1,17 @@
 package com.ociweb.gl.impl.file;
 
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
-import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
 
 public class SerialStoreConsumer {
 
 	private final Pipe<PersistedBlobStoreConsumerSchema> target;
-	
+
+	/**
+	 *
+	 * @param target
+	 */
 	public SerialStoreConsumer(Pipe<PersistedBlobStoreConsumerSchema> target) {
 		this.target = target;
 	}

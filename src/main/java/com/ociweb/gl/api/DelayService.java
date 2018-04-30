@@ -6,18 +6,31 @@ import com.ociweb.pronghorn.pipe.Pipe;
 public class DelayService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
-	
+
+	/**
+	 *
+	 * @param msgCommandChannel
+	 */
 	public DelayService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.USE_DELAY;
 	}
 
+	/**
+	 *
+	 * @param messageCount number of messages
+	 * @return has rooom
+	 */
 	public boolean hasRoomFor(int messageCount) {
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
 		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
 	}
-	
-	
+
+	/**
+	 *
+	 * @param durationNanos delay in nanoseconds
+	 * @return true if msgCommandChannel.goHasRoom <p> else return false
+	 */
 	 public boolean delay(long durationNanos) {
 		 assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
@@ -31,8 +44,13 @@ public class DelayService {
 		    assert(msgCommandChannel.exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
 		}
 	 }
-	 
-	 public boolean delayUntil(long msTime) {
+
+	/**
+	 *
+	 * @param msTime time to delay in miliseconds
+	 * @return true if msgCommandChannel.goHasRoom <p> else return false
+	 */
+	public boolean delayUntil(long msTime) {
 		 assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
 		    if (msgCommandChannel.goHasRoom()) {
