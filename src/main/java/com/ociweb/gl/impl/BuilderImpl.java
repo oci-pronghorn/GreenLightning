@@ -542,7 +542,13 @@ public class BuilderImpl implements Builder {
 	}
 
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
-				
+		return createScheduler(runtime, null, null);
+	}
+	
+	public StageScheduler createScheduler(final MsgRuntime runtime,
+										  final	Runnable cleanRunnable,
+										  final	Runnable dirtyRunnable) {
+
 		final StageScheduler scheduler = 
 				 runtime.builder.threadLimit>0 ?				
 		         StageScheduler.defaultScheduler(gm, 
@@ -550,14 +556,9 @@ public class BuilderImpl implements Builder {
 		        		 runtime.builder.threadLimitHard) :
 		         StageScheduler.defaultScheduler(gm);
 
-		Runtime.getRuntime().addShutdownHook(new Thread() {
-			public void run() {
-				scheduler.shutdown();
-				scheduler.awaitTermination(getShutdownSeconds(), TimeUnit.SECONDS);
-			}
-		});
-		
-		
+		runtime.addCleanShutdownRunnable(cleanRunnable);
+		runtime.addDirtyShutdownRunnable(dirtyRunnable);
+
 		return scheduler;
 	}
 

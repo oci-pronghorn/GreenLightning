@@ -637,7 +637,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		if (builder.totalLiveReactors.decrementAndGet()==0) {
 			//ready for full system shutdown.
-			if (null!=builder.lastCall) {				
+			if (null != builder.lastCall) {				
 				new Thread(
 						new Runnable() {							
 							public void run() {

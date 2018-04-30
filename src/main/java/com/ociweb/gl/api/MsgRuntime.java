@@ -341,11 +341,31 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	    		return;
 	    	}
 	    	
-	    	final Runnable lastCall = new Runnable() {    		
+	    	final Runnable lastCallClean = new Runnable() {    		
 	    		@Override
 	    		public void run() {
+	    			
 	    			//all the software has now stopped so shutdown the hardware now.
 	    			builder.shutdown();
+	    			
+	    			if (null!=cleanShutdownRunnable) {
+	    				cleanShutdownRunnable.run();
+	    			}
+	    				    			
+	    		}    		
+	    	};
+	    	
+	    	final Runnable lastCallDirty = new Runnable() {    		
+	    		@Override
+	    		public void run() {
+	    			
+	    			//all the software has now stopped so shutdown the hardware now.
+	    			builder.shutdown();
+	    			
+	    			if (null!=dirtyShutdownRunnable) {
+	    				dirtyShutdownRunnable.run();
+	    			}
+	    			
 	    			
 	    		}    		
 	    	};
@@ -359,7 +379,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					logger.info("Scheduler {} shutdown ", scheduler.getClass().getSimpleName());
 					scheduler.shutdown();
 				
-					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCall, lastCall);
+					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCallClean, lastCallDirty);
 					
 				}
 	    		
@@ -719,16 +739,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		serverConfig.ensureServerCanWrite(errConfig.maxVarLenSize());
 		final HTTP1xRouterStageConfig routerConfig1 = routerConfig;
 		
+		
+		
 		//TODO: use ServerCoordinator to hold information about log?
-		Pipe<HTTPLogRequestSchema>[] log = new Pipe[trackCounts];
-		Pipe<HTTPLogResponseSchema>[] log2 = new Pipe[trackCounts];
+		Pipe<HTTPLogRequestSchema>[] reqLog = new Pipe[trackCounts];
+		Pipe<HTTPLogResponseSchema>[] resLog = new Pipe[trackCounts];
 		Pipe[][] perTrackFromNet = Pipe.splitPipes(trackCounts, planIncomingGroup);
 
-		NetGraphBuilder.buildLogging(gm, serverCoord, log, log2);
+		NetGraphBuilder.buildLogging(gm, serverCoord, reqLog, resLog);
 		
 		NetGraphBuilder.buildRouters(gm, serverCoord, acks,
 				fromModulesToOrderSuper, fromRouterToModules, routerConfig1, errConfig,
-				catchAll, log, perTrackFromNet);
+				catchAll, reqLog, perTrackFromNet);
 
 		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup);
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
@@ -737,7 +759,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe<NetPayloadSchema>[][] perTrackFromSuper = Pipe.splitPipes(trackCounts, fromOrderedContent);
 				
 				
-		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, fromModulesToOrderSuper, log2, perTrackFromSuper);
+		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, fromModulesToOrderSuper, resLog, perTrackFromSuper);
 	}
 	//////////////////
 	//end of server and other behavior
@@ -1053,6 +1075,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 	public static IntHashTable getSubPipeLookup(MsgRuntime runtime) {
 		return runtime.subscriptionPipeLookup;
+	}
+
+	private Runnable cleanShutdownRunnable;
+	private Runnable dirtyShutdownRunnable;
+	
+	
+	public void addCleanShutdownRunnable(Runnable cleanRunnable) {
+		this.cleanShutdownRunnable = cleanRunnable;
+	}
+
+	public void addDirtyShutdownRunnable(Runnable dirtyRunnable) {
+		this.dirtyShutdownRunnable = dirtyRunnable;
 	}
 
     
