@@ -19,7 +19,7 @@ public class BlockingTaskTest {
 		//HTTP1xRouterStage.showHeader = true;
 		
 		boolean telemetry = false;  //must not be true when checked in.
-		int cyclesPerTrack = 400;
+		int cyclesPerTrack = 100;
 		int parallelTracks = 4;
 		int timeoutMS = 600_000;
 				
@@ -44,12 +44,12 @@ public class BlockingTaskTest {
 				timeoutMS);
 
 		//wait for telemetry to update
-		try {
-			Thread.sleep(2_000);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		try {
+//			Thread.sleep(2_000);
+//		} catch (InterruptedException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 		//TODO: assert some things about these results.
 	}

@@ -15,7 +15,8 @@ public interface HTTPServerConfig {
 	HTTPServerConfig setDecryptionUnitsPerTrack(int value);
 	HTTPServerConfig setConcurrentChannelsPerEncryptUnit(int value);
 	HTTPServerConfig setConcurrentChannelsPerDecryptUnit(int value);
-	HTTPServerConfig logTraffic(String basePath, int fileCount, long fileSizeLimit);
+	HTTPServerConfig logTraffic(String basePath, int fileCount, long fileSizeLimit, boolean logResponses);
+	HTTPServerConfig logTraffic(boolean logResponses);
 	HTTPServerConfig logTraffic();
 	
 	int getMaxConnectionBits();

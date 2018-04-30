@@ -424,7 +424,7 @@ public class HTTPResponseService {
 		try {
 		    if (msgCommandChannel.goHasRoom()) {            	
 		    	if (null!=msgCommandChannel.goPipe) {
-		    		PipeWriter.publishEOF(msgCommandChannel.goPipe);            		
+		    		Pipe.publishEOF(msgCommandChannel.goPipe);            		
 		    	} else {
 		    		//must find one of these outputs to shutdown
 		    		if (!msgCommandChannel.sentEOF(msgCommandChannel.messagePubSub)) {

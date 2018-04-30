@@ -5,7 +5,7 @@ import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeWriter;
+
 
 public class HTTPRequestService {
 
@@ -46,14 +46,15 @@ public class HTTPRequestService {
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
-		if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) 
-			&& PipeWriter.tryWriteFragment(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104)) {
+		if (msgCommandChannel.goHasRoom() && Pipe.hasRoomForWrite(msgCommandChannel.httpRequest) ) {
 								        	    
-			PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_SESSION_10, session.sessionId);
-			PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_PORT_1, session.port);
-			PipeWriter.writeBytes(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104_FIELD_HOST_2, session.hostBytes);
-		
-			PipeWriter.publishWrites(msgCommandChannel.httpRequest);
+			int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104);
+			
+			Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);	
+			Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
+			Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
+			Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
+			Pipe.publishWrites(msgCommandChannel.httpRequest);
 		        		
 			MsgCommandChannel.publishGo(1, msgCommandChannel.builder.netIndex(), msgCommandChannel);
 			    	            
@@ -92,50 +93,55 @@ public class HTTPRequestService {
 			
 		} 
 		
-		if ((null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe))) {
+		if (msgCommandChannel.goHasRoom() ) {
 		
 			if (session.getConnectionId()<0) {
 		
-				if (PipeWriter.tryWriteFragment(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100)) {
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_DESTINATION_11, msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId));
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_SESSION_10, session.sessionId);
+				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
-		    		PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1, session.port);
-		    		PipeWriter.writeBytes(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2, session.hostBytes);
-		    		
-		    		PipeWriter.writeUTF8(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, route);
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100);
+							
+					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
+					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
+					Pipe.addUTF8(route, msgCommandChannel.httpRequest);		    	
 					
 					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
 				    DataOutputBlobWriter.openField(hw);
 				    if (null!=headers) {
 				    	headers.write(msgCommandChannel.headerWriter.target(hw));
 				    }
-				    hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7);
+				    hw.closeLowLevelField();
 					
-					PipeWriter.publishWrites(msgCommandChannel.httpRequest);
+				    Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
+				    Pipe.publishWrites(msgCommandChannel.httpRequest);
 					
 					MsgCommandChannel.publishGo(1, msgCommandChannel.builder.netIndex(), msgCommandChannel);
 					
 					return true;
 				}
 			} else {
-				if (PipeWriter.tryWriteFragment(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200)) {
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_DESTINATION_11, msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId));
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_SESSION_10, session.sessionId);
+				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
-		    		PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PORT_1, session.port);
-		    		PipeWriter.writeBytes(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HOST_2, session.hostBytes);
-		    		PipeWriter.writeLong(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20, session.getConnectionId());
-		    		PipeWriter.writeUTF8(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PATH_3, route);
-		
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200);
+					
+					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
+					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
+					Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
+					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
+			
 					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
 				    DataOutputBlobWriter.openField(hw);
 				    if (null!=headers) {
 				    	headers.write(msgCommandChannel.headerWriter.target(hw));
 				    }
-				    hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HEADERS_7);
-										
-					PipeWriter.publishWrites(msgCommandChannel.httpRequest);
+				    hw.closeLowLevelField();
+						
+				    Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
+				    Pipe.publishWrites(msgCommandChannel.httpRequest);
 					
 					MsgCommandChannel.publishGo(1, msgCommandChannel.builder.netIndex(), msgCommandChannel);
 					
@@ -163,30 +169,33 @@ public class HTTPRequestService {
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
-		if (null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) { 
+		if (msgCommandChannel.goHasRoom() ) { 
 						
 			if (session.getConnectionId()<0) {
-				if (PipeWriter.tryWriteFragment(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101)) {
+				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_DESTINATION_11, msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId));
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_SESSION_10, session.sessionId);
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PORT_1, session.port);
-					PipeWriter.writeBytes(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HOST_2, session.hostBytes);
-					PipeWriter.writeUTF8(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, route);
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101);
 					
+					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);					
+					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
+					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
+						
 					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
 					DataOutputBlobWriter.openField(hw);
 					if (null!=headers) {
 						headers.write(msgCommandChannel.headerWriter.target(hw));
 					}
-					hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7);
+					hw.closeLowLevelField();
 					
 					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(msgCommandChannel.httpRequest);
 					DataOutputBlobWriter.openField(pw);
 					payload.write(pw);
-					pw.closeHighLevelField(ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PAYLOAD_5);
+					pw.closeLowLevelField();
 					
-					PipeWriter.publishWrites(msgCommandChannel.httpRequest);
+				    Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
+				    Pipe.publishWrites(msgCommandChannel.httpRequest);
 					
 					MsgCommandChannel.publishGo(1, msgCommandChannel.builder.netIndex(), msgCommandChannel);
 					
@@ -195,30 +204,32 @@ public class HTTPRequestService {
 				
 			} else {
 				
-				if (PipeWriter.tryWriteFragment(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201)) {
+				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {					
+
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201);
 					
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_DESTINATION_11, msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId));
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_SESSION_10, session.sessionId);
-					PipeWriter.writeInt(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_PORT_1, session.port);
-					PipeWriter.writeBytes(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_HOST_2, session.hostBytes);
-					
-					PipeWriter.writeLong(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_CONNECTIONID_20, session.getConnectionId());
+					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
+					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
+					Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
 										
-					PipeWriter.writeUTF8(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_PATH_3, route);
-					
+					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
+									
 					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
 					DataOutputBlobWriter.openField(hw);
 					if (null!=headers) {
 						headers.write(msgCommandChannel.headerWriter.target(hw));
 					}
-					hw.closeHighLevelField(ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_HEADERS_7);
+					hw.closeLowLevelField();
 					
 					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(msgCommandChannel.httpRequest);
 					DataOutputBlobWriter.openField(pw);
 					payload.write(pw);
-					pw.closeHighLevelField(ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201_FIELD_PAYLOAD_5);
+					pw.closeLowLevelField();
 					
-					PipeWriter.publishWrites(msgCommandChannel.httpRequest);
+				    Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
+				    Pipe.publishWrites(msgCommandChannel.httpRequest);
 					
 					MsgCommandChannel.publishGo(1, msgCommandChannel.builder.netIndex(), msgCommandChannel);
 					
@@ -238,7 +249,7 @@ public class HTTPRequestService {
 		try {
 		    if (msgCommandChannel.goHasRoom()) {            	
 		    	if (null!=msgCommandChannel.goPipe) {
-		    		PipeWriter.publishEOF(msgCommandChannel.goPipe);            		
+		    		Pipe.publishEOF(msgCommandChannel.goPipe);            		
 		    	} else {
 		    		//must find one of these outputs to shutdown
 		    		if (!msgCommandChannel.sentEOF(msgCommandChannel.messagePubSub)) {

@@ -1,5 +1,11 @@
 package com.ociweb.gl.api;
 
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+import java.util.concurrent.locks.ReentrantLock;
+
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
@@ -41,33 +47,33 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
   		  );    
      }
      
-//     @Deprecated
-//     private GreenCommandChannel newCommandChannel(int features) { 
-//         
-//     	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
-//     			                                         defaultCommandChannelMaxPayload);
-//
-//     	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
-//     	pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class);
-//     	
-//     	return this.builder.newCommandChannel(
-// 				features,
-// 				parallelInstanceUnderActiveConstruction,
-// 				pcm
-// 		  );    	
-//     }
+
      
     public static GreenRuntime run(GreenApp app) {
     	return run(app,new String[0]);
     }
 
-	/**
-	 *
-	 * @param app GreenApp arg used in runtime.declareBehavior
-	 * @param args String array arg
-	 * @return runtime
-	 */
-	public static GreenRuntime run(GreenApp app, String[] args) {
+    
+    public static GreenRuntime run(GreenApp app, String[] args) {
+    	return run(app, 
+    			   args,
+    			   new Runnable() {
+					@Override
+					public void run() {
+					}
+    			   }, 
+    			   new Runnable() {
+					@Override
+					public void run() {
+					}
+			       });
+    }
+    
+	public static GreenRuntime run(GreenApp app, 
+			                       String[] args,
+			                       Runnable cleanShutdown,
+			                       Runnable dirtyShutdown
+								) {
 		GreenRuntime runtime = new GreenRuntime(args, app.getClass().getSimpleName());
 		app.declareConfiguration(runtime.getBuilder());
 
@@ -82,13 +88,10 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		TelemetryConfig telemetryConfig = runtime.builder.getTelemetryConfig();
 		if (telemetryConfig != null) {
 			runtime.telemetryHost = runtime.gm.enableTelemetry(telemetryConfig.getHost(), telemetryConfig.getPort());
-		}
-		   //exportGraphDotFile();
+		}				
 
-		//runtime.scheduler = StageScheduler.threadPerStage(runtime.gm);//hack test.				
-		runtime.setScheduler(runtime.builder.createScheduler(runtime));
+		runtime.setScheduler(runtime.builder.createScheduler(runtime,cleanShutdown,dirtyShutdown));
 	    
-
 		System.out.println("To exit app press Ctrl-C");
 		
 		System.gc();
@@ -109,21 +112,51 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	 */
 	public static boolean testConcurrentUntilShutdownRequested(GreenApp app, long timeoutMS) {
 		
-		 long limit = System.nanoTime() + (timeoutMS*1_000_000L);
+		 final CyclicBarrier barrier = new CyclicBarrier(2);
 		 
-		 MsgRuntime runtime = run(app);
-
-    	 while (!runtime.isShutdownComplete()) {
-    		if (System.nanoTime() > limit) {
-				System.err.println("exit due to timeout");
-				return false;
-    		}
-    		try {
-				Thread.sleep(2);
-			} catch (InterruptedException e) {
-				return false;
+		 Runnable cleanShutdown = new Runnable() {
+			@Override
+			public void run() {
+				try {
+					barrier.await();
+				} catch (InterruptedException e) {
+					throw new RuntimeException(e);
+				} catch (BrokenBarrierException e) {
+					throw new RuntimeException(e);
+				}    
 			}
-    	 }
+	    };
+		   
+		   
+		Runnable dirtyShutdown = new Runnable() {
+			@Override
+			public void run() {
+				try {
+					barrier.await();
+				} catch (InterruptedException e) {
+					throw new RuntimeException(e);
+				} catch (BrokenBarrierException e) {
+					throw new RuntimeException(e);
+				}    
+			}
+		   };
+		   
+		MsgRuntime runtime = run(app, new String[0], cleanShutdown, dirtyShutdown);
+
+		try {			
+			//timeout code is now broken by this..
+			barrier.await(timeoutMS,TimeUnit.MILLISECONDS);
+		} catch (TimeoutException e) {
+			System.err.println("exit due to timeout");
+			return false;
+		} catch (InterruptedException e) {
+			logger.info("exit",e);
+			return false;
+		} catch (BrokenBarrierException e) {
+			logger.info("exit",e);
+			return false;
+		}    	
+		
     	 return true;
 	}
 

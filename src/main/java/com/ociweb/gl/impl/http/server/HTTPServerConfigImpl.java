@@ -215,13 +215,27 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 
 	@Override
 	public HTTPServerConfig logTraffic() {
-		logFile = new LogFileConfig();
+		logFile = new LogFileConfig(LogFileConfig.defaultPath(),
+				                    LogFileConfig.DEFAULT_COUNT, 
+				                    LogFileConfig.DEFAULT_SIZE,
+				                    true);
 		return this;
 	}
 	
 	@Override
-	public HTTPServerConfig logTraffic(String basePath, int fileCount, long fileSizeLimit) {
-		logFile = new LogFileConfig(basePath,fileCount,fileSizeLimit);
+	public HTTPServerConfig logTraffic(boolean logResponse) {
+		logFile = new LogFileConfig(LogFileConfig.defaultPath(),
+				                    LogFileConfig.DEFAULT_COUNT, 
+				                    LogFileConfig.DEFAULT_SIZE,
+				                    logResponse);
 		return this;
 	}
+	
+	@Override
+	public HTTPServerConfig logTraffic(String basePath, int fileCount, long fileSizeLimit, boolean logResponse) {
+		logFile = new LogFileConfig(basePath,fileCount,fileSizeLimit,logResponse);
+		return this;
+	}
+	
+	
 }
