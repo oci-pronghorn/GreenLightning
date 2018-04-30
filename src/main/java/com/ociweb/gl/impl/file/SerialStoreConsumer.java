@@ -1,9 +1,7 @@
 package com.ociweb.gl.impl.file;
 
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
-import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
 
 public class SerialStoreConsumer {
@@ -17,7 +15,11 @@ public class SerialStoreConsumer {
 	public SerialStoreConsumer(Pipe<PersistedBlobStoreConsumerSchema> target) {
 		this.target = target;
 	}
-		
+
+	/**
+	 *
+	 * @return if
+	 */
 	public boolean replay() {		
 		if (PipeWriter.tryWriteFragment(target, PersistedBlobStoreConsumerSchema.MSG_REQUESTREPLAY_6)) {
 			PipeWriter.publishWrites(target);	

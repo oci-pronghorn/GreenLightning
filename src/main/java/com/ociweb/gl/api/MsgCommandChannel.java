@@ -92,7 +92,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				           ) {
     	this(gm,hardware,ALL, parallelInstanceId, pcm);
     }
-    
+
     public MsgCommandChannel(GraphManager gm, B builder,
     					  int features,
     					  int parallelInstanceId,
@@ -114,7 +114,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	/**
 	 *
 	 * @param id int id to be passed to builder.serialStoreWrite
-	 * @return SerialStoreProducer(mypipe)
+	 * @return SerialStoreProducer(myPipe)
 	 */
 	public SerialStoreProducer newSerialStoreProducer(int id) {
 	  	if (isInit) {
@@ -134,7 +134,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	/**
 	 *
 	 * @param id int id be passed to builder.serialStoreRequestReplay
-	 * @return SerialStoreProducer(mypipe)
+	 * @return SerialStoreProducer(myPipe)
 	 */
 	public SerialStoreConsumer newSerialStoreConsumer(int id) {
 	  	if (isInit) {
@@ -362,8 +362,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	PipeConfig<TrafficOrderSchema> goConfig = cmd.pcm.getConfig(TrafficOrderSchema.class);
     	cmd.pcm.addConfig(count + goConfig.minimumFragmentsOnPipe(), 0, TrafficOrderSchema.class);
 	}
-    
-    
+
 	@SuppressWarnings("unchecked")
 	private void buildAllPipes() {
 		   

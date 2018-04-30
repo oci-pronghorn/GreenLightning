@@ -1,15 +1,14 @@
 package com.ociweb.gl.impl;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collection;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collection;
 
 /**
  * Scans up the object tree to find instances of specific classes
@@ -19,7 +18,14 @@ import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 public class ChildClassScanner {
 
 	private static final Logger logger = LoggerFactory.getLogger(ChildClassScanner.class);
-	
+
+	/**
+	 *
+	 * @param child Object arg used for System.identityHashCode
+	 * @param topParent Object arg used for System.identityHashCode
+	 * @param usageChecker IntHashTable arg compared against parentHash
+	 * @return if IntHashTable.hasItem and parentHash!=IntHashTable return false else true
+	 */
 	public static boolean notPreviouslyHeld(Object child, 
 			                                   Object topParent, 
 			                                   IntHashTable usageChecker) {
