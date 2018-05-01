@@ -12,7 +12,7 @@ public class JSONClient implements GreenApp {
     public void declareConfiguration(Builder builder) {
         builder.useInsecureNetClient();
         // Create the session
-        session = builder.createHTTP1xClient("127.0.0.1", 8068).finish();
+        session = builder.useNetClient().createHTTP1xClient("127.0.0.1", 8068).finish();
     }
     @Override
     public void declareBehavior(GreenRuntime runtime) {
