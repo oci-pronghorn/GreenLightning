@@ -29,7 +29,7 @@ public class ClientHostPortInstance {
 	 * @param sessionId int arg specifying the sessionId, null to auto-compute
 	 * @param extractor optional JSON extractor
 	 */
-	public ClientHostPortInstance(String host, int port, Integer sessionId, JSONExtractor extractor) {
+	public ClientHostPortInstance(String host, int port, int sessionId, JSONExtractor extractor) {
 		this.host = host;
 		this.port = port;
 		if (port<=0 || port>65535) {
