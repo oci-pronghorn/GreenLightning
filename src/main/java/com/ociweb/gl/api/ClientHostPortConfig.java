@@ -7,7 +7,8 @@ public class ClientHostPortConfig {
 	public final int port;
 
 	private JSONExtractor extractor;
-	private Integer sessionId;
+	private int sessionId;
+	private boolean didSetSessionId;
 
 	public ClientHostPortConfig(String host, int port) {
 		this.host = host;
@@ -20,10 +21,13 @@ public class ClientHostPortConfig {
 
 	public void setSharedSessionId(int sessionId) {
 		this.sessionId = sessionId;
+		this.didSetSessionId = true;
 	}
 
 	public ClientHostPortInstance finish() {
-		ClientHostPortInstance instance = new ClientHostPortInstance(host, port, sessionId, extractor);
-		return instance;
+		if (didSetSessionId) {
+			return new ClientHostPortInstance(host, port, sessionId, extractor);
+		}
+		return new ClientHostPortInstance(host, port, extractor);
 	}
 }
