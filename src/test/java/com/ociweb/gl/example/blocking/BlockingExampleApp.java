@@ -8,6 +8,7 @@ import com.ociweb.gl.api.PubSubService;
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.struct.StructTypes;
 
 public class BlockingExampleApp implements GreenAppParallel {
@@ -28,12 +29,15 @@ public class BlockingExampleApp implements GreenAppParallel {
 
 	@Override
 	public void declareConfiguration(Builder builder) {
+		
 		builder.useHTTP1xServer(8083)
 	       .useInsecureServer()
 	       .logTraffic()
 	       .setDecryptionUnitsPerTrack(3)
 	       .setEncryptionUnitsPerTrack(3)
+	       .echoHeaders(128, HTTPHeaderDefaults.DNT, HTTPHeaderDefaults.STRICT_TRANSPORT_SECURITY)
 	       .setHost("127.0.0.1");		
+		
 		builder.parallelTracks(2);
 	
 		if (telemetry) {

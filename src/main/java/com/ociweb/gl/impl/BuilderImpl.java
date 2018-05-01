@@ -273,10 +273,14 @@ public class BuilderImpl implements Builder {
     	return BehaviorMask | System.identityHashCode(b);
     }
     
-    public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {
+    public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
+    	routerConfig() {
     	if (null==routerConfig) {
     		
-    		routerConfig = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(httpSpec,gm.recordTypeData); 
+    		routerConfig = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(
+    				httpSpec,
+    				server.connectionStruct()); 
+    	
     	}    	
     	return routerConfig;
     }
