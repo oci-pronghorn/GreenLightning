@@ -4,10 +4,10 @@ package com.ociweb.gl.api;
 public class HTTPSession extends ClientHostPortInstance{
 	
 	public HTTPSession(String host, int port, int sessionId) {
-		super(host,port,sessionId);
+		super(host, port, sessionId, null);
 	}
 	
 	public HTTPSession(String host, int port) {
-		super(host,port);
+		super(host, port, null,null);
 	}
 }
