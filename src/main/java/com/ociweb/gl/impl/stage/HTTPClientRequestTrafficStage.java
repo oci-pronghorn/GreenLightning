@@ -97,13 +97,13 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		    Pipe<ClientHTTPRequestSchema> requestPipe = input[activePipe];
 
 //		    System.err.println(PipeReader.hasContentToRead(requestPipe) 
-//	        		+" && "+hasReleaseCountRemaining(activePipe) 
-//	        		+" && "+isChannelUnBlocked(activePipe)	                
+//	        		+" && "+hasReleaseCountRemaining(activePipe)
+//	        		+" && "+isChannelUnBlocked(activePipe)
 //	        		+" && "+hasOpenConnection(requestPipe, output, ccm));
 		    
 	        while (PipeReader.hasContentToRead(requestPipe) 
-	        		&& hasReleaseCountRemaining(activePipe) 
-	                && isChannelUnBlocked(activePipe)	                
+	        		&& hasReleaseCountRemaining(activePipe)
+	                && isChannelUnBlocked(activePipe)
 	                && hasOpenConnection(requestPipe, output, ccm, activePipe)
 	                && PipeReader.tryReadFragment(requestPipe) ){
 	  	    
@@ -338,10 +338,18 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 	}
 
 	private PipeUTF8MutableCharSquence mCharSequence = new PipeUTF8MutableCharSquence();
-	
+
+	/**
+	 *
+	 * @param requestPipe Pipe<ClientHTTPRequestSchema> arg used in PipeReader.peekMsg, .peekInt, .peekDataMeta, .peekDataLength, .peekLong, mCharSequence.setToField, Pipe.convertToPosition, pipe.byteBackingArray, Pipe.blobMask, PipeReader.tryReadFragment and PipeReader.releaseReadLock
+	 * @param output Pipe<NetPayloadSchema> used in ClientCoordinator.openConnection and PipeWriter.hasRoomForWrite
+	 * @param ccm ClientCoordinator arg used in ClientCoordinator.openConnection
+	 * @param activePipe int arg used in decReleaseCount
+	 * @return PipeWriter.hasRoomForWrite(output[activeConnection.requestPipeLineIdx()])
+	 */
 	//has side effect of storing the active connection as a member so it need not be looked up again later.
 	public boolean hasOpenConnection(Pipe<ClientHTTPRequestSchema> requestPipe, 
-									 Pipe<NetPayloadSchema>[] output, 
+									 Pipe<NetPayloadSchema>[] output,
 									 ClientCoordinator ccm, int activePipe) {
 		
 		if (PipeReader.peekMsg(requestPipe, -1)) {
@@ -350,7 +358,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		
 		final int msgIdx = PipeReader.peekInt(requestPipe, 0);
 		
-		//these fields are assumed to be the same for all mesage types.
+		//these fields are assumed to be the same for all message types.
 		int hostMeta = PipeReader.peekDataMeta(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
 		int hostLen = PipeReader.peekDataLength(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HOST_2);
 		int port = PipeReader.peekInt(requestPipe, ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PORT_1);

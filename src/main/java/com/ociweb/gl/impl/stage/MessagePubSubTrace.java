@@ -17,6 +17,10 @@ public class MessagePubSubTrace {
 		this.payload = payloadLOC;
 	}
 
+	/**
+	 *
+	 * @return builder.toString
+	 */
 	public String toString() {
 		
 		StringBuilder builder = new StringBuilder();

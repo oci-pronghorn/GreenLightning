@@ -27,7 +27,10 @@ public class TrafficAckSchema extends MessageSchema<TrafficAckSchema> {
         
     public static final int MSG_DONE_10 = 0x00000000;
 
-
+    /**
+     *
+     * @param input Pipe<TrafficSchema> arg used for PipeReader.tryReadFragment, PipeReader.getMsgIdx, consumeDone and PipeReader.releaseReadLock
+     */
     public static void consume(Pipe<TrafficAckSchema> input) {
         while (PipeReader.tryReadFragment(input)) {
             int msgIdx = PipeReader.getMsgIdx(input);
@@ -46,6 +49,10 @@ public class TrafficAckSchema extends MessageSchema<TrafficAckSchema> {
     public static void consumeDone(Pipe<TrafficAckSchema> input) {
     }
 
+    /**
+     * Pipe<TrafficSchema> arg used for PipeWriter.presumeWriteFragment and .publishWrites
+     * @param output
+     */
     public static void publishDone(Pipe<TrafficAckSchema> output) {
             PipeWriter.presumeWriteFragment(output, MSG_DONE_10);
             PipeWriter.publishWrites(output);
