@@ -23,6 +23,21 @@ public class StageRouteFilter implements RouteFilter {
 	    
 		return this;
 	}
+	
+	@Override
+	public RouteFilter includeRoutesByAssoc(Object ... assocRouteObjects) {
+		
+		int r = assocRouteObjects.length;
+		int[] routeIds = new int[r];
+		while (--r >= 0) {
+			routeIds[r] = builder.routerConfig().lookupRouteIdByIdentity(assocRouteObjects[r]);
+		}		
+		
+		builder.appendPipeMappingIncludingGroupIds(input, parallelIndex, routeIds);
+	    
+		return this;
+	}
+	
 
 	@Override
 	public RouteFilter excludeRoutes(int... routeIds) {
