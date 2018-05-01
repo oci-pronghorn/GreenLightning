@@ -8,20 +8,16 @@ import com.ociweb.gl.api.ClientHostPortInstance;
 
 public class HTTPClient implements GreenApp
 {
+    ClientHostPortInstance session;
 
     @Override
     public void declareConfiguration(Builder c) {
     	//c.useInsecureNetClient();
-    	c.useNetClient();
-
+        session = c.useNetClient().createHTTP1xClient("127.0.0.1", 8088).finish();
     }
 
     @Override
-    public void declareBehavior(GreenRuntime runtime) {       
-    	
-    	ClientHostPortInstance session = new ClientHostPortInstance(
-    			//"javanut.com",80,0);
-    			"127.0.0.1",8088,0);
+    public void declareBehavior(GreenRuntime runtime) {
     	
     	HTTPGetBehaviorSingle temp = new HTTPGetBehaviorSingle(runtime, session);
 		runtime.addStartupListener(temp).addSubscription("next");
