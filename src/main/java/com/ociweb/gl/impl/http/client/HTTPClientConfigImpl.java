@@ -1,5 +1,6 @@
 package com.ociweb.gl.impl.http.client;
 
+import com.ociweb.gl.api.ClientHostPortConfig;
 import com.ociweb.gl.api.HTTPClientConfig;
 import com.ociweb.gl.impl.BridgeConfigStage;
 import com.ociweb.pronghorn.network.TLSCertificates;
@@ -23,6 +24,11 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     @Override
     public TLSCertificates getCertificates() {
         return certificates;
+    }
+
+    @Override
+    public ClientHostPortConfig createHTTP1xClient(String host, int port) {
+        return new ClientHostPortConfig(host, port);
     }
 
     public void beginDeclarations() {

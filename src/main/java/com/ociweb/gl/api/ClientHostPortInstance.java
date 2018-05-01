@@ -7,23 +7,39 @@ import com.ociweb.pronghorn.util.TrieParser;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ClientHostPortInstance {
+	private final static AtomicInteger sessionCounter = new AtomicInteger(0);
 
-	public static AtomicInteger sessionCounter = new AtomicInteger(0);
-	
-	public final String host;
-	public final int hostId;
-	public final byte[] hostBytes;
-	public final int port;
-	public final int sessionId; 
-	public final TrieParser headers = null; //
-	
-	public final JSONExtractor extractor;
+	final String host;
+	final int port;
+	public final int sessionId;
+	final int hostId;
+	final byte[] hostBytes;
+	final JSONExtractor extractor;
 	
 	//cache
 	private long connectionId=-1;
 
 	//TODO: add method to limit headers
+	private final TrieParser headers = null; //
 
+	/**
+	 *
+	 * @param host String arg specifying host
+	 * @param port int arg specifying port number
+	 * @param sessionId int arg specifying the sessionId, null to auto-compute
+	 * @param extractor optional JSON extractor
+	 */
+	public ClientHostPortInstance(String host, int port, Integer sessionId, JSONExtractor extractor) {
+		this.host = host;
+		this.port = port;
+		if (port<=0 || port>65535) {
+			throw new UnsupportedOperationException("Invalid port "+port+" must be postive and <= 65535");
+		}
+		this.sessionId = sessionId != null ? sessionId : sessionCounter.incrementAndGet();
+		this.hostId = ClientCoordinator.registerDomain(host);
+		this.hostBytes = host.getBytes();
+		this.extractor = extractor;
+	}
 
 	/**
 	 *
@@ -31,60 +47,6 @@ public class ClientHostPortInstance {
 	 */
 	public String toString() {
 		return host+":"+port;
-	}
-
-	/**
-	 * @param host String arg specifying host
-	 * @param port int arg specifying port number
-	 * @param sessionId int arg specifying the sessionId
-	 */
-	public ClientHostPortInstance(String host, int port, int sessionId) {
-		this(host,port,null,sessionId);
-	}
-
-	/**
-	 * @param host String arg specifying host
-	 * @param port int arg specifying port number
-	 */
-	public ClientHostPortInstance(String host, int port) {
-		this(host,port,null);
-	}
-
-	/**
-	 *
-	 * @param host String arg specifying host
-	 * @param port int arg specifying port number
-	 * @param extractor JSON data to be extracted
-	 * @param sessionId int arg specifying the sessionId
-	 */
-	public ClientHostPortInstance(String host, int port, JSONExtractor extractor, int sessionId) {
-		this.sessionId = sessionCounter.incrementAndGet();
-		this.host = host;
-		this.port = port;
-		if (port<=0 || port>65535) {
-			throw new UnsupportedOperationException("Invalid port "+port+" must be postive and <= 65535");
-		}
-		this.extractor = null;
-		this.hostId = ClientCoordinator.registerDomain(host);
-		this.hostBytes = host.getBytes();
-
-	}
-
-	/**
-	 * @param host String arg specifying host
-	 * @param port int arg specifying port number
-	 * @param extractor JSON data to be extracted
-	 */
-	public ClientHostPortInstance(String host, int port, JSONExtractor extractor) {
-		this.sessionId = sessionCounter.incrementAndGet();
-		this.host = host;
-		this.hostId = ClientCoordinator.registerDomain(host);
-		this.hostBytes = host.getBytes();
-		this.port = port;
-		if (port<=0 || port>65535) {
-			throw new UnsupportedOperationException("Invalid port "+port+" must be postive and <= 65535");
-		}
-		this.extractor = null;
 	}
 
 	/**
@@ -108,5 +70,4 @@ public class ClientHostPortInstance {
 	public static int getSessionCount() {
 		return sessionCounter.get();
 	}
-	
 }
