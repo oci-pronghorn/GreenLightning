@@ -10,7 +10,6 @@ import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class HTTPResponseService {
@@ -221,13 +220,31 @@ public class HTTPResponseService {
 		return true;
 	}
 
+	/**
+	 *
+	 * @param reqeustReader HTTPFieldReader<?> arg used in publishHTTPResponse
+	 * @param headers HeaderWritable arg used in publishHTTPResponse
+	 * @param writable Writable arg used in publishHTTPResponse
+	 * @return publishHTTPResponse(reqeustReader.getConnectionId (), reqeustReader.getSequenceCode(),
+	 * 				false, headers, 200, writable)
+	 */
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
 	           HeaderWritable headers, Writable writable) {
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
 				false, headers, 200, writable
 				);
 	}
-	
+
+	/**
+	 *
+	 * @param connectionId long arg used in msgCommandChannel.holdEmptyBlock and Pipe.addLongValue
+	 * @param sequenceCode long arg set as final int sequenceNo and parallelIndex
+	 * @param hasContinuation boolean used to determine of msgCommandChannel.lastResponseWriterFinished or outputStream.write
+	 * @param headers HeaderWritable arg. If !null write(msgCommandChannel.headerWriter.target(outputStream))
+	 * @param statusCode int arg used to display status code to user
+	 * @param writable Writable arg used to write outputStream
+	 * @return if !Pipe.hasRoomForWrite(pipe) return false else return true
+	 */
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
 	           boolean hasContinuation, HeaderWritable headers, int statusCode,
 	           Writable writable) {
@@ -317,6 +334,13 @@ public class HTTPResponseService {
 		return true;
 	}
 
+	/**
+	 *
+	 * @param w HTTPFieldReader arg used in publishHTTPResponseContinuation
+	 * @param hasContinuation boolean arg used in publishHTTPResponseContinuation
+	 * @param writable Writable arg used in publishHTTPResponseContinuation
+	 * @return publishHTTPResponseContinuation(w.getConnectionId(),w.getSequenceCode(), hasContinuation, writable)
+	 */
 	public boolean publishHTTPResponseContinuation(HTTPFieldReader<?> w, 
 			boolean hasContinuation, Writable writable) {
 		return publishHTTPResponseContinuation(w.getConnectionId(),w.getSequenceCode(), hasContinuation, writable);
@@ -392,7 +416,7 @@ public class HTTPResponseService {
 
 	/**
 	 *
-	 * @return <code>false</code> if !msbCommandChannel.goHasRoom else <code>true</code>
+	 * @return <code>false</code> if !msgCommandChannel.goHasRoom else <code>true</code>
 	 */
 	public boolean shutdown() {
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";

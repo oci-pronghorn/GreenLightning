@@ -1,20 +1,14 @@
 package com.ociweb.gl.impl.http.server;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ociweb.gl.api.FailablePayloadReading;
 import com.ociweb.gl.api.HeaderReader;
 import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.impl.PayloadReader;
-import com.ociweb.pronghorn.network.config.HTTPContentType;
-import com.ociweb.pronghorn.network.config.HTTPHeader;
-import com.ociweb.pronghorn.network.config.HTTPRevision;
-import com.ociweb.pronghorn.network.config.HTTPSpecification;
-import com.ociweb.pronghorn.network.config.HTTPVerb;
+import com.ociweb.pronghorn.network.config.*;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.StructuredReader;
-import com.ociweb.pronghorn.util.TrieParser;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader<S> implements HeaderReader {
 
@@ -33,6 +27,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		super(pipe);
 	}
 
+
 	public HTTPSpecification<
 			? extends Enum<? extends HTTPContentType>,
 			? extends Enum<? extends HTTPRevision>,
@@ -41,7 +36,11 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		return this.httpSpec;
 	}
 
-	
+	/**
+	 *
+	 * @param reader Payloadable arg used to read(this)
+	 * @return if (hasRemainingBytes()) true else false
+	 */
 	public boolean openPayloadData(Payloadable reader) {
 		if (hasRemainingBytes()) {
 			position(this, readFromEndLastInt(StructuredReader.PAYLOAD_INDEX_LOCATION));
@@ -52,7 +51,11 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		}
 	}
 
-
+	/**
+	 *
+	 * @param reader FailablePayloadReading arg used to read(this)
+	 * @return if (hasRemainingBytes()) return reader.read(this) else false
+	 */
 	public boolean openPayloadDataFailable(FailablePayloadReading reader) {
 		if (hasRemainingBytes()) {
 			position(this, readFromEndLastInt(StructuredReader.PAYLOAD_INDEX_LOCATION));

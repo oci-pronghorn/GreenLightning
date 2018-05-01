@@ -27,7 +27,11 @@ public class HeaderTypeCapture implements Headable {
 		}
 		
 	}
-	
+
+	/**
+	 *
+	 * @return type
+	 */
 	public HTTPContentType type() {
 		return type;
 	}

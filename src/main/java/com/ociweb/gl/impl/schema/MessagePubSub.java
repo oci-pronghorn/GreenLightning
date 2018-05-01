@@ -40,7 +40,10 @@ public class MessagePubSub extends MessageSchema<MessagePubSub> {
 	public static final int MSG_CHANGESTATE_70 = 0x0000000d; //Group/OpenTempl/2
 	public static final int MSG_CHANGESTATE_70_FIELD_ORDINAL_7 = 0x00000001; //IntegerUnsigned/None/2
 
-
+	/**
+	 *
+	 * @param input Pipe<MessagePubSub> arg used in PipeReader.tryReadFragment and case MSG_SUBSCRIBE_100, 101, 103, and 70
+	 */
 	public static void consume(Pipe<MessagePubSub> input) {
 	    while (PipeReader.tryReadFragment(input)) {
 	        int msgIdx = PipeReader.getMsgIdx(input);
@@ -65,35 +68,77 @@ public class MessagePubSub extends MessageSchema<MessagePubSub> {
 	    }
 	}
 
+	/**
+	 *
+	 * @param input Pipe<MessagePubSub> arg used for PipeReader.readUTF8, PipeReader.readBytesLength and PipeReader.readInt
+	 */
 	public static void consumeSubscribe(Pipe<MessagePubSub> input) {
 	    StringBuilder fieldTopic = PipeReader.readUTF8(input,MSG_SUBSCRIBE_100_FIELD_TOPIC_1,new StringBuilder(PipeReader.readBytesLength(input,MSG_SUBSCRIBE_100_FIELD_TOPIC_1)));
 	    int fieldSubscriberIdentityHash = PipeReader.readInt(input,MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4);
 	}
+
+	/**
+	 *
+	 * @param input arg used for PipeReader.readUTF8, PipeReader.readBytesLength and PipeReader.readIntPipeReader.readUTF8, PipeReader.readBytesLength and PipeReader.readInt
+	 */
 	public static void consumeUnsubscribe(Pipe<MessagePubSub> input) {
 	    StringBuilder fieldTopic = PipeReader.readUTF8(input,MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1,new StringBuilder(PipeReader.readBytesLength(input,MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1)));
 	    int fieldSubscriberIdentityHash = PipeReader.readInt(input,MSG_UNSUBSCRIBE_101_FIELD_SUBSCRIBERIDENTITYHASH_4);
 	}
+
+	/**
+	 *
+	 * @param input Pipe<MessagePubSub> arg used for PipeReader.readInt, PipeReader.readUTF8 and PipeReader.inputStream
+	 */
 	public static void consumePublish(Pipe<MessagePubSub> input) {
 	    int fieldQOS = PipeReader.readInt(input,MSG_PUBLISH_103_FIELD_QOS_5);
 	    StringBuilder fieldTopic = PipeReader.readUTF8(input,MSG_PUBLISH_103_FIELD_TOPIC_1,new StringBuilder(PipeReader.readBytesLength(input,MSG_PUBLISH_103_FIELD_TOPIC_1)));
 	    DataInputBlobReader<MessagePubSub> fieldPayload = PipeReader.inputStream(input, MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 	}
+
+	/**
+	 *
+	 * @param input Pipe<MessagePubSub> arg used for PipeReader.readInt
+	 */
 	public static void consumeChangeState(Pipe<MessagePubSub> input) {
 	    int fieldOrdinal = PipeReader.readInt(input,MSG_CHANGESTATE_70_FIELD_ORDINAL_7);
 	}
 
+	/**
+	 *
+	 * @param output Pipe<MessagePubSub> arg used for PipeWriter.presumeWriteFragment, .writeUTF8, .writeInt and .publishWrites
+	 * @param fieldTopic CharSequence arg used for PipeWriter.writeUTF8
+	 * @param fieldSubscriberIdentityHash int arg used for PipeWriter.writeInt
+	 */
 	public static void publishSubscribe(Pipe<MessagePubSub> output, CharSequence fieldTopic, int fieldSubscriberIdentityHash) {
 	        PipeWriter.presumeWriteFragment(output, MSG_SUBSCRIBE_100);
 	        PipeWriter.writeUTF8(output,MSG_SUBSCRIBE_100_FIELD_TOPIC_1, fieldTopic);
 	        PipeWriter.writeInt(output,MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, fieldSubscriberIdentityHash);
 	        PipeWriter.publishWrites(output);
 	}
+
+	/**
+	 *
+	 * @param output Pipe<MessagePubSub> arg used for PipeWriter.presumeWriteFragment
+	 * @param fieldTopic CharSequence arg used for PipeWriter.writeUTF8
+	 * @param fieldSubscriberIdentityHash int arg used for PipeWriter.writeInt
+	 */
 	public static void publishUnsubscribe(Pipe<MessagePubSub> output, CharSequence fieldTopic, int fieldSubscriberIdentityHash) {
 	        PipeWriter.presumeWriteFragment(output, MSG_UNSUBSCRIBE_101);
 	        PipeWriter.writeUTF8(output,MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1, fieldTopic);
 	        PipeWriter.writeInt(output,MSG_UNSUBSCRIBE_101_FIELD_SUBSCRIBERIDENTITYHASH_4, fieldSubscriberIdentityHash);
 	        PipeWriter.publishWrites(output);
 	}
+
+	/**
+	 *
+	 * @param output Pipe<MessagePubSub> arg used in PipeWriter.writeInt, .writeUTF8, .writeBytes and .publishWrites
+	 * @param fieldQOS int arg used in PipeWriter.writeInt
+	 * @param fieldTopic CharSequence arg used in PipeWriter.writeUTF8
+	 * @param fieldPayloadBacking byte[] arg used in PipeWriter.writeBytes
+	 * @param fieldPayloadPosition int arg used in PipeWriter.writeBytes
+	 * @param fieldPayloadLength int arg used in PipeWriter.writeBytes
+	 */
 	public static void publishPublish(Pipe<MessagePubSub> output, int fieldQOS, CharSequence fieldTopic, byte[] fieldPayloadBacking, int fieldPayloadPosition, int fieldPayloadLength) {
 	        PipeWriter.presumeWriteFragment(output, MSG_PUBLISH_103);
 	        PipeWriter.writeInt(output,MSG_PUBLISH_103_FIELD_QOS_5, fieldQOS);
@@ -101,6 +146,12 @@ public class MessagePubSub extends MessageSchema<MessagePubSub> {
 	        PipeWriter.writeBytes(output,MSG_PUBLISH_103_FIELD_PAYLOAD_3, fieldPayloadBacking, fieldPayloadPosition, fieldPayloadLength);
 	        PipeWriter.publishWrites(output);
 	}
+
+	/**
+	 *
+	 * @param output Pipe<MessagePubSub> arg used in PipeWriter.presumeWriteFragment and PipeWriter.publishWrites
+	 * @param fieldOrdinal int arg used in PipeWriter.writeInt
+	 */
 	public static void publishChangeState(Pipe<MessagePubSub> output, int fieldOrdinal) {
 	        PipeWriter.presumeWriteFragment(output, MSG_CHANGESTATE_70);
 	        PipeWriter.writeInt(output,MSG_CHANGESTATE_70_FIELD_ORDINAL_7, fieldOrdinal);

@@ -1,8 +1,8 @@
 package com.ociweb.gl.impl.stage;
 
-import java.util.Arrays;
-
 import com.ociweb.pronghorn.util.ByteSquenceVisitor;
+
+import java.util.Arrays;
 
 public class CollectTargetLists implements ByteSquenceVisitor {
 
@@ -34,6 +34,10 @@ public class CollectTargetLists implements ByteSquenceVisitor {
 		
 	}
 
+	/**
+	 *
+	 * @return targetLists
+	 */
 	public int[] targetArray() {
 		//ensure we end with -1 then return
 		targetLists[collectedIndex++] = -1;

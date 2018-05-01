@@ -1,32 +1,21 @@
 package com.ociweb.gl.impl.stage;
 
-import static com.ociweb.pronghorn.pipe.Pipe.blobMask;
-import static com.ociweb.pronghorn.pipe.Pipe.byteBackingArray;
-import static com.ociweb.pronghorn.pipe.Pipe.bytePosition;
-
-import java.util.Arrays;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.WaitFor;
 import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.schema.IngressMessages;
-import com.ociweb.gl.impl.schema.MessagePubSub;
-import com.ociweb.gl.impl.schema.MessageSubscription;
-import com.ociweb.gl.impl.schema.TrafficAckSchema;
-import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeReader;
-import com.ociweb.pronghorn.pipe.PipeWriter;
-import com.ociweb.pronghorn.pipe.RawDataSchema;
+import com.ociweb.gl.impl.schema.*;
+import com.ociweb.pronghorn.pipe.*;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.Arrays;
+
+import static com.ociweb.pronghorn.pipe.Pipe.*;
 
 public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
@@ -89,7 +78,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     /**
      * Provides an eventually consistent state model of events.  It works in the same way as the larger universe.  If a supernova is observed by two planets they may
      * not know about it at the same moment but the first who observes it can not send a message to the second that would arrive before the second observes the
-     * even themselves.
+     * event themselves.
      * 
      * Ensures that every subscriber gets its correct published messages.  The publisher CommandChannel does not receive an Ack( will not continue) until 
      * all subscribers have consumed the message from the pipe.  Other command channels are free to send other messages at the same time.  We only need to ensure 

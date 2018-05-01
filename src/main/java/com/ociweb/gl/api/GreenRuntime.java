@@ -52,6 +52,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
     public static GreenRuntime run(GreenApp app) {
     	return run(app,new String[0]);
     }
+
     
     public static GreenRuntime run(GreenApp app, String[] args) {
     	return run(app, 
@@ -102,7 +103,13 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	public void checkForException() {
 		getScheduler().checkForException();
 	}
-	
+
+	/**
+	 *
+	 * @param app GreenApp arg used in MsgRuntime
+	 * @param timeoutMS long arg used to set timeout in milliseconds
+	 * @return if !runtime.isShutdownComplete() return false else return true
+	 */
 	public static boolean testConcurrentUntilShutdownRequested(GreenApp app, long timeoutMS) {
 		
 		 final CyclicBarrier barrier = new CyclicBarrier(2);
@@ -153,6 +160,12 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
     	 return true;
 	}
 
+	/**
+	 *
+	 * @param app GreenApp arg used in ScriptedNonThreadScheduler
+	 * @param timeoutMS long arg used to set the timeout in milliseconds
+	 * @return result (true or false)
+	 */
 	public static boolean testUntilShutdownRequested(GreenApp app, long timeoutMS) {
 		GreenRuntime runtime = new GreenRuntime(app.getClass().getSimpleName());
 		
@@ -175,9 +188,13 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 		
 		return result;
 	}
-	
-	
-	
+
+	/**
+	 *
+	 * @param app GreenApp arg used in runtime.declareBehavior and used to declareConfiguration
+	 * @param runtime GreenRuntime arg used with builder.BuilderImpl, builder.setDefaultRate, builder.buildStages and logStageScheduleRates
+	 * @return ScriptedNonThreadScheduler runtime.getScheduler()
+	 */
 	private static ScriptedNonThreadScheduler test(GreenApp app, GreenRuntime runtime) {
 		//force hardware to TestHardware regardless of where or what platform its run on.
         //this is done because this is the test() method and must behave the same everywhere.

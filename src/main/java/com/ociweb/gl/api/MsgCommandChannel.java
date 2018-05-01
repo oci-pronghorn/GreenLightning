@@ -92,7 +92,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				           ) {
     	this(gm,hardware,ALL, parallelInstanceId, pcm);
     }
-    
+
     public MsgCommandChannel(GraphManager gm, B builder,
     					  int features,
     					  int parallelInstanceId,
@@ -114,7 +114,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	/**
 	 *
 	 * @param id int id to be passed to builder.serialStoreWrite
-	 * @return SerialStoreProducer(mypipe)
+	 * @return SerialStoreProducer(myPipe)
 	 */
 	public SerialStoreProducer newSerialStoreProducer(int id) {
 	  	if (isInit) {
@@ -134,7 +134,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	/**
 	 *
 	 * @param id int id be passed to builder.serialStoreRequestReplay
-	 * @return SerialStoreProducer(mypipe)
+	 * @return SerialStoreProducer(myPipe)
 	 */
 	public SerialStoreConsumer newSerialStoreConsumer(int id) {
 	  	if (isInit) {
@@ -234,7 +234,6 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 
-
 	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
 		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
 	}
@@ -324,8 +323,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	PipeConfig<TrafficOrderSchema> goConfig = cmd.pcm.getConfig(TrafficOrderSchema.class);
     	cmd.pcm.addConfig(count + goConfig.minimumFragmentsOnPipe(), 0, TrafficOrderSchema.class);
 	}
-    
-    
+
 	@SuppressWarnings("unchecked")
 	private void buildAllPipes() {
 		   
@@ -914,7 +912,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			Pipe.confirmLowLevelRead(gcc.goPipe, size);
 			Pipe.publishWrites(gcc.goPipe);
 		} else {
-			logger.info("Unable to use block channel for ns without an additonal feature use or USE_DELAY can be added.");
+			logger.info("Unable to use block channel for ns without an additional feature use or USE_DELAY can be added.");
 		}
 	}
 	
@@ -933,16 +931,27 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			Pipe.confirmLowLevelRead(gcc.goPipe, size);
 			Pipe.publishWrites(gcc.goPipe);
 		} else {
-			logger.info("Unable to use block channel for ns without an additonal feature or USE_DELAY can be added.");
+			logger.info("Unable to use block channel for ns without an additional feature or USE_DELAY can be added.");
 		}
 	}
-	
+
+	/**
+	 *
+	 * @param cmd MsgCommandChannel <?> arg
+	 * @param publishPrivateTopics PublishPrivateTopics arg
+	 */
 	public static void setPrivateTopics(
 			MsgCommandChannel<?> cmd,
 			PublishPrivateTopics publishPrivateTopics) {
 		cmd.publishPrivateTopics = publishPrivateTopics;
 	}
 
+	/**
+	 *
+	 * @param cmd MsgCommandChannel<?> arg used for goPipe
+	 * @param target Pipe<TrafficOrderSchema> arg used for goPipe
+	 * @return null if cmd.goPipe == null else if target.cmd.goPipe target
+	 */
 	public static boolean isGoPipe(MsgCommandChannel<?> cmd, Pipe<TrafficOrderSchema> target) {
 		return (null==cmd.goPipe) || (target==cmd.goPipe);
 	}
