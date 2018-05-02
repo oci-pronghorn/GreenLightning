@@ -23,11 +23,10 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	private HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig;
 
 	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe, boolean hasNoRoutes,
-			                 HTTPSpecification httpSpec,
 			                 HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig) {
 		super(pipe);
 		this.hasNoRoutes = hasNoRoutes;
-		this.httpSpec = httpSpec;
+		this.httpSpec = http1xRouterStageConfig.httpSpec;
 		this.http1xRouterStageConfig = http1xRouterStageConfig;
 	}
 	
