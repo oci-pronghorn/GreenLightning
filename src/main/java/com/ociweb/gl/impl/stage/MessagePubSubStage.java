@@ -10,6 +10,8 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
+import com.ociweb.pronghorn.util.TrieParserReaderLocal;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +62,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private int pendingReleaseCountIdx;
 
     private final TrieParser topicConversionTrie;
-    private final TrieParserReader topicConversionTrieReader;
     
     //global state.
     private int currentState;
@@ -138,8 +139,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   topicConversionTrie.setUTF8Value("/#", 1);  //   /%b     //from this point all wild card to end
 	   topicConversionTrie.setUTF8Value("+/", 2);  //   %b/     //single level wild card up to next /
    	      	   
-	   int maxCapturedFields = 16;
-	   topicConversionTrieReader = new TrieParserReader(maxCapturedFields,true);
 	   
 	   //TODO: need a better way to set when no subs are used except for startup only.
 	   tempSubject = RawDataSchema.instance.newPipe(2, 0==incomingSubsAndPubsPipe.length ? estimatedAvgTopicLength : incomingSubsAndPubsPipe[0].maxVarLen);
@@ -803,17 +802,17 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		int size = Pipe.addMsgIdx(tempSubject, RawDataSchema.MSG_CHUNKEDSTREAM_1);
 		DataOutputBlobWriter<RawDataSchema> stream = Pipe.outputStream(tempSubject);
 		DataOutputBlobWriter.openField(stream);
-		TrieParserReader.parseSetup(topicConversionTrieReader, backing1, pos1, len1, mask1);
+		TrieParserReader.parseSetup(TrieParserReaderLocal.get(), backing1, pos1, len1, mask1);
 		boolean foundEnd = false;
-		while (TrieParserReader.parseHasContent(topicConversionTrieReader)) {
+		while (TrieParserReader.parseHasContent(TrieParserReaderLocal.get())) {
 						
 			if (foundEnd) {
 				throw new UnsupportedOperationException("Invalid topic if /# is used it must only be at the end.");
 			}
 			
-			int token = (int)TrieParserReader.parseNext(topicConversionTrieReader, topicConversionTrie);
+			int token = (int)TrieParserReader.parseNext(TrieParserReaderLocal.get(), topicConversionTrie);
 			if (-1 == token) {				
-				stream.write(TrieParserReader.parseSkipOne(topicConversionTrieReader));
+				stream.write(TrieParserReader.parseSkipOne(TrieParserReaderLocal.get()));
 			} if (1 == token) {
 				stream.write(WILD_POUND_THE_END); //  /#
 				foundEnd = true;
@@ -821,6 +820,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 				stream.write(WILD_PLUS_THE_SEGMENT); //  +/
 			}
 		}
+		
 		DataOutputBlobWriter.closeLowLevelField(stream);
 		Pipe.confirmLowLevelWrite(tempSubject, size);
 		Pipe.publishWrites(tempSubject);
