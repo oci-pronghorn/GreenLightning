@@ -12,6 +12,7 @@ import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
 import com.ociweb.gl.impl.schema.*;
 import com.ociweb.gl.impl.stage.*;
 import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
+import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
@@ -739,6 +740,14 @@ public class BuilderImpl implements Builder {
 	@Override
 	public final CompositePath defineRoute(HTTPHeader ... headers) {
 		return routerConfig().registerCompositeRoute(headers);
+	}
+	@Override
+	public final JSONExtractor defineJSONExtractor() {
+		return new JSONExtractor();
+	}
+	@Override
+	public final JSONExtractor defineJSONExtractor(boolean writeDot) {
+		return new JSONExtractor(writeDot);
 	}
 
 	public final TrieParser routeExtractionParser(int route) {

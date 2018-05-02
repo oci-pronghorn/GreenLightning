@@ -5,13 +5,12 @@ import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 
 public class WildExample implements GreenApp {
-
-	Appendable collectedA;
-	Appendable collectedB;
+	private final Appendable collectedRoot;
+	private final Appendable collectedGreen;
 	
-	public WildExample(Appendable a, Appendable b) {
-		this.collectedA = a;
-		this.collectedB = b;
+	WildExample(Appendable collectedRoot, Appendable collectedGreen) {
+		this.collectedRoot = collectedRoot;
+		this.collectedGreen = collectedGreen;
 	}
 	
 	@Override
@@ -22,9 +21,8 @@ public class WildExample implements GreenApp {
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
 		//TODO: we have a problem inserting in the reverse order, must fix.
-		runtime.addPubSubListener(new WildListener(collectedB)).addSubscription("root/green/#");
-		runtime.addPubSubListener(new WildListener(collectedA)).addSubscription("root/#");
+		runtime.addPubSubListener(new WildListener(collectedGreen, runtime)).addSubscription("root/green/#");
+		runtime.addPubSubListener(new WildListener(collectedRoot, runtime)).addSubscription("root/#");
 		runtime.addStartupListener(new WildPublish(runtime));
 	}
-
 }

@@ -1,32 +1,24 @@
 package com.ociweb.gl.pubsub;
 
-import org.junit.Ignore;
+import com.ociweb.gl.api.GreenRuntime;
 import org.junit.Test;
 
-import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
-import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class PubSubTest {
-
-	
-	@Ignore
+	@Test
 	public void somethingTest() {
-		
-		
-			StringBuilder a = new StringBuilder();
-			StringBuilder b = new StringBuilder();
-						
-			
-			GreenRuntime.testUntilShutdownRequested(new WildExample(a,b),100);
+		StringBuilder collectedRoot = new StringBuilder();
+		StringBuilder collectedGreen = new StringBuilder();
 
-			
-			//add asserts here
-			//System.err.println("A:\n"+a);
-			//System.out.println("B:\n"+b);
-			
-		
+		boolean completed = GreenRuntime.testUntilShutdownRequested(new WildExample(collectedRoot,collectedGreen),100);
+
+		System.err.println("Root:\n" + collectedRoot);
+		System.out.println("Green:\n" + collectedGreen);
+
+		assertTrue(completed);
+		assertEquals("root/green/color\nroot/green/frequency\nroot/red/frequency\nroot/green/frequency\nroot/shutdown\n", collectedRoot.toString());
+		assertEquals("root/green/color\nroot/green/frequency", collectedGreen.toString());
 	}
-	
-	
 }
