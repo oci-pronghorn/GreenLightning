@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -127,7 +126,7 @@ public class BuilderImpl implements Builder {
     ////////////////////////////
     ///gather and store the server module pipes
     /////////////////////////////
-    private ArrayList<Pipe<HTTPRequestSchema>>[][] collectedHTTPRequstPipes;
+    private ArrayList<Pipe<HTTPRequestSchema>>[][] collectedHTTPRequestPipes;
 	private ArrayList<Pipe<ServerResponseSchema>>[] collectedServerResponsePipes;
 	
 	
@@ -161,9 +160,9 @@ public class BuilderImpl implements Builder {
     private final Set<String> behaviorNames = new HashSet<String>();
 
 	/**
-	 * a method to validate fullname and add it to behaviorNames
-	 * @param behaviorName String arg
-	 * @param trackId int arg
+	 * a method to validate fullName and add it to behaviorNames
+	 * @param behaviorName String arg used in behaviorNames
+	 * @param trackId int arg used with fullName if arg >= 0
 	 * @return behaviorName + trackId
 	 */
 	//will throw if a duplicate stage name is detected.
@@ -196,8 +195,8 @@ public class BuilderImpl implements Builder {
 
 	/**
 	 * a method that doubles IntHashTable if necessary and logs warning if !IntHashTable.setItem(netPipeLookup, uniqueId, pipeIdx)
-	 * @param uniqueId int id arg
-	 * @param pipeIdx int idx arg
+	 * @param uniqueId int arg to specify id
+	 * @param pipeIdx int arg to specify index
 	 */
 	public void registerHTTPClientId(int uniqueId, int pipeIdx) {
 				
@@ -218,7 +217,7 @@ public class BuilderImpl implements Builder {
     }
 
 	/**
-	 *
+	 * A method to look up the client pipes http
 	 * @param routeId route to be looked for in pipe
 	 * @return IntHashTable.getItem(netPipeLookup, routeId)
 	 */
@@ -245,13 +244,17 @@ public class BuilderImpl implements Builder {
 
 	/**
 	 *
-	 * @param count
-	 * @param gcc
+	 * @param count int arg used to set count in MsgCommandChannel.publishGo
+	 * @param gcc MsgCommandChannel<?>
 	 */
-	public void releasePubSubTraffic(int count, MsgCommandChannel<?> gcc) {
+	public void releasePubSubTraffic(int count, MsgCommandChannel<?> gcc) { //TODO: non descriptive arg name gcc??
 		MsgCommandChannel.publishGo(count, IDX_MSG, gcc);
 	}
 
+	/**
+	 *
+	 * @return ccm
+	 */
 	public ClientCoordinator getClientCoordinator() {
 		return ccm;
 	}
@@ -269,53 +272,91 @@ public class BuilderImpl implements Builder {
 		return this.server;
 	}
 
+	/**
+	 *
+	 * @param b Behavior arg used in System.identityHashCode
+	 * @return Behavior Mask
+	 */
     public int behaviorId(Behavior b) {
     	return BehaviorMask | System.identityHashCode(b);
     }
-    
-    public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {
+
+	/**
+	 *
+	 * @return routerConfig
+	 */
+	public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults> routerConfig() {
     	if (null==routerConfig) {
     		
     		routerConfig = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(httpSpec,gm.recordTypeData); 
     	}    	
     	return routerConfig;
     }
- 
-    
+
+	/**
+	 * A method to append pipe mapping and group ids when invoked by builder
+	 * @param pipe Pipe<HTTPRequestSchema> arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
+	 * @param parallelId int arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
+	 * @param groupIds int arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
+	 * @return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds)
+	 */
 	public final boolean appendPipeMappingIncludingGroupIds(Pipe<HTTPRequestSchema> pipe,
 											            int parallelId,
 											            int ... groupIds) {
 		lazyCreatePipeLookupMatrix();
-		return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequstPipes, groupIds);
+		return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds);
 	}
-    
+
+	/**
+	 * A method to append pipe mapping but not including group ids when invoked by builder
+	 * @param pipe Pipe<HTTPRequestSchema> arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
+	 * @param parallelId int arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
+	 * @param groupIds int arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
+	 * @return routerConfig().appendPipeIdMappingForExcludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds)
+	 */
 	public final boolean appendPipeMappingExcludingGroupIds(Pipe<HTTPRequestSchema> pipe,
 					                            int parallelId,
 					                            int ... groupIds) {
 		lazyCreatePipeLookupMatrix();
-		return routerConfig().appendPipeIdMappingForExcludedGroupIds(pipe, parallelId, collectedHTTPRequstPipes, groupIds);
+		return routerConfig().appendPipeIdMappingForExcludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds);
 	}
-	
+
+	/**
+	 *
+	 * @param pipe Pipe<HTTPRequestSchema> arg used for routerConfig().appendPipeIdMappingForAllGroupIds
+	 * @param parallelId int arg used for routerConfig().appendPipeIdMappingForAllGroupIds
+	 * @return routerConfig().appendPipeIdMappingForAllGroupIds(pipe, parallelId, collectedHTTPRequestPipes)
+	 */
 	public final boolean appendPipeMappingAllGroupIds(Pipe<HTTPRequestSchema> pipe,
 									int parallelId) {
 		lazyCreatePipeLookupMatrix();
-		return routerConfig().appendPipeIdMappingForAllGroupIds(pipe, parallelId, collectedHTTPRequstPipes);
+		return routerConfig().appendPipeIdMappingForAllGroupIds(pipe, parallelId, collectedHTTPRequestPipes);
 	}
-	
+
+	/**
+	 *
+	 * @return collectedHTTPRequestPipes
+	 */
 	final ArrayList<Pipe<HTTPRequestSchema>>[][] targetPipeMapping() {
 		lazyCreatePipeLookupMatrix();
-		return collectedHTTPRequstPipes;
+		return collectedHTTPRequestPipes;
 	}
-	
+
+	/**
+	 *
+	 * @param r int arg used as index in collectedHTTPRequestPipes array
+	 * @param p int arg used as index in collectedHTTPRequestPipes array
+	 * @return null!= collectedHTTPRequestPipes ? collectedHTTPRequestPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>()
+	 */
 	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int r, int p) {
-		assert(null==collectedHTTPRequstPipes || r<collectedHTTPRequstPipes.length);
-		assert(null==collectedHTTPRequstPipes || p<collectedHTTPRequstPipes[r].length) : "p "+p+" vs "+collectedHTTPRequstPipes[r].length;
-		return null!=collectedHTTPRequstPipes ? collectedHTTPRequstPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>();
+		assert(null== collectedHTTPRequestPipes || r< collectedHTTPRequestPipes.length);
+		assert(null== collectedHTTPRequestPipes || p< collectedHTTPRequestPipes[r].length) : "p "+p+" vs "+ collectedHTTPRequestPipes[r].length;
+		return null!= collectedHTTPRequestPipes ? collectedHTTPRequestPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>();
 	}
 	
 	
 	private void lazyCreatePipeLookupMatrix() {
-		if (null==collectedHTTPRequstPipes) {
+		if (null== collectedHTTPRequestPipes) {
 			
 			int parallelism = parallelTracks();
 			int routesCount = routerConfig().totalPathsCount();
@@ -328,20 +369,24 @@ public class BuilderImpl implements Builder {
 				routesCount = 1;
 			}
 			
-			collectedHTTPRequstPipes = (ArrayList<Pipe<HTTPRequestSchema>>[][]) new ArrayList[parallelism][routesCount];
+			collectedHTTPRequestPipes = (ArrayList<Pipe<HTTPRequestSchema>>[][]) new ArrayList[parallelism][routesCount];
 			
 			int p = parallelism;
 			while (--p>=0) {
 				int r = routesCount;
 				while (--r>=0) {
-					collectedHTTPRequstPipes[p][r] = new ArrayList();
+					collectedHTTPRequestPipes[p][r] = new ArrayList();
 				}
 			}
 		}
 	}
 
-	
-	
+
+	/**
+	 *
+	 * @param netResponse {@link Pipe<ServerResponseSchema>} arg used for collectedServerResponse
+	 * @param parallelInstanceId int arg used for collectedServerResponse
+	 */
 	public final void recordPipeMapping(Pipe<ServerResponseSchema> netResponse, int parallelInstanceId) {
 		
 		if (null == collectedServerResponsePipes) {
@@ -358,8 +403,12 @@ public class BuilderImpl implements Builder {
 		collectedServerResponsePipes[parallelInstanceId].add(netResponse);
 		
 	}
-	
 
+	/**
+	 *
+	 * @param r int arg used in collectedServerResponsePipes
+	 * @return (Pipe<ServerResponseSchema>[]) list.toArray(new Pipe[list.size()])
+	 */
 	public final Pipe<ServerResponseSchema>[] buildToOrderArray(int r) {
 		if (null==collectedServerResponsePipes || collectedServerResponsePipes.length==0) {
 			return new Pipe[0];
@@ -368,8 +417,13 @@ public class BuilderImpl implements Builder {
 			return (Pipe<ServerResponseSchema>[]) list.toArray(new Pipe[list.size()]);
 		}
 	}
-	
-	
+
+	/**
+	 *
+	 * @param config {@link PipeConfig<ServerResponseSchema>} arg used for making a new Pipe<~>
+	 * @param parallelInstanceId int arg used for recordPipeMapping
+	 * @return pipe
+	 */
     public final Pipe<ServerResponseSchema> newNetResponsePipe(PipeConfig<ServerResponseSchema> config, int parallelInstanceId) {
     	Pipe<ServerResponseSchema> pipe = new Pipe<ServerResponseSchema>(config) {
 			@SuppressWarnings("unchecked")
@@ -430,13 +484,25 @@ public class BuilderImpl implements Builder {
 		beginningState = state;
 		return this;
 	}
-	
+
+	/**
+	 *
+	 * @param rateInMS Rate in milliseconds to trigger events.
+	 *
+	 * @return this
+	 */
 	public final Builder setTimerPulseRate(long rateInMS) {
 		timeTriggerRate = rateInMS;
 		timeTriggerStart = System.currentTimeMillis()+rateInMS;
 		return this;
 	}
-	
+
+	/**
+	 *
+	 * @param trigger {@link TimeTrigger} to use for controlling trigger rate.
+	 *
+	 * @return this
+	 */
 	public final Builder setTimerPulseRate(TimeTrigger trigger) {	
 		long period = trigger.getRate();
 		timeTriggerRate = period;
@@ -464,17 +530,41 @@ public class BuilderImpl implements Builder {
 		return client;
 	}
 
+	/**
+	 *
+	 * @return this.client
+	 */
 	public final HTTPClientConfig getHTTPClientConfig() {
 		return this.client;
 	}
 
+	/**
+	 *
+	 * @return timeTriggerRate
+	 */
 	public final long getTriggerRate() {
 		return timeTriggerRate;
 	}
+
+	/**
+	 *
+	 * @return timeTriggerStart
+	 */
 	public final long getTriggerStart() {
 		return timeTriggerStart;
 	}
 
+	/**
+	 *
+	 * @param gm {@link GraphManager} arg used in new ReactiveListenerStage
+	 * @param listener {@link Behavior} arg used in ReactiveListenerStage
+	 * @param inputPipes {@link Pipe<?>[]} arg used in ReactiveListenerStage
+	 * @param outputPipes {@link Pipe<?>[]} arg used in ReactiveListenerStage
+	 * @param consumers {@link ArrayList<ReactiveManagerPipeConsumer>} arg used in ReactiveListenerStage
+	 * @param parallelInstance int arg used in ReactiveListenerStage
+	 * @param nameId String arg used in ReactiveListenerStage
+	 * @return new reactive listener stage
+	 */
     public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Behavior listener, 
     		                		Pipe<?>[] inputPipes, Pipe<?>[] outputPipes, 
     		                		ArrayList<ReactiveManagerPipeConsumer> consumers,
@@ -494,8 +584,14 @@ public class BuilderImpl implements Builder {
 			                                ) {
 		return (G) new GreenCommandChannel(gm, this, features, parallelInstanceId,
 				                           pcm);
-	}	
-	
+	}
+
+    /**
+     *
+     * @param parallelInstanceId MsgCommandChannel arg used for GreenCommandChannel(gm, this, 0, parallelInstanceId, pcm)
+     * @param pcm int arg used for GreenCommandChannel(gm, this, 0, parallelInstanceId, pcm)
+     * @return new GreenCommandChannel(gm, this, 0, parallelInstanceId, pcm)
+     */
 	public <G extends MsgCommandChannel> G newCommandChannel(
             int parallelInstanceId,
             PipeConfigManager pcm
@@ -541,10 +637,22 @@ public class BuilderImpl implements Builder {
 
 	}
 
+    /**
+     *
+     * @param runtime final MsgRuntime arg used in createScheduler
+     * @return createScheduler(runtime, null, null)
+     */
 	public StageScheduler createScheduler(final MsgRuntime runtime) {
 		return createScheduler(runtime, null, null);
 	}
-	
+
+    /**
+     *
+     * @param runtime final MsgRuntime arg used to check if  arg.builder.threadLimit > 0
+     * @param cleanRunnable final Runnable arg used with runtime.addCleanShutdownRunnable
+     * @param dirtyRunnable final Runnable arg used with runtime.addDirtyShutdownRunnable
+     * @return scheduler
+     */
 	public StageScheduler createScheduler(final MsgRuntime runtime,
 										  final	Runnable cleanRunnable,
 										  final	Runnable dirtyRunnable) {

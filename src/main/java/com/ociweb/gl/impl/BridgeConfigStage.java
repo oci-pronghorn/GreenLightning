@@ -13,6 +13,11 @@ public enum BridgeConfigStage {
     DeclareBehavior,
     Finalized;
 
+    /**
+     *
+     * @param stage BridgeConfigStage arg used for comparison
+     * @throws UnsupportedOperationException if stage != this
+     */
     public void throwIfNot(BridgeConfigStage stage) {
 		if (stage != this) {
 			throw new UnsupportedOperationException("Cannot invoke method in " + this.toString() + "; must be in " + stage.toString());

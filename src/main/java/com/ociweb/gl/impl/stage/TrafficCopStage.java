@@ -46,7 +46,7 @@ public class TrafficCopStage extends PronghornStage {
     
     	return new TrafficCopStage(graphManager, msAckTimeout, primaryIn, ackIn, goOut, runtime, builder);	
     }
-    
+
     public TrafficCopStage(GraphManager graphManager, long msAckTimeout, 
     		               Pipe<TrafficOrderSchema> primaryIn, 
     		               Pipe<TrafficAckSchema>[] ackIn,  
@@ -73,9 +73,15 @@ public class TrafficCopStage extends PronghornStage {
         GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "cadetblue2", this);
         GraphManager.addNota(graphManager, GraphManager.TRIGGER, GraphManager.TRIGGER, this);
         
-    }    
-    
-    public String toString() {
+    }
+
+	/**
+	 *
+	 * @return result+ ( needsAck ?
+	 *         		" AckExpectedOn:"+localActEO+" "+GraphManager.getRingProducer(graphManager, ackIn[localActEO].id)
+	 *         	    : "" )
+	 */
+	public String toString() {
         String result = super.toString();
         
         final int localActEO = ackExpectedOn;//must hold since it can change while using

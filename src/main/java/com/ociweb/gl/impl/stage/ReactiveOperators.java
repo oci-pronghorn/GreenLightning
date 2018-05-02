@@ -1,15 +1,14 @@
 package com.ociweb.gl.impl.stage;
 
-import java.util.ArrayList;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.ociweb.gl.api.Grouper;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
 
 public class ReactiveOperators {
 
@@ -27,7 +26,13 @@ public class ReactiveOperators {
 				
 		return this;
 	}
-	
+
+	/**
+	 *
+	 * @param p Pipe arg used for Pipe.isForSchema
+	 * @return operators.get(i) if (Pipe.isForSchema(p, schemas.get(i)))
+	 * @throws UnsupportedOperationException
+	 */
 	public ReactiveOperator getOperator(Pipe p) {
 		
 		int i = schemas.size();
@@ -45,7 +50,13 @@ public class ReactiveOperators {
 		throw new UnsupportedOperationException("can not find operator by schema for pipe "+p+"\n in schemas "+text);
 	}
 
-	//creates inputs for this Transducer or Behavior
+	/**
+	 * A method that creates inputs for this Transducer or Behavior
+	 * @param builder BuilderImpl arg used for createPipes
+	 * @param listener Object arg used for createPipes
+	 * @param g Grouper arg used for createPipes
+	 * @return Pipe created by implementing createPipes(builder, 0, 0, listener, g)
+	 */
 	public Pipe[] createPipes(BuilderImpl builder, Object listener, Grouper g) {
 		return createPipes(builder, 0, 0, listener, g);
 	}

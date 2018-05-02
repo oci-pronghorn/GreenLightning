@@ -1,42 +1,8 @@
 package com.ociweb.gl.impl.stage;
 
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ociweb.gl.api.Behavior;
-import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.gl.api.HTTPResponseListener;
-import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.ClientHostPortInstance;
-import com.ociweb.gl.api.ListenerFilter;
-import com.ociweb.gl.api.MsgCommandChannel;
-import com.ociweb.gl.api.PubSubListener;
-import com.ociweb.gl.api.RestListener;
-import com.ociweb.gl.api.SerialStoreProducerAckListener;
-import com.ociweb.gl.api.SerialStoreReleaseAckListener;
-import com.ociweb.gl.api.SerialStoreReplayListener;
-import com.ociweb.gl.api.ShutdownListener;
-import com.ociweb.gl.api.StartupListener;
-import com.ociweb.gl.api.StateChangeListener;
-import com.ociweb.gl.api.TimeListener;
+import com.ociweb.gl.api.*;
 import com.ociweb.gl.api.transducer.StartupListenerTransducer;
-import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.ChildClassScanner;
-import com.ociweb.gl.impl.ChildClassScannerVisitor;
-import com.ociweb.gl.impl.PayloadReader;
-import com.ociweb.gl.impl.PrivateTopic;
-import com.ociweb.gl.impl.PubSubListenerBase;
-import com.ociweb.gl.impl.PubSubMethodListenerBase;
-import com.ociweb.gl.impl.RestMethodListenerBase;
-import com.ociweb.gl.impl.StartupListenerBase;
-import com.ociweb.gl.impl.file.SerialStoreConsumer;
+import com.ociweb.gl.impl.*;
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -61,6 +27,13 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage implements ListenerFilter {
 
@@ -289,6 +262,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		this.httpClientPipeId = httpClientPipeId;
 	}
 
+	/**
+	 *
+	 * @param inputPipes Pipe<?> arg used in consumerJoin
+	 * @param iterator Iterator<ReactiveManagerPipeConsumer> arg used with .hasNext()
+	 * @return consumerJoin(join(inputPipes, iterator.next().inputs),iterator) if iterator.hasNext() else inputPipes
+	 */
     private static Pipe[] consumerJoin(Pipe<?>[] inputPipes,
     		                   Iterator<ReactiveManagerPipeConsumer> iterator) {
     	if (iterator.hasNext()) {    		
@@ -465,16 +444,30 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	   	 }
 	}
 
+	/**
+	 *
+	 * @param builder BuilderImpl arg used with .shutdownRequested.get()
+	 * @return builder.shutdownRequested.get()
+	 */
 	public static boolean isShutdownRequested(BuilderImpl builder) {
     	return builder.shutdownRequsted.get();
     }
-    
-    public static boolean isShutdownComplete(BuilderImpl builder) {    	
+
+	/**
+	 *
+	 * @param builder BuilderImpl arg used with shutdownIsComplete
+	 * @return builder.shutdownIsComplete
+	 */
+	public static boolean isShutdownComplete(BuilderImpl builder) {
     	return builder.shutdownIsComplete;
     }
-    
-    
-    public static void requestSystemShutdown(BuilderImpl builder, Runnable shutdownRunnable) {
+
+	/**
+	 *
+	 * @param builder BuilderImpl arg used with .lastcall and .shutdownRequested
+	 * @param shutdownRunnable Runnable arg
+	 */
+	public static void requestSystemShutdown(BuilderImpl builder, Runnable shutdownRunnable) {
     	builder.lastCall = shutdownRunnable;
     	//Note: begin shutdown only when all the shutdown vetos are taken into account
     	//      setting this boolean triggers all the reactors to begin shutdown
@@ -1129,8 +1122,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
 		}
 	}
-	
 
+	/**
+	 *
+	 * @param topic CharSequence arg used to specify subscription to add
+	 * @param callable <code>final</code> CallableMethod arg used to assert(childIsFoundIn)
+	 * @return callable.method(title, reader)
+	 */
 	@SuppressWarnings("unchecked")
 	public final ListenerFilter addSubscription(CharSequence topic, 
 		                                    	final CallableMethod callable) {
@@ -1149,7 +1147,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	private IntHashTable serialStoreProdAckPipeMap; //TODO: could use perfect hash in the future.
 	private IntHashTable serialStoreRelAckPipeMap;  //TODO: could use perfect hash in the future.
 	private IntHashTable serialStoreReplayPipeMap;  //TODO: could use perfect hash in the future.
-	
+
 	public final ListenerFilter includeSerialStoreWriteAck(int ... id) {		
 		serialStoreProdAckPipeMap = new IntHashTable(IntHashTable.computeBits(id.length*3));		
 		int i = id.length;
@@ -1164,7 +1162,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		}	
 		return this;
 	}
-	
+
 	public final ListenerFilter includeSerialStoreReleaseAck(int ... id) {
 		serialStoreRelAckPipeMap = new IntHashTable(IntHashTable.computeBits(id.length*3));	
 		int i = id.length;
@@ -1217,7 +1215,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		};
 		return this;
 	}
-	
+
+	/**
+	 *
+	 * @param routeId int arg to set route it used to compare to restRequestReader.length
+	 * @param callable
+	 * @param <T>
+	 * @return
+	 */
 	public final <T extends Behavior> ListenerFilter includeRoute(int routeId, final CallableStaticRestRequestReader<T> callable) {
 		
 		if (null==restRequestReader) {
@@ -1233,8 +1238,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		return this;
 	}
-    
-    public int getId() {
+
+	/**
+	 *
+	 * @return builder.behaviorId((Behavior)listener)
+	 */
+	public int getId() {
     	return builder.behaviorId((Behavior)listener);
     }
 	

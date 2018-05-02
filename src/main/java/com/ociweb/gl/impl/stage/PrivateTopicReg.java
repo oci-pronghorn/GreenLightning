@@ -26,8 +26,8 @@ class PrivateTopicReg implements ChildClassScannerVisitor<MsgCommandChannel> {
 	/**
 	 *
 	 * @param cmdChnl MsgCommandChannel arg used in MsbCommandChannel.setPrivateTopics
-	 * @param topParent
-	 * @return
+	 * @param topParent Object arg
+	 * @return true
 	 */
 	public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
 		    MsgCommandChannel.setPrivateTopics(cmdChnl, reactiveListenerStage.publishPrivateTopics);	
