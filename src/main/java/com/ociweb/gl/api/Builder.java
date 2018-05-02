@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
@@ -56,6 +57,9 @@ public interface Builder extends ArgumentProvider {
 	
 	CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers);
 	CompositePath defineRoute(HTTPHeader ... headers);
+
+	JSONExtractor defineJSONExtractor();
+	JSONExtractor defineJSONExtractor(boolean writeDot);
 		
 	StructBuilder defineStruct();
 	StructBuilder extendStruct(StructBuilder template);
