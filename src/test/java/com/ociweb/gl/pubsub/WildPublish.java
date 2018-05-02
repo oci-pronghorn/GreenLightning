@@ -9,9 +9,8 @@ public class WildPublish implements StartupListener {
 
 	private final PubSubService cmd;
 
-	public WildPublish(GreenRuntime runtime) {
+	WildPublish(GreenRuntime runtime) {
 		cmd = runtime.newCommandChannel().newPubSubService();
-		
 	}
 
 	@Override
@@ -20,8 +19,6 @@ public class WildPublish implements StartupListener {
 		cmd.publishTopic("root/green/color",WaitFor.None);
 		cmd.publishTopic("root/green/frequency",WaitFor.None);
 		cmd.publishTopic("root/red/frequency",WaitFor.None);
-	
+		cmd.publishTopic("root/shutdown",WaitFor.None);
 	}
-
-
 }

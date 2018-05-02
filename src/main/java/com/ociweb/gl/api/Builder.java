@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
@@ -68,6 +69,9 @@ public interface Builder extends ArgumentProvider {
      * Creates a new struct builder that allows you to define named values on a channel
      * @return the new struct built
      */
+	JSONExtractor defineJSONExtractor();
+	JSONExtractor defineJSONExtractor(boolean writeDot);
+		
 	StructBuilder defineStruct();
 
     /**

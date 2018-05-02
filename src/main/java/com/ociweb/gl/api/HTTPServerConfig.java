@@ -3,6 +3,8 @@ package com.ociweb.gl.api;
 import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
 public interface HTTPServerConfig {
 	HTTPServerConfig setDefaultPath(String defaultPath);
@@ -44,6 +46,8 @@ public interface HTTPServerConfig {
 	int getMaxRequestSize();
 		
 	ServerPipesConfig buildServerConfig(int tracks);
+	
+	HTTPServerConfig echoHeaders(int maxSingleHeaderLength, HTTPHeader ... headers);
 
 }
 

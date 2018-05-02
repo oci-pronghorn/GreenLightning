@@ -10,10 +10,8 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 	private long sequenceId = -1;
 	private StringBuilder key1Value = new StringBuilder();
 	private int key2;
-	private final int structId;
 	
-	public BlockingBehaviorExample(int structId) {
-		this.structId = structId;
+	public BlockingBehaviorExample() {
 	}
 		
 	@Override
@@ -25,7 +23,7 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 		connectionId = reader.structured().readLong(Fields.connectionId);
 		sequenceId = reader.structured().readLong(Fields.sequenceId);
 		key1Value.setLength(0);
-	//	reader.structured().readText(Fields.key1, key1Value);
+	//TODO: fix this to work??	reader.structured().readText(Fields.key1, key1Value);
 		key2 = reader.structured().readInt(Fields.key2);		
 		
 	}
@@ -43,7 +41,7 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 		
 		writer.structured().writeLong(Fields.connectionId, connectionId);
 		writer.structured().writeLong(Fields.sequenceId, sequenceId);
-		writer.structured().selectStruct(structId); //TODO: need better error when missing.
+		writer.structured().selectStruct(Structs.data); //TODO: need better error when missing.
 
 		connectionId=-1;
 		sequenceId=-1;

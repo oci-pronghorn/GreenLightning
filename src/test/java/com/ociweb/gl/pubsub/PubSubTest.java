@@ -1,32 +1,28 @@
 package com.ociweb.gl.pubsub;
 
-import org.junit.Ignore;
+import com.ociweb.gl.api.GreenRuntime;
 import org.junit.Test;
 
-import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
-import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class PubSubTest {
+	@Test
+	public void wildCardTest() {
+		StringBuilder collectedRoot = new StringBuilder();
+		StringBuilder collectedGreen = new StringBuilder();
 
-	
-	@Ignore
-	public void somethingTest() {
-		
-		
-			StringBuilder a = new StringBuilder();
-			StringBuilder b = new StringBuilder();
-						
-			
-			GreenRuntime.testUntilShutdownRequested(new WildExample(a,b),100);
+		boolean completed = GreenRuntime.testConcurrentUntilShutdownRequested(new WildExample(collectedRoot,collectedGreen),100);
 
-			
-			//add asserts here
-			//System.err.println("A:\n"+a);
-			//System.out.println("B:\n"+b);
-			
+		//System.err.println("Root:\n" + collectedRoot);
+		//System.out.println("Green:\n" + collectedGreen);
+
+		assertTrue(completed);
+		assertEquals("root/green/color\nroot/green/frequency\n", collectedGreen.toString());
 		
+		//TODO: this part is broken 
+		//     must investigate MessagePubSubStage private void addSubscription( method
+		//TODO: also add tests to confirm /?/ single path part works.		
+		//assertEquals("root/green/color\nroot/green/frequency\nroot/red/frequency\nroot/green/frequency\nroot/shutdown\n", collectedRoot.toString());
 	}
-	
-	
 }

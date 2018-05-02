@@ -8,6 +8,7 @@ import com.ociweb.gl.api.PubSubService;
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.struct.StructTypes;
 
 public class BlockingExampleApp implements GreenAppParallel {
@@ -20,7 +21,6 @@ public class BlockingExampleApp implements GreenAppParallel {
 	
 	private boolean telemetry;
 	//TODO: these two fields will be removed...
-	private int structId;
 	private long chooserLongFieldId;
 	
 	public BlockingExampleApp(boolean telemetry) {
@@ -29,12 +29,14 @@ public class BlockingExampleApp implements GreenAppParallel {
 
 	@Override
 	public void declareConfiguration(Builder builder) {
+		
 		builder.useHTTP1xServer(8083)
 	       .useInsecureServer()
 	       .logTraffic()
 	       .setDecryptionUnitsPerTrack(3)
 	       .setEncryptionUnitsPerTrack(3)
 	       .setHost("127.0.0.1");		
+		
 		builder.parallelTracks(2);
 	
 		if (telemetry) {
@@ -47,7 +49,7 @@ public class BlockingExampleApp implements GreenAppParallel {
 		//TODO: as long as the con/seq is recorded before the header add predefined fields for these??
 		builder.defineRoute(extractor)
 		       .path("/test")
-			   .routeId();
+			   .routeId(Structs.route);
 		
 		builder.usePrivateTopicsExclusively();			
 		
@@ -57,14 +59,13 @@ public class BlockingExampleApp implements GreenAppParallel {
 		
 //		builder.definePrivateTopic("testTopicA", "restListener", "restResponder");
 		
-		//TODO: associate struct with enum so we need not keep the structId
-		structId = builder.defineStruct()
+		int structId = builder.defineStruct()
 				.addField("connectionId", StructTypes.Long, 0, Fields.connectionId)
 				.addField("sequenceId", StructTypes.Long, 0, Fields.sequenceId)
 			    //.addFields(extractor)  TODO: this would be nicer.
 				.addField("key1", StructTypes.Text, 0, Fields.key1)
 			    .addField("key2", StructTypes.Integer, 0, Fields.key2)		   
-		        .register();			
+		        .register(Structs.data);			
 		
 		chooserLongFieldId = builder.lookupFieldByIdentity(structId, Fields.connectionId);
 		
@@ -91,19 +92,20 @@ public class BlockingExampleApp implements GreenAppParallel {
 				
 				//Not GC free, TODO: need to update...
 				w.structured().writeText(Fields.key1,r.structured().readText(Fields.key1));
-		
-						
+								
 				
-				w.structured().selectStruct(structId);
+				w.structured().selectStruct(Structs.data); 
 			});
-		}).includeAllRoutes(); //TODO: need better error message when this is missing.
+		}).includeRoutesByAssoc(Structs.route); //TODO: need better error message when this is missing.
 		
 		int threadsCount = 16;
 		long timeoutNS = 120_000_000_000L;
 		
 		//blocker will relay data
 		runtime.registerBlockingListener("blocker",
-				()->{return new BlockingBehaviorExample(structId);},
+				()->{
+					return new BlockingBehaviorExample();
+				},
 				threadsCount, 
 				timeoutNS, 
 				chooserLongFieldId); //TODO: instead of this pass in chooser?

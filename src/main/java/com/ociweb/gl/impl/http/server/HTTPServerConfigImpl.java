@@ -7,6 +7,7 @@ import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
@@ -235,6 +236,13 @@ public class HTTPServerConfigImpl implements HTTPServerConfig {
 	public HTTPServerConfig logTraffic(String basePath, int fileCount, long fileSizeLimit, boolean logResponse) {
 		logFile = new LogFileConfig(basePath,fileCount,fileSizeLimit,logResponse);
 		return this;
+	}
+
+	@Override
+	public HTTPServerConfig echoHeaders(int maxSingleHeaderLength, HTTPHeader... headers) {
+		scs.headersToEcho(maxSingleHeaderLength, headers);
+		return this;
+		
 	}
 	
 	

@@ -17,7 +17,8 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 	<T extends Behavior> ListenerFilter includeRoute(int routeId, CallableStaticRestRequestReader<T> callable);
 		
 	ListenerFilter includeRoute(int routeId, CallableRestRequestReader callable);
-
+	
+	
 	/**
 	 * Add subscription to this topic to this listener at startup.
 	 * @param topic
@@ -60,5 +61,6 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 	<E extends Enum<E>> ListenerFilter includeHTTPSession(ClientHostPortInstance ... httpSessions);
 
 	ListenerFilter SLALatencyNS(long latency);
+
 	
 }

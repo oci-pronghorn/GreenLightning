@@ -1,8 +1,45 @@
 package com.ociweb.gl.impl.stage;
 
+<<<<<<< HEAD
 import com.ociweb.gl.api.*;
 import com.ociweb.gl.api.transducer.StartupListenerTransducer;
 import com.ociweb.gl.impl.*;
+=======
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ociweb.gl.api.Behavior;
+import com.ociweb.gl.api.ClientHostPortInstance;
+import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPResponseListener;
+import com.ociweb.gl.api.HTTPResponseReader;
+import com.ociweb.gl.api.ListenerFilter;
+import com.ociweb.gl.api.MsgCommandChannel;
+import com.ociweb.gl.api.PubSubListener;
+import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.api.SerialStoreProducerAckListener;
+import com.ociweb.gl.api.SerialStoreReleaseAckListener;
+import com.ociweb.gl.api.SerialStoreReplayListener;
+import com.ociweb.gl.api.ShutdownListener;
+import com.ociweb.gl.api.StartupListener;
+import com.ociweb.gl.api.StateChangeListener;
+import com.ociweb.gl.api.TimeListener;
+import com.ociweb.gl.api.transducer.StartupListenerTransducer;
+import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.ChildClassScanner;
+import com.ociweb.gl.impl.ChildClassScannerVisitor;
+import com.ociweb.gl.impl.PayloadReader;
+import com.ociweb.gl.impl.PrivateTopic;
+import com.ociweb.gl.impl.PubSubListenerBase;
+import com.ociweb.gl.impl.PubSubMethodListenerBase;
+import com.ociweb.gl.impl.RestMethodListenerBase;
+import com.ociweb.gl.impl.StartupListenerBase;
+>>>>>>> cede4f6a84231c5d77f425113b800e5d4595c6d7
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -40,6 +77,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     private static final int SIZE_OF_PRIVATE_MSG_PUB = Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1);
 	private static final int SIZE_OF_MSG_STATECHANGE = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_STATECHANGED_71);
 	private static final int SIZE_OF_MSG_PUBLISH     = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_PUBLISH_103);
+	
 	protected final Behavior            listener;
     protected final TimeListener        timeListener;
     
@@ -1077,6 +1115,18 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
 		}
 	}
+	
+	@Override
+	public ListenerFilter includeRoutesByAssoc(Object ... assocRouteObjects) {
+		int r = assocRouteObjects.length;
+		int[] routeIds = new int[r];
+		while (--r >= 0) {
+			routeIds[r] = builder.routerConfig().lookupRouteIdByIdentity(assocRouteObjects[r]);
+		}		
+		includeRoutes(routeIds);
+		return this;
+	}
+	
 	
 	@Override
 	public final ListenerFilter includeRoutes(int... routeIds) {
