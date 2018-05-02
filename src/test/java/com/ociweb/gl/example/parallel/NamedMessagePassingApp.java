@@ -71,8 +71,8 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		builder.setGlobalSLALatencyNS(50_000_000);
 		
 		
-		JSONExtractorCompleted extractor = 
-				new JSONExtractor()
+		JSONExtractorCompleted extractor =
+				builder.defineJSONExtractor()
 				.newPath(JSONType.TypeString).key("key1").completePath("name_a", Fields.nameA)
 		        .newPath(JSONType.TypeInteger).key("key2").completePath("name_b", Fields.nameB);
 		
