@@ -144,6 +144,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
         this.contentType = null==payload ? null : payload.contentType;
         this.maxPayloadSize = null==payload ? 256 : payload.maxPayloadSize;
 		this.post = null==payload? null : payload.post;
+		if (this.post != null) {
+			if (null == this.contentType) {
+				throw new UnsupportedOperationException("Content type is required for payload");
+			}
+		}	
+		
 		this.validate = null==payload? null : payload.validate;
 
 		this.out = out;
