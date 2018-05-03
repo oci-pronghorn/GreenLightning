@@ -12,18 +12,7 @@ public class ParallelClientLoadTesterPayload {
     public int maxPayloadSize = 1024;
     public HTTPContentTypeDefaults contentType = HTTPContentTypeDefaults.JSON;
     public Supplier<Writable> post = null;
-    public Supplier<HTTPResponseListener> validate = new Supplier<HTTPResponseListener>() {
-        @Override
-        public HTTPResponseListener get() {
-            return new HTTPResponseListener() {
-                @Override
-                public boolean responseHTTP(HTTPResponseReader reader) {
-                    int code = reader.statusCode();
-                    return code >= 200 && code < 400;
-                }
-            };
-        }
-    };
+    public Supplier<HTTPResponseListener> validate = new ParallelClientLoadTesterStatusValidator();
 
     public ParallelClientLoadTesterPayload() {
     }

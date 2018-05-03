@@ -25,12 +25,6 @@ class GatherAllFeaturesAndSetReactor implements ChildClassScannerVisitor<MsgComm
 		   this.features = 0;
 	   }
 
-	/**
-	 *
-	 * @param cmdChnl MsgCommandChannel arg used in MsgCommandChannel
-	 * @param topParent Object arg
-
-	 */
 	   public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {	
 			if (MsgCommandChannel.isGoPipe(cmdChnl, target)) {
 				features |= cmdChnl.initFeatures;
