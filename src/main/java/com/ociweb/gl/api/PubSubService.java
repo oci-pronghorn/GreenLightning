@@ -181,6 +181,12 @@ public class PubSubService {
 		return false;	
 	}
 
+    /**
+     * Publishes specified failable topic with data written onto this channel
+     * @param topic CharSequence arg to be specified for publish
+     * @param writable to write data into this channel
+     * @return result if msgCommandChannel.goHasRoom else FailableWrite.Retry
+     */
 	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
@@ -227,10 +233,11 @@ public class PubSubService {
 	}
 
 	/**
-	 * @param topic CharSequence arg used in output.append
-	 * @param writable FailableWritable arg used in msgCommandChannel.publishPrivateTopics
+     * Publishes specified failable topic with data written onto this channel and waits for success or failure
+     * @param topic CharSequence arg to be specified for publish
+     * @param writable to write data into this channel
 	 * @param ap WaitFor arg used in PipeWriter.writeInt
-	 * @return failableWrite
+	 * @return result if msgCommandChannel.goHasRoom else FailableWrite.Retry
 	 */
 	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
@@ -279,11 +286,10 @@ public class PubSubService {
 	}
 
 	/**
-	 *
-	 * @param topic byte[] arg used in msgCommandChannel.publishPrivateTopics.getToken
-	 * @return if token >= 0 returns msgCommandChannel.publishOnPrivateTopic <p> else if null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) &&
-	 * 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103) returns true <p> else returns false
-	 */
+	 * Publishes specified topic with no data onto this channel
+     * @param topic byte[] arg to be specified for publish
+     * @return published topic if msgCommandChannel.goHasRoom
+     */
 	public boolean publishTopic(byte[] topic) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
@@ -320,11 +326,11 @@ public class PubSubService {
 	}
 
 	/**
-	 * @param topic byte[] arg used in msgCommandChannel.publishPrivateTopics.getToken
-	 * @param writable Writable arg used in msgCommandChannel.publishOnPrivateTopic
-	 * @return if token >= 0 returns msgCommandChannel.publishOnPrivateTopic(token, writable) <p> else if null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) &&
-	 * 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103) returns true <p> else returns false
-	 */
+     * Publishes specified topic with data written onto this channel
+     * @param topic byte[] arg to be specified for publish
+     * @param writable to write data into this channel
+	 * @return published topic if msgCommandChannel.goHasRoom
+     */
 	public boolean publishTopic(byte[] topic, Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
@@ -365,11 +371,10 @@ public class PubSubService {
 	}
 
 	/**
-	 *
-	 * @param topic byte[] arg used in msgCommandChannel.publishPrivateTopics.getToken
-	 * @return if token >= 0 returns msgCommandChannel.publishOnPrivateTopic <p> else if null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) &&
-	 * 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103) returns true <p> else returns false
-	 */
+     * Publishes specified topic with no data onto this channel
+     * @param topic CharSequence arg to be specified for publish
+     * @return published topic if msgCommandChannel.goHasRoom
+     */
 	public boolean publishTopic(CharSequence topic) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
@@ -417,12 +422,11 @@ public class PubSubService {
 	}
 
 	/**
-	 *
-	 * @param topic CharSequence arg used in msgCommandChannel.publishPrivateTopics.getToken
+     * Publishes specified topic with no data onto this channel while not accepting new messages until published message is received
+     * @param topic CharSequence arg to be specified for publish
 	 * @param waitFor WaitFor arg used in PipeWriter.writeInt
-	 * @return if token >= 0 returns msgCommandChannel.publishOnPrivateTopic <p> else if null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) &&
-	 *	    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103) returns true <p> else returns false
-	 */
+     * @return published topic if msgCommandChannel.goHasRoom
+     */
 	public boolean publishTopic(CharSequence topic, WaitFor waitFor) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
@@ -470,11 +474,10 @@ public class PubSubService {
 	}
 
 	/**
-	 *
-	 * @param topic CharSequence arg used in msgCommandChannel.getToken
-	 * @param writable Writable arg used in msgCommandChannel.publishOnPrivateTopic
-	 * @return if token >= 0 returns msgCommandChannel.publishOnPrivateTopic <p> else if null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) &&
-	 *	    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103) returns true <p> else returns false
+	 * Publishes specified topic with data written onto this channel
+     * @param topic CharSequence arg to be specified for publish
+     * @param writable to write data into this channel
+	 * @return published topic if token >= 0
 	 */
 	public boolean publishTopic(CharSequence topic, Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
@@ -533,12 +536,11 @@ public class PubSubService {
 	}
 
 	/**
-	 *
-	 * @param topic CharSequence arg used in msgCommandChannel.publishPrivateTopics.getToken or output.append
-	 * @param writable Writable arg used in msgCommandChannel.publishPrivateTopic
+     * Publishes specified topic with data written onto this channel while not accepting new messages until published message is received
+     * @param topic CharSequence arg to be specified for publish
+     * @param writable to write data into this channel
 	 * @param waitFor waitFor arg used in PipeWriter.writeInt
-	 * @return if token >= 0 returns msgCommandChannel.publishOnPrivateTopic <p> else if null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) &&
-	 *   	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103) returns true <p> else returns false
+	 * @return published topic if token >= 0
 	 */
 	public boolean publishTopic(CharSequence topic, Writable writable, WaitFor waitFor) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
@@ -585,7 +587,7 @@ public class PubSubService {
 		        
 		        PipeWriter.publishWrites(msgCommandChannel.messagePubSub);
 		
-		        MsgCommandChannel.publishGo(1,msgCommandChannel.builder.pubSubIndex(), msgCommandChannel);
+		        MsgCommandChannel.publishGo(1, msgCommandChannel.builder.pubSubIndex(), msgCommandChannel);
 		                    
 		        
 		        return true;
@@ -611,17 +613,22 @@ public class PubSubService {
 		}
 	}
 
+    /**
+     * Publishes specified topic with data written onto this channel
+     * @param topic topic to be specified for publish
+     * @param writable to write data into this channel
+     * @return published topic
+     */
 	public boolean publishTopic(TopicWritable topic, Writable writable) {
 		return publishTopic(topic, writable, WaitFor.All);
 	}
 
 	/**
-	 *
-	 * @param topic TopicWritable arg used in msgCommandChannel.tokenForPrivateTopic
-	 * @param writable Writable arg used in msgCommandChannel.publishOnPrivateTopic
+     * Publishes specified topic with data written onto this channel while not accepting new messages until published message is received
+     * @param topic CharSequence arg to be specified for publish
+     * @param writable to write data into this channel
 	 * @param ap WaitFor arg used in PipeWriter.writeInt
-	 * @return if token >= 0 returns msgCommandChannel.publishOnPrivateTopic <p> else if null==msgCommandChannel.goPipe || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe)) &&
-	 *   	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103) returns true <p> else returns false
+	 * @return published topic if token >= 0
 	 */
 	public boolean publishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
@@ -669,6 +676,10 @@ public class PubSubService {
 		return publishTopic(topic, ap);
 	}
 
+    /**
+     * Takes previous state and changes it to specified state
+     * @param state state used to convert original
+      */
 	public <E extends Enum<E>> boolean changeStateTo(E state) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
@@ -691,8 +702,8 @@ public class PubSubService {
 	}
 
 	/**
-	 *
-	 * @return true if msgCommandChannel.goHasRoom else false
+	 * Used to shutdown a pipe //TODO: correct??
+	 * @return true or false
 	 */
 	public boolean shutdown() {
 
@@ -716,8 +727,8 @@ public class PubSubService {
 	}
 
 	/**
-	 *
-	 * @param durationNanos long duration in nanoseconds?? used as arg in MsgCommandChannel.publishBlockChannel
+	 * Used to set delay of service in nanoseconds
+	 * @param durationNanos long duration in nanoseconds used to set delay time
 	 * @return true if msgCommandChannel.goHasRoom else false
 	 */
 	public boolean delay(long durationNanos) {
@@ -735,8 +746,8 @@ public class PubSubService {
 	}
 
 	/**
-	 *
-	 * @param msTime long duration in miliseconds used as arg in MsgCommandChannel.publishBlockChannelUntil
+	 * Used to set delay of service until some action takes place
+	 * @param msTime long duration in milliseconds used to set delay time
 	 * @return true if msgCommandChannel.goHasRoom else false
 	 */
 	public boolean delayUntil(long msTime) {
