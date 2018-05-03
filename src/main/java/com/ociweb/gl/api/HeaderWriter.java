@@ -1,11 +1,13 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
+import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
+import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 
-import java.io.IOException;
 
 public class HeaderWriter {
 
@@ -74,6 +76,15 @@ public class HeaderWriter {
 			value.appendTo(activeTarget.append(header.writingRoot()));
 			activeTarget.write(BYTES_EOL);
 
+	}
+
+	public void write(HTTPHeader header,
+			HTTPSpecification<? extends Enum<? extends HTTPContentType>, ? extends Enum<? extends HTTPRevision>, ? extends Enum<? extends HTTPVerb>, ? extends Enum<? extends HTTPHeader>> spec,
+			ChannelReader reader) {
+    	
+		activeTarget.write(header.rootBytes());
+    	header.writeValue(activeTarget, spec, reader);
+    	activeTarget.write(BYTES_EOL);
 	}
 	
 }

@@ -38,14 +38,19 @@ public class PubSubService {
 		//IngressMessages Confirm that MQTT ingress is big enough as well			
 		msgCommandChannel.pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
 	}
-	
+
+	/**
+	 * A method to determine if there is enough room in the pipe for more data
+	 * @param messageCount int arg used in FieldReferenceOffsetManager.maxFragmentSize
+	 * @return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount)
+	 */
 	public boolean hasRoomFor(int messageCount) {
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
 		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
 	}
 
 	/**
-	 *
+	 * A method used to subscribe to a specified topic
 	 * @param topic CharSequence arg used for output.append
 	 * @return true if msgCommandChannel.goPipe == null || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe) <p> else false
 	 */
@@ -82,7 +87,7 @@ public class PubSubService {
 	}
 
 	/**
-	 *
+	 * A method used to subscribe to a specified topic with a listener
 	 * @param topic CharSequence arg used in output.append
 	 * @param listener PubSubMethodListenerBase arg used in PipeWriter.writeInt
 	 * @return true if msgCommandChannel.goPipe == null || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe) <p> else false
@@ -114,7 +119,7 @@ public class PubSubService {
 	}
 
 	/**
-	 *
+	 * A method used to unsubscribe from a specific topic
 	 * @param topic CharSequence arg used in output.append
 	 * @return true if msgCommandChannel.goPipe == null || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe) <p> else false
 	 */
@@ -146,7 +151,7 @@ public class PubSubService {
 	}
 
 	/**
-	 *
+	 * A method used to unsubscribe from a specific topic and listener
 	 * @param topic CharSequence arg used in output.append
 	 * @param listener PubSubMethodListenerBase arg used in PipeWriter.writeInt
 	 * @return true if msgCommandChannel.goPipe == null || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe) <p> else false

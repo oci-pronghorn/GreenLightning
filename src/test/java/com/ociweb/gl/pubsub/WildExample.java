@@ -20,7 +20,6 @@ public class WildExample implements GreenApp {
 
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
-		//TODO: we have a problem inserting in the reverse order, must fix.
 		runtime.addPubSubListener(new WildListener(collectedGreen, runtime)).addSubscription("root/green/#");
 		runtime.addPubSubListener(new WildListener(collectedRoot, runtime)).addSubscription("root/#");
 		runtime.addStartupListener(new WildPublish(runtime));

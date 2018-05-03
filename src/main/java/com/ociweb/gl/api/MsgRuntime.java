@@ -12,6 +12,7 @@ import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
+import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
@@ -495,6 +496,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 
 	private Pipe<NetResponseSchema> buildNetResponsePipe() {
+				
 		Pipe<NetResponseSchema> netResponsePipe = new Pipe<NetResponseSchema>(builder.pcm.getConfig(NetResponseSchema.class)) {
 			@SuppressWarnings("unchecked")
 			@Override
@@ -726,6 +728,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		final boolean catchAll = builder.routerConfig().totalPathsCount()==0;
 				
+		
+		int spaceForEchos = serverCoord.connectionStruct().inFlightPayloadSize();
+		
 		int j = trackCounts;
 		while (--j>=0) {
 			Pipe<ServerResponseSchema>[] temp = fromModulesToOrderSuper[j] = builder.buildToOrderArray(j);			
@@ -733,10 +738,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			int c = temp.length;
 			while (--c>=0) {
 				//ensure that the ordering stage can consume messages of this size
-				serverConfig.ensureServerCanWrite(temp[c].config().maxVarLenSize());
+				serverConfig.ensureServerCanWrite(spaceForEchos+temp[c].config().maxVarLenSize());
 			}		
 		}
-		serverConfig.ensureServerCanWrite(errConfig.maxVarLenSize());
+		serverConfig.ensureServerCanWrite(spaceForEchos+errConfig.maxVarLenSize());
 		final HTTP1xRouterStageConfig routerConfig1 = routerConfig;
 		
 		

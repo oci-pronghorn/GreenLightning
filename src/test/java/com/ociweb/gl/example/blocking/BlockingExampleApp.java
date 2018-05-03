@@ -35,7 +35,6 @@ public class BlockingExampleApp implements GreenAppParallel {
 	       .logTraffic()
 	       .setDecryptionUnitsPerTrack(3)
 	       .setEncryptionUnitsPerTrack(3)
-	       .echoHeaders(128, HTTPHeaderDefaults.DNT, HTTPHeaderDefaults.STRICT_TRANSPORT_SECURITY)
 	       .setHost("127.0.0.1");		
 		
 		builder.parallelTracks(2);
