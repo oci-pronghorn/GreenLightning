@@ -114,7 +114,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	/**
 	 *
 	 * @param id int id to be passed to builder.serialStoreWrite
-	 * @return SerialStoreProducer(myPipe)
+	 * @return new SerialStoreProducer(myPipe)
 	 */
 	public SerialStoreProducer newSerialStoreProducer(int id) {
 	  	if (isInit) {

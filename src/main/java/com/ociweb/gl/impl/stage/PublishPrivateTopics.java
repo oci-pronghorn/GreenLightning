@@ -43,24 +43,51 @@ public class PublishPrivateTopics {
 		return true;
 	}
 
+	/**
+	 *
+	 * @param index int arg used for privateTopicPublishPipes
+	 * @return privateTopicPublishPipes[index]
+	 */
 	public Pipe<MessagePrivate> getPipe(int index) {
 		return privateTopicPublishPipes[index];
 	}
-	
+
+	/**
+	 *
+	 * @param index int arg used for topics
+	 * @return topics[index]
+	 */
 	public String getTopic(int index) {
 		return topics[index];
 	}
 
+	/**
+	 *
+	 * @param topic CharSequence arg used in TrieParserReader.query
+	 * @return (int)TrieParserReader.query(privateTopicsTrieReader, privateTopicsPublishTrie, topic)
+	 */
 	public int getToken(CharSequence topic) {
 		return (int)TrieParserReader.query(privateTopicsTrieReader,
 				privateTopicsPublishTrie, topic);
 	}
 
+	/**
+	 *
+	 * @param topic byte[] arg used in TrieParserReader.query
+	 * @param pos int arg used in TrieParserReader.query
+	 * @param length int arg used in TrieParserReader.query
+	 * @return (int)TrieParserReader.query(privateTopicsTrieReader, privateTopicsPublishTrie, topic, pos, length, Integer.MAX_VALUE)
+	 */
 	public int getToken(byte[] topic, int pos, int length) {
 		return (int)TrieParserReader.query(privateTopicsTrieReader,
 				privateTopicsPublishTrie, topic, pos, length, Integer.MAX_VALUE);
 	}
 
+	/**
+	 *
+	 * @param tempTopicPipe Pipe<RawDataSchema> arg used in TrieParserReader.query
+	 * @return (int)TrieParserReader.query(privateTopicsTrieReader, privateTopicsPublishTrie, tempTopicPipe, - 1)
+	 */
 	public int getToken(Pipe<RawDataSchema> tempTopicPipe) {
 
 		return (int)TrieParserReader.query(privateTopicsTrieReader,

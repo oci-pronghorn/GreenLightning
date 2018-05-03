@@ -1,9 +1,6 @@
 package com.ociweb.gl.impl.stage;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipePublishListener;
 import com.ociweb.pronghorn.stage.PronghornStage;
 
 public class ReactiveManagerPipeConsumer {
@@ -77,6 +74,12 @@ public class ReactiveManagerPipeConsumer {
 		//}
 	}
 
+	/**
+	 * A method used to switch old pipe with new pipe if true
+	 * @param oldPipe Pipe arg used to determine swap
+	 * @param newPipe Pipe arg used to determine swap
+	 * @return true if --i> = 0 else false
+	 */
 	public boolean swapIfFound(Pipe oldPipe, Pipe newPipe) {		
 		int i = inputs.length;
 		while (--i>=0) {
