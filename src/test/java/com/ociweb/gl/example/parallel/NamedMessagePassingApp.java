@@ -1,8 +1,5 @@
 package com.ociweb.gl.example.parallel;
 
-import java.io.File;
-import java.io.IOException;
-
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenAppParallel;
 import com.ociweb.gl.api.GreenRuntime;
@@ -35,7 +32,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 	
 	@Override
 	public void declareConfiguration(Builder builder) {
-
+		
 		builder.useHTTP1xServer(8081)
 		       .useInsecureServer()
 		       //.logTraffic(false)

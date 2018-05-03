@@ -1,10 +1,5 @@
 package com.ociweb.gl.impl.stage;
 
-<<<<<<< HEAD
-import com.ociweb.gl.api.*;
-import com.ociweb.gl.api.transducer.StartupListenerTransducer;
-import com.ociweb.gl.impl.*;
-=======
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -39,7 +34,6 @@ import com.ociweb.gl.impl.PubSubListenerBase;
 import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.RestMethodListenerBase;
 import com.ociweb.gl.impl.StartupListenerBase;
->>>>>>> cede4f6a84231c5d77f425113b800e5d4595c6d7
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -64,13 +58,6 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage implements ListenerFilter {
 
@@ -1271,7 +1258,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	 * @param routeId int arg to set route it used to compare to restRequestReader.length
 	 * @param callable
 	 * @param <T>
-	 * @return
+	 * @return listener filter
 	 */
 	public final <T extends Behavior> ListenerFilter includeRoute(int routeId, final CallableStaticRestRequestReader<T> callable) {
 		

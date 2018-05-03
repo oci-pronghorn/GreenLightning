@@ -389,7 +389,7 @@ public class BuilderImpl implements Builder {
 
 	/**
 	 *
-	 * @param netResponse {@link Pipe<ServerResponseSchema>} arg used for collectedServerResponse
+	 * @param netResponse arg used for collectedServerResponse
 	 * @param parallelInstanceId int arg used for collectedServerResponse
 	 */
 	public final void recordPipeMapping(Pipe<ServerResponseSchema> netResponse, int parallelInstanceId) {
@@ -425,7 +425,7 @@ public class BuilderImpl implements Builder {
 
 	/**
 	 *
-	 * @param config {@link PipeConfig<ServerResponseSchema>} arg used for making a new Pipe<~>
+	 * @param config
 	 * @param parallelInstanceId int arg used for recordPipeMapping
 	 * @return pipe
 	 */
@@ -563,9 +563,9 @@ public class BuilderImpl implements Builder {
 	 *
 	 * @param gm {@link GraphManager} arg used in new ReactiveListenerStage
 	 * @param listener {@link Behavior} arg used in ReactiveListenerStage
-	 * @param inputPipes {@link Pipe<?>[]} arg used in ReactiveListenerStage
-	 * @param outputPipes {@link Pipe<?>[]} arg used in ReactiveListenerStage
-	 * @param consumers {@link ArrayList<ReactiveManagerPipeConsumer>} arg used in ReactiveListenerStage
+	 * @param inputPipes arg used in ReactiveListenerStage
+	 * @param outputPipes arg used in ReactiveListenerStage
+	 * @param consumers arg used in ReactiveListenerStage
 	 * @param parallelInstance int arg used in ReactiveListenerStage
 	 * @param nameId String arg used in ReactiveListenerStage
 	 * @return new reactive listener stage
