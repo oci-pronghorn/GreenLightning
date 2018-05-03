@@ -9,6 +9,7 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
+import com.ociweb.json.decode.JSONDecoder;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
 public class NamedMessagePassingApp implements GreenAppParallel {
@@ -71,18 +72,20 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		builder.setGlobalSLALatencyNS(50_000_000);
 		
 		
-		JSONExtractorCompleted extractor =
-				builder.defineJSONExtractor()
-				.newPath(JSONType.TypeString).key("key1").completePath("name_a", Fields.nameA)
-		        .newPath(JSONType.TypeInteger).key("key2").completePath("name_b", Fields.nameB);
+		JSONDecoder extractor =
+				builder.defineJSONSDecoder().begin()
+					.element(JSONType.TypeString).key("key1").asField(Fields.nameA)
+		        	.element(JSONType.TypeInteger).key("key2").asField(Fields.nameB)
+				.finish();
 		
 		
 		int aRouteId = builder.defineRoute(extractor).path("/te${value}")
 				        .associatedObject("value", Fields.urlArg)
 				        .routeId();
 		
-		fieldA  = builder.lookupFieldByName(aRouteId,"name_a");
-		fieldB  = builder.lookupFieldByName(aRouteId,"name_b");
+		fieldA  = builder.lookupFieldByName(aRouteId,"nameA");
+		fieldB  = builder.lookupFieldByName(aRouteId,"nameB");
+
 		long fieldB2 = builder.lookupFieldByIdentity(aRouteId, Fields.nameB);
 		assert(fieldB==fieldB2);
 		long fieldL  = builder.lookupFieldByIdentity(aRouteId, HTTPHeaderDefaults.CONTENT_LENGTH);

@@ -2,6 +2,7 @@ package com.ociweb.gl.api;
 
 import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
+import com.ociweb.json.decode.JSONDecoder;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.http.CompositePath;
@@ -68,13 +69,14 @@ public interface Builder extends ArgumentProvider {
 	CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers);
 	CompositePath defineRoute(HTTPHeader ... headers);
 
+
     /**
      * Creates a new struct builder that allows you to define named values on a channel
      * @return the new struct built
      */
 	JSONExtractor defineJSONExtractor();
 	JSONExtractor defineJSONExtractor(boolean writeDot);
-		
+
 	StructBuilder defineStruct();
 
     /**

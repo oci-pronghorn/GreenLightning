@@ -1,12 +1,12 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.json.JSONExtractor;
+import com.ociweb.json.JSONExtractorCompleted;
 
 public class ClientHostPortConfig {
 	public final String host;
 	public final int port;
 
-	private JSONExtractor extractor;
+	private JSONExtractorCompleted extractor;
 	private int sessionId;
 	private boolean didSetSessionId;
 
@@ -15,7 +15,7 @@ public class ClientHostPortConfig {
 		this.port = port;
 	}
 
-	public void setExtractor(JSONExtractor extractor) {
+	public void setExtractor(JSONExtractorCompleted extractor) {
 		this.extractor = extractor;
 	}
 
