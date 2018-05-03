@@ -1,6 +1,6 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.json.JSONExtractor;
+import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.util.TrieParser;
 
@@ -14,7 +14,7 @@ public class ClientHostPortInstance {
 	public final int sessionId;
 	final int hostId;
 	final byte[] hostBytes;
-	final JSONExtractor extractor;
+	final JSONExtractorCompleted extractor;
 	
 	//cache
 	private long connectionId=-1;
@@ -47,7 +47,7 @@ public class ClientHostPortInstance {
 	 * @param port int arg specifying port number
 	 * @param extractor optional JSON extractor
 	 */
-	public ClientHostPortInstance(String host, int port, JSONExtractor extractor) {
+	public ClientHostPortInstance(String host, int port, JSONExtractorCompleted extractor) {
 		this(host, port, sessionCounter.incrementAndGet(), extractor);
 	}
 
@@ -58,7 +58,7 @@ public class ClientHostPortInstance {
 	 * @param sessionId int arg specifying the sessionId
 	 * @param extractor optional JSON extractor
 	 */
-	public ClientHostPortInstance(String host, int port, int sessionId, JSONExtractor extractor) {
+	public ClientHostPortInstance(String host, int port, int sessionId, JSONExtractorCompleted extractor) {
 		this.host = host;
 		this.port = port;
 		if (port<=0 || port>65535) {

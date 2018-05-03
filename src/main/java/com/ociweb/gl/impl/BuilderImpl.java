@@ -35,6 +35,8 @@ import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructRegistry;
 import com.ociweb.pronghorn.util.*;
+import com.ociweb.json.decode.JSONDecoder;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -848,12 +850,12 @@ public class BuilderImpl implements Builder {
 		return routerConfig().registerCompositeRoute(headers);
 	}
 	@Override
-	public final JSONExtractor defineJSONExtractor() {
-		return new JSONExtractor();
+	public final JSONDecoder defineJSONSDecoder() {
+		return new JSONDecoder();
 	}
 	@Override
-	public final JSONExtractor defineJSONExtractor(boolean writeDot) {
-		return new JSONExtractor(writeDot);
+	public final JSONDecoder defineJSONSDecoder(boolean writeDot) {
+		return new JSONDecoder(writeDot);
 	}
 
 	public final TrieParser routeExtractionParser(int route) {
