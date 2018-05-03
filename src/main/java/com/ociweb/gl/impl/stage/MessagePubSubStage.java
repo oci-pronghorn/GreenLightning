@@ -765,7 +765,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		    }
 		}
 		subscriberLists[limit]=pipeIdx; //outgoing pipe which will be sent this data.
-		subscriberLists[listIdx]++;//incrment the count;
+		subscriberLists[listIdx]++;
 		
 	}
 
