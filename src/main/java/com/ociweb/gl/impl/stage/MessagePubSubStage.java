@@ -849,9 +849,16 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
         if (PipeWriter.tryWriteFragment(outPipe, MessageSubscription.MSG_PUBLISH_103)) {
 
-            PipeReader.copyBytes(pipe, outPipe, topicLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1);
-            PipeReader.copyBytes(pipe, outPipe, payloadLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-     
+            PipeReader.copyBytes(pipe, outPipe, 
+            		             topicLOC, 
+            		             MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1);
+            
+            PipeReader.copyBytes(pipe, outPipe, 
+            		             payloadLOC, 
+            		             MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+            
+            
+            
             PipeWriter.publishWrites(outPipe);
         } else {
         	//add this one back to the list so we can send again later
