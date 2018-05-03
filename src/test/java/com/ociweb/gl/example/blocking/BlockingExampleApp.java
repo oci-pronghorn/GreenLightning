@@ -9,7 +9,7 @@ import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
-import com.ociweb.pronghorn.struct.StructTypes;
+import com.ociweb.pronghorn.struct.StructType;
 
 public class BlockingExampleApp implements GreenAppParallel {
 
@@ -60,11 +60,11 @@ public class BlockingExampleApp implements GreenAppParallel {
 //		builder.definePrivateTopic("testTopicA", "restListener", "restResponder");
 		
 		int structId = builder.defineStruct()
-				.addField("connectionId", StructTypes.Long, 0, Fields.connectionId)
-				.addField("sequenceId", StructTypes.Long, 0, Fields.sequenceId)
+				.addField("connectionId", StructType.Long, 0, Fields.connectionId)
+				.addField("sequenceId", StructType.Long, 0, Fields.sequenceId)
 			    //.addFields(extractor)  TODO: this would be nicer.
-				.addField("key1", StructTypes.Text, 0, Fields.key1)
-			    .addField("key2", StructTypes.Integer, 0, Fields.key2)		   
+				.addField("key1", StructType.Text, 0, Fields.key1)
+			    .addField("key2", StructType.Integer, 0, Fields.key2)		   
 		        .register(Structs.data);			
 		
 		chooserLongFieldId = builder.lookupFieldByIdentity(structId, Fields.connectionId);
