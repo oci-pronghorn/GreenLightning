@@ -197,7 +197,7 @@ public interface Builder extends ArgumentProvider {
 
     /**
      * Activates HTTP client services
-     * @return
+     * @return client config
      */
 	HTTPClientConfig useInsecureNetClient();
 
