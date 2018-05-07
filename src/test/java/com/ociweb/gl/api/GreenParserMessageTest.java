@@ -7,7 +7,6 @@ import org.junit.Test;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
-import static com.ociweb.gl.api.FieldType.*;
 import static org.junit.Assert.assertEquals;
 
 enum FieldType {
@@ -54,17 +53,17 @@ public class GreenParserMessageTest {
     }
 
     private static final MsgField[] messages = new MsgField[] {
-            new MsgField("st", integer),
-            new MsgField("sn", integer),
-            new MsgField("cl", integer),
-            new MsgField("cc", integer),
-            new MsgField("pp", floatingPoint),
-            new MsgField("fd", int64),
-            new MsgField("sd", int64),
-            new MsgField("pf", string),
-            new MsgField("ld", string),
-            new MsgField("in", string),
-            new MsgField("pn", string),
+            new MsgField("st", FieldType.integer),
+            new MsgField("sn", FieldType.integer),
+            new MsgField("cl", FieldType.integer),
+            new MsgField("cc", FieldType.integer),
+            new MsgField("pp", FieldType.floatingPoint),
+            new MsgField("fd", FieldType.int64),
+            new MsgField("sd", FieldType.int64),
+            new MsgField("pf", FieldType.string),
+            new MsgField("ld", FieldType.string),
+            new MsgField("in", FieldType.string),
+            new MsgField("pn", FieldType.string),
     };
 
     private static GreenTokenMap buildParser() {
