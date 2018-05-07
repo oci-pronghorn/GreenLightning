@@ -71,7 +71,7 @@ public class ClientHostPortInstance {
 	}
 
 	/**
-	 *
+	 * Used to make host and port num a string
 	 * @return host and port num.
 	 */
 	public String toString() {
@@ -79,7 +79,7 @@ public class ClientHostPortInstance {
 	}
 
 	/**
-	 *
+	 * To set the connection id for the session
 	 * @param id number to use for connection id
 	 */
 	void setConnectionId(long id) {
@@ -87,6 +87,7 @@ public class ClientHostPortInstance {
 	}
 
 	/**
+	 * To get the connection id for the session
 	 * @return long connectionId
 	 */
 	long getConnectionId() {

@@ -197,7 +197,7 @@ public interface Builder extends ArgumentProvider {
      * @param certificates certificates to use for HTTPS client
      */
 	HTTPClientConfig useNetClient(TLSCertificates certificates);
-	
+
 	HTTPClientConfig useInsecureNetClient();
 
     /**
