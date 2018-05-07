@@ -202,8 +202,10 @@ public class BuilderImpl implements Builder {
 	 * @param uniqueId int arg to specify id
 	 * @param pipeIdx int arg to specify index
 	 */
-	public void registerHTTPClientId(int uniqueId, int pipeIdx) {
-				
+	public void registerHTTPClientId(final int uniqueId, int pipeIdx) {
+		if (0==uniqueId) {
+			throw new UnsupportedOperationException("Zero can not be used as the uniqueId");
+		}
 		if ( (IntHashTable.count(netPipeLookup)<<1) >= IntHashTable.size(netPipeLookup) ) {
 			//must grow first since we are adding many entries
 			netPipeLookup = IntHashTable.doubleSize(netPipeLookup);			
@@ -211,8 +213,7 @@ public class BuilderImpl implements Builder {
 				
 		//TODO: netPipeLookup is the entry point for JSON extraction??
 		//      we need to store extractor so its done when we do the lookup.
-		
-		
+				
 		boolean addedItem = IntHashTable.setItem(netPipeLookup, uniqueId, pipeIdx);
         if (!addedItem) {
         	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"

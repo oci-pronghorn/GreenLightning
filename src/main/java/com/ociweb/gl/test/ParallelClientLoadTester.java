@@ -137,7 +137,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		int i = parallelTracks;
 		while (--i>=0) {
-			session[i]=new ClientHostPortInstance(config.host,config.port, null);
+			session[i]=new ClientHostPortInstance(config.host,config.port,i+1);
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 
@@ -178,6 +178,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 		builder.parallelTracks(session.length);
 
+		builder.setTimerPulseRate(20_000);
+		
 		if (rate != null) {
 			builder.setDefaultRate(rate);
 		}
@@ -339,7 +341,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	}
 
 
-	private class TrackHTTPResponseListener implements HTTPResponseListener, StartupListener, PubSubMethodListener {
+	private class TrackHTTPResponseListener implements HTTPResponseListener, TimeListener, StartupListener, PubSubMethodListener {
 		private final PubSubService cmd3;
 		private final int track;
 		private final HTTPResponseListener validator;
@@ -410,6 +412,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
 			} else {
 				sendFailures++;
+				callCounter--;
 			}
 			return wasSent;
 		}
@@ -423,6 +426,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		
 		private boolean doHTTPCall() {
 			if (cmd2.hasRoomFor(2)) {
+				
 				boolean wasSent;
 				if (null==writer) {
 					wasSent = httpGet();
@@ -446,6 +450,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			} else {
 				wasSent = cmd2.httpPost(session[track], route, writeClose, writer);
 				cmd2.httpClose(session[track]);
+				if (wasSent) {
+					session[track] = null;//ensure never used after this point.
+				}
 			}
 			return wasSent;
 		}
@@ -459,11 +466,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			
 			
 			if (callCounter<cyclesPerTrack) {
-				wasSent = cmd2.httpGet(session[track], route);					
+				wasSent = cmd2.httpGet(session[track], route);		
 			} else {
 				wasSent = cmd2.httpGet(session[track], route, writeClose);	
 				//add boolean for easier time of this.. :TODO: API change.
 				cmd2.httpClose(session[track]);//we wrote the close header must follow with close.
+				if (wasSent) {
+					session[track] = null;//ensure never used after this point.
+				}
 			}
 			return wasSent;
 		}
@@ -487,6 +497,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				};
 				wasSent = cmd2.httpPost(session[track], route, allHeaders, writer);
 				cmd2.httpClose(session[track]);
+				if (wasSent) {
+					session[track] = null;//ensure never used after this point.
+				}
 			}
 			return wasSent;
 		}
@@ -512,9 +525,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
-			
+								
 			if (reader.isConnectionClosed()) {
-				
 				//server just axed connection and we got no notice..
 				out.connectionClosed(track);
 				
@@ -562,7 +574,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				}
 							
 				//only log after warmup when the world is stable.
-				if (duration>LOG_LATENCY_LIMIT) {
+				if ((duration > LOG_LATENCY_LIMIT) && (sentTime > 0)) {
 					long now = System.currentTimeMillis();
 					long start = now - (duration/1_000_000);
 
@@ -609,9 +621,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 			else {
 				if (0==countDown) {
-					
-					logger.info("finished track {}",track);
-					
+		
 					//only end after all the inFlightMessages have returned.
 					isOk = cmd3.publishTopic(ENDERS_TOPIC, writer -> {
 						writer.writePackedInt(track);
@@ -631,6 +641,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 
 			return isOk;
+		}
+
+		@Override
+		public void timeEvent(long time, int iteration) {
+			
+			StringBuilder builder = new StringBuilder();
+			
+			Appendables.appendEpochTime(builder, time);
+			builder.append(" send request for track "+track+"  "+callCounter+" vs "+cyclesPerTrack);
+						
+			System.err.println(builder);
+	
 		}
 
 	}

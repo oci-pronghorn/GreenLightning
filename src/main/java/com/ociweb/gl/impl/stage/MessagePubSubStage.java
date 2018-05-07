@@ -4,7 +4,11 @@ import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.api.WaitFor;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.*;
-import com.ociweb.pronghorn.pipe.*;
+import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeReader;
+
+import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
@@ -21,6 +25,15 @@ import static com.ociweb.pronghorn.pipe.Pipe.*;
 
 public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
+	//TODO: convert go to use low level first....
+	//TODO: 1 copy subscriber must hold offset and length not LOC...
+	
+	//TODO: need abstract base using low level
+	//TODO: need pub sub not using abstract base
+	
+	//TODO: need wild card support.
+	//TODO: is block support here on go pipe, without go pipe? how
+	
 	public final static boolean showNewSubscriptions = false;
 	
 	private static final byte[] WILD_PLUS_THE_SEGMENT = "%b/".getBytes();
@@ -52,6 +65,17 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private boolean[] pendingAck; //this input needs an ack and should be sent once all consumed marks are cleared.
     private int[] requiredConsumes;
     
+    private byte[] topicBacking;
+    private int topicPos;
+    private int topicLen;
+    private int topicMask;                  
+    
+    private byte[] payloadBacking;
+    private int payloadPos;
+    private int payloadLen;
+    private int payloadMask;                
+    
+    
     enum PubType {
     	Message, State;
     }
@@ -74,6 +98,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     
 
 	private final Pipe<RawDataSchema> tempSubject;
+
+	private final String graphName;
 	
 	
     /**
@@ -114,7 +140,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                               Pipe<TrafficAckSchema>[] ackPipe,  //NOTE: can be null for no cop
                               
                               Pipe<MessageSubscription>[] outgoingMessagePipes) {
-       super(gm, runtime, hardware, join(ingressMessagePipes,incomingSubsAndPubsPipe), goPipe, ackPipe, outgoingMessagePipes);
+       super(gm, runtime, hardware, join(ingressMessagePipes, incomingSubsAndPubsPipe), goPipe, ackPipe, outgoingMessagePipes);
 
        this.ingressMessagePipes = ingressMessagePipes;
        this.incomingSubsAndPubsPipe = incomingSubsAndPubsPipe;
@@ -149,6 +175,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	   //This extends traffic ordering and as a result often introduces a 2ms latency.
 	   //until this is resolved this stage must be isolated
 	   GraphManager.addNota(gm, GraphManager.ISOLATE, GraphManager.ISOLATE, this);
+	   graphName = gm.name;
 	   
     }
 
@@ -368,13 +395,25 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		        	 										IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
 		        	 			logger.info("new message to be routed, {}", pubSubTrace); 
 		        	 		}
-			        				        	 		
-		        	 		allMessagesForIngress(ingessPipe, listIdx, 1+listIdx+length, subscriberLists);
+			        				 
+		        			
+		        	        topicBacking = PipeReader.readBytesBackingArray(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+		        	        topicPos = PipeReader.readBytesPosition(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+		        	        topicLen = PipeReader.readBytesLength(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);
+		        	        topicMask = PipeReader.readBytesMask(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1);                  
+		        	        
+		        	        payloadBacking = PipeReader.readBytesBackingArray(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+		        	        payloadPos = PipeReader.readBytesPosition(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+		        	        payloadLen = PipeReader.readBytesLength(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+		        	        payloadMask = PipeReader.readBytesMask(ingessPipe, IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                  
+		        	             			
+		        	        
+		        	 		allPendingIngressMessages(listIdx+1, 1+listIdx+length, subscriberLists, ingessPipe);
 	                	}
 	        			
 	                    if (pendingPublishCount>0) {
 	                    	
-	                    	logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing");
+	                    	logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing in graph {} [1]",graphName);
 	                    	pendingDeliveryType = PubType.Message;                   	
 	                        pendingReleaseCountIdx = i; 
 	                        
@@ -404,17 +443,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     }
 
 
-	private void allMessagesForIngress(Pipe<IngressMessages> ingessPipe, int listIdx, final int limit,
-			int[] localSubList) {
-		for(int j = listIdx+1; j<limit ; j++) {
-		
-			copyToSubscriber(ingessPipe, localSubList[j],
-						IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-						IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3
-					);
-			
-		}
-	}
 
 
 	private void processPending() {
@@ -424,9 +452,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		
 		if (PubType.Message == pendingDeliveryType) {
 			if (pendingIngress) {		    			
-				allPendingIngressMessages(limit, pendingPublish, ingressMessagePipes[pendingReleaseCountIdx]);
+				allPendingIngressMessages(0, limit, pendingPublish, ingressMessagePipes[pendingReleaseCountIdx]);
 			} else {
-				allPendingNormalMessages(limit, pendingPublish, consumedMarks[pendingReleaseCountIdx], incomingSubsAndPubsPipe[pendingReleaseCountIdx]);
+				allPendingNormalMessages(0, limit, pendingPublish, consumedMarks[pendingReleaseCountIdx], incomingSubsAndPubsPipe[pendingReleaseCountIdx]);
 			}
 		} else if (PubType.State == pendingDeliveryType) {
 			assert(!pendingIngress);
@@ -440,23 +468,29 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 	}
 
 
-	private void allPendingNormalMessages(int limit, int[] localPP, long[] targetMakrs, Pipe<MessagePubSub> pipe) {
-		for(int i = 0; i<limit; i++) {			        			
-			copyToSubscriber(pipe, localPP[i], targetMakrs, 
-					 MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-					 MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+	private void allPendingNormalMessages(int startIdx, int limit, int[] localPP, long[] targetMakrs, Pipe<MessagePubSub> pipe) {
+		
+		for(int i = startIdx; i<limit; i++) {			        			
+			copyToSubscriber(
+					 localPP[i], targetMakrs, 
+					 topicBacking, topicPos, topicLen, topicMask,
+					 payloadBacking, payloadPos, payloadLen, payloadMask
+					);                
 		}
 	}
 
 
-	private void allPendingIngressMessages(int limit, int[] localPP, Pipe<IngressMessages> pipe) {
-		for(int i = 0; i<limit; i++) {
-			copyToSubscriber(pipe, localPP[i],
-					IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-					IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                
+	private void allPendingIngressMessages(int startIdx, int limit, int[] localPP, Pipe<IngressMessages> pipe) {
+
+		for(int i = startIdx; i<limit; i++) {
+			copyToSubscriber(
+					localPP[i], null,
+					 topicBacking, topicPos, topicLen, topicMask,
+					 payloadBacking, payloadPos, payloadLen, payloadMask
+					);                
 		}
 	}
-
+	
 
 	private void allPendingStateChanges(int limit, int[] localPP, long[] targetMakrs, int localCurState,
 			int localNewState) {
@@ -564,7 +598,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
                         		}
 	                        		                
 	                        	//////////
-	                        	//publish to all subscribers using wild card support
+	                        	//publish to all subscribers using wild card support here
+                        		//TODO: walk the other lists
 	                        	///////////
 //	                        	int sumLen = 0;
 //	                    		int x = subscriberListSize*totalSubscriberLists;
@@ -592,23 +627,31 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 //                        		}
                         		
                         		
-	                        	////////////
-	                        	////////////
 	                        	///////////
-                        		allMessageSubscribers(pipe, targetMakrs, listIdx, subscriberLists, 1+listIdx+length);
-	                        	int sumLen = length;
-	                    		
-	                    		
-	                        	pendingAck[a] = true;
-	                        	requiredConsumes[a] = WaitFor.computeRequiredCount(ackPolicy, sumLen);
-	                     	
+	                        	///////////
+	                        	///////////
+                        		
+                                topicBacking = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+                                topicPos = PipeReader.readBytesPosition(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+                                topicLen = PipeReader.readBytesLength(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
+                                topicMask = PipeReader.readBytesMask(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);                  
+                                
+                                payloadBacking = PipeReader.readBytesBackingArray(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+                                payloadPos = PipeReader.readBytesPosition(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+                                payloadLen = PipeReader.readBytesLength(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
+                                payloadMask = PipeReader.readBytesMask(pipe, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);                  
+                                                                
+                        		allPendingNormalMessages(listIdx+1, 1+listIdx+length, subscriberLists, targetMakrs, pipe);
+
+                        		pendingAck[a] = true;
+	                        	requiredConsumes[a] = WaitFor.computeRequiredCount(ackPolicy, length);                   	
 	                        	
                         	}
                         	
                         	//Do nothing else until this is completed.
                         	//critical to ensure that ordering is preserved
                             if (pendingPublishCount>0) {
-                            	logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing");
+                            	logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing in graph {} [2]",graphName);
                             	pendingDeliveryType = PubType.Message;
                                 pendingReleaseCountIdx = a; //keep so this is only cleared after we have had successful transmit to all subscribers.
                                 return;//must try again later
@@ -641,15 +684,6 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     }
 
 
-	private void allMessageSubscribers(Pipe<MessagePubSub> pipe, long[] targetMakrs, int listIdx, int[] localSubs,
-			final int limit) {
-		for(int i = listIdx+1; i<limit; i++) {
-			copyToSubscriber(pipe, localSubs[i], targetMakrs,
-					MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, 
-					MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3
-					);                                
-		}
-	}
 
 	private CollectTargetLists visitor;
 
@@ -826,61 +860,53 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		Pipe.publishWrites(tempSubject);
 	}
 //   
-    private void copyToSubscriber(Pipe<?> pipe, int pipeIdx, long[] targetMarks, int topicLOC, int payloadLOC) {
+    private void copyToSubscriber(
+    		int pipeIdx, long[] targetMarks, 
+    		byte[] topicBacking, int topicPos, int topicLength, int topicMask,
+    		byte[] payloadBacking, int payloadPos, int payloadLength, int payloadMask
+
+    		) {
         Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
-        if (PipeWriter.tryWriteFragment(outPipe, MessageSubscription.MSG_PUBLISH_103)) {
-        	
-            PipeReader.copyBytes(pipe, outPipe, topicLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1);
-            PipeReader.copyBytes(pipe, outPipe, payloadLOC, MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-            
+        if (Pipe.hasRoomForWrite(outPipe)) {
+        	int size = Pipe.addMsgIdx(outPipe, MessageSubscription.MSG_PUBLISH_103);
+
+        	Pipe.addByteArray(topicBacking, topicPos, topicLength, topicMask, outPipe);
+
+        	if (payloadLength>0) {
+        		Pipe.addByteArray(payloadBacking, payloadPos, payloadLength, payloadMask, outPipe); 	
+        	} 
+ 
             //due to batching this may not become the head position upon publish but it will do so eventually.
             //so to track this position we use workingHeadPosition not headPosition
-            targetMarks[pipeIdx] = Pipe.workingHeadPosition(outPipe);
-            
-            PipeWriter.publishWrites(outPipe);
+        	if (null!=targetMarks) {
+        		targetMarks[pipeIdx] = Pipe.workingHeadPosition(outPipe);
+        	}
+        	Pipe.confirmLowLevelWrite(outPipe, size);
+        	Pipe.publishWrites(outPipe);
+        	
         } else {
         	//add this one back to the list so we can send again later
-          	pendingPublish[pendingPublishCount++] = pipeIdx; //TODO: why does this value never go down??
-            pendingIngress = false;
+          	pendingPublish[pendingPublishCount++] = pipeIdx; 
+            pendingIngress = (null==targetMarks); //true for ingress and false for normal
         }
     }
     
-    private void copyToSubscriber(Pipe<?> pipe, int pipeIdx, int topicLOC, int payloadLOC) {
-        Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
-        if (PipeWriter.tryWriteFragment(outPipe, MessageSubscription.MSG_PUBLISH_103)) {
-
-            PipeReader.copyBytes(pipe, outPipe, 
-            		             topicLOC, 
-            		             MessageSubscription.MSG_PUBLISH_103_FIELD_TOPIC_1);
-            
-            PipeReader.copyBytes(pipe, outPipe, 
-            		             payloadLOC, 
-            		             MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-            
-            
-            
-            PipeWriter.publishWrites(outPipe);
-        } else {
-        	//add this one back to the list so we can send again later
-            pendingPublish[pendingPublishCount++] = pipeIdx;    
-            pendingIngress = true;
-        }
-    }
 
     private void copyToSubscriberState(int oldOrdinal, int newOrdinal, int pipeIdx, long[] targetMarks) {
         Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
-        if (PipeWriter.tryWriteFragment(outPipe, MessageSubscription.MSG_STATECHANGED_71)) {
+        if (Pipe.hasRoomForWrite(outPipe)) {
+        	int size = Pipe.addMsgIdx(outPipe, MessageSubscription.MSG_STATECHANGED_71);
         	assert(oldOrdinal != newOrdinal) : "Stage change must actualt change the state!";
-        	PipeWriter.writeInt(outPipe, MessageSubscription.MSG_STATECHANGED_71_FIELD_OLDORDINAL_8, oldOrdinal);
-        	PipeWriter.writeInt(outPipe, MessageSubscription.MSG_STATECHANGED_71_FIELD_NEWORDINAL_9, newOrdinal);
-        	            
+        	Pipe.addIntValue(oldOrdinal, outPipe);
+        	Pipe.addIntValue(newOrdinal, outPipe);
+ 
             //due to batching this may not become the head position upon publish but it will do so eventually.
             //so to track this position we use workingHeadPosition not headPosition
         	targetMarks[pipeIdx] = Pipe.workingHeadPosition(outPipe);
-            		
-            PipeWriter.publishWrites(outPipe);
+
+        	Pipe.confirmLowLevelWrite(outPipe, size);
+        	Pipe.publishWrites(outPipe);
         } else {
-        	//System.err.println("xxxxxxxxxxxxxxxxxxxxxxxxx stored for later");
         	pendingPublish[pendingPublishCount++] = pipeIdx;
         	pendingIngress = false;
         }

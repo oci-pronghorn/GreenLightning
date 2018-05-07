@@ -32,6 +32,8 @@ public class OpenCloseTestServer implements GreenApp {
 		builder.useHTTP1xServer(port)
 			   .setHost("127.0.0.1")
 			   .setMaxConnectionBits(3)//only 8 connections
+			   .setDecryptionUnitsPerTrack(12)
+			   .setEncryptionUnitsPerTrack(12)
 		       .useInsecureServer();
 		
 		neverCloseRoute = builder.defineRoute().path("neverclose").routeId();

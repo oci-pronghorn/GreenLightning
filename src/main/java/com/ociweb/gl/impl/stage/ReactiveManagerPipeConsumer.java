@@ -54,11 +54,11 @@ public class ReactiveManagerPipeConsumer {
 			temp = 0;
 			int i = count;
 			while (--i >= 0) {
-				if (Pipe.contentRemaining(localInputs[i])<=0) {
+				if (Pipe.isEmpty(localInputs[i]) || !Pipe.hasContentToRead(localInputs[i])) {
 					//most calls are stopping on this if
 				} else {
 					localOperators[i].apply(i, localObj, localInputs[i], r);
-					if (Pipe.contentRemaining(localInputs[i])>0) {
+					if (Pipe.hasContentToRead(localInputs[i])) {
 						temp++;
 						passes++;
 					}

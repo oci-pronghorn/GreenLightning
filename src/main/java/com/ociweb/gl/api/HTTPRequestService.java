@@ -1,5 +1,8 @@
 package com.ociweb.gl.api;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -10,7 +13,8 @@ import com.ociweb.pronghorn.pipe.Pipe;
 public class HTTPRequestService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
-
+	private final static Logger logger = LoggerFactory.getLogger(HTTPRequestService.class);
+	
 	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;		
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
@@ -83,7 +87,7 @@ public class HTTPRequestService {
 		//get the cached connection ID so we need not deal with the host again
 		/////////////////////
 		if (session.getConnectionId()<0) {
-			
+		
 			final long id = ClientCoordinator.lookup(
 					                   ClientCoordinator.lookupHostId(session.hostBytes), 
 					                   session.port, 
@@ -91,7 +95,6 @@ public class HTTPRequestService {
 		    if (id>=0) {
 		    	session.setConnectionId(id);
 		    }
-			
 		} 
 		
 		if (msgCommandChannel.goHasRoom() ) {
@@ -148,7 +151,6 @@ public class HTTPRequestService {
 					
 					return true;
 				}
-				
 			}
 			
 		}
@@ -171,7 +173,7 @@ public class HTTPRequestService {
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
 		if (msgCommandChannel.goHasRoom() ) { 
-						
+	
 			if (session.getConnectionId()<0) {
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					

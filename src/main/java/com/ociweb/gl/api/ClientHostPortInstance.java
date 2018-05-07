@@ -6,9 +6,14 @@ import com.ociweb.pronghorn.util.TrieParser;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class ClientHostPortInstance {
 	private final static AtomicInteger sessionCounter = new AtomicInteger(0);
 
+	private final static Logger logger = LoggerFactory.getLogger(ClientHostPortInstance.class);
+	
 	final String host;
 	final int port;
 	public final int sessionId;
@@ -63,6 +68,9 @@ public class ClientHostPortInstance {
 		this.port = port;
 		if (port<=0 || port>65535) {
 			throw new UnsupportedOperationException("Invalid port "+port+" must be postive and <= 65535");
+		}
+		if (sessionId<=0) {
+			throw new UnsupportedOperationException("SessionId must be postive and greater than zero. found: "+sessionId);
 		}
 		this.sessionId = sessionId;
 		this.hostId = ClientCoordinator.registerDomain(host);

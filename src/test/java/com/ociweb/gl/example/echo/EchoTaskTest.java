@@ -19,7 +19,7 @@ public class EchoTaskTest {
 		//HTTP1xRouterStage.showHeader = true;
 		
 		boolean telemetry = false;  //must not be true when checked in.
-		int cyclesPerTrack = 100000;
+		int cyclesPerTrack = 10000;
 		int parallelTracks = 1;
 		int timeoutMS = 600_000;
 				

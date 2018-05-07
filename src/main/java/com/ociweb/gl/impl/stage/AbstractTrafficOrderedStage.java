@@ -1,7 +1,5 @@
 package com.ociweb.gl.impl.stage;
 
-import static com.ociweb.pronghorn.pipe.PipeWriter.publishWrites;
-
 import java.util.Arrays;
 
 import org.slf4j.Logger;
@@ -12,8 +10,6 @@ import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.PipeReader;
-import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Blocker;
@@ -63,21 +59,21 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	public AbstractTrafficOrderedStage(GraphManager graphManager, 
 			MsgRuntime<?,?> runtime,
 			BuilderImpl hardware,
-			Pipe<?>[] output,
+			Pipe<?>[] inputData,
 			Pipe<TrafficReleaseSchema>[] goPipe,
 			Pipe<TrafficAckSchema>[] ackPipe,
 			
 			Pipe<?> ... otherResponse ) {
 
-		super(graphManager, join(goPipe, output), join(ackPipe, otherResponse));
+		super(graphManager, join(goPipe, inputData), join(ackPipe, otherResponse));
 	       
-		assert(output.length >= goPipe.length);
+		assert(inputData.length >= goPipe.length);
 		
 		logger.info("Warning, 2ms latency may be introduced due to longer timeout on traffic stages. {}",this.getClass().getSimpleName());
 		
 		this.runtime = runtime;
 		this.hardware = hardware;
-		this.etcAndDataPipe = output;//the last few pipes align with goPipe
+		this.etcAndDataPipe = inputData;//the last few pipes align with goPipe
 		this.ackPipe = ackPipe;
 		this.goPipe = goPipe;
 		this.hitPoints = goPipe.length;
@@ -213,13 +209,15 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 						//there was some work to be done
 						if (0==localActiveCounts[a]) {
 						    //logger.debug("send ack back to {}",a);
-							Pipe<TrafficAckSchema> pipe = ackPipe[a];
-							
+							Pipe<TrafficAckSchema> pipe = ackPipe[a];							
 							if (null != pipe) {
-							    if (PipeWriter.tryWriteFragment(pipe, TrafficAckSchema.MSG_DONE_10)) {
-									publishWrites(pipe);
+								if (Pipe.hasRoomForWrite(pipe)) {
+									int size = Pipe.addMsgIdx(pipe, TrafficAckSchema.MSG_DONE_10);
+									Pipe.confirmLowLevelWrite(pipe, size);
+									Pipe.publishWrites(pipe);
 									localActiveCounts[a] = -1;
 									foundWork = true; //keep running may find something else 
+									
 								}
 							} else {
 								localActiveCounts[a] = -1;
@@ -271,7 +269,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
         return (null==goPipe[a]) || (!hardware.isChannelBlocked( goPipe[a].id ));
     }
 
-    protected int goPipeId(int a) {
+    protected int goPipeId(int a) { //TODO: rename as blocking id?
     	return goPipe[a].id;
     }
     
@@ -288,23 +286,22 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 		}
 	}
 
-	//TOOD: convert to Low level, this is a hot spot.
 	private void countFromGoPipe(final int a, Pipe<TrafficReleaseSchema> localPipe) {
-		if (PipeReader.tryReadFragment(localPipe)) { 
-		
-			assert(PipeReader.isNewMessage(localPipe)) : "This test should only have one simple message made up of one fragment";
-			
-			int msgIdx = PipeReader.getMsgIdx(localPipe);
+		if (Pipe.hasContentToRead(localPipe)) { 
+			int msgIdx = Pipe.takeMsgIdx(localPipe);
 			if(TrafficReleaseSchema.MSG_RELEASE_20 == msgIdx){
 				assert(-1==activeCounts[a]);
-				activeCounts[a] = PipeReader.readInt(localPipe, TrafficReleaseSchema.MSG_RELEASE_20_FIELD_COUNT_22);
+				activeCounts[a] = Pipe.takeInt(localPipe);
+				Pipe.confirmLowLevelRead(localPipe, Pipe.sizeOf(localPipe, TrafficReleaseSchema.MSG_RELEASE_20));
+				
 			} else {
 				assert(msgIdx == -1);
 				if (--hitPoints == 0) {
 					requestShutdown();
 				}
+				Pipe.confirmLowLevelRead(localPipe, Pipe.EOF_SIZE);				
 			}
-			PipeReader.releaseReadLock(localPipe);
+			Pipe.releaseReadLock(localPipe);
 		}
 	}
 
@@ -318,12 +315,15 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 
 	private void noGoProcessSingleMessage(final int a, Pipe<?> pipe) {
 		//detect any request to begin the shutdown process
-		if (!PipeReader.peekMsg(pipe, -1)) {					
+		if (!Pipe.peekMsg(pipe, -1)) {					
 			activeCounts[a] = 1; //NOTE: only do 1 at a time
-		} else {				
-			if (PipeReader.tryReadFragment(pipe)) {
-				PipeReader.releaseReadLock(pipe);
-			}
+		} else {
+			//TODO: until every extending class is all low level we
+			//      can not consume this properly			
+			//Pipe.takeMsgIdx(pipe);
+			//Pipe.confirmLowLevelRead(pipe, Pipe.EOF_SIZE);
+			//Pipe.releaseReadLock(pipe);
+			
 			runtime.shutdownRuntime();
 		}
 	}

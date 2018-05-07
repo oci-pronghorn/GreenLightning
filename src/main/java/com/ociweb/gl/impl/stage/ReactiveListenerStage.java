@@ -695,11 +695,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  int revision = HTTPRevision.MASK & parallelRevision;
     	    	  
 				  reader.setRevisionId(revision);
-    	    	  final int context = Pipe.takeInt(p);   	    	  
+    	    	  int context = Pipe.takeInt(p);   	    	  
     	    	  
     	    	  reader.setRouteId(pathId);
     	    	  
     	    	  assert(parallelIdx<OrderSupervisorStage.CLOSE_CONNECTION_MASK);
+    	    	  
+    	    	  //if (0!=(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context)) {
+    	    	  //	  logger.info("\nclosed discovered {} sent from client.. ",connectionId);
+    	    	  //}
     	    	  
     	    	  //all these values are required in order to ensure the right sequence order once processed.
     	    	  long sequenceCode = (((long)(parallelIdx|(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context))  )<<32) | ((long)sequenceNo);
