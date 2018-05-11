@@ -7,10 +7,6 @@ public class DelayService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
 
-	/**
-	 *
-	 * @param msgCommandChannel
-	 */
 	public DelayService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.USE_DELAY;
@@ -19,7 +15,6 @@ public class DelayService {
 	/**
 	 *
 	 * @param messageCount number of messages
-	 * @return has rooom
 	 */
 	public boolean hasRoomFor(int messageCount) {
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 

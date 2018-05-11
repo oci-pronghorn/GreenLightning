@@ -48,6 +48,9 @@ public interface Builder extends ArgumentProvider {
      */
     Builder setTimerPulseRate(TimeTrigger trigger);
 
+    /**
+	 * Used to limit the threads for telemetry
+     */
     void limitThreads(int threadLimit);
 
 	void limitThreads();
@@ -195,10 +198,6 @@ public interface Builder extends ArgumentProvider {
      */
 	HTTPClientConfig useNetClient(TLSCertificates certificates);
 
-    /**
-     * Activates HTTP client services
-     * @return client config
-     */
 	HTTPClientConfig useInsecureNetClient();
 
     /**

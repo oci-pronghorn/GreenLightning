@@ -152,8 +152,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 	/**
-	 *
-	 * @return PubSubService(this)
+	 * Used to create a new pubsub service
+	 * @return new PubSubService
 	 */
 	public PubSubService newPubSubService() {
 		return new PubSubService(this);
@@ -169,25 +169,25 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 	/**
-	 *
+	 * Used to create a new pubsub service with specific queue length and a max message size
 	 * @param queueLength int to be passed to PubSubService
 	 * @param maxMessageSize int to be passed to PubSubService
-	 * @return PubSubService(this, queueLength, maxMessageSize)
+	 * @return new PubSubService
 	 */
 	public PubSubService newPubSubService(int queueLength, int maxMessageSize) {
 		return new PubSubService(this,queueLength,maxMessageSize);
 	}
 
 	/**
-	 *
-	 * @return HTTPRequestService(this)
+	 * Used to create a new HTTP client service
+	 * @return new HTTPRequestService
 	 */
 	public HTTPRequestService newHTTPClientService() {
 		return new HTTPRequestService(this);
 	}
 
 	/**
-	 *
+	 * Used to create a new HTTP client service with specified queue length and a max message size
 	 * @param queueLength int arg to be passed to HTTPRequestService
 	 * @param maxMessageSize int arg to be passed to HTTPRequestService
 	 * @return HTTPRequestService(this, queueLength, maxMessageSize)
@@ -198,7 +198,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	/**
 	 *
-	 * @return HTTPResponseService
+	 * @return new HTTPResponseService
 	 */
 	public HTTPResponseService newHTTPResponseService() {
 		return new HTTPResponseService(this);
@@ -208,7 +208,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	 *
 	 * @param queueLength int arg to be passed to HTTPResponseService
 	 * @param maxMessageSize int arg to be passed to HTTPResponseService
-	 * @return HTTPResponseService(this, queueLength, maxMessageSize)
+	 * @return new HTTPResponseService
 	 */
 	public HTTPResponseService newHTTPResponseService(int queueLength, int maxMessageSize) {
 		return new HTTPResponseService(this,queueLength,maxMessageSize);
@@ -216,7 +216,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	/**
 	 *
-	 * @return new DelayService(this)
+	 * @return new DelayService
 	 */
 	public DelayService newDelayService() {
 		return new DelayService(this);

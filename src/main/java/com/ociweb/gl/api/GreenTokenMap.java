@@ -33,29 +33,47 @@ public class GreenTokenMap {
 	}
 
 	/**
-	 * 
-	 * @param id
-	 * @param template
-	 * @return map
+	 * Used to add ids and templates to GreenTokenMaps
+	 * @param id long id to add to GreenTokenMap
+	 * @param template CharSequence template to add to GreenTokenMap
 	 */
 	public GreenTokenMap add(long id, CharSequence template) {
 		tp.setUTF8Value(template, id); 
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());		
 		return this;
 	}
-	
+
+	/**
+	 * Used to add ids and templates to GreenTokenMaps
+	 * @param id long id to add to GreenTokenMap
+	 * @param templatePart1 CharSequence template to add to GreenTokenMap
+	 * @param templatePart2 CharSequence template to add to GreenTokenMap
+	 */
 	public GreenTokenMap addTemplate(long id, CharSequence templatePart1, CharSequence templatePart2) {
 		tp.setUTF8Value(templatePart1, templatePart2, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
-	
+
+	/**
+	 * Used to add ids and templates to GreenTokenMaps
+	 * @param id long id to add to GreenTokenMap
+	 * @param templatePart1 CharSequence template to add to GreenTokenMap
+	 * @param templatePart2 CharSequence template to add to GreenTokenMap
+	 * @param templatePart3 CharSequence template to add to GreenTokenMap
+	 */
 	public GreenTokenMap addTemplate(long id, CharSequence templatePart1, CharSequence templatePart2, CharSequence templatePart3) {
 		tp.setUTF8Value(templatePart1, templatePart2, templatePart3, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
-	
+
+	/**
+	 * Used to add long id and template to GreenTokenMaps
+	 * @param id long id to add to GreenTokenMap
+	 * @param template byte[] template to add to GreenTokenMap
+	 * @return
+	 */
 	public GreenTokenMap addTemplate(long id, byte[] template) {
 		tp.setValue(template, id);
 		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
