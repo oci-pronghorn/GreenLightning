@@ -74,8 +74,8 @@ public interface Builder extends ArgumentProvider {
      * Creates a new struct builder that allows you to define named values on a channel
      * @return the new struct built
      */
-	JSONDecoder defineJSONSDecoder();
-	JSONDecoder defineJSONSDecoder(boolean writeDot);
+	JSONExtractor defineJSONSDecoder();
+	JSONExtractor defineJSONSDecoder(boolean writeDot);
 
 	StructBuilder defineStruct();
 

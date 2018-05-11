@@ -72,7 +72,7 @@ public class GreenTokenMap {
 	 * Used to add long id and template to GreenTokenMaps
 	 * @param id long id to add to GreenTokenMap
 	 * @param template byte[] template to add to GreenTokenMap
-	 * @return
+	 * @return token map
 	 */
 	public GreenTokenMap addTemplate(long id, byte[] template) {
 		tp.setValue(template, id);
