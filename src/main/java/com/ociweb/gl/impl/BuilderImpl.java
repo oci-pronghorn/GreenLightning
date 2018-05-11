@@ -7,14 +7,15 @@ import com.ociweb.gl.api.transducer.RestListenerTransducer;
 import com.ociweb.gl.api.transducer.StateChangeListenerTransducer;
 import com.ociweb.gl.impl.http.client.HTTPClientConfigImpl;
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
-import com.ociweb.gl.impl.http.server.HTTPServerConfigImpl;
 import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
 import com.ociweb.gl.impl.schema.*;
 import com.ociweb.gl.impl.stage.*;
 import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
-import com.ociweb.json.JSONExtractor;
+import com.ociweb.json.JSONExtractorImpl;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.ClientCoordinator;
+import com.ociweb.pronghorn.network.HTTPServerConfig;
+import com.ociweb.pronghorn.network.HTTPServerConfigImpl;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.*;
@@ -35,7 +36,7 @@ import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructRegistry;
 import com.ociweb.pronghorn.util.*;
-import com.ociweb.json.decode.JSONDecoder;
+import com.ociweb.json.decode.JSONExtractor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -268,9 +269,7 @@ public class BuilderImpl implements Builder {
 	public HTTPServerConfig useHTTP1xServer(int bindPort) {
 		if (server != null) throw new RuntimeException("Server already enabled");
 		
-		this.server = new HTTPServerConfigImpl(bindPort, pcm, gm.recordTypeData);
-		server.beginDeclarations();
-		return server;
+		return new HTTPServerConfigImpl(bindPort, pcm, gm.recordTypeData);
 	}
 
 	public final HTTPServerConfig getHTTPServerConfig() {
@@ -851,12 +850,12 @@ public class BuilderImpl implements Builder {
 		return routerConfig().registerCompositeRoute(headers);
 	}
 	@Override
-	public final JSONDecoder defineJSONSDecoder() {
-		return new JSONDecoder();
+	public final JSONExtractor defineJSONSDecoder() {
+		return new JSONExtractor();
 	}
 	@Override
-	public final JSONDecoder defineJSONSDecoder(boolean writeDot) {
-		return new JSONDecoder(writeDot);
+	public final JSONExtractor defineJSONSDecoder(boolean writeDot) {
+		return new JSONExtractor(writeDot);
 	}
 
 	public final TrieParser routeExtractionParser(int route) {

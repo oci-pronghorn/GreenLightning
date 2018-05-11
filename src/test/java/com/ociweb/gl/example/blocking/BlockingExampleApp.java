@@ -5,7 +5,7 @@ import com.ociweb.gl.api.GreenAppParallel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.PubSubService;
-import com.ociweb.json.JSONExtractor;
+import com.ociweb.json.JSONExtractorImpl;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
@@ -14,7 +14,7 @@ import com.ociweb.pronghorn.struct.StructType;
 public class BlockingExampleApp implements GreenAppParallel {
 
 	static final JSONExtractorCompleted extractor = 
-			new JSONExtractor()
+			new JSONExtractorImpl()
 			.newPath(JSONType.TypeString).key("key1").completePath("name_a", Fields.key1)
 			.newPath(JSONType.TypeInteger).key("key2").completePath("name_b", Fields.key2);
 	

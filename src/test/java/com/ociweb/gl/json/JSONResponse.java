@@ -1,6 +1,6 @@
 package com.ociweb.gl.json;
 
-import com.ociweb.json.JSONExtractor;
+import com.ociweb.json.JSONExtractorImpl;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
 import com.ociweb.json.encode.JSONRenderer;
@@ -23,7 +23,7 @@ public class JSONResponse {
     	Status, Message, Body;
     }    
     
-    public static final JSONExtractorCompleted jsonExtractor = new JSONExtractor()
+    public static final JSONExtractorCompleted jsonExtractor = new JSONExtractorImpl()
             .newPath(JSONType.TypeInteger).key("status").completePath("status",Fields.Status)
             .newPath(JSONType.TypeString).key("message").completePath("message",Fields.Message)
             .newPath(JSONType.TypeString).key("body").completePath("body",Fields.Body);

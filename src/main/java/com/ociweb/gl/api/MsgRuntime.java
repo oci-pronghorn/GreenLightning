@@ -11,6 +11,7 @@ import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
+import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerCoordinator;
@@ -604,27 +605,27 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	private void buildGraphForServer(MsgApp app) {
 
 		HTTPServerConfig config = builder.getHTTPServerConfig();
+		final int parallelTrackCount = builder.parallelTracks();
 				
-		ServerPipesConfig serverConfig = config.buildServerConfig(builder.parallelTracks());
+		//////////////////////////
+		//////////////////////////
+		
+		config.setTracks(parallelTrackCount);//TODO: this will write over value if user called set Tracks!!!
+		ServerPipesConfig serverConfig = config.buildServerConfig();
 
 		ServerCoordinator serverCoord = new ServerCoordinator(
 				config.getCertificates(),
 				config.bindHost(), 
 				config.bindPort(),
-				config.connectionStruct(),				
-				serverConfig.maxConnectionBitsOnServer,
-				serverConfig.maxConcurrentInputs,
-				serverConfig.maxConcurrentOutputs,
-				builder.parallelTracks(), false,
+				config.connectionStruct(),
+				false,
 				"Server",
-				config.defaultHostPath(), 
-				serverConfig.logFile);
-		
-		final int parallelTrackCount = builder.parallelTracks();
-		
+				config.defaultHostPath(),
+				serverConfig);
+				
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
 		
-		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, serverConfig, encryptedIncomingGroup);
+		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, encryptedIncomingGroup);
 		               
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
@@ -632,11 +633,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		if (config.isTLS()) {
 			planIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);
 			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, 
-					                      serverConfig.serverRequestUnwrapUnits, serverConfig.handshakeDataConfig,
+					                      serverConfig.serverRequestUnwrapUnits, serverConfig.incomingDataConfig,
 					                      encryptedIncomingGroup, planIncomingGroup, acks);
 		} else {
 			planIncomingGroup = encryptedIncomingGroup;
 		}
+		////////////////////////
+		////////////////////////
 		
 		//Must call here so the beginning stages of the graph are drawn first when exporting graph.
 		app.declareBehavior(this);
@@ -670,8 +673,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//////////////////
 		//////////////////
 		
-		HTTP1xRouterStageConfig routerConfig = builder.routerConfig();
+		final HTTP1xRouterStageConfig routerConfig = builder.routerConfig();
 				
+		/////////////////
+		/////////////////
+		
 		ArrayList<Pipe> forPipeCleaner = new ArrayList<Pipe>();
 		Pipe<HTTPRequestSchema>[][] fromRouterToModules = new Pipe[trackCounts][];	
 		int t = trackCounts;
@@ -726,7 +732,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe<ServerResponseSchema>[] errorResponsePipes = new Pipe[trackCounts];
 		PipeConfig<ServerResponseSchema> errConfig = ServerResponseSchema.instance.newPipeConfig(4, 512);
 		
-		final boolean catchAll = builder.routerConfig().totalPathsCount()==0;
+		final boolean catchAll = routerConfig.totalPathsCount()==0;
 				
 		
 		int spaceForEchos = serverCoord.connectionStruct().inFlightPayloadSize();
@@ -754,10 +760,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		NetGraphBuilder.buildLogging(gm, serverCoord, reqLog, resLog);
 		
 		NetGraphBuilder.buildRouters(gm, serverCoord, acks,
-				fromModulesToOrderSuper, fromRouterToModules, routerConfig1, errConfig,
-				catchAll, reqLog, perTrackFromNet);
+				fromModulesToOrderSuper, fromRouterToModules, routerConfig1, catchAll, reqLog, perTrackFromNet);
 
-		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, serverConfig, handshakeIncomingGroup);
+		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, handshakeIncomingGroup);
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
 		assert(fromOrderedContent.length >= trackCounts) : "reduce track count since we only have "+fromOrderedContent.length+" pipes";
 		

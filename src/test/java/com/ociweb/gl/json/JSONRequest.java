@@ -1,7 +1,7 @@
 package com.ociweb.gl.json;
 
 import com.ociweb.gl.api.HTTPRequestReader;
-import com.ociweb.json.JSONExtractor;
+import com.ociweb.json.JSONExtractorImpl;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
 import com.ociweb.json.encode.JSONRenderer;
@@ -39,7 +39,7 @@ public class JSONRequest {
     	ID1, ID2, TimeStamp, Value;
     }
     
-    public static final JSONExtractorCompleted jsonExtractor = new JSONExtractor()
+    public static final JSONExtractorCompleted jsonExtractor = new JSONExtractorImpl()
             .newPath(JSONType.TypeString).key("ID1").completePath("ID1",Fields.ID1)
             .newPath(JSONType.TypeString).key("ID2").completePath("ID2",Fields.ID2)
             .newPath(JSONType.TypeString).key("TimeStamp").completePath("TimeStamp",Fields.TimeStamp)

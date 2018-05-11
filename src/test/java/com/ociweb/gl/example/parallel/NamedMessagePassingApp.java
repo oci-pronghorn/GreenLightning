@@ -3,10 +3,10 @@ package com.ociweb.gl.example.parallel;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenAppParallel;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.json.JSONExtractor;
+import com.ociweb.json.JSONExtractorImpl;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.JSONType;
-import com.ociweb.json.decode.JSONDecoder;
+import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
 public class NamedMessagePassingApp implements GreenAppParallel {
@@ -69,7 +69,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		builder.setGlobalSLALatencyNS(50_000_000);
 		
 		
-		JSONDecoder extractor =
+		JSONExtractor extractor =
 				builder.defineJSONSDecoder().begin()
 					.element(JSONType.TypeString).key("key1").asField(Fields.nameA)
 		        	.element(JSONType.TypeInteger).key("key2").asField(Fields.nameB)

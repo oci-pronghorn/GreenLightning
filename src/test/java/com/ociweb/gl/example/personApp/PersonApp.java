@@ -4,7 +4,7 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.json.JSONType;
-import com.ociweb.json.decode.JSONDecoder;
+import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructType;
 
@@ -12,7 +12,7 @@ public class PersonApp implements GreenApp {
 
 	@Override
 	public void declareConfiguration(Builder builder) {
-		JSONDecoder jsonDecoder = builder.defineJSONSDecoder()
+		JSONExtractor jsonDecoder = builder.defineJSONSDecoder()
 			.begin()
 			.element(JSONType.TypeString).key("firstName").asField(GreenField.firstName)
 			.element(JSONType.TypeString).key("lastName").asField(GreenField.lastName)

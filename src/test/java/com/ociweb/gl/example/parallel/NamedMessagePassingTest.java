@@ -78,17 +78,15 @@ public class NamedMessagePassingTest {
 		
 		//2M is about 1 min
 		
-		int cyclesPerTrack = 200_000; //*(1+99_9999);// / 10;
+		int cyclesPerTrack = 1_000_000; //*(1+99_9999);// / 10;
 		int parallelTracks = 1;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8081, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 0;  //7 126k for max volume
-		
-		
-		
+		config2.simultaneousRequestsPerTrackBits  = 7; // 126k for max volume
+			
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),

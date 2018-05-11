@@ -1,8 +1,8 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.json.JSONExtractor;
 import com.ociweb.json.JSONExtractorCompleted;
-import com.ociweb.json.decode.JSONDecoder;
+import com.ociweb.json.decode.JSONExtractor;
+import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.http.CompositePath;
@@ -48,6 +48,9 @@ public interface Builder extends ArgumentProvider {
      */
     Builder setTimerPulseRate(TimeTrigger trigger);
 
+    /**
+	 * Used to limit the threads for telemetry
+     */
     void limitThreads(int threadLimit);
 
 	void limitThreads();
