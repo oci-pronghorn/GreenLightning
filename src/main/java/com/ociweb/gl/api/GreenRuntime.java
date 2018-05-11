@@ -1,11 +1,5 @@
 package com.ociweb.gl.api;
 
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.locks.ReentrantLock;
-
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
@@ -14,6 +8,11 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageVisitor;
+
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	
@@ -106,7 +105,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 
 	/**
 	 *
-	 * @param app GreenApp arg used in MsgRuntime
+	 * @param app GreenApp used to test
 	 * @param timeoutMS long arg used to set timeout in milliseconds
 	 * @return if !runtime.isShutdownComplete() return false else return true
 	 */

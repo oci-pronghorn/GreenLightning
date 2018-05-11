@@ -198,10 +198,6 @@ public interface Builder extends ArgumentProvider {
      */
 	HTTPClientConfig useNetClient(TLSCertificates certificates);
 
-    /**
-     * Activates HTTP client services
-     * @return client config
-     */
 	HTTPClientConfig useInsecureNetClient();
 
     /**
