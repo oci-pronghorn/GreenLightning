@@ -267,9 +267,11 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public HTTPServerConfig useHTTP1xServer(int bindPort) {
-		if (server != null) throw new RuntimeException("Server already enabled");
+		if (server != null) {
+			throw new RuntimeException("Server already enabled");
+		}
 		
-		return new HTTPServerConfigImpl(bindPort, pcm, gm.recordTypeData);
+		return server = new HTTPServerConfigImpl(bindPort, pcm, gm.recordTypeData);
 	}
 
 	public final HTTPServerConfig getHTTPServerConfig() {
