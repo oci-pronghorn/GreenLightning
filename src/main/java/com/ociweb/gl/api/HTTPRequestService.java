@@ -83,24 +83,23 @@ public class HTTPRequestService {
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
+		if (session.getConnectionId()<0) {
+			final long id = ClientCoordinator.lookup(
+					ClientCoordinator.lookupHostId(session.hostBytes), 
+					session.port, 
+					session.sessionId);
+			if (id>=0) {
+				session.setConnectionId(id);
+			}
+		}
 		//////////////////////
 		//get the cached connection ID so we need not deal with the host again
 		/////////////////////
-		if (session.getConnectionId()<0) {
-		
-			final long id = ClientCoordinator.lookup(
-					                   ClientCoordinator.lookupHostId(session.hostBytes), 
-					                   session.port, 
-					                   session.sessionId);
-		    if (id>=0) {
-		    	session.setConnectionId(id);
-		    }
-		} 
-		
+
 		if (msgCommandChannel.goHasRoom() ) {
 		
 			if (session.getConnectionId()<0) {
-		
+						
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
 					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100);
@@ -172,12 +171,24 @@ public class HTTPRequestService {
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
+		if (session.getConnectionId()<0) {
+			final long id = ClientCoordinator.lookup(
+					ClientCoordinator.lookupHostId(session.hostBytes), 
+					session.port, 
+					session.sessionId);
+			if (id>=0) {
+				session.setConnectionId(id);
+			}
+		}
+		
 		if (msgCommandChannel.goHasRoom() ) { 
 	
 			if (session.getConnectionId()<0) {
+	
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101);
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, 
+							      ClientHTTPRequestSchema.MSG_HTTPPOST_101);
 					
 					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
@@ -201,7 +212,7 @@ public class HTTPRequestService {
 				    Pipe.publishWrites(msgCommandChannel.httpRequest);
 					
 					MsgCommandChannel.publishGo(1, msgCommandChannel.builder.netIndex(), msgCommandChannel);
-					
+						
 					return true;
 				}
 				
@@ -216,9 +227,11 @@ public class HTTPRequestService {
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
 					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
 					Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
-										
+						
+					//path
 					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
-									
+						
+					//headers
 					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
 					DataOutputBlobWriter.openField(hw);
 					if (null!=headers) {
@@ -226,6 +239,7 @@ public class HTTPRequestService {
 					}
 					hw.closeLowLevelField();
 					
+					//payload
 					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(msgCommandChannel.httpRequest);
 					DataOutputBlobWriter.openField(pw);
 					payload.write(pw);

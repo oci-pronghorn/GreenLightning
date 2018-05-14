@@ -1,5 +1,7 @@
 package com.ociweb.gl.example.echo;
 
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
@@ -13,7 +15,7 @@ public class EchoTaskTest {
 	
 	@Test
 	public void runTest() {
-		
+
 		//ClientSocketWriterStage.showWrites = true;
 		//ServerSocketReaderStage.showRequests = true;
 		//HTTP1xRouterStage.showHeader = true;

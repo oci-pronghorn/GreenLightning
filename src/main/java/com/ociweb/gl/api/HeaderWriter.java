@@ -51,7 +51,7 @@ public class HeaderWriter {
 	 */
 	public void write(HTTPHeader header, CharSequence value) {		
 
-			activeTarget.append(header.writingRoot());
+		    activeTarget.write(header.rootBytes());
 			activeTarget.append(value);
 			activeTarget.write(BYTES_EOL);
 
@@ -59,7 +59,7 @@ public class HeaderWriter {
 
 	public void writeUTF8(HTTPHeader header, byte[] value) {
 
-		activeTarget.write(header.rootBytes());//still testing this...
+		activeTarget.write(header.rootBytes());
 		activeTarget.write(value);
 		activeTarget.write(BYTES_EOL);
 

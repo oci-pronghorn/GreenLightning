@@ -47,7 +47,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private final ParallelClientLoadTesterOutput out;
 	private final Supplier<Writable> post;
     private final int maxPayloadSize;
-    private final HTTPContentTypeDefaults contentType;
+    private final byte[] contentType;
 	private final Supplier<HTTPResponseListener> validate;
 
     private final ClientHostPortInstance[] session;
@@ -141,7 +141,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 
-        this.contentType = null==payload ? null : payload.contentType;
+        this.contentType = null==payload ? null : payload.contentType.getBytes();
         this.maxPayloadSize = null==payload ? 256 : payload.maxPayloadSize;
 		this.post = null==payload? null : payload.post;
 		if (this.post != null) {
@@ -359,7 +359,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private boolean lastResponseOk=true;
 		private final int cookieSize = 10;//00;
 
-		private final String largeCookie = buildLargeCookie(cookieSize);
+		private final byte[] largeCookie = buildLargeCookie(cookieSize).getBytes();
 		
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
@@ -370,11 +370,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					new HeaderWritable() {
 						@Override
 						public void write(HeaderWriter writer) {
-							writer.write(HTTPHeaderDefaults.COOKIE, 
-									largeCookie);
+							writer.writeUTF8(HTTPHeaderDefaults.COOKIE, 
+										    largeCookie);
 							
-							writer.write(HTTPHeaderDefaults.CONTENT_TYPE,
-									         contentType.contentType());
+							writer.writeUTF8(HTTPHeaderDefaults.CONTENT_TYPE,
+									         contentType);
 						}
 					}				
 					
