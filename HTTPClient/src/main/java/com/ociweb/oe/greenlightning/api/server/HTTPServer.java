@@ -4,7 +4,7 @@ package com.ociweb.oe.greenlightning.api.server;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.HTTPServerConfig;
+import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -81,7 +81,7 @@ public class HTTPServer implements GreenApp
         //splitResponseRouteId
         
         runtime.addRestListener(new ShutdownRestListener(runtime, keyFieldId))
-                  .includeRoutes(shutdownRouteId);
+                  .includeRoutesByAssoc(shutdownRouteId);
         
         //NOTE .includeAllRoutes() can be used to write a behavior taking all routes
 
