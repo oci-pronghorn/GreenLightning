@@ -40,10 +40,10 @@ public class JSONRequest {
     }
     
     public static final JSONExtractorCompleted jsonExtractor = new JSONExtractorImpl()
-            .newPath(JSONType.TypeString).key("ID1").completePath("ID1",Fields.ID1)
-            .newPath(JSONType.TypeString).key("ID2").completePath("ID2",Fields.ID2)
-            .newPath(JSONType.TypeString).key("TimeStamp").completePath("TimeStamp",Fields.TimeStamp)
-            .newPath(JSONType.TypeInteger).key("Value").completePath("Value",Fields.Value);
+            .newPath(JSONType.TypeString).completePath("ID1","ID1",Fields.ID1)
+            .newPath(JSONType.TypeString).completePath("ID2","ID2",Fields.ID2)
+            .newPath(JSONType.TypeString).completePath("TimeStamp", "TimeStamp",Fields.TimeStamp)
+            .newPath(JSONType.TypeInteger).completePath("Value","Value",Fields.Value);
 
     public JSONRequest() {
         this.timestamp = -1;

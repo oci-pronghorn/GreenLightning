@@ -15,8 +15,8 @@ public class BlockingExampleApp implements GreenAppParallel {
 
 	static final JSONExtractorCompleted extractor = 
 			new JSONExtractorImpl()
-			.newPath(JSONType.TypeString).key("key1").completePath("name_a", Fields.key1)
-			.newPath(JSONType.TypeInteger).key("key2").completePath("name_b", Fields.key2);
+			.newPath(JSONType.TypeString).completePath("key1","name_a", Fields.key1)
+			.newPath(JSONType.TypeInteger).completePath("key2","name_b", Fields.key2);
 	
 	
 	private boolean telemetry;

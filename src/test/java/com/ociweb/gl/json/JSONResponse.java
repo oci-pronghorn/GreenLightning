@@ -24,9 +24,9 @@ public class JSONResponse {
     }    
     
     public static final JSONExtractorCompleted jsonExtractor = new JSONExtractorImpl()
-            .newPath(JSONType.TypeInteger).key("status").completePath("status",Fields.Status)
-            .newPath(JSONType.TypeString).key("message").completePath("message",Fields.Message)
-            .newPath(JSONType.TypeString).key("body").completePath("body",Fields.Body);
+            .newPath(JSONType.TypeInteger).completePath("status","status",Fields.Status)
+            .newPath(JSONType.TypeString).completePath("message","message",Fields.Message)
+            .newPath(JSONType.TypeString).completePath("body","body",Fields.Body);
 
     public void reset() {
         status = 0;

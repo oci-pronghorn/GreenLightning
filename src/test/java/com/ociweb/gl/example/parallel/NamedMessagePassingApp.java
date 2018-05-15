@@ -71,8 +71,8 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		
 		JSONExtractor extractor =
 				builder.defineJSONSDecoder().begin()
-					.element(JSONType.TypeString).key("key1").asField(Fields.nameA)
-		        	.element(JSONType.TypeInteger).key("key2").asField(Fields.nameB)
+					.element(JSONType.TypeString).asField("key1",Fields.nameA)
+		        	.element(JSONType.TypeInteger).asField("key2",Fields.nameB)
 				.finish();
 		
 		
