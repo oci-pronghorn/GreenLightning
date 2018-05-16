@@ -1070,7 +1070,6 @@ public class BuilderImpl implements Builder {
 			}
 
 			int releaseCount = 1024;
-			int writeBufferMultiplier = 100; //takes more memory but limits writes, each creating a little GC
 			int responseUnwrapCount = 2;
 			int clientWrapperCount = 2;
 	
@@ -1080,7 +1079,6 @@ public class BuilderImpl implements Builder {
 												netResponsePipes,
 												netResponseCount,
 												releaseCount,
-												writeBufferMultiplier,
 												responseUnwrapCount,
 												clientWrapperCount,
 												clientWriters);

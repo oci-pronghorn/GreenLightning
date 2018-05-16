@@ -15,8 +15,8 @@ public class JSONResponse {
     private static final JSONRenderer<JSONResponse> jsonRenderer = new JSONRenderer<JSONResponse>()
             .beginObject()
             .integer("status", o->o.status)
-            .string("message", o->o.message)
-            .string("body", o->o.body)
+            .string("message", (o,t)->t.append(o.message))
+            .string("body", (o,t)->t.append(o.body))
             .endObject();
 
     public enum Fields {

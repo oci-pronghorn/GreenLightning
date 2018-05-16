@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.MessageSchema;
@@ -155,54 +156,6 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
 	}
 
 	@Override
-	public void writeByteArray(byte[] bytes) {
-		checkLimit(this,bytes.length);
-		super.writeByteArray(bytes);
-	}
-
-	@Override
-	public void writeCharArray(char[] chars) {
-		checkLimit(this,chars.length*2);
-		super.writeCharArray(chars);
-	}
-
-	@Override
-	public void writeIntArray(int[] ints) {
-		checkLimit(this,ints.length*4);
-		super.writeIntArray(ints);
-	}
-
-	@Override
-	public void writeLongArray(long[] longs) {
-		checkLimit(this,longs.length*8);
-		super.writeLongArray(longs);
-	}
-
-	@Override
-	public void writeDoubleArray(double[] doubles) {
-		checkLimit(this,doubles.length*8);
-		super.writeDoubleArray(doubles);
-	}
-
-	@Override
-	public void writeFloatArray(float[] floats) {
-		checkLimit(this,floats.length*4);
-		super.writeFloatArray(floats);
-	}
-
-	@Override
-	public void writeShortArray(short[] shorts) {
-		checkLimit(this,shorts.length*2);
-		super.writeShortArray(shorts);
-	}
-
-	@Override
-	public void writeBooleanArray(boolean[] booleans) {
-		checkLimit(this,booleans.length);
-		super.writeBooleanArray(booleans);
-	}
-
-	@Override
 	public void writeUTFArray(String[] utfs) {
 		int i = utfs.length;
 		while (--i>=0) {
@@ -212,19 +165,19 @@ public class PayloadWriter<T extends MessageSchema<T>> extends DataOutputBlobWri
 	}
 
 	@Override
-	public Appendable append(CharSequence csq) {
+	public ChannelWriter append(CharSequence csq) {
 		checkLimit(this,csq.length()*6); //Estimate (maximum length)
 		return super.append(csq);
 	}
 
 	@Override
-	public Appendable append(CharSequence csq, int start, int end) {
+	public ChannelWriter append(CharSequence csq, int start, int end) {
 		checkLimit(this,(end-start) * 6); //Estimate (maximum length)
 		return super.append(csq, start, end);
 	}
 
 	@Override
-	public Appendable append(char c) {
+	public ChannelWriter append(char c) {
 		checkLimit(this, 6); //Estimate (maximum length)
 		return super.append(c);
 	}

@@ -9,6 +9,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.http.AbstractRestStage;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -248,20 +249,23 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 		super.writeUTFArray(utfs);
 	}
 
+	
+	
+	
 	@Override
-	public Appendable append(CharSequence csq) {
+	public ChannelWriter append(CharSequence csq) {
 		checkLimit(this,csq.length() * 6); //Estimate (maximum length)
 		return super.append(csq);
 	}
 
 	@Override
-	public Appendable append(CharSequence csq, int start, int end) {
+	public ChannelWriter append(CharSequence csq, int start, int end) {
 		checkLimit(this,(end-start) * 6); //Estimate (maximum length)
 		return super.append(csq, start, end);
 	}
 
 	@Override
-	public Appendable append(char c) {
+	public ChannelWriter append(char c) {
 		checkLimit(this, 6); //Estimate (maximum length)
 		return super.append(c);
 	}

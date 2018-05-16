@@ -21,7 +21,7 @@ public class RestResponder implements PubSubListener{
     private static final JSONRenderer<ChannelReader> jsonRenderer = new JSONRenderer<ChannelReader>()
             .beginObject()
             .integer("value", o->o.readPackedInt())
-            .string("other", o->"text")
+            .string("other", (o,t)->t.append("text"))
             .endObject();
 	
 	private ChannelReader payloadW;	

@@ -29,9 +29,9 @@ public class JSONRequest {
 
     public static final JSONRenderer<JSONRequest> renderer = new JSONRenderer<JSONRequest>()
             .beginObject()
-            .string("ID1", o -> o.id1)
-            .string("ID2", o -> o.id2)
-            .string("TimeStamp", o -> "1969-12-31 18:02:03.0456 CST")
+            .string("ID1", (o,t) -> t.append(o.id1))
+            .string("ID2", (o,t) -> t.append(o.id2))
+            .string("TimeStamp", (o,t) -> t.append("1969-12-31 18:02:03.0456 CST"))
             .integer("Value", o -> o.value)
             .endObject();
 
