@@ -685,7 +685,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  final int sequenceNo = Pipe.takeInt(p);    	    	  
 
     	    	  int routeVerb = Pipe.takeInt(p);
-    	    	  int pathId = routeVerb>>>HTTPVerb.BITS;
+    	    	  int routeId = routeVerb>>>HTTPVerb.BITS;
     	    	  int verbId = HTTPVerb.MASK & routeVerb;
     	    	      	    	      	    	  
     	    	  HTTPRequestReader reader = (HTTPRequestReader)Pipe.openInputStream(p);
@@ -697,7 +697,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 				  reader.setRevisionId(revision);
     	    	  int context = Pipe.takeInt(p);   	    	  
     	    	  
-    	    	  reader.setRouteId(pathId);
+    	    	  reader.setRouteId(routeId);
     	    	  
     	    	  assert(parallelIdx<OrderSupervisorStage.CLOSE_CONNECTION_MASK);
     	    	  
@@ -715,10 +715,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
     	    	  reader.setVerb((HTTPVerbDefaults)httpSpec.verbs[verbId]);
  			
     	    	  if (null!=restRequestReader && 
-    	    	      pathId<restRequestReader.length &&
-    	    	      null!=restRequestReader[pathId]) {
+    	    	      routeId<restRequestReader.length &&
+    	    	      null!=restRequestReader[routeId]) {
     	    		  
-    	    		  if (!restRequestReader[pathId].restRequest(listener, reader)) {
+    	    		  if (!restRequestReader[routeId].restRequest(listener, reader)) {
     	    			  Pipe.resetTail(p);
 		            	  return;//continue later and repeat this same value.
     	    		  }
