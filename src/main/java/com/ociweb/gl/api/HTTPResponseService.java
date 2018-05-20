@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.EmptyBlockHolder;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
@@ -148,7 +149,7 @@ public class HTTPResponseService {
 		///////////////////////////////////////
 		//message 1 which contains the headers
 		//////////////////////////////////////		
-		msgCommandChannel.holdEmptyBlock(connectionId, sequenceNo, pipe);
+		msgCommandChannel.data.holdEmptyBlock(connectionId, sequenceNo, pipe);
 		
 		
 		//check again because we have taken 2 spots now
@@ -192,7 +193,7 @@ public class HTTPResponseService {
 		assert(isValidContent(contentType,outputStream)) : "content type is not matching payload";
 				
 		
-		outputStream.publishWithHeader(msgCommandChannel.block1HeaderBlobPosition, msgCommandChannel.block1PositionOfLen); //closeLowLevelField and publish 
+		outputStream.publishWithHeader(msgCommandChannel.data.block1HeaderBlobPosition, msgCommandChannel.data.block1PositionOfLen); //closeLowLevelField and publish 
 		
 		return true;
 				
@@ -264,7 +265,7 @@ public class HTTPResponseService {
 		///////////////////////////////////////
 		//message 1 which contains the headers
 		//////////////////////////////////////		
-		msgCommandChannel.holdEmptyBlock(connectionId, sequenceNo, pipe);
+		msgCommandChannel.data.holdEmptyBlock(connectionId, sequenceNo, pipe);
 		
 		//////////////////////////////////////////
 		//begin message 2 which contains the body
@@ -300,7 +301,10 @@ public class HTTPResponseService {
 		   	
 		////////////////////Write the header
 		
-		DataOutputBlobWriter.openFieldAtPosition(outputStream, msgCommandChannel.block1HeaderBlobPosition);
+		EmptyBlockHolder data = msgCommandChannel.data;
+		
+		
+		data.openToEmptyBlock(outputStream);
 		
 		//HACK TODO: must formalize response building..
 		outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());
@@ -323,10 +327,7 @@ public class HTTPResponseService {
 		
 		//outputStream.debugAsUTF8();
 		
-		int propperLength = DataOutputBlobWriter.length(outputStream);
-		Pipe.validateVarLength(outputStream.getPipe(), propperLength);
-		Pipe.setIntValue(propperLength, outputStream.getPipe(), msgCommandChannel.block1PositionOfLen); //go back and set the right length.
-		outputStream.getPipe().closeBlobFieldWrite();
+		data.finalizeLengthOfFirstBlock(outputStream);
 		
 		//now publish both header and payload
 		Pipe.publishWrites(outputStream.getPipe());
@@ -375,7 +376,7 @@ public class HTTPResponseService {
 		///////////////////////////////////////
 		//message 1 which contains the chunk length
 		//////////////////////////////////////		
-		msgCommandChannel.holdEmptyBlock(connectionId, sequenceNo, pipe);
+		msgCommandChannel.data.holdEmptyBlock(connectionId, sequenceNo, pipe);
 		
 		///////////////////////////////////////
 		//message 2 which contains the chunk
@@ -409,7 +410,7 @@ public class HTTPResponseService {
 			
 		}
 		
-		outputStream.publishWithChunkPrefix(msgCommandChannel.block1HeaderBlobPosition, msgCommandChannel.block1PositionOfLen);
+		outputStream.publishWithChunkPrefix(msgCommandChannel.data.block1HeaderBlobPosition, msgCommandChannel.data.block1PositionOfLen);
 		
 		return true;
 	}

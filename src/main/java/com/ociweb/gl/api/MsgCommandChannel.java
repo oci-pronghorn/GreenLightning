@@ -1,5 +1,10 @@
 package com.ociweb.gl.api;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.file.SerialStoreConsumer;
 import com.ociweb.gl.impl.file.SerialStoreProducer;
@@ -7,6 +12,7 @@ import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.PublishPrivateTopics;
+import com.ociweb.pronghorn.network.EmptyBlockHolder;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -22,10 +28,6 @@ import com.ociweb.pronghorn.util.BloomFilter;
 import com.ociweb.pronghorn.util.CharSequenceToUTF8Local;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Represents a dedicated channel for communicating with a single device
@@ -836,47 +838,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      
 
 	
-	///////////////////////////////////
-	//these fields are needed for holding the position data for the first block of two
-	//this is required so we can go back to fill in length after the second block
-	//length is known
-	long block1PositionOfLen;
-	int block1HeaderBlobPosition;
-	//this is not thread safe but works because command channels are only used by same thread
-	////////////////////////////////////
-	
-
-	
-	void holdEmptyBlock(long connectionId, final int sequenceNo, Pipe<ServerResponseSchema> pipe) {
-	
-			Pipe.addMsgIdx(pipe, ServerResponseSchema.MSG_TOCHANNEL_100);
-			Pipe.addLongValue(connectionId, pipe);
-			Pipe.addIntValue(sequenceNo, pipe);	
-			
-			NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);	
-			block1HeaderBlobPosition = Pipe.getWorkingBlobHeadPosition(pipe);
-	
-			DataOutputBlobWriter.openFieldAtPosition(outputStream, block1HeaderBlobPosition); 	//no context, that will come in the second message 
-	        
-			//for the var field we store this as meta then length
-			block1PositionOfLen = (1+Pipe.workingHeadPosition(pipe));
-			
-			DataOutputBlobWriter.closeLowLevelMaxVarLenField(outputStream);
-			assert(pipe.maxVarLen == Pipe.slab(pipe)[((int)block1PositionOfLen) & Pipe.slabMask(pipe)]) : "expected max var field length";
-			
-			Pipe.addIntValue(0, pipe); 	//no context, that will come in the second message		
-			//the full blob size of this message is very large to ensure we have room later...
-			//this call allows for the following message to be written after this messages blob data
-			int consumed = Pipe.writeTrailingCountOfBytesConsumed(outputStream.getPipe()); 
-			assert(pipe.maxVarLen == consumed);
-			Pipe.confirmLowLevelWrite(pipe); 
-			//Stores this publish until the next message is complete and published
-			Pipe.storeUnpublishedWrites(outputStream.getPipe());
-	
-			
-			//logger.info("new empty block at {} {} ",block1HeaderBlobPosition, block1PositionOfLen);
-	}
-
+	public final EmptyBlockHolder data = new EmptyBlockHolder();
 
 	/**
 	 *
