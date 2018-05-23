@@ -1,11 +1,13 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.network.EmptyBlockHolder;
+import com.ociweb.pronghorn.network.HTTPUtilResponse;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
+import com.ociweb.pronghorn.network.http.HTTPUtil;
+import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -149,7 +151,7 @@ public class HTTPResponseService {
 		///////////////////////////////////////
 		//message 1 which contains the headers
 		//////////////////////////////////////		
-		msgCommandChannel.data.holdEmptyBlock(connectionId, sequenceNo, pipe);
+		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data,connectionId, sequenceNo, pipe);
 		
 		
 		//check again because we have taken 2 spots now
@@ -265,7 +267,7 @@ public class HTTPResponseService {
 		///////////////////////////////////////
 		//message 1 which contains the headers
 		//////////////////////////////////////		
-		msgCommandChannel.data.holdEmptyBlock(connectionId, sequenceNo, pipe);
+		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data,connectionId, sequenceNo, pipe);
 		
 		//////////////////////////////////////////
 		//begin message 2 which contains the body
@@ -301,10 +303,10 @@ public class HTTPResponseService {
 		   	
 		////////////////////Write the header
 		
-		EmptyBlockHolder data = msgCommandChannel.data;
+		HTTPUtilResponse data = msgCommandChannel.data;
 		
 		
-		data.openToEmptyBlock(outputStream);
+		HTTPUtilResponse.openToEmptyBlock(data, outputStream);
 		
 		//HACK TODO: must formalize response building..
 		outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());
@@ -327,7 +329,7 @@ public class HTTPResponseService {
 		
 		//outputStream.debugAsUTF8();
 		
-		data.finalizeLengthOfFirstBlock(outputStream);
+		HTTPUtilResponse.finalizeLengthOfFirstBlock(data, outputStream);
 		
 		//now publish both header and payload
 		Pipe.publishWrites(outputStream.getPipe());
@@ -376,7 +378,7 @@ public class HTTPResponseService {
 		///////////////////////////////////////
 		//message 1 which contains the chunk length
 		//////////////////////////////////////		
-		msgCommandChannel.data.holdEmptyBlock(connectionId, sequenceNo, pipe);
+		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data, connectionId, sequenceNo, pipe);
 		
 		///////////////////////////////////////
 		//message 2 which contains the chunk
@@ -401,11 +403,11 @@ public class HTTPResponseService {
 			
 			//this adds 3, note the publishWithChunkPrefix also takes this into account
 			Appendables.appendHexDigitsRaw(outputStream, 0);
-			outputStream.write(AbstractAppendablePayloadResponseStage.RETURN_NEWLINE);
+			outputStream.write(HTTPUtil.RETURN_NEWLINE);
 						
 			//TODO: add trailing headers here. (no request for this feature yet)
 			
-			outputStream.write(AbstractAppendablePayloadResponseStage.RETURN_NEWLINE);
+			outputStream.write(HTTPUtil.RETURN_NEWLINE);
 		
 			
 		}

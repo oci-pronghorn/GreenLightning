@@ -239,7 +239,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		        	topics[i] = topic.topic;
 		        	privateTopicsPublishTrie.setUTF8Value(topic.topic, i);//to matching pipe index	
 		        }
-		        privateTopicsTrieReader = new TrieParserReader(0,true);
+		        privateTopicsTrieReader = new TrieParserReader(true);
 		        
 		        this.publishPrivateTopics =
 			        new PublishPrivateTopics(privateTopicsPublishTrie,
@@ -1314,7 +1314,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 		
 		if (null == methods) {
 			methodLookup = new TrieParser(16,1,false,false,false);
-			methodReader = new TrieParserReader(0, true);
+			methodReader = new TrieParserReader(true);
 			methods = new CallableStaticMethod[0];
 		}
 		

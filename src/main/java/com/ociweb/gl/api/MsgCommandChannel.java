@@ -12,7 +12,8 @@ import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.PublishPrivateTopics;
-import com.ociweb.pronghorn.network.EmptyBlockHolder;
+import com.ociweb.pronghorn.network.HTTPUtilResponse;
+import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -838,7 +839,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
      
 
 	
-	public final EmptyBlockHolder data = new EmptyBlockHolder();
+	public final HTTPUtilResponse data = new HTTPUtilResponse();
 
 	/**
 	 *

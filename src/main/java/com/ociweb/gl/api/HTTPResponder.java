@@ -1,6 +1,7 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;

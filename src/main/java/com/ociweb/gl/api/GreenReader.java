@@ -10,8 +10,8 @@ public class GreenReader extends GreenExtractor {
 	private final static boolean alwaysCompletePayloads = true;
 	private final TrieParser tp;
 	
-	GreenReader(TrieParser tp, int extractions) {		
-		super(new TrieParserReader(extractions, alwaysCompletePayloads));
+	GreenReader(TrieParser tp) {		
+		super(new TrieParserReader(alwaysCompletePayloads));
 		this.tp = tp;
 	}
 

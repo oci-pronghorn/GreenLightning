@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.http.HeaderValue;
 import com.ociweb.pronghorn.util.Appendables;
 
 import java.io.IOException;

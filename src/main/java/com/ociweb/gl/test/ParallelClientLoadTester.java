@@ -13,8 +13,6 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestService;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.HeaderWritable;
-import com.ociweb.gl.api.HeaderWriter;
 import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
@@ -22,6 +20,8 @@ import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.network.http.HeaderWritable;
+import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 import com.ociweb.pronghorn.util.Appendables;
@@ -178,7 +178,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 		builder.parallelTracks(session.length);
 
-		builder.setTimerPulseRate(20_000);
+		builder.setTimerPulseRate(200_000);
 		
 		if (rate != null) {
 			builder.setDefaultRate(rate);

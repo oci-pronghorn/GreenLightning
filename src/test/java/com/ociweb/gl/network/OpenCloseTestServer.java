@@ -4,9 +4,9 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseService;
-import com.ociweb.gl.api.HeaderWritable;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.network.http.HeaderWritable;
 
 public class OpenCloseTestServer implements GreenApp {
 

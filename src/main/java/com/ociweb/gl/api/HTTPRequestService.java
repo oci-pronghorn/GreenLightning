@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.pronghorn.network.ClientCoordinator;
+import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;

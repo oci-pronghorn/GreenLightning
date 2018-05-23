@@ -3,10 +3,8 @@ package com.ociweb.gl.api;
 import com.ociweb.pronghorn.util.TrieParser;
 
 public class GreenTokenMap {
-
 	
 	private final TrieParser tp;
-	private int extractions = 0;
 	
 	public GreenTokenMap() {
 		this(false);
@@ -21,11 +19,11 @@ public class GreenTokenMap {
 	}	
 	
 	public GreenTokenizer newTokenizer() {
-		return new GreenTokenizer(tp, extractions);
+		return new GreenTokenizer(tp);
 	}	
 	
 	public GreenReader newReader() {
-		return new GreenReader(tp, extractions);
+		return new GreenReader(tp);
 	}
 		
 	public int getSize() {
@@ -38,8 +36,7 @@ public class GreenTokenMap {
 	 * @param template CharSequence template to add to GreenTokenMap
 	 */
 	public GreenTokenMap add(long id, CharSequence template) {
-		tp.setUTF8Value(template, id); 
-		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());		
+		tp.setUTF8Value(template, id);		
 		return this;
 	}
 
@@ -50,8 +47,7 @@ public class GreenTokenMap {
 	 * @param templatePart2 CharSequence template to add to GreenTokenMap
 	 */
 	public GreenTokenMap addTemplate(long id, CharSequence templatePart1, CharSequence templatePart2) {
-		tp.setUTF8Value(templatePart1, templatePart2, id);
-		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
+		tp.setUTF8Value(templatePart1, templatePart2, id);	
 		return this;
 	}
 
@@ -64,7 +60,6 @@ public class GreenTokenMap {
 	 */
 	public GreenTokenMap addTemplate(long id, CharSequence templatePart1, CharSequence templatePart2, CharSequence templatePart3) {
 		tp.setUTF8Value(templatePart1, templatePart2, templatePart3, id);
-		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
 
@@ -76,19 +71,16 @@ public class GreenTokenMap {
 	 */
 	public GreenTokenMap addTemplate(long id, byte[] template) {
 		tp.setValue(template, id);
-		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
 	
 	public GreenTokenMap addTemplate(long id, byte[] template, int offset, int length) {
-		tp.setValue(template, offset, length, Integer.MAX_VALUE, id);
-		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
+		tp.setValue(template, offset, length, Integer.MAX_VALUE, id);	
 		return this;
 	}
 	
 	public GreenTokenMap addTemplate(long id, byte[] template, int offset, int length, int mask) {
 		tp.setValue(template, offset, length, mask, id);
-		extractions = Math.max(extractions, tp.lastSetValueExtractionCount());	
 		return this;
 	}
 	

@@ -7,8 +7,8 @@ public class GreenTokenizer extends GreenExtractor {
 
 	private final TrieParser tp;
 	
-	GreenTokenizer(TrieParser tp, int extractions) {
-		super(new TrieParserReader(extractions, true));
+	GreenTokenizer(TrieParser tp) {
+		super(new TrieParserReader(true));
 		this.tp = tp;		
 	}
 

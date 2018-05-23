@@ -836,7 +836,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	
-	private final TrieParserReader localReader = new TrieParserReader(0, true);
+	private final TrieParserReader localReader = new TrieParserReader(true);
 	
 	@Override
 	public long fieldId(int routeId, byte[] fieldName) {	

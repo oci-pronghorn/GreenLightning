@@ -258,7 +258,7 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
         this.localSubscriptionTrie = new TrieParser(initialSubscriptions * estimatedAvgTopicLength,1,false,true);//must support extraction for wild cards.
 
         //this reader is set up for complete text only, all topics are sent in complete.
-        this.localSubscriptionTrieReader = new TrieParserReader(2,true);
+        this.localSubscriptionTrieReader = new TrieParserReader(true);
 
         this.pendingPublish = new int[subscriberListSize];
         

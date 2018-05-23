@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
-import com.ociweb.pronghorn.network.http.AbstractRestStage;
+import com.ociweb.pronghorn.network.http.HTTPUtil;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
@@ -45,8 +45,9 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 		byte[] etagBytes = null;//TODO: nice feature to add later		
 		int connectionIsClosed = 1&(context>>ServerCoordinator.CLOSE_CONNECTION_SHIFT);
 		
-		AbstractRestStage.writeHeader(revisionBytes, statusCode, 0, etagBytes, null!=contentType?contentType.getBytes():null, 
-					                  length, chunked, false, null, 0,0,0, outputStream, connectionIsClosed);
+		HTTPUtil.writeHeader(revisionBytes, statusCode, 0, etagBytes, null!=contentType?contentType.getBytes():null, 
+					                  length, chunked, false, 
+					                  outputStream, connectionIsClosed, null);
 
 		int propperLength = DataOutputBlobWriter.length(outputStream);
 		Pipe.validateVarLength(outputStream.getPipe(), propperLength);
