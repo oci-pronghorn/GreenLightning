@@ -1,6 +1,6 @@
 package com.ociweb.gl.example.blocking;
 
-import org.junit.Test;
+import org.junit.*;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
@@ -11,7 +11,7 @@ import com.ociweb.pronghorn.network.ClientSocketWriterStage;
 public class BlockingTaskTest {
 	
 	
-	@Test
+	@Ignore
 	public void runTest() {
 		
 		//ClientSocketWriterStage.showWrites = true;
