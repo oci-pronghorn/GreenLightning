@@ -1,14 +1,18 @@
 package com.ociweb.gl.impl.http.server;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.FailablePayloadReading;
 import com.ociweb.gl.api.HeaderReader;
 import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.impl.PayloadReader;
-import com.ociweb.pronghorn.network.config.*;
+import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
+import com.ociweb.pronghorn.network.config.HTTPRevision;
+import com.ociweb.pronghorn.network.config.HTTPSpecification;
+import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.pipe.MessageSchema;
 import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.StructuredReader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader<S> implements HeaderReader {
 
@@ -42,9 +46,8 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	 * @return if (hasRemainingBytes()) true else false
 	 */
 	public boolean openPayloadData(Payloadable reader) {
-		if (hasRemainingBytes()) {
-			position(this, readFromEndLastInt(StructuredReader.PAYLOAD_INDEX_LOCATION));
-			reader.read(this);//even when we have zero length...
+		if (hasRemainingBytes()) {			
+			reader.read(this.structured().readPayload());//even when we have zero length...
 			return true;
 		} else {
 			return false;
@@ -58,8 +61,7 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 	 */
 	public boolean openPayloadDataFailable(FailablePayloadReading reader) {
 		if (hasRemainingBytes()) {
-			position(this, readFromEndLastInt(StructuredReader.PAYLOAD_INDEX_LOCATION));
-			return reader.read(this);//even when we have zero length...
+			return reader.read(this.structured().readPayload());//even when we have zero length...
 		} else {
 			return false;
 		}
