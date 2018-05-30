@@ -911,8 +911,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
             switch (msgIdx) {
                 case MessageSubscription.MSG_PUBLISH_103:
                     	
-                    	final int meta = Pipe.takeRingByteLen(p);
-                    	final int len = Pipe.takeRingByteMetaData(p);                    	
+                    	final int meta = Pipe.takeByteArrayLength(p);
+                    	final int len = Pipe.takeByteArrayMetaData(p);                    	
                     	final int pos = Pipe.convertToPosition(meta, p);
                     	                    	               	
                     	mutableTopic.setToField(p, meta, len);

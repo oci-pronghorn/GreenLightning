@@ -723,8 +723,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		convertMQTTTopicsToLocal(backing1, pos1, len1, mask1);
 		
 		int msgIdx = Pipe.takeMsgIdx(tempSubject);
-		int mta = Pipe.takeRingByteMetaData(tempSubject);
-		int len = Pipe.takeRingByteLen(tempSubject);
+		int mta = Pipe.takeByteArrayMetaData(tempSubject);
+		int len = Pipe.takeByteArrayLength(tempSubject);
 		int mask = blobMask(tempSubject);	
     	int pos = bytePosition(mta, tempSubject, len)&mask;     		
 		byte[] backing = byteBackingArray(mta, tempSubject);
@@ -767,8 +767,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 		convertMQTTTopicsToLocal(backing1, pos1, len1, mask1);
 		
 		int msgIdx = Pipe.takeMsgIdx(tempSubject);
-		int mta = Pipe.takeRingByteMetaData(tempSubject);
-		int len = Pipe.takeRingByteLen(tempSubject);
+		int mta = Pipe.takeByteArrayMetaData(tempSubject);
+		int len = Pipe.takeByteArrayLength(tempSubject);
 		int mask = blobMask(tempSubject);	
     	int pos = bytePosition(mta, tempSubject, len)&mask;     		
 		byte[] backing = byteBackingArray(mta, tempSubject);
