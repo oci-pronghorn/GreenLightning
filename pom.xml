@@ -1,9 +1,33 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ociweb</groupId>
-    <version>0.1.0-SNAPSHOT</version>
-    <name>GreenLightning</name>
     <artifactId>GreenLightning</artifactId>
+    <version>0.1.0-SNAPSHOT</version>
+
+    <name>${project.artifactId}</name>
+    <description>Open Edge - Green Lightning Micro-Service Runtime</description>
+    <url>https://github.com/oci-pronghorn/GreenLightning</url>
+    <licenses>
+        <license>
+            <name>BSD-3 License</name>
+            <url>https://opensource.org/licenses/BSD-3-Clause</url>
+        </license>
+    </licenses>
+    <developers>
+        <developer>
+            <name>Nathan Tippy</name>
+            <email>info@objectcomputing.com</email>
+            <organization>ObjectComputing</organization>
+            <organizationUrl>http://www.ObjectComputing.com</organizationUrl>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:git://github.com/oci-pronghorn/GreenLightning.git</connection>
+        <url>https://github.com/oci-pronghorn/GreenLightning</url>
+        <developerConnection>scm:git:ssh://git@github.com/oci-pronghorn/GreenLightning.git</developerConnection>
+        <tag>HEAD</tag>
+    </scm>
 
     <properties>
   		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -19,24 +43,82 @@
 	    </java.secure.socket.extension.classes>
 	    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
    </properties>
-     
+
     <profiles>
         <profile>
-	        <id>disable-java8-doclint</id>
-	        <activation>
-	            <jdk>[1.8,)</jdk>
-	        </activation>
-	        <properties>
-	            <additionalparam>-Xdoclint:none</additionalparam>
-	        </properties>
-	    </profile>
+            <id>cloudbees</id>
+            <distributionManagement>
+                <repository>
+                    <id>cloudbees.release</id>
+                    <url>dav:https://repository-pronghorn.forge.cloudbees.com/release</url>
+                </repository>
+            </distributionManagement>
+        </profile>
+        <profile>
+            <id>disable-java8-doclint</id>
+            <activation>
+                <jdk>[1.8,)</jdk>
+            </activation>
+            <properties>
+                <additionalparam>-Xdoclint:none</additionalparam>
+            </properties>
+        </profile>
+        <profile>
+            <id>mvn-central</id>
+            <distributionManagement>
+                <snapshotRepository>
+                    <id>PronghornPipes</id>
+                    <url>https://oss.sonatype.org/content/repositories/snapshots
+                    </url> <!-- Maven central repos for snapshot and release -->
+                </snapshotRepository>
+                <repository>
+                    <id>PronghornPipes</id>
+                    <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
+                </repository>
+            </distributionManagement>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-release-plugin</artifactId>
+                        <version>2.5.3</version>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.sonatype.plugins</groupId>
+                        <artifactId>nexus-staging-maven-plugin</artifactId>
+                        <version>1.6.8</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <serverId>ossrh</serverId>
+                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
+                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
+                        </configuration>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>1.5</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
     </profiles>
    
     <dependencies>
         <dependency>
             <groupId>com.ociweb</groupId>
             <artifactId>Pronghorn</artifactId>
-            <version>[0.1.0-SNAPSHOT,0.2.0)</version>
+            <version>[1.0.0-SNAPSHOT,1.1.0)</version>
         </dependency>
 
         <dependency>
@@ -55,20 +137,6 @@
             <optional>false</optional>
         </dependency>
     </dependencies>
-
-  <scm>
-    <connection>scm:git:git://github.com/oci-pronghorn/GreenLightning.git</connection>
-    <url>https://github.com/oci-pronghorn/GreenLightning</url>
-    <developerConnection>scm:git:ssh://git@github.com/oci-pronghorn/GreenLightning.git</developerConnection>
-    <tag>HEAD</tag>
-  </scm>
-    
-  <distributionManagement>
-    <repository>
-      <id>cloudbees.release</id>
-      <url>dav:https://repository-pronghorn.forge.cloudbees.com/release</url>
-    </repository>
-  </distributionManagement>
 
   <repositories>
     
@@ -256,6 +324,5 @@
     </build>
 
 
-    <description>Open Edge - Green Lightning Micro-Service Runtime</description>
-    <url>https://github.com/oci-pronghorn/GreenLightning</url>
+
 </project>
