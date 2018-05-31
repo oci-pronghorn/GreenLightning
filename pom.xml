@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ociweb</groupId>
     <artifactId>GreenLightning</artifactId>
-    <version>0.1.0</version>
+    <version>1.0.0-SNAPSHOT</version>
 
     <name>${project.artifactId}</name>
     <description>Open Edge - Green Lightning Micro-Service Runtime</description>
@@ -26,7 +26,7 @@
         <connection>scm:git:git://github.com/oci-pronghorn/GreenLightning.git</connection>
         <url>https://github.com/oci-pronghorn/GreenLightning</url>
         <developerConnection>scm:git:ssh://git@github.com/oci-pronghorn/GreenLightning.git</developerConnection>
-        <tag>GreenLightning-0.1.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <properties>
