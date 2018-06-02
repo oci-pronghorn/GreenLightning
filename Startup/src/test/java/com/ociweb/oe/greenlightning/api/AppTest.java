@@ -17,8 +17,9 @@ public class AppTest {
 	    public void testApp()
 	    {
 		 	StringBuilder result = new StringBuilder();
-		 	boolean cleanExit = GreenRuntime.testUntilShutdownRequested(new Startup(result), 100);
-		 	
+		 	boolean cleanExit = 
+		 			GreenRuntime.testConcurrentUntilShutdownRequested(new Startup(result), 100);
+
 		 	/////////////////////
 		 	//System.out.println(result);
 		    ////////////////////
