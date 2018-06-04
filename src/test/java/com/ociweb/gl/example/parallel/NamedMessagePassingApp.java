@@ -39,6 +39,8 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		       //TODO: confirm that 404 comes back when we get requests too large..
 		       .setDecryptionUnitsPerTrack(2)
 		       .setEncryptionUnitsPerTrack(2)
+		       .setMaxRequestSize(1<<17)
+		       .setMaxResponseSize(1<<16)
 		       .setHost("127.0.0.1");		
 		
 		if (telemetry) {
@@ -88,9 +90,11 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		long fieldL  = builder.lookupFieldByIdentity(aRouteId, HTTPHeaderDefaults.CONTENT_LENGTH);
 		
 		//TODO: if the responder is found in the parallel section then mutate the name.
-		builder.definePrivateTopic(1<<16,100,"/send/200", "consumer", "responder");
+		builder.definePrivateTopic(1<<17,32,"/send/200", "consumer", "responder");
 		builder.usePrivateTopicsExclusively();
-
+	
+		//not quite 2x slower for routed topics
+		//	builder.defineUnScopedTopic("/send/200"); //TODO: urgent, this was required because for tracks this mangled topic name does not get matched...
 	}
 
 	@Override

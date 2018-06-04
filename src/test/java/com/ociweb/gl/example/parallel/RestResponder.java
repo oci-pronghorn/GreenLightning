@@ -34,7 +34,7 @@ public class RestResponder implements PubSubListener{
 
 	public RestResponder(GreenRuntime runtime, boolean chunked) {
 		newCommandChannel = runtime.newCommandChannel();
-		cmd = newCommandChannel.newHTTPResponseService(128,400);
+		cmd = newCommandChannel.newHTTPResponseService(1<<12,250);
 		useChunked = chunked;
 	}
 	
