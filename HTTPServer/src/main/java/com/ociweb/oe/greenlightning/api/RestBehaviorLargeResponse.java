@@ -36,7 +36,7 @@ public class RestBehaviorLargeResponse implements RestListener {
 			});
 		}
 		
-		request.structured().identityVisit(HTTPHeaderDefaults.COOKIE, (id,reader)-> {
+		request.structured().identityVisit(HTTPHeaderDefaults.COOKIE, (id,reader,field)-> {
 			
 			console.append("COOKIE: ");
 			reader.readUTF(console).append('\n');
