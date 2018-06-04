@@ -36,4 +36,9 @@ public class HeaderTypeCapture implements Headable {
 		return type;
 	}
 
+	@Override
+	public void read(HTTPHeader value, ChannelReader reader, long fieldId) {
+		read(value,reader.structured().read(fieldId));		
+	}
+
 }
