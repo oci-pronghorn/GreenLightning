@@ -67,12 +67,12 @@
             <id>mvn-central</id>
             <distributionManagement>
                 <snapshotRepository>
-                    <id>PronghornPipes</id>
+                    <id>ossrh</id>
                     <url>https://oss.sonatype.org/content/repositories/snapshots
                     </url> <!-- Maven central repos for snapshot and release -->
                 </snapshotRepository>
                 <repository>
-                    <id>PronghornPipes</id>
+                    <id>ossrh</id>
                     <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
                 </repository>
             </distributionManagement>
@@ -98,7 +98,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.5</version>
+                        <version>1.6</version>
                         <executions>
                             <execution>
                                 <id>sign-artifacts</id>
@@ -118,7 +118,7 @@
         <dependency>
             <groupId>com.ociweb</groupId>
             <artifactId>Pronghorn</artifactId>
-            <version>[1.0.0-SNAPSHOT,1.1.0)</version>
+            <version>[1.0.1-SNAPSHOT,1.1.0)</version>
         </dependency>
 
         <dependency>
