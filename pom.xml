@@ -117,7 +117,7 @@
     <dependencies>
         <dependency>
             <groupId>com.ociweb</groupId>
-            <artifactId>Pronghorn</artifactId>
+            <artifactId>pronghorn</artifactId>
             <version>[1.0.1-SNAPSHOT,1.1.0)</version>
         </dependency>
 
