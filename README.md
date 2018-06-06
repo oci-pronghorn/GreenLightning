@@ -21,7 +21,7 @@
 #### Create a new directory outside of the GreenLighter project directory for your new IoT project.
 Now, ```cd``` into the directory for your to be created IoT project, and enter:
 ```
-mvn archetype:generate -DarchetypeGroupId=com.ociweb -DarchetypeArtifactId=GreenLighter -DarchetypeVersion=0.1.0-SNAPSHOT
+mvn archetype:generate -DarchetypeGroupId=com.ociweb -DarchetypeArtifactId=GreenLighter -DarchetypeVersion=0.0.1-SNAPSHOT
 ```
 The terminal now asks for:
 
@@ -29,7 +29,7 @@ The terminal now asks for:
 
 ```ArtifactID```: type in name of your project then press Enter
 
-```version: 1.0-SNAPSHOT ```: Ignore, Press Enter
+```version: 0.0.1-SNAPSHOT ```: Ignore, Press Enter
 
 ```package: com.ociweb ```: Ignore, Press Enter
 
