@@ -950,7 +950,7 @@ public class BuilderImpl implements Builder {
 				    && subscriptionPipes.length==0 && messagePubSub.length==0) ? -1 : eventSchemas++;
 		IDX_NET = useNetClient(httpClientRequestPipes) ? eventSchemas++ : -1;
 						
-        long timeout = 20_000; //20 seconds
+        long timeout = 240_000; //240 seconds so we have time to capture telemetry.
 		
 		int maxGoPipeId = 0;
 					
