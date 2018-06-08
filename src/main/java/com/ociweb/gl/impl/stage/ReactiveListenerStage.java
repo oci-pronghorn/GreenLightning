@@ -902,7 +902,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
 	
 	final void consumePubSubMessage(Object listener, Pipe<MessageSubscription> p) {
 
-		while (Pipe.hasContentToRead(p)) {
+		while (
+				Pipe.hasContentToRead(p) &&
+				Pipe.peekMsg(p, 
+						//all the switch states are listed here
+						MessageSubscription.MSG_STATECHANGED_71, 
+						MessageSubscription.MSG_PUBLISH_103, 
+						-1)				
+				) {			
 			
 			Pipe.markTail(p);
 			
@@ -971,14 +978,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends PronghornStage
                     Pipe.confirmLowLevelRead(p, Pipe.EOF_SIZE);
                     Pipe.releaseReadLock(p);
                     return;
-                   
-                default:
-                    throw new UnsupportedOperationException("Unknown id: "+msgIdx);
-                
             }
             Pipe.releaseReadLock(p);
         }
     }
+
 
 	private final int methodLookup(Pipe<MessageSubscription> p, final int len, final int pos) {
 		int result = (int)TrieParserReader.query(methodReader, methodLookup,

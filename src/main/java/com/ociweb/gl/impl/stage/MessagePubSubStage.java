@@ -874,7 +874,9 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
         	if (payloadLength>0) {
         		Pipe.addByteArray(payloadBacking, payloadPos, payloadLength, payloadMask, outPipe); 	
-        	} 
+        	} else {
+        		Pipe.addNullByteArray(outPipe);
+        	}
  
             //due to batching this may not become the head position upon publish but it will do so eventually.
             //so to track this position we use workingHeadPosition not headPosition
