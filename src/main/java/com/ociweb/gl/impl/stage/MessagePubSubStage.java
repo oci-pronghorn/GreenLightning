@@ -147,8 +147,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
        this.outgoingMessagePipes = outgoingMessagePipes;
        assert(noNulls(incomingSubsAndPubsPipe));
        assert(goPipe.length == ackPipe.length) : "should be one ack pipe for every go pipe";
-        
        assert(goPipe.length == incomingSubsAndPubsPipe.length) : "Publish/Subscribe should be one pub sub pipe for every go "+goPipe.length+" vs "+incomingSubsAndPubsPipe.length;
+       assert(validMatching(goPipe,ackPipe));
        
        //can never have more subscribers than ALL, add 1 for the leading counter and 1 for the -1 stop
        this.subscriberListSize = outgoingMessagePipes.length+4;
@@ -180,7 +180,28 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     }
 
     
-    private boolean isPreviousConsumed(int incomingPipeId) {
+    private boolean validMatching(Pipe<TrafficReleaseSchema>[] goPipe, 
+    		                      Pipe<TrafficAckSchema>[] ackPipe) {
+		//for every go pipe we must have a matching ack
+    	assert(goPipe.length==ackPipe.length);
+    	int i = goPipe.length;
+    	while (--i>=0) {
+    		
+    		if (null != goPipe[i] && null==ackPipe[i]) {
+    			logger.warn("found go pipe but no ack pipe at index {}",i);
+    			return false;
+    		}
+    		
+    		if (null == goPipe[i] && null!=ackPipe[i]) {
+    			logger.warn("found ack pipe but no go pipe at index {}",i);
+    			return false;
+    		}    		
+    	}
+    	return true;
+	}
+
+
+	private boolean isPreviousConsumed(int incomingPipeId) {
         	
     	long[] marks = consumedMarks[incomingPipeId];
     	int totalUnconsumed = countUnconsumed(marks, 0);
