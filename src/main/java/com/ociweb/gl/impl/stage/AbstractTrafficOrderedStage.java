@@ -145,7 +145,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 
     protected boolean processReleasedCommands(long timeoutNS) {
    	
-        boolean foundWork;
+ //       boolean foundWork;
 		int[] localActiveCounts = activeCounts;
 		
 		long now = hardware.currentTimeMillis();
@@ -156,7 +156,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
         long windowLimit = 0;
         boolean holdForWindow = false;
 		do {
-			foundWork = false;
+	//		foundWork = false;
 			int a = startLoopAt;
 			
 				while (--a >= 0) {
@@ -216,19 +216,19 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 									Pipe.confirmLowLevelWrite(pipe, size);
 									Pipe.publishWrites(pipe);
 									localActiveCounts[a] = -1;
-									foundWork = true; //keep running may find something else 
+//									foundWork = true; //keep running may find something else 
 									
 								}
 							} else {
 								localActiveCounts[a] = -1;
-								foundWork = true; //keep running may find something else 
+//								foundWork = true; //keep running may find something else 
 							}
 						    
 						} else {							
 							if (localActiveCounts[a]==startCount) {
 								//we did none of the work
 							} else {		
-								foundWork = true;
+//								foundWork = true;
 								//we did some of the work
 							    //unable to finish group, try again later, this is critical so that callers can
 							    //interact and then block knowing nothing else can get between the commands.
@@ -257,7 +257,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 					holdForWindow = connectionBlocker.willReleaseInWindow(windowLimit);
 				}
 				
-		} while (foundWork | holdForWindow);
+		} while (/*foundWork |*/ holdForWindow);
 		return true;
     }
 
