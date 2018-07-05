@@ -336,12 +336,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   this.messagePubSub = ((this.initFeatures & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
 			   this.httpRequest   = ((this.initFeatures & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
 			   
-			   //when looking at features that requires cops, eg go pipes we ignore
-			   //the following since they do not use cops but are features;
-			   int filteredFeatures = this.initFeatures;
-			   if (0!=(NET_RESPONDER&filteredFeatures)) {
-				   filteredFeatures ^= NET_RESPONDER;
-			   }  
+			   int filteredFeatures = usedFeaturesNeedingCop();  
 			   
 			   int featuresCount = Integer.bitCount(filteredFeatures);
 			   if (featuresCount>1 || featuresCount==USE_DELAY) {
@@ -410,6 +405,16 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   this.maxHTTPContentLength = temp;		
 			   ///////////////////////////////////////
 		   }
+	}
+
+	protected int usedFeaturesNeedingCop() {
+		//when looking at features that requires cops, eg go pipes we ignore
+		   //the following since they do not use cops but are features;
+		   int filteredFeatures = this.initFeatures;
+		   if (0!=(NET_RESPONDER&filteredFeatures)) {
+			   filteredFeatures ^= NET_RESPONDER;
+		   }
+		   return filteredFeatures;
 	}
 
 	/**

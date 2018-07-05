@@ -979,22 +979,23 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         
 		if (null!=id) {
 			
+			///////////////////////////
+			//For private topics the in and out pipes MUST be created before the 
+			//ReactiveListener is created which is done here when register is called
+			//as a result it must be known before register is called which topics will 
+			//end up as private topics.
+			///////////////////////////
+			
 			List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(id);
 			int i = sourceTopics.size();
-			while (--i>=0) {
-								
-				PrivateTopic privateTopic = sourceTopics.get(i);
-				
-				outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe(parallelInstanceUnderActiveConstruction));				
+			while (--i>=0) {	
+				outputPipes = PronghornStage.join(outputPipes, sourceTopics.get(i).getPipe(parallelInstanceUnderActiveConstruction));				
 			}
 						
 			List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(id);
 			int j = targetTopics.size();
 			while (--j>=0) {
-								
-				PrivateTopic privateTopic = targetTopics.get(j);
-				
-				inputPipes = PronghornStage.join(inputPipes, privateTopic.getPipe(parallelInstanceUnderActiveConstruction));
+				inputPipes = PronghornStage.join(inputPipes, targetTopics.get(j).getPipe(parallelInstanceUnderActiveConstruction));
 			}
 			
 		}

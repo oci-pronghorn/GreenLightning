@@ -757,7 +757,7 @@ public class BuilderImpl implements Builder {
     		DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(pipe);
     		output.openField();
     		output.append(topic);
-    		//this is in a track amay need a suffix.
+    		//this is in a track and may need a suffix.
     		if (parallelInstance>=0) { 
     			if (BuilderImpl.hasNoUnscopedTopics()) {
     				//add suffix..
@@ -774,9 +774,6 @@ public class BuilderImpl implements Builder {
     		
     		output.closeHighLevelField(MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1);	
 			//PipeWriter.writeUTF8(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1, topic);
-			
-			
-			
 	
 			PipeWriter.writeInt(pipe, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_SUBSCRIBERIDENTITYHASH_4, systemHash);
 			PipeWriter.publishWrites(pipe);

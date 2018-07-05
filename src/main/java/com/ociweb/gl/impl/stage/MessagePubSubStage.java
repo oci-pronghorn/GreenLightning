@@ -25,14 +25,18 @@ import static com.ociweb.pronghorn.pipe.Pipe.*;
 
 public class MessagePubSubStage extends AbstractTrafficOrderedStage {
 
-	//TODO: convert go to use low level first....
-	//TODO: 1 copy subscriber must hold offset and length not LOC...
+	//TODO: if we have NO traffic cop usages then we should choose pub sub without AbstractTrafficOrderedStage
 	
+	//TODO: convert go to use low level 	
+	//TODO: 1 copy subscriber must hold offset and length not LOC...
 	//TODO: need abstract base using low level
 	//TODO: need pub sub not using abstract base
 	
 	//TODO: need wild card support.
+	
 	//TODO: is block support here on go pipe, without go pipe? how
+	
+	//TODO: recommend the use of private topics when found
 	
 	public final static boolean showNewSubscriptions = false;
 	
@@ -290,7 +294,8 @@ public class MessagePubSubStage extends AbstractTrafficOrderedStage {
     private void processStartupSubscriptions(Pipe<MessagePubSub> pipe) {
     	 
     	if (null==pipe) {
-    		logger.info("warning this stage was created but there are no subscriptions to be routed.");
+    		logger.info("warning this stage was created to listen to pub/sub but there are no subscriptions to be routed. This may not be important if subscriptions are added at runtime.");
+    		//this may not be an error.
     		return; //no subscriptions were added.
     	}
     	/////////////////////////
