@@ -71,8 +71,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     //      is actually taken off and consumed.  We have little benefit to making this longer.
     protected static final int defaultCommandChannelSubscriberLength = 8;
     
-    protected static final int defaultCommandChannelLength = 16;
-    protected static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
+    public static final int defaultCommandChannelLength = 32;
+    public static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
     protected static final int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support
 
     protected boolean transducerAutowiring = true;
