@@ -637,7 +637,7 @@ public class BuilderImpl implements Builder {
 			Pipe<MessageSubscription>[] subscriptionPipes) {
 
 
-		new MessagePubSubStage(this.gm, runtime, subscriptionPipeLookup, this, 
+		new MessagePubSubTrafficStage(this.gm, runtime, subscriptionPipeLookup, this, 
 				                ingressMessagePipes, messagePubSub, 
 				                masterMsggoOut, masterMsgackIn, subscriptionPipes);
 

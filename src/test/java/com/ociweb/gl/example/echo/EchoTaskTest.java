@@ -1,7 +1,5 @@
 package com.ociweb.gl.example.echo;
 
-import static org.junit.Assert.assertTrue;
-
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;

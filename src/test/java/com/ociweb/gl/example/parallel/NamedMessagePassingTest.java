@@ -6,7 +6,6 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
-import com.ociweb.pronghorn.network.ServerSocketWriterStage;
 
 public class NamedMessagePassingTest {
 	
