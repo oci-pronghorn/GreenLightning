@@ -9,6 +9,7 @@ import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.EgressMQTTStage;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.IngressMQTTStage;
+import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.mqtt.MQTTEncoder;
@@ -460,8 +461,23 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		}
 		
 		if (internalTopicsXmit.length>0) {
-			EgressMQTTStage stage = new EgressMQTTStage(builder.gm, msgRuntime.buildPublishPipe(code), clientRequest, internalTopicsXmit, externalTopicsXmit, convertersXmit, qosXmit, retainXmit);
-			GraphManager.addNota(builder.gm, GraphManager.DOT_BACKGROUND, MQTTClientGraphBuilder.BACKGROUND_COLOR, stage);
+			
+			final boolean isOld = false;
+			if (isOld) {
+				EgressMQTTStage stage = new EgressMQTTStage(builder.gm, 
+						                          msgRuntime.buildPublishPipe(code), 
+						                          clientRequest, internalTopicsXmit, 
+						                          externalTopicsXmit, convertersXmit, qosXmit, retainXmit);
+				GraphManager.addNota(builder.gm, GraphManager.DOT_BACKGROUND, MQTTClientGraphBuilder.BACKGROUND_COLOR, stage);
+			} else {
+				((ReactiveListenerStage)msgRuntime.registerListener("EgressMQTT", new EgressMQTTBehavior(
+										internalTopicsXmit, 
+				                        externalTopicsXmit, 
+				                        qosXmit, retainXmit, 
+				                        convertersXmit, clientRequest						
+						))).addOutputPronghornPipes(clientRequest);
+				
+			}
 		} else {
 			PipeNoOp.newInstance(builder.gm, clientRequest);			
 		}

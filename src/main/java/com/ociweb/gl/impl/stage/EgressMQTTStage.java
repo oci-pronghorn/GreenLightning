@@ -2,6 +2,7 @@ package com.ociweb.gl.impl.stage;
 
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -25,10 +26,10 @@ public class EgressMQTTStage extends PronghornStage {
 	public static final EgressConverter copyConverter = new EgressConverter() {
 
 		@Override
-		public void convert(DataInputBlobReader<MessageSubscription> inputStream,
+		public void convert(ChannelReader inputStream,
 							DataOutputBlobWriter<?> outputStream) {
 			
-			inputStream.readInto(outputStream,inputStream.available());
+			inputStream.readInto(outputStream, inputStream.available());
 			
 		}
 		

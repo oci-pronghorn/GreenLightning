@@ -47,6 +47,7 @@ import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
+import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
@@ -1629,6 +1630,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 
 	public String behaviorName() {
 		return nameId;
+	}
+
+	public void addInputPronghornPipes(Pipe ... pipes) {
+		inputPipes = PronghornStage.join(inputPipes, pipes);
+	}
+	
+	public void addOutputPronghornPipes(Pipe ... pipes) {
+		outputPipes = PronghornStage.join(outputPipes, pipes);
 	}
     
 }
