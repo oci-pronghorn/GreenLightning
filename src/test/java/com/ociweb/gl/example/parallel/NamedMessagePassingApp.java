@@ -61,7 +61,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		//since they require a router to manage the interTrack communication.	
 		///////////////////////////
 				
-		builder.parallelTracks(1);
+		builder.parallelTracks(2); //TODO: mutiple tracks is breaking the auto private topic detection...
 		
 		builder.setDefaultRate(rate);
 
@@ -89,10 +89,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		assert(fieldB==fieldB2);
 		long fieldL  = builder.lookupFieldByIdentity(aRouteId, HTTPHeaderDefaults.CONTENT_LENGTH);
 		
-		//TODO: if the responder is found in the parallel section then mutate the name.
-		builder.definePrivateTopic(1<<17,32,"/send/200", "consumer", "responder");
-		builder.usePrivateTopicsExclusively();
-	
+
 		//not quite 2x slower for routed topics
 		//	builder.defineUnScopedTopic("/send/200"); //TODO: urgent, this was required because for tracks this mangled topic name does not get matched...
 	}
@@ -102,6 +99,18 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 	
 	//	runtime.addPubSubListener("watcher",new Watcher(runtime))
 		//       .addSubscription("/test/gobal");
+		
+		
+//		runtime.addRestListener("consumer",new RestConsumer(runtime, fieldA, fieldB, 
+//				Fields.nameA,
+//				Fields.nameB,
+//				Fields.urlArg))
+//		       .includeAllRoutes();
+//
+//		
+//		runtime.addPubSubListener("responder",new RestResponder(runtime, chunked))
+//		       .addSubscription("/send/200"); //add boolean for unscoped if required
+		
 	}
 
 	@Override
@@ -115,7 +124,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 //			//}
 //			
 //		});
-		
+
 		runtime.addRestListener("consumer",new RestConsumer(runtime, fieldA, fieldB, 
 				Fields.nameA,
 				Fields.nameB,
@@ -125,6 +134,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		
 		runtime.addPubSubListener("responder",new RestResponder(runtime, chunked))
 		       .addSubscription("/send/200"); //add boolean for unscoped if required
+
 
 	}
 }

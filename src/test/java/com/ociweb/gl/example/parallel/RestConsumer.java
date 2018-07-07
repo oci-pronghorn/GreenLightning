@@ -5,6 +5,7 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.MsgCommandChannel;
+import com.ociweb.gl.api.PubSubFixedTopicService;
 import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.Writable;
@@ -31,14 +32,14 @@ public class RestConsumer implements RestListener {
 		}
 		
 	};
-	private PubSubService messageService;
+	private PubSubFixedTopicService messageService;
 	private HTTPResponseService responseService;
 	public RestConsumer(GreenRuntime runtime, long fieldA, long fieldB,
 			Object objectA,
 			Object objectB,
 			Object valueObj) {		
 		this.cmd2 = runtime.newCommandChannel();		
-		this.messageService = this.cmd2.newPubSubService();
+		this.messageService = this.cmd2.newPubSubService("/send/200");
 		this.responseService = this.cmd2.newHTTPResponseService();
 		this.fieldA = fieldA;
 		this.fieldB = fieldB;	
@@ -64,7 +65,7 @@ public class RestConsumer implements RestListener {
 		}
 		
 		requestW = request;
-		return messageService.publishTopic("/send/200", w);
+		return messageService.publishTopic(w);
 
 		
 	//	cmd2.publishTopic("/test/gobal");//tell the watcher its good

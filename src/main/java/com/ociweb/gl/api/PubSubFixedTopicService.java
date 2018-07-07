@@ -12,21 +12,32 @@ import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
 
-public class PubSubService {
+public class PubSubFixedTopicService {
 
 	private static final Logger logger = LoggerFactory.getLogger(PubSubService.class);
 	private final MsgCommandChannel<?> msgCommandChannel;
+	private final String topic;
+    private final byte[] topicBytes;
+    private int topicToken = -2; //lazy loaded by design
 	
-	public PubSubService(MsgCommandChannel<?> msgCommandChannel) {
+	
+	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String topic) {
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;
+		this.topic = topic;
+		this.topicBytes = topic.getBytes();
+		
+		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, topic);
+		
 	}
 	
-	public PubSubService(MsgCommandChannel<?> msgCommandChannel,
-								int queueLength, int maxMessageSize) {
+	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String topic,
+								   int queueLength, int maxMessageSize) {
 		
 		this.msgCommandChannel = msgCommandChannel;
-
+		this.topic = topic;
+		this.topicBytes = topic.getBytes();
+		
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;  
 		
@@ -37,8 +48,21 @@ public class PubSubService {
 		
 		//IngressMessages Confirm that MQTT ingress is big enough as well			
 		msgCommandChannel.pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
+		
+		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, topic);
+		
+		
 	}
 
+
+	private final int token() {
+		if (-2 == topicToken) {
+			topicToken = (null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topicBytes, 0, topicBytes.length));
+		}
+		return topicToken;
+	}
+
+	
 	/**
 	 * A method to determine if there is enough room in the pipe for more data
 	 * @param messageCount int arg used in FieldReferenceOffsetManager.maxFragmentSize
@@ -51,10 +75,9 @@ public class PubSubService {
 
 	/**
 	 * A method used to subscribe to a specified topic
-	 * @param topic CharSequence arg used for output.append
 	 * @return true if msgCommandChannel.goPipe == null || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe) <p> else false
 	 */
-	public boolean subscribe(CharSequence topic) {
+	public boolean subscribe() {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
 		if (null==msgCommandChannel.listener) {
@@ -70,8 +93,8 @@ public class PubSubService {
 		    //OLD -- PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_SUBSCRIBE_100_FIELD_TOPIC_1, topic);
 		    
 		    DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
-			output.openField();	    		
-			output.append(topic);
+			output.openField();
+			output.write(topicBytes, 0, topicBytes.length);
 			
 			MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 			
@@ -88,11 +111,10 @@ public class PubSubService {
 
 	/**
 	 * A method used to subscribe to a specified topic with a listener
-	 * @param topic CharSequence arg used in output.append
 	 * @param listener PubSubMethodListenerBase arg used in PipeWriter.writeInt
 	 * @return true if msgCommandChannel.goPipe == null || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe) <p> else false
 	 */
-	public boolean subscribe(CharSequence topic, PubSubMethodListenerBase listener) {
+	public boolean subscribe(PubSubMethodListenerBase listener) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
 		if (msgCommandChannel.goHasRoom()  
@@ -103,7 +125,7 @@ public class PubSubService {
 		    
 		    DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 			output.openField();	    		
-			output.append(topic);
+			output.write(topicBytes, 0, topicBytes.length);
 			
 			MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 			
@@ -120,10 +142,9 @@ public class PubSubService {
 
 	/**
 	 * A method used to unsubscribe from a specific topic
-	 * @param topic CharSequence arg used in output.append
 	 * @return true if msgCommandChannel.goPipe == null || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe) <p> else false
 	 */
-	public boolean unsubscribe(CharSequence topic) {
+	public boolean unsubscribe() {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
@@ -135,7 +156,7 @@ public class PubSubService {
 		   //OLD  PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1, topic);
 		    DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 			output.openField();	    		
-			output.append(topic);
+			output.write(topicBytes, 0, topicBytes.length);
 			
 			MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 			
@@ -152,11 +173,10 @@ public class PubSubService {
 
 	/**
 	 * A method used to unsubscribe from a specific topic and listener
-	 * @param topic CharSequence arg used in output.append
 	 * @param listener PubSubMethodListenerBase arg used in PipeWriter.writeInt
 	 * @return true if msgCommandChannel.goPipe == null || PipeWriter.hasRoomForWrite(msgCommandChannel.goPipe) <p> else false
 	 */
-	public boolean unsubscribe(CharSequence topic, PubSubMethodListenerBase listener) {
+	public boolean unsubscribe(PubSubMethodListenerBase listener) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
 		if (msgCommandChannel.goHasRoom()  
@@ -166,7 +186,7 @@ public class PubSubService {
 		   //OLD  PipeWriter.writeUTF8(messagePubSub, MessagePubSub.MSG_UNSUBSCRIBE_101_FIELD_TOPIC_1, topic);
 		    DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 			output.openField();	    		
-			output.append(topic);
+			output.write(topicBytes, 0, topicBytes.length);
 			
 			MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 			
@@ -183,15 +203,14 @@ public class PubSubService {
 
     /**
      * Publishes specified failable topic with data written onto this channel
-     * @param topic CharSequence arg to be specified for publish
      * @param writable to write data into this channel
      * @return result if msgCommandChannel.goHasRoom else FailableWrite.Retry
      */
-	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable) {
+	public FailableWrite publishFailableTopic(FailableWritable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
 		
-		int token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);
+		int token =  token();
 		
 		if (token>=0) {
 			return msgCommandChannel.publishFailableOnPrivateTopic(token, writable);
@@ -211,7 +230,7 @@ public class PubSubService {
 					
 		    		DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 		    		output.openField();	    		
-		    		output.append(topic);
+		    		output.write(topicBytes, 0, topicBytes.length);
 		    		
 		    		MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 		    		
@@ -234,16 +253,15 @@ public class PubSubService {
 
 	/**
      * Publishes specified failable topic with data written onto this channel and waits for success or failure
-     * @param topic CharSequence arg to be specified for publish
      * @param writable to write data into this channel
 	 * @param ap WaitFor arg used in PipeWriter.writeInt
 	 * @return result if msgCommandChannel.goHasRoom else FailableWrite.Retry
 	 */
-	public FailableWrite publishFailableTopic(CharSequence topic, FailableWritable writable, WaitFor ap) {
+	public FailableWrite publishFailableTopic(FailableWritable writable, WaitFor ap) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
 		
-		int token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);
+		int token =  token();
 		
 		if (token>=0) {
 			return msgCommandChannel.publishFailableOnPrivateTopic(token, writable);
@@ -264,7 +282,7 @@ public class PubSubService {
 					
 		    		DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 		    		output.openField();	    		
-		    		output.append(topic);
+		    		output.write(topicBytes, 0, topicBytes.length);
 		    		
 		    		MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 		    		
@@ -285,103 +303,15 @@ public class PubSubService {
 		}		
 	}
 
-	/**
-	 * Publishes specified topic with no data onto this channel
-     * @param topic byte[] arg to be specified for publish
-     * @return published topic if msgCommandChannel.goHasRoom
-     */
-	public boolean publishTopic(byte[] topic) {
-		
-		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-		
-		int token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic, 0, topic.length);
-		
-		if (token>=0) {
-			return msgCommandChannel.publishOnPrivateTopic(token);
-		} else {
-			//should not be called when	DYNAMIC_MESSAGING is not on.
-			
-		    //this is a public topic
-			if (msgCommandChannel.goHasRoom()  && 
-		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-		        
-				DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
-				output.openField();	
-				output.write(topic);
-				MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);	    		
-				
-				output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
-		    	//OLD  PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
-		    		        	
-				PipeWriter.writeSpecialBytesPosAndLen(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3, -1, 0);
-				PipeWriter.publishWrites(msgCommandChannel.messagePubSub);
-		        	            
-		        MsgCommandChannel.publishGo(1,msgCommandChannel.builder.pubSubIndex(), msgCommandChannel);
-		                    
-		        return true;
-		        
-		    } else {
-		        return false;
-		    }
-		}
-	}
-
-	/**
-     * Publishes specified topic with data written onto this channel
-     * @param topic byte[] arg to be specified for publish
-     * @param writable to write data into this channel
-	 * @return published topic if msgCommandChannel.goHasRoom
-     */
-	public boolean publishTopic(byte[] topic, Writable writable) {
-		
-		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-		assert(writable != null);
-		
-		int token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic, 0, topic.length);
-		
-		if (token>=0) {
-			return msgCommandChannel.publishOnPrivateTopic(token, writable);
-		} else {
-			//should not be called when	DYNAMIC_MESSAGING is not on.
-			
-		    //this is a public topic
-			if (msgCommandChannel.goHasRoom()  && 
-		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-		        
-				DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
-				output.openField();	
-				output.write(topic);
-				MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);    		
-				
-				output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
-				
-		    	//OLD PipeWriter.writeBytes(messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1, topic);         
-		    	
-		        PubSubWriter writer = (PubSubWriter) Pipe.outputStream(msgCommandChannel.messagePubSub);
-		        
-		        writer.openField(MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3,msgCommandChannel);
-		        writable.write(writer);
-		        writer.publish();
-		        MsgCommandChannel.publishGo(1,msgCommandChannel.builder.pubSubIndex(), msgCommandChannel);
-		                    
-		        return true;
-		        
-		    } else {
-		        return false;
-		    }
-		}
-	}
 
 	/**
      * Publishes specified topic with no data onto this channel
-     * @param topic CharSequence arg to be specified for publish
      * @return published topic if msgCommandChannel.goHasRoom
      */
-	public boolean publishTopic(CharSequence topic) {
-		
+	public boolean publishTopic() {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
-		int token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);
+		int token =  token();
 		
 		if (token>=0) {
 			return msgCommandChannel.publishOnPrivateTopic(token);
@@ -401,7 +331,7 @@ public class PubSubService {
 		    	
 				DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 				output.openField();	    		
-				output.append(topic);
+				output.write(topicBytes, 0, topicBytes.length);
 				
 				MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 				
@@ -426,15 +356,13 @@ public class PubSubService {
 
 	/**
      * Publishes specified topic with no data onto this channel while not accepting new messages until published message is received
-     * @param topic CharSequence arg to be specified for publish
 	 * @param waitFor WaitFor arg used in PipeWriter.writeInt
      * @return published topic if msgCommandChannel.goHasRoom
      */
-	public boolean publishTopic(CharSequence topic, WaitFor waitFor) {
-		
+	public boolean publishTopic(WaitFor waitFor) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
-		int token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);
+		int token =  token();
 		
 		if (token>=0) {
 			return msgCommandChannel.publishOnPrivateTopic(token);
@@ -454,7 +382,7 @@ public class PubSubService {
 		    	
 				DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 				output.openField();	    		
-				output.append(topic);
+				output.write(topicBytes, 0, topicBytes.length);
 				
 				MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 				
@@ -479,41 +407,18 @@ public class PubSubService {
 
 	/**
 	 * Publishes specified topic with data written onto this channel
-     * @param topic CharSequence arg to be specified for publish
      * @param writable to write data into this channel
 	 * @return published topic if token >= 0
 	 */
-	public boolean publishTopic(CharSequence topic, Writable writable) {
-		
+	public boolean publishTopic(Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
 		
-		
-		///////////////////////////////////////////////////
-		//hack test for now to see if this is worth doing.
-		//NOTE: this is not helping much because HTTP header parsing dwarfs this work.
-		int token;
-		if (topic instanceof String) {
-			if (topic == msgCommandChannel.cachedTopic) {
-				token = msgCommandChannel.cachedTopicToken;
-			} else {
-				
-				token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);
-				msgCommandChannel.cachedTopic = (String)topic;
-				msgCommandChannel.cachedTopicToken = token;
-			}
-		} else {
-			token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);	
-		}
-		//////////////////////////
-		
+		int token = token();		
 		
 		if (token>=0) {
 			return msgCommandChannel.publishOnPrivateTopic(token, writable);
 		} else {
-			
-			assert(msgCommandChannel.messagePubSub!=null) : "public topic is missing pipe in pub sub service for topic "+topic+" has private topics "+msgCommandChannel.publishPrivateTopics;
-			
 		    if (msgCommandChannel.goHasRoom()  && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 				
@@ -522,7 +427,7 @@ public class PubSubService {
 		
 		    	DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 		 		output.openField();	    		
-		 		output.append(topic);	     		
+		 		output.write(topicBytes, 0, topicBytes.length);     		
 		 		MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 		 		output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
 		 		
@@ -546,34 +451,15 @@ public class PubSubService {
 
 	/**
      * Publishes specified topic with data written onto this channel while not accepting new messages until published message is received
-     * @param topic CharSequence arg to be specified for publish
      * @param writable to write data into this channel
 	 * @param waitFor waitFor arg used in PipeWriter.writeInt
 	 * @return published topic if token >= 0
 	 */
-	public boolean publishTopic(CharSequence topic, Writable writable, WaitFor waitFor) {
-		
+	public boolean publishTopic(Writable writable, WaitFor waitFor) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		assert(writable != null);
 		
-		
-		///////////////////////////////////////////////////
-		//hack test for now to see if this is worth doing.
-		//NOTE: this is not helping much because HTTP header parsing dwarfs this work.
-		int token;
-		if (topic instanceof String) {
-			if (topic == msgCommandChannel.cachedTopic) {
-				token = msgCommandChannel.cachedTopicToken;
-			} else {
-				token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);
-				msgCommandChannel.cachedTopic = (String)topic;
-				msgCommandChannel.cachedTopicToken = token;
-			}
-		} else {
-			token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);	
-		}
-		//////////////////////////
-		
+		int token = token();
 		
 		if (token>=0) {
 			return msgCommandChannel.publishOnPrivateTopic(token, writable);
@@ -586,7 +472,7 @@ public class PubSubService {
 		
 		    	DataOutputBlobWriter<MessagePubSub> output = PipeWriter.outputStream(msgCommandChannel.messagePubSub);
 		 		output.openField();	    		
-		 		output.append(topic);	     		
+		 		output.write(topicBytes, 0, topicBytes.length);     		
 		 		MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, output);
 		 		output.closeHighLevelField(MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
 		 		
@@ -608,112 +494,21 @@ public class PubSubService {
 		}
 	}
 		
-	public void presumePublishTopic(CharSequence topic, Writable writable) {
-		presumePublishTopic(topic,writable, WaitFor.All);
+	public void presumePublishTopic(Writable writable) {
+		presumePublishTopic(writable, WaitFor.All);
 	}
 
-	public void presumePublishTopic(CharSequence topic, Writable writable, WaitFor waitFor) {
+	public void presumePublishTopic(Writable writable, WaitFor waitFor) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
 		
-		if (!publishTopic(topic, writable, waitFor)) {
+		if (!publishTopic(writable, waitFor)) {
 			logger.warn("unable to publish on topic {} must wait.",topic);
-			while (!publishTopic(topic, writable, waitFor)) {
+			while (!publishTopic(writable, waitFor)) {
 				Thread.yield();
 			}
 		}
 	}
 
-    /**
-     * Publishes specified topic with data written onto this channel
-     * @param topic topic to be specified for publish
-     * @param writable to write data into this channel
-     * @return published topic
-     */
-	public boolean publishTopic(TopicWritable topic, Writable writable) {
-	
-		return publishTopic(topic, writable, WaitFor.All);
-	}
-
-	/**
-     * Publishes specified topic with data written onto this channel while not accepting new messages until published message is received
-     * @param topic CharSequence arg to be specified for publish
-     * @param writable to write data into this channel
-	 * @param ap WaitFor arg used in PipeWriter.writeInt
-	 * @return published topic if token >= 0
-	 */
-	public boolean publishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
-		
-		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-		assert(writable != null);
-		
-		int token = msgCommandChannel.tokenForPrivateTopic(topic);
-		
-		if (token>=0) {
-			return msgCommandChannel.publishOnPrivateTopic(token, writable);
-		} else { 
-		    if (msgCommandChannel.goHasRoom()  && 
-		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
-		    	
-				
-				PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, ap.policy());
-		
-		        
-		        PubSubWriter pw = (PubSubWriter) Pipe.outputStream(msgCommandChannel.messagePubSub);
-		    	DataOutputBlobWriter.openField(pw);
-		    	topic.write(pw);
-		 		MsgCommandChannel.publicTrackedTopicSuffix(msgCommandChannel, pw);
-		    	DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_TOPIC_1);
-		       
-		    	DataOutputBlobWriter.openField(pw);
-		    	writable.write(pw);
-		        DataOutputBlobWriter.closeHighLevelField(pw, MessagePubSub.MSG_PUBLISH_103_FIELD_PAYLOAD_3);
-		        
-		        PipeWriter.publishWrites(msgCommandChannel.messagePubSub);
-		
-		        MsgCommandChannel.publishGo(1,msgCommandChannel.builder.pubSubIndex(), msgCommandChannel);
-		        		                    
-		        return true;
-		        
-		    } else {
-		        return false;
-		    }
-		}
-	}
-
-	public boolean publishTopic(TopicWritable topic) {
-		
-		return publishTopic(topic, WaitFor.All);
-	}
-	
-	public boolean publishTopic(TopicWritable topic, WaitFor ap) {
-		
-		return publishTopic(topic, ap);
-	}
-
-    /**
-     * Takes previous state and changes it to specified state
-     * @param state state used to convert original
-      */
-	public <E extends Enum<E>> boolean changeStateTo(E state) {
-		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
-		
-		 assert(msgCommandChannel.builder.isValidState(state));
-		 if (!msgCommandChannel.builder.isValidState(state)) {
-			 throw new UnsupportedOperationException("no match "+state.getClass());
-		 }
-		
-		 if (msgCommandChannel.goHasRoom()  
-		     && PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_CHANGESTATE_70)) {
-		
-			 PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_CHANGESTATE_70_FIELD_ORDINAL_7,  state.ordinal());
-		     PipeWriter.publishWrites(msgCommandChannel.messagePubSub);
-		     
-		     msgCommandChannel.builder.releasePubSubTraffic(1, msgCommandChannel);
-			 return true;
-		 }
-		
-		return false;
-	}
 
 	/**
 	 * Used to shutdown a pipe //TODO: correct??

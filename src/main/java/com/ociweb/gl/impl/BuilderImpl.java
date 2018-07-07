@@ -59,6 +59,9 @@ public class BuilderImpl implements Builder {
 	protected long timeTriggerRate;
 	protected long timeTriggerStart;
 
+    
+    int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
+    final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
 	
 	private Blocker channelBlocker;
 
@@ -684,7 +687,7 @@ public class BuilderImpl implements Builder {
 	
 	protected final ChildClassScannerVisitor deepListener = new ChildClassScannerVisitor<ListenerTransducer>() {
 		@Override
-		public boolean visit(ListenerTransducer child, Object topParent) {
+		public boolean visit(ListenerTransducer child, Object topParent, String name) {
 			return false;
 		}		
 	};
@@ -694,20 +697,20 @@ public class BuilderImpl implements Builder {
 		//NOTE: we only call for scan if the listener is not already of this type
 		return listener instanceof PubSubMethodListenerBase ||
 			   listener instanceof StateChangeListenerBase<?> 
-		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, PubSubListenerTransducer.class)
-		       || !ChildClassScanner.visitUsedByClass(listener, deepListener, StateChangeListenerTransducer.class);
+		       || !ChildClassScanner.visitUsedByClass(null, listener, deepListener, PubSubListenerTransducer.class)
+		       || !ChildClassScanner.visitUsedByClass(null, listener, deepListener, StateChangeListenerTransducer.class);
 	}
 
 	public final boolean isListeningToHTTPResponse(Object listener) {
 		return listener instanceof HTTPResponseListenerBase ||
 			   //will return false if HTTPResponseListenerBase was encountered
-			  !ChildClassScanner.visitUsedByClass(listener, deepListener, HTTPResponseListenerTransducer.class);
+			  !ChildClassScanner.visitUsedByClass(null, listener, deepListener, HTTPResponseListenerTransducer.class);
 	}
 
 	public final boolean isListeningHTTPRequest(Object listener) {
 		return listener instanceof RestMethodListenerBase ||
 			    //will return false if RestListenerBase was encountered
-			   !ChildClassScanner.visitUsedByClass(listener, deepListener, RestListenerTransducer.class);
+			   !ChildClassScanner.visitUsedByClass(null, listener, deepListener, RestListenerTransducer.class);
 	}
 	
 	/**
@@ -1120,9 +1123,9 @@ public class BuilderImpl implements Builder {
 	
 	protected int getFeatures(GraphManager gm, Pipe<TrafficOrderSchema> orderPipe) {
 		PronghornStage producer = GraphManager.getRingProducer(gm, orderPipe.id);
-		assert(producer instanceof ReactiveListenerStage) : "TrafficOrderSchema must only come from Reactor stages but was "+producer.getClass().getSimpleName();
+		assert(producer instanceof ReactiveProxyStage) : "TrafficOrderSchema must only come from Reactor stages but was "+producer.getClass().getSimpleName();
 		
-		return ((ReactiveListenerStage)producer).getFeatures(orderPipe);
+		return ((ReactiveProxyStage)producer).getFeatures(orderPipe);
 	}
 	
 	@Override
@@ -1381,6 +1384,15 @@ public class BuilderImpl implements Builder {
 		
 	}
 	
+	//these are to stop some topics from becomming private.
+	private ArrayList<String[]> publicTopics = new ArrayList<String[]>();
+	
+	
+	@Override
+	public void definePublicTopics(String ... topics) {
+		publicTopics.add(topics);
+	}
+	
 	@Override
 	public void definePrivateTopic(String topic, String source, String target) {
 		definePrivateTopic(10, 10000, topic, source, target);
@@ -1418,8 +1430,6 @@ public class BuilderImpl implements Builder {
 			localTargetTopics = privateTargetTopics.get(targetId); 
 		}
 		localTargetTopics.add(obj);
-		
-		
 		
 	}
 
@@ -1579,6 +1589,214 @@ public class BuilderImpl implements Builder {
 		return StructBuilder.newStruct(gm.recordTypeData, template);
 	}
 
+	 
+	private ArrayList<ReactiveListenerStage> pendingReactiveStages = new ArrayList<ReactiveListenerStage>();
+	
+	/**
+	 * Store the reactive listeners until they are all created.
+	 * The actual stages are created at once after they are all registered.
+	 * @param reactiveListenerStage
+	 */
+	public void pendingInit(ReactiveListenerStage<?> reactiveListenerStage) {
+		pendingReactiveStages.add(reactiveListenerStage);
+	}
+
+	public void initAllPendingReactors() {
+		if (null!=pendingReactiveStages) {
+			defineAutoDiscoveredPrivateTopcis();//must be done before the initRealStage call.
+			for(ReactiveListenerStage stage: pendingReactiveStages) {
+				stage.initRealStage();
+			}
+			pendingReactiveStages = null;
+		}
+	}
+
+	/////////////////////////////////////////////////////////////////////
+	/////////////Auto discovery of private topics
+	///////////////////////////////////////////////////////////////////////
+	//find topic matches where we have 1 channel producer and 1 behavior consumer
+	//////////////////////////////////////////////////////////////////////////
+	
+	private TrieParser possibleTopics = new TrieParser();
+	private int possiblePrivateTopicsCount = 0;
+	private MsgCommandChannel[] possiblePrivateCmds = new MsgCommandChannel[16];
+	
+	//ReactiveListenerStage
+	private ArrayList[] possiblePrivateBehaviors = new ArrayList[16];
+	
+	
+	private int[] possiblePrivateTopicsProducerCount = new int[16];
+	private CharSequence[] possiblePrivateTopicsTopic = new CharSequence[16];
+	
+	public void possiblePrivateTopicProducer(MsgCommandChannel<?> cmdChannel, String topic) {
+
+		int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
+		if (-1 == id) {
+			growPossiblePrivateTopics();			
+			possiblePrivateCmds[possiblePrivateTopicsCount] = cmdChannel;
+			possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
+			possiblePrivateTopicsProducerCount[possiblePrivateTopicsCount]++;
+			possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);
+		} else {		
+			
+			possiblePrivateCmds[id] = cmdChannel;
+			possiblePrivateTopicsProducerCount[id]++;
+		}
+	}
+	
+	public void possiblePrivateTopicConsumer(ReactiveListenerStage listener, CharSequence topic) {
+				
+		int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
+		if (-1 == id) {
+			growPossiblePrivateTopics();			
+			if (null==possiblePrivateBehaviors[possiblePrivateTopicsCount]) {
+				possiblePrivateBehaviors[possiblePrivateTopicsCount] = new ArrayList();
+			}
+			possiblePrivateBehaviors[possiblePrivateTopicsCount].add(listener);
+			
+			possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
+			possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);			
+		} else {
+			
+			if (null==possiblePrivateBehaviors[id]) {
+				possiblePrivateBehaviors[id] = new ArrayList();
+			}
+			possiblePrivateBehaviors[id].add(listener);
+			
+		}
+	}
+
+	
+	private void growPossiblePrivateTopics() {
+		if (possiblePrivateTopicsCount == possiblePrivateBehaviors.length) {
+			//grow
+			MsgCommandChannel[] newCmds = new MsgCommandChannel[possiblePrivateTopicsCount*2];
+			System.arraycopy(possiblePrivateCmds, 0, newCmds, 0, possiblePrivateTopicsCount);
+			possiblePrivateCmds = newCmds;
+			
+			ArrayList[] newBeh = new ArrayList[possiblePrivateTopicsCount*2];
+			System.arraycopy(possiblePrivateBehaviors, 0, newBeh, 0, possiblePrivateTopicsCount);
+			possiblePrivateBehaviors = newBeh;
+			
+			int[] newProducer = new int[possiblePrivateTopicsCount*2];
+			System.arraycopy(possiblePrivateTopicsProducerCount, 0, newProducer, 0, possiblePrivateTopicsCount);
+			possiblePrivateTopicsProducerCount = newProducer;
+
+			String[] newTopics = new String[possiblePrivateTopicsCount*2];
+			System.arraycopy(possiblePrivateTopicsTopic, 0, newTopics, 0, possiblePrivateTopicsCount);
+			possiblePrivateTopicsTopic = newTopics;
+						
+		}
+	}
+	
+	public void defineAutoDiscoveredPrivateTopcis() {
+		
+		logger.info("possible private topics {} ",possiblePrivateTopicsCount);
+		int actualPrivateTopicsFound = 0;
+		int i = possiblePrivateTopicsCount;
+		while (--i>=0) {			
+			
+			String topic = possiblePrivateTopicsTopic[i].toString();					
+			logger.info("possible private topic {} {}->{}",topic, possiblePrivateTopicsProducerCount[i], null==possiblePrivateBehaviors[i] ? -1 :possiblePrivateBehaviors[i].size());
+			
+			if (possiblePrivateTopicsProducerCount[i]==1) {
+				if ((null!=possiblePrivateBehaviors[i]) && (possiblePrivateBehaviors[i].size()>=1)) {
+					//may be valid check that is is not on the list.
+					if (!skipTopic(topic)) {
+						
+						String producerName = possiblePrivateCmds[i].behaviorName();
+						
+						int j = possiblePrivateBehaviors[i].size();
+						if (j >= 1) {
+							actualPrivateTopicsFound++;
+						}
+						
+						while (--j>=0) {
+							String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
+							definePrivateTopic(topic, producerName, consumerName);
+						}
+					}
+				}
+			}
+		}
+		
+		if (actualPrivateTopicsFound == possiblePrivateTopicsCount) {
+			isAllPrivateTopics = true;
+		}
+		
+	}
+	//iterate over single matches 
+
+	private boolean skipTopic(CharSequence topic) {
+		boolean skipTopic = false;
+		int w = publicTopics.size();
+		while (--w>=0) {
+			
+			if (isFoundInArray(topic, w)) {
+				skipTopic = true;
+				break;
+			}
+		}
+		return skipTopic;
+	}
+
+	private boolean isFoundInArray(CharSequence topic, int w) {
+
+		String[] s = publicTopics.get(w);						
+		int x = s.length;
+		while (--x>=0) {			
+			if (isMatch(topic, s, x)) {
+				return true;
+			}			
+		}
+		return false;
+	}
+
+	private boolean isMatch(CharSequence topic, String[] s, int x) {
+
+		if (topic.length() == s[x].length()) {
+			int z = topic.length();
+			while (--z >= 0) {									
+				if (topic.charAt(z) != s[x].charAt(z)) {
+					return false;									
+				}
+			}
+		} else {
+			return false;
+		}
+		return true;
+	}
+
+	public void populateListenerIdentityHash(Behavior listener) {
+		//store this value for lookup later
+		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
+		if (!IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++)) {
+			throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
+		}
+		
+		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+	}
+	
+	public void populateListenerIdentityHash(int hash) {
+		//store this value for lookup later
+		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
+		if (!IntHashTable.setItem(subscriptionPipeLookup, hash, subscriptionPipeIdx++)) {
+			throw new RuntimeException("Could not find unique identityHashCode for "+hash);
+		}
+		
+		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+	}
+
+	public IntHashTable getSubPipeLookup() {
+		return subscriptionPipeLookup;
+	}
+	
+	/////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////
+	
+	
+	
 	
 	
 }

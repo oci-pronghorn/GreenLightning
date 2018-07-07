@@ -65,6 +65,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     protected static final long MS_TO_NS = 1_000_000;
          
     Behavior listener;
+    private String behaviorName;
     
     //TODO: add GreenService class for getting API specific objects.
     public static final int DYNAMIC_MESSAGING = 1<<0;
@@ -89,6 +90,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	protected PipeConfigManager pcm;
 	private final int parallelInstanceId;
 
+
     public MsgCommandChannel(GraphManager gm, B hardware,
 				  		    int parallelInstanceId,
 				  		    PipeConfigManager pcm
@@ -110,6 +112,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.track = parallelInstanceId<0 ? null : trackNameBuilder(parallelInstanceId);
     }
 
+    
+    public String behaviorName() {
+    	return behaviorName;
+    }
+    
     ////////////////////////////////////
     //new method API
     ////////////////////////////////////
@@ -163,6 +170,27 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	}
 
 	/**
+	 * Used to create a new pubsub service for a fixed topic
+	 * @return new PubSubFixedTopicService
+	 */
+	public PubSubFixedTopicService newPubSubService(String fixedTopic) {
+		
+		if (null != track) {
+			if (BuilderImpl.hasNoUnscopedTopics()) {//normal case where topics are scoped
+				fixedTopic = fixedTopic+new String(track);
+			} else {
+				//if scoped then add suffix
+				if ((-1 == TrieParserReaderLocal.get().query(BuilderImpl.unScopedTopics, fixedTopic))) {
+					fixedTopic = fixedTopic+new String(track);
+				}
+			}
+		}
+		
+		
+		return new PubSubFixedTopicService(this, fixedTopic);
+	}
+	
+	/**
 	 *
 	 * @param cmd MsgCommandChannel arg
 	 * @return cmd.pcm
@@ -181,6 +209,28 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return new PubSubService(this,queueLength,maxMessageSize);
 	}
 
+	/**
+	 * Used to create a new pubsub service for a fixed topic
+	 * @param queueLength int to be passed to PubSubService
+	 * @param maxMessageSize int to be passed to PubSubService
+	 * @return new PubSubFixedTopicService
+	 */
+	public PubSubFixedTopicService newPubSubService(String fixedTopic, int queueLength, int maxMessageSize) {
+		
+		if (null != track) {
+			if (BuilderImpl.hasNoUnscopedTopics()) {//normal case where topics are scoped
+				fixedTopic = fixedTopic+new String(track);
+			} else {
+				//if scoped then add suffix
+				if ((-1 == TrieParserReaderLocal.get().query(BuilderImpl.unScopedTopics, fixedTopic))) {
+					fixedTopic = fixedTopic+new String(track);
+				}
+			}
+		}
+		
+		return new PubSubFixedTopicService(this,fixedTopic,queueLength,maxMessageSize);
+	}
+	
 	/**
 	 * Used to create a new HTTP client service
 	 * @return new HTTPRequestService
@@ -230,10 +280,8 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     
     
     //common method for building topic suffix
-	static byte[] trackNameBuilder(int parallelInstanceId) {		
-		return CharSequenceToUTF8Local.get()
-		.append("/")
-		.append(Integer.toString(parallelInstanceId)).asBytes();
+	static byte[] trackNameBuilder(int parallelInstanceId) {
+		return( "/"+Integer.toString(parallelInstanceId)).getBytes();
 	}
 
 
@@ -270,53 +318,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return (Pipe<PersistedBlobStoreConsumerSchema>[])result;
 	}
 
-//    @Deprecated
-//	public void ensureHTTPClientRequesting() {
-//    	if (isInit) {
-//    		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
-//    	}
-//    	this.initFeatures |= NET_REQUESTER;
-//    }
-//    
-//    @Deprecated
-//    public void ensureHTTPClientRequesting(int queueLength, int maxMessageSize) {
-//    	if (isInit) {
-//    		throw new UnsupportedOperationException("Too late, ensureHTTPClientRequesting method must be called in define behavior.");
-//    	}
-//    	growCommandCountRoom(queueLength);
-//    	this.initFeatures |= NET_REQUESTER;
-//    	
-//    	pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
-//
-//    }
-//
-//    @Deprecated
-//    public void ensureDelaySupport() {
-//    	if (isInit) {
-//    		throw new UnsupportedOperationException("Too late, ensureDelaySupport method must be called in define behavior.");
-//    	}
-//    	this.initFeatures |= USE_DELAY;
-//    }
-//    
-//    @Deprecated
-//    public void ensureHTTPServerResponse() {
-//    	if (isInit) {
-//    		throw new UnsupportedOperationException("Too late, ensureHTTPServerResponse method must be called in define behavior.");
-//    	}
-//    	this.initFeatures |= NET_RESPONDER;
-//    }
-//    
-//    @Deprecated
-//    public void ensureHTTPServerResponse(int queueLength, int maxMessageSize) {
-//    	if (isInit) {
-//    		throw new UnsupportedOperationException("Too late, ensureHTTPServerResponse method must be called in define behavior.");
-//    	}
-//    	growCommandCountRoom(queueLength);
-//    	this.initFeatures |= NET_RESPONDER;    	
-//    	
-//    	pcm.ensureSize(ServerResponseSchema.class, queueLength, maxMessageSize);
-//
-//    }
+
 
 	public static void growCommandCountRoom(MsgCommandChannel<?> cmd, int count) {
 		if (cmd.isInit) {
@@ -335,7 +337,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   isInit = true;
 			   this.messagePubSub = ((this.initFeatures & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
 			   this.httpRequest   = ((this.initFeatures & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
-			   
+	
 			   int filteredFeatures = usedFeaturesNeedingCop();  
 			   
 			   int featuresCount = Integer.bitCount(filteredFeatures);
@@ -562,11 +564,12 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	 * @param c MsgCommandChannel arg
 	 * @param listener Behavior arg used to set c.listener
 	 */
-	public static void setListener(MsgCommandChannel<?> c, Behavior listener) {
+	public static void setListener(MsgCommandChannel<?> c, Behavior listener, String name) {
         if (null != c.listener && c.listener!=listener) {
             throw new UnsupportedOperationException("Bad Configuration, A CommandChannel can only be held and used by a single listener lambda/class");
         }
-        c.listener = listener;        
+        c.listener = listener;
+        c.behaviorName = name;
     }
 
 
@@ -724,6 +727,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	private static void trackedChannelSuffix(MsgCommandChannel cmd, DataOutputBlobWriter<MessagePubSub> output) {
 		if (BuilderImpl.hasNoUnscopedTopics()) {//normal case where topics are scoped
+			
 			output.write(cmd.track);
 		} else {
 			unScopedCheckForTrack(cmd, output);
@@ -756,7 +760,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			
 			return true;
 		} else {
-			logPrivateTopicTooShort(token,output);
+			//Pipe<MessagePrivate> output = publishPrivateTopics.getPipe(token);
+			
+			logPrivateTopicTooShort(token, output);
 			return false;
 		}
 	}
@@ -791,7 +797,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			Pipe.confirmLowLevelWrite(output, size);	
 			Pipe.publishWrites(output);
 			return true;
-		} else {
+		} else {			
 			logPrivateTopicTooShort(token, output);
 			return false;
 		}
@@ -801,6 +807,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	private final BloomFilter topicsTooShort = new BloomFilter(10000, .00001); //32K
 	
     private void logPrivateTopicTooShort(int token, Pipe<?> p) {
+
     	String topic = publishPrivateTopics.getTopic(token);
     	
     	if (!topicsTooShort.mayContain(topic)) {   

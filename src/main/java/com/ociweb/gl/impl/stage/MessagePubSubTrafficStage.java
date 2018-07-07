@@ -270,23 +270,6 @@ public class MessagePubSubTrafficStage extends AbstractTrafficOrderedStage {
     }
 
 
-	void sendAndClear(MessagePubSubImpl messagePubSubImpl, int incomingPipeId) {
-		//if this is waiting for an ack send it and clear the value
-		if (messagePubSubImpl.pendingAck[incomingPipeId]) {   
-			PipeReader.releaseReadLock( messagePubSubImpl.incomingSubsAndPubsPipe[incomingPipeId]); 
-		    		
-	        decReleaseCount(incomingPipeId);  		
-			
-	        messagePubSubImpl.pendingAck[incomingPipeId] = false;
-			
-			//if this ack was for the state change in flight clear it
-			if (messagePubSubImpl.stateChangeInFlight == incomingPipeId) {
-				messagePubSubImpl.stateChangeInFlight = -1;
-			}
-		}
-	}
-
-
 	boolean isPreviousConsumed(MessagePubSubImpl messagePubSubImpl, int incomingPipeId) {
 	    	
 		long[] marks = messagePubSubImpl.consumedMarks[incomingPipeId];
@@ -300,7 +283,19 @@ public class MessagePubSubTrafficStage extends AbstractTrafficOrderedStage {
 		if (totalUnconsumed>0) {
 			Arrays.fill(marks, 0);
 		}
-		sendAndClear(messagePubSubImpl, incomingPipeId);
+		//if this is waiting for an ack send it and clear the value
+		if (messagePubSubImpl.pendingAck[incomingPipeId]) {   
+			PipeReader.releaseReadLock( messagePubSubImpl.incomingSubsAndPubsPipe[incomingPipeId]); 
+		    		
+		    decReleaseCount(incomingPipeId);  		
+			
+		    messagePubSubImpl.pendingAck[incomingPipeId] = false;
+			
+			//if this ack was for the state change in flight clear it
+			if (messagePubSubImpl.stateChangeInFlight == incomingPipeId) {
+				messagePubSubImpl.stateChangeInFlight = -1;
+			}
+		}
 		
 		return true;//consumer has moved tail past all marks
 		

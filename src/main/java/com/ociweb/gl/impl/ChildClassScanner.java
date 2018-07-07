@@ -43,7 +43,7 @@ public class ChildClassScanner {
 	///////////
 	///////////
 
-	static boolean visitByClass(Object listener, int depth, 
+	static boolean visitByClass(String topName, Object listener, int depth, 
 												 ChildClassScannerVisitor visitor,
 												 Class<? extends Object> c,
 												 Class targetType, 
@@ -61,7 +61,7 @@ public class ChildClassScanner {
 						obj = fields[f].get(listener);
 			
 						if (targetType.isInstance(obj)) {
-							if (!visitor.visit(obj, topParent)) {
+							if (!visitor.visit(obj, topParent, topName)) {
 								return false;
 							}                              
 						} else {      
@@ -111,7 +111,7 @@ public class ChildClassScanner {
 								                		//}
 								
 								//recursive check for command channels
-									if (!visitUsedByClass(obj, depth+1, visitor, topParent, targetType, seen)) {
+									if (!visitUsedByClass(topName, obj, depth+1, visitor, topParent, targetType, seen)) {
 										return false;
 									}
 								}
@@ -127,13 +127,13 @@ public class ChildClassScanner {
 	        return true;
 		}
 
-	static boolean visitUsedByClass(Object obj, int depth, ChildClassScannerVisitor visitor, 
+	static boolean visitUsedByClass(String name, Object obj, int depth, ChildClassScannerVisitor visitor, 
 			     Object topParent, Class targetType, Collection<Object> seen) {
 		
 	    if (null!=obj) {
 		    Class<? extends Object> c = obj.getClass();
 		    while (null != c) {
-		    	if (!visitByClass(obj, depth, visitor, c, targetType, topParent, seen)) {
+		    	if (!visitByClass(name, obj, depth, visitor, c, targetType, topParent, seen)) {
 		    		return false;
 		    	}
 		    	c = c.getSuperclass();
@@ -142,9 +142,9 @@ public class ChildClassScanner {
 	    return true;
 	}
 
-	public static boolean visitUsedByClass(Object listener, ChildClassScannerVisitor visitor, Class target) {
+	public static boolean visitUsedByClass(String name, Object listener, ChildClassScannerVisitor visitor, Class target) {
 	
-		return visitUsedByClass(listener, 0, visitor, listener, target, new ArrayList<Object>());
+		return visitUsedByClass(name, listener, 0, visitor, listener, target, new ArrayList<Object>());
 	}
 
 }

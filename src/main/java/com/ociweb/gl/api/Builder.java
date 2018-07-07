@@ -171,7 +171,10 @@ public interface Builder extends ArgumentProvider {
 	void definePrivateTopic(String topic, String source, String ... targets);
 	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String target);
 	void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String ... targets);
-
+	
+	//this blocks automatic private topics as needed.
+	void definePublicTopics(String ... topics);
+	
     /**
      * Sets isAllPrivateTopics to true
      */

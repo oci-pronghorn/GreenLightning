@@ -81,19 +81,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     private int netResponsePipeIdxCounter = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
     protected int netResponsePipeIdx = -1;
-       
-    protected int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
-    protected final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
+
     
     private BridgeConfig[] bridges = new BridgeConfig[0];
     
 	protected int parallelInstanceUnderActiveConstruction = -1;
 	
 	protected Pipe<?>[] outputPipes = null;
-    protected ChildClassScannerVisitor gatherPipesVisitor = new ChildClassScannerVisitor<MsgCommandChannel>() {
+    protected ChildClassScannerVisitor listenerAndNameVisitor = new ChildClassScannerVisitor<MsgCommandChannel>() {
     	
 		@Override
-		public boolean visit(MsgCommandChannel cmdChnl, Object topParent) {
+		public boolean visit(MsgCommandChannel cmdChnl, Object topParent, String topName) {
 			    
             IntHashTable usageChecker = getUsageChecker();
             if (null!=usageChecker) {
@@ -105,13 +103,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	            }
             }
             
-            MsgCommandChannel.setListener(cmdChnl, (Behavior)topParent);
-            //add this to the count of publishers
-            //CharSequence[] supportedTopics = cmdChnl.supportedTopics();
-            //get count of subscribers per topic as well.
-			//get the pipe ID of the singular PubSub...
-			
-			outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());
+            MsgCommandChannel.setListener(cmdChnl, (Behavior)topParent, topName);
+
 			return true;//keep looking
 					
 		}
@@ -308,17 +301,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
     
 
-    protected void configureStageRate(Object listener, ReactiveListenerStage stage) {
-        //if we have a time event turn it on.
-        long rate = builder.getTriggerRate();
-        if (rate>0 && listener instanceof TimeListener) {
-            stage.setTimeEventSchedule(rate, builder.getTriggerStart());
-            //Since we are using the time schedule we must set the stage to be faster
-            long customRate =   (rate*nsPerMS)/NonThreadScheduler.granularityMultiplier;// in ns and guanularityXfaster than clock trigger
-            long appliedRate = Math.min(customRate,builder.getDefaultSleepRateNS());
-            GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, appliedRate, stage);
-        }
-    }
 
       
     
@@ -417,11 +399,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		if (this.builder.isListeningToHTTPResponse(listener)) {
         	pipesCount++; //these are calls to URL responses        	
         }
-        
-        if ( (!this.builder.isAllPrivateTopics())
-        	&& this.builder.isListeningToSubscription(listener)) {
-        	pipesCount++;
-        }
+//        
+//        if ( (!this.builder.isAllPrivateTopics())
+//        	&& this.builder.isListeningToSubscription(listener)) {
+//        	pipesCount++;
+//        }
         
         if (this.builder.isListeningHTTPRequest(listener)) {
         	pipesCount += ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
@@ -442,10 +424,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			builder.registerHTTPClientId(builder.behaviorId(listener), netResponsePipeIdx);            
         }
         
-        if ((!this.builder.isAllPrivateTopics())
-        	&& this.builder.isListeningToSubscription(listener)) {   
-            inputPipes[--pipesCount] = buildPublishPipe(listener);
-        }
+//        if ((!this.builder.isAllPrivateTopics())
+//        	&& this.builder.isListeningToSubscription(listener)) {   
+//            inputPipes[--pipesCount] = buildPublishPipe(listener);
+//        }
 
         
         //if we push to this 1 pipe all the requests...
@@ -512,7 +494,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
      * This pipe returns all the data this object has requested via subscriptions elsewhere.
      * @param listener
      */
-	public Pipe<MessageSubscription> buildPublishPipe(Object listener) {
+	public Pipe<MessageSubscription> buildPublishPipe(Behavior listener) {
 		
 		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
 		if (builder.isAllPrivateTopics()) {
@@ -520,13 +502,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 		
 		
-		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();		
-		//store this value for lookup later
-		//logger.info("adding hash listener {} to pipe  ",System.identityHashCode(listener));
-		if (!IntHashTable.setItem(subscriptionPipeLookup, System.identityHashCode(listener), subscriptionPipeIdx++)) {
-			throw new RuntimeException("Could not find unique identityHashCode for "+listener.getClass().getCanonicalName());
-		}
-		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe(builder);		
+		builder.populateListenerIdentityHash(listener);
+				
 		return subscriptionPipe;
 	}
 	
@@ -538,17 +516,15 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 		
 		
-		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe();	
-		if (!IntHashTable.setItem(subscriptionPipeLookup, listenerHash, subscriptionPipeIdx++)) {
-			throw new RuntimeException("HashCode must be unique");
-		}
-		assert(!IntHashTable.isEmpty(subscriptionPipeLookup));
+		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe(builder);	
+		builder.populateListenerIdentityHash(listenerHash);
+
 		return subscriptionPipe;
 	}
 
-	private Pipe<MessageSubscription> buildMessageSubscriptionPipe() {
+	public static Pipe<MessageSubscription> buildMessageSubscriptionPipe(BuilderImpl b) {
 		
-	    Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(builder.pcm.getConfig(MessageSubscription.class)) {
+	    Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(b.pcm.getConfig(MessageSubscription.class)) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<MessageSubscription> createNewBlobReader() {
@@ -592,6 +568,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			    	((MsgAppParallel)app).declareParallelBehavior(this);                
 			    }
 			}
+			//////////////
+			//create real stages now for each of the behaviors
+			//////////////
+			builder.initAllPendingReactors();
+			
 		}
 		constructingParallelInstancesEnding();
 		
@@ -643,15 +624,19 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		//Must call here so the beginning stages of the graph are drawn first when exporting graph.
 		app.declareBehavior(this);
+		buildModulesForServer(app);
 		
-		buildLastHalfOfGraphForServer(app, serverConfig, serverCoord, parallelTrackCount, 
-				                      acks, handshakeIncomingGroup, planIncomingGroup);
+		//////////////
+		//create real stages now for each of the behaviors
+		//////////////
+		builder.initAllPendingReactors();
+		
+		
+		buildLastHalfOfGraphForServerImpl(serverConfig, serverCoord, parallelTrackCount, acks, handshakeIncomingGroup,
+				planIncomingGroup);
 	}
 
-	private void buildLastHalfOfGraphForServer(MsgApp app, ServerPipesConfig serverConfig,
-			ServerCoordinator serverCoord, final int trackCounts, Pipe[] acks, 
-			Pipe[] handshakeIncomingGroup,
-			Pipe[] planIncomingGroup) {
+	private void buildModulesForServer(MsgApp app) {
 		////////////////////////
 		//create the working modules
 		//////////////////////////
@@ -669,7 +654,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 						"Remove call to parallelism("+builder.parallelTracks()+") OR make the application implement GreenAppParallel or something extending it.");
 			}
 		}
+	}
 
+	private void buildLastHalfOfGraphForServerImpl(ServerPipesConfig serverConfig, ServerCoordinator serverCoord,
+			final int trackCounts, Pipe[] acks, Pipe[] handshakeIncomingGroup, Pipe[] planIncomingGroup) {
 		//////////////////
 		//////////////////
 		
@@ -771,9 +759,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				
 		NetGraphBuilder.buildOrderingSupers(gm, serverCoord, fromModulesToOrderSuper, resLog, perTrackFromSuper);
 	}
-	//////////////////
-	//end of server and other behavior
-	//////////////////
 	
 	
 	public void setExclusiveTopics(MsgCommandChannel cc, String ... exlusiveTopics) {
@@ -951,8 +936,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	//OUTPUT
     	///////////
     	outputPipes = new Pipe<?>[0];
-    	//extract pipes used by listener and use cmdChannelUsageChecker to confirm its not re-used
-    	ChildClassScanner.visitUsedByClass(listener, gatherPipesVisitor, MsgCommandChannel.class);//populates outputPipes
+    	
+    	//assigns the listener and id to any CommandChannels so they know where they belong for private topics later...
+    	ChildClassScanner.visitUsedByClass(id, listener, listenerAndNameVisitor, MsgCommandChannel.class);//populates outputPipes
 
     	
     	/////////////
@@ -974,67 +960,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
         
         //extract this into common method to be called in GL and FL
 		if (transducerAutowiring) {
-			inputPipes = autoWireTransducers(listener, inputPipes, consumers);
-		}       
-        
-		if (null!=id) {
-			
-			///////////////////////////
-			//For private topics the in and out pipes MUST be created before the 
-			//ReactiveListener is created which is done here when register is called
-			//as a result it must be known before register is called which topics will 
-			//end up as private topics.
-			///////////////////////////
-			
-			List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(id);
-			int i = sourceTopics.size();
-			while (--i>=0) {	
-				outputPipes = PronghornStage.join(outputPipes, sourceTopics.get(i).getPipe(parallelInstanceUnderActiveConstruction));				
-			}
-						
-			List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(id);
-			int j = targetTopics.size();
-			while (--j>=0) {
-				inputPipes = PronghornStage.join(inputPipes, targetTopics.get(j).getPipe(parallelInstanceUnderActiveConstruction));
-			}
-			
+			inputPipes = autoWireTransducers(id, listener, inputPipes, consumers);
 		}
+        
 		
-        ReactiveListenerStage<?> reactiveListener = builder.createReactiveListener(gm, listener, 
+        return builder.createReactiveListener(gm, listener, 
         		                                inputPipes, outputPipes, consumers,
         		                                parallelInstanceUnderActiveConstruction,id);
-
-        //finds all the command channels which make use of private topics.
-        reactiveListener.regPrivateTopics();
-        
-        if (listener instanceof RestListenerBase) {
-			GraphManager.addNota(gm, GraphManager.DOT_RANK_NAME, "ModuleStage", reactiveListener);
-			
-		}
-		
-		/////////////////////
-		//StartupListener is not driven by any response data and is called when the stage is started up. no pipe needed.
-		/////////////////////
-		//TimeListener, time rate signals are sent from the stages its self and therefore does not need a pipe to consume.
-		/////////////////////
-		
-		configureStageRate(listener,reactiveListener);
-		
-		int testId = -1;
-		int i = inputPipes.length;
-		while (--i>=0) {
-			if (inputPipes[i]!=null && Pipe.isForSchema((Pipe<MessageSubscription>)inputPipes[i], MessageSubscription.class)) {
-				testId = inputPipes[i].id;
-			}
-		}
-		
-		assert(-1==testId || GraphManager.allPipesOfType(gm, MessageSubscription.instance)[subscriptionPipeIdx-1].id==testId) : "GraphManager has returned the pipes out of the expected order";
-		
-		return reactiveListener;
         
     }
 
-	protected Pipe<?>[] autoWireTransducers(final Behavior listener, Pipe<?>[] inputPipes,
+	protected Pipe<?>[] autoWireTransducers(final String topName, final Behavior listener, Pipe<?>[] inputPipes,
 			final ArrayList<ReactiveManagerPipeConsumer> consumers) {
 		
 		if (inputPipes.length==0) {
@@ -1045,7 +981,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		ChildClassScannerVisitor tVisitor = new ChildClassScannerVisitor() {
 			@Override
-			public boolean visit(Object child, Object topParent) {					
+			public boolean visit(Object child, Object topParent, String topName) {					
 				if (g.additions()==0) {
 					//add first value
 					Pipe[] pipes = builder.operators.createPipes(builder, listener, g);
@@ -1069,7 +1005,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			}				
 		};
 		
-		ChildClassScanner.visitUsedByClass(listener, tVisitor, ListenerTransducer.class);
+		ChildClassScanner.visitUsedByClass(topName, listener, tVisitor, ListenerTransducer.class);
 					
 		if (g.additions()>0) {
 			inputPipes = g.firstArray();
@@ -1085,7 +1021,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 
 	public static IntHashTable getSubPipeLookup(MsgRuntime runtime) {
-		return runtime.subscriptionPipeLookup;
+		return runtime.builder.getSubPipeLookup();
 	}
 
 	private Runnable cleanShutdownRunnable;
