@@ -19,7 +19,7 @@ public class AppTest {
 	    {
 		    StringBuilder result = new StringBuilder();
 		    
-		    boolean cleanExit = GreenRuntime.testUntilShutdownRequested(new StateMachine(result,1), 500);
+		    boolean cleanExit = GreenRuntime.testConcurrentUntilShutdownRequested(new StateMachine(result,10), 1000);
 		    
 		    /////////////////////////////
 		    //System.out.println(result);
