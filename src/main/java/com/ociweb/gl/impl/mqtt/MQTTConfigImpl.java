@@ -306,8 +306,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		}
 	}
 	
-
-	private final int code =  System.identityHashCode(this);
 	private CharSequence[] internalTopicsXmit = new CharSequence[0];
 	private CharSequence[] externalTopicsXmit = new CharSequence[0];
 	private EgressConverter[] convertersXmit = new EgressConverter[0];
@@ -359,8 +357,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		ensureConnected();
 
 		//logger.trace("added subscription to {} in order to transmit out to  ",internalTopic, externalTopic);
-		builder.addStartupSubscription(internalTopic, code, -1);
-		
+
 		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
 		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);
 		convertersXmit = grow(convertersXmit,EgressMQTTStage.copyConverter);
@@ -379,8 +376,6 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	public long addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
 		ensureConnected();
 
-		builder.addStartupSubscription(internalTopic, code, -1);
-		
 		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
 		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);
 		convertersXmit = grow(convertersXmit,converter);
@@ -461,23 +456,20 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		}
 		
 		if (internalTopicsXmit.length>0) {
+
+			ListenerFilter registerListener = msgRuntime.registerListener("EgressMQTT", new EgressMQTTBehavior(
+									internalTopicsXmit, 
+			                        externalTopicsXmit, 
+			                        qosXmit, retainXmit, 
+			                        convertersXmit, clientRequest						
+					));
 			
-			final boolean isOld = false;
-			if (isOld) {
-				EgressMQTTStage stage = new EgressMQTTStage(builder.gm, 
-						                          msgRuntime.buildPublishPipe(code), 
-						                          clientRequest, internalTopicsXmit, 
-						                          externalTopicsXmit, convertersXmit, qosXmit, retainXmit);
-				GraphManager.addNota(builder.gm, GraphManager.DOT_BACKGROUND, MQTTClientGraphBuilder.BACKGROUND_COLOR, stage);
-			} else {
-				((ReactiveListenerStage)msgRuntime.registerListener("EgressMQTT", new EgressMQTTBehavior(
-										internalTopicsXmit, 
-				                        externalTopicsXmit, 
-				                        qosXmit, retainXmit, 
-				                        convertersXmit, clientRequest						
-						))).addOutputPronghornPipes(clientRequest);
-				
+			for(int i = 0; i<internalTopicsXmit.length; i++) {
+				registerListener.addSubscription(internalTopicsXmit[i]);
 			}
+			
+			((ReactiveListenerStage)registerListener).addOutputPronghornPipes(clientRequest);
+
 		} else {
 			PipeNoOp.newInstance(builder.gm, clientRequest);			
 		}

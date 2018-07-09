@@ -106,9 +106,9 @@ public class BlockingExampleApp implements GreenAppParallel {
 				()->{
 					return new BlockingBehaviorExample();
 				},
+				Fields.connectionId,
 				threadsCount, 
-				timeoutNS, 
-				chooserLongFieldId); //TODO: instead of this pass in chooser?
+				timeoutNS);
 		
 		HTTPResponseService resp = runtime.newCommandChannel().newHTTPResponseService();		
 		runtime.addPubSubListener("restResponder",(t,p)-> {

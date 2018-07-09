@@ -4,23 +4,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.schema.MessagePrivate;
+import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.stage.blocking.Blockable;
 
-//  newBlocking( blockClass, 
-
-
-//8 patterns?
-//Pipe<MessagePrivate> inout;
-//Pipe<MessagePubSub> output;
-//Pipe<MessageSubscription> input;
-
-
-//adapter to map??
-//need one per specific inputs...?
-public class BlockingBehaviorBridgePPP extends Blockable<MessagePrivate, MessagePrivate, MessagePrivate> {
+public class BlockingBehaviorBridgePPP extends Blockable {
 	
 	private static final Logger logger = LoggerFactory.getLogger(BlockingBehaviorBridgePPP.class);
 	
@@ -31,24 +21,31 @@ public class BlockingBehaviorBridgePPP extends Blockable<MessagePrivate, Message
 	}
 	
 	@Override
-	public void begin(Pipe<MessagePrivate> input) {	
+	public void begin(Pipe input) {	
 		//logger.info("\n------------------begin");
 		
+		int id = Pipe.takeMsgIdx(input);	
 		if (Pipe.isForSchema(input, MessagePrivate.instance)) {
-			int id = Pipe.takeMsgIdx(input);	
 			assert(MessagePrivate.MSG_PUBLISH_1 == id);
 			bb.begin(Pipe.openInputStream(input));
 			
-			Pipe.confirmLowLevelRead(input, Pipe.sizeOf(input, MessagePrivate.MSG_PUBLISH_1));
-			Pipe.releaseReadLock(input);
 			
 			
 		} else {
-		
+			assert(Pipe.isForSchema(input, MessageSubscription.instance));
+			assert(MessageSubscription.MSG_PUBLISH_103 == id);
 			//MessageSubscription.MSG_PUBLISH_103
 		
+		//	public static final int MSG_PUBLISH_103_FIELD_TOPIC_1 = 0x01400001;
+		//	public static final int MSG_PUBLISH_103_FIELD_PAYLOAD_3 = 0x01c00003;
+			
+			
+			//TODO: fix MQTT engress code...
+			
 			
 		}
+		Pipe.confirmLowLevelRead(input, Pipe.sizeOf(input, id));
+		Pipe.releaseReadLock(input);
 	}
 
 	@Override
@@ -58,28 +55,44 @@ public class BlockingBehaviorBridgePPP extends Blockable<MessagePrivate, Message
 	}
 
 	@Override
-	public void finish(Pipe<MessagePrivate> output) {
+	public void finish(Pipe output) {
 		//logger.info("\n-----------------finish");
-		int size = Pipe.addMsgIdx(output, MessagePrivate.MSG_PUBLISH_1);
-		DataOutputBlobWriter<MessagePrivate> stream = Pipe.openOutputStream(output);
-		bb.finish(stream);
-		DataOutputBlobWriter.closeLowLevelField(stream);
-		Pipe.confirmLowLevelWrite(output,size);
-		Pipe.publishWrites(output);
+		if (Pipe.isForSchema(output, MessagePrivate.instance)) {
+			int size = Pipe.addMsgIdx(output, MessagePrivate.MSG_PUBLISH_1);
+			DataOutputBlobWriter<MessagePrivate> stream = Pipe.openOutputStream(output);
+			bb.finish(stream);
+			DataOutputBlobWriter.closeLowLevelField(stream);
+			Pipe.confirmLowLevelWrite(output,size);
+			Pipe.publishWrites(output);
+		} else {
+			assert(Pipe.isForSchema(output, MessagePubSub.instance));
+			
+			//MessagePubSub.MSG_PUBLISH_103;
+			
+		
+			
+		}
 	}
 
 	@Override
-	public void timeout(Pipe<MessagePrivate> output) {
+	public void timeout(Pipe output) {
 		//logger.info("\n-----------------timeout");
-		int size = Pipe.addMsgIdx(output, MessagePrivate.MSG_PUBLISH_1);
-		DataOutputBlobWriter<MessagePrivate> stream = Pipe.openOutputStream(output);
-		bb.finish(stream);
-		DataOutputBlobWriter.closeLowLevelField(stream);
+		if (Pipe.isForSchema(output, MessagePrivate.instance)) {
+			int size = Pipe.addMsgIdx(output, MessagePrivate.MSG_PUBLISH_1);
+			DataOutputBlobWriter<MessagePrivate> stream = Pipe.openOutputStream(output);
+			bb.finish(stream);
+			DataOutputBlobWriter.closeLowLevelField(stream);
 		
+			Pipe.confirmLowLevelWrite(output, size);
+			Pipe.publishWrites(output);
+		} else {
+			assert(Pipe.isForSchema(output, MessagePubSub.instance));
 		
-		Pipe.confirmLowLevelWrite(output, size);
-		Pipe.publishWrites(output);
+			//MessagePubSub.MSG_PUBLISH_103;
 		
+	
+		
+		}
 	}
 
 }

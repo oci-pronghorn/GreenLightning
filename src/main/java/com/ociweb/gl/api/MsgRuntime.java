@@ -518,11 +518,19 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			//////////////
 			//create real stages now for each of the behaviors
 			//////////////
+			constructingBridges();
 			builder.initAllPendingReactors();
 			
 		}
+		
+		
+		
 		constructingParallelInstancesEnding();
 		
+		
+	}
+
+	private void constructingBridges() {
 		//Init bridges		
 		int b = bridges.length;
 		while (--b>=0) {
@@ -576,6 +584,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//////////////
 		//create real stages now for each of the behaviors
 		//////////////
+		constructingBridges();
 		builder.initAllPendingReactors();
 		
 		
@@ -813,10 +822,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	public <T extends BlockingBehavior> void registerBlockingListener(
 			String behaviorName,
 			Class<T> clazz,
+			Object chosserFieldAssoc,
 			int threadsCount,
-			long timeoutNS,
-			//TODO: change to assoicated object..
-			long chooserLongFieldId) {
+			long timeoutNS) {
 		registerBlockingListener(behaviorName, new BlockingBehaviorProducer() {
 			@Override
 			public BlockingBehavior produce() {
@@ -826,17 +834,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					throw new RuntimeException(e);
 				}
 			}
-		}, threadsCount, timeoutNS, chooserLongFieldId);
+		}, chosserFieldAssoc, threadsCount, timeoutNS);
 	}
 
 	//adding support for blocking
 	public <T extends BlockingBehavior> void registerBlockingListener(
 			String behaviorName,
 			BlockingBehaviorProducer producer,
+			Object chooserFieldAssoc,
 			int threadsCount,
-			long timeoutNS,
-			//TODO: urgent change to associated object....
-			long chooserLongFieldId) {
+			long timeoutNS) {
 	
 		if (null==behaviorName) {
 			throw new UnsupportedOperationException("All blocking behaviors must be named.");
@@ -859,7 +866,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe<MessagePrivate> timeout = output;
 		assert(input!=output);
 			
-		Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(chooserLongFieldId, threadsCount, BlockableStageFactory.streamOffset(input));		
+		Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(
+				chooserFieldAssoc, threadsCount, BlockableStageFactory.streamOffset(input));
+		
 		BlockableStageFactory.buildBlockingSupportStage(gm, timeoutNS, threadsCount, input, output, timeout, producer, chooser);
 	
 	}

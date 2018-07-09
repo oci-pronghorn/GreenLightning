@@ -7,14 +7,14 @@ import com.ociweb.pronghorn.stage.blocking.Choosable;
 
 public class ChoosableLongField<T extends MessageSchema<T>> implements Choosable<T> {
 
-	private final long fieldId;
+	private final Object fieldIdAssoc;
 	private final int choiceCount;
 	private final int offsetToStream;
 	
-	public ChoosableLongField(long fieldId,
+	public ChoosableLongField(Object fieldIdAssoc,
 			                  int choiceCount,
 			                  int offsetToStream) {
-		this.fieldId = fieldId;
+		this.fieldIdAssoc = fieldIdAssoc;
 		this.choiceCount = choiceCount;
 		this.offsetToStream = offsetToStream;
 	}
@@ -26,8 +26,7 @@ public class ChoosableLongField<T extends MessageSchema<T>> implements Choosable
 		} else {
 			StructuredReader reader = Pipe.peekInputStream(pipe, offsetToStream)
 					                      .structured();
-			long readLong = reader.readLong(fieldId);
-			return ((int)readLong)%choiceCount;
+			return ((int)reader.readLong(fieldIdAssoc))%choiceCount;
 		}
 	}
 }

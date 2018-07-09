@@ -1710,15 +1710,18 @@ public class BuilderImpl implements Builder {
 					if (!skipTopic(topic)) {
 						
 						String producerName = possiblePrivateCmds[i].behaviorName();
-						
-						int j = possiblePrivateBehaviors[i].size();
-						if (j >= 1) {
-							actualPrivateTopicsFound++;
-						}
-						
-						while (--j>=0) {
-							String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
-							definePrivateTopic(topic, producerName, consumerName);
+						if (null!=producerName) {
+							int j = possiblePrivateBehaviors[i].size();
+							if (j >= 1) {
+								actualPrivateTopicsFound++;
+							}
+							
+							while (--j>=0) {
+								String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
+								if (null!=consumerName) {
+									definePrivateTopic(topic, producerName, consumerName);
+								}
+							}
 						}
 					}
 				}

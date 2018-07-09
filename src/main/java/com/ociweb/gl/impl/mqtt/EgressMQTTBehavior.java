@@ -117,13 +117,16 @@ public class EgressMQTTBehavior implements PubSubListener {
 				boolean topicMatches = false;
 				//TODO: this is very bad, swap out with trie parser instead of linear search
 				while (--i >= 0) { 
-					
-					CharSequence it = internalTopic[i];				
-					if (it.equals(topic)) {  //TOOD: not sure this equals works...
-						topicMatches = true;
-						break;
-					}
-					
+					CharSequence it = internalTopic[i];
+					if (it.length() == topic.length()) {
+						int j = it.length();
+						while (--j>=0 && (it.charAt(j)==topic.charAt(j))) {	
+						}
+						if (j<0) {
+							topicMatches = true;
+							break;
+						}
+					}					
 				}
 				assert (topicMatches) : "ERROR, this topic was not known " + topic;
 				
