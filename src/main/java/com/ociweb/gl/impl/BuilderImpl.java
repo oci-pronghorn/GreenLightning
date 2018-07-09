@@ -1725,7 +1725,7 @@ public class BuilderImpl implements Builder {
 			}
 		}
 		
-		if (actualPrivateTopicsFound == possiblePrivateTopicsCount) {
+		if (actualPrivateTopicsFound == possiblePrivateTopicsCount && (!messageRoutingRequired)) {
 			isAllPrivateTopics = true;
 		}
 		
@@ -1866,6 +1866,12 @@ public class BuilderImpl implements Builder {
 
 	public StageScheduler getScheduler() {
 		return this.scheduler;
+	}
+
+	private boolean messageRoutingRequired = false;
+	
+	public void messageRoutingRequired() {
+		messageRoutingRequired = true;
 	}
 	
 	/////////////////////////////////////////////////////////////

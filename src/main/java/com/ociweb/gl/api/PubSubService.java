@@ -20,6 +20,7 @@ public class PubSubService {
 	public PubSubService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;
+		msgCommandChannel.builder.messageRoutingRequired();
 	}
 	
 	public PubSubService(MsgCommandChannel<?> msgCommandChannel,
@@ -37,6 +38,8 @@ public class PubSubService {
 		
 		//IngressMessages Confirm that MQTT ingress is big enough as well			
 		msgCommandChannel.pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
+		
+		msgCommandChannel.builder.messageRoutingRequired();
 	}
 
 	/**

@@ -3,6 +3,7 @@ package com.ociweb.gl.api;
 import com.ociweb.gl.api.blocking.BlockableStageFactory;
 import com.ociweb.gl.api.blocking.BlockingBehavior;
 import com.ociweb.gl.api.blocking.BlockingBehaviorProducer;
+import com.ociweb.gl.api.blocking.ChoosableLongField;
 import com.ociweb.gl.impl.*;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -30,6 +31,7 @@ import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
+import com.ociweb.pronghorn.stage.blocking.Choosable;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
@@ -813,6 +815,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			Class<T> clazz,
 			int threadsCount,
 			long timeoutNS,
+			//TODO: change to assoicated object..
 			long chooserLongFieldId) {
 		registerBlockingListener(behaviorName, new BlockingBehaviorProducer() {
 			@Override
@@ -832,6 +835,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			BlockingBehaviorProducer producer,
 			int threadsCount,
 			long timeoutNS,
+			//TODO: urgent change to associated object....
 			long chooserLongFieldId) {
 	
 		if (null==behaviorName) {
@@ -854,9 +858,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		assert(null!=output);
 		Pipe<MessagePrivate> timeout = output;
 		assert(input!=output);
-		
-		BlockableStageFactory.buildStage(gm, timeoutNS, threadsCount, chooserLongFieldId,
-	    		   						input, output, timeout, producer);
+			
+		Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(chooserLongFieldId, threadsCount, BlockableStageFactory.streamOffset(input));		
+		BlockableStageFactory.buildBlockingSupportStage(gm, timeoutNS, threadsCount, input, output, timeout, producer, chooser);
 	
 	}
 	
