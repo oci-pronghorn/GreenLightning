@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.schema.MessagePrivate;
+import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.stage.blocking.Blockable;
@@ -32,12 +33,22 @@ public class BlockingBehaviorBridgePPP extends Blockable<MessagePrivate, Message
 	@Override
 	public void begin(Pipe<MessagePrivate> input) {	
 		//logger.info("\n------------------begin");
-		int id = Pipe.takeMsgIdx(input);	
-		assert(MessagePrivate.MSG_PUBLISH_1 == id);
-		bb.begin(Pipe.openInputStream(input));
 		
-		Pipe.confirmLowLevelRead(input, Pipe.sizeOf(input, MessagePrivate.MSG_PUBLISH_1));
-		Pipe.releaseReadLock(input);
+		if (Pipe.isForSchema(input, MessagePrivate.instance)) {
+			int id = Pipe.takeMsgIdx(input);	
+			assert(MessagePrivate.MSG_PUBLISH_1 == id);
+			bb.begin(Pipe.openInputStream(input));
+			
+			Pipe.confirmLowLevelRead(input, Pipe.sizeOf(input, MessagePrivate.MSG_PUBLISH_1));
+			Pipe.releaseReadLock(input);
+			
+			
+		} else {
+		
+			//MessageSubscription.MSG_PUBLISH_103
+		
+			
+		}
 	}
 
 	@Override
