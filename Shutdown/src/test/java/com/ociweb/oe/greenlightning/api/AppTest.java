@@ -10,6 +10,7 @@ import java.net.*;
 
 import static com.ociweb.pronghorn.network.TLSCertificateTrust.httpsURLConnectionTrustAllCerts;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -17,22 +18,20 @@ import static org.junit.Assert.fail;
  */
 public class AppTest { 
 
-	private final int timeoutMS = 4_000; //4 sec
+	private final int timeoutMS = 240_000; //240 sec
 	private final static Logger logger = LoggerFactory.getLogger(AppTest.class);
 	
 	 @Test
-	    public void testApp()
-	    {
-		 
-		   simulateUser();		 		   
+	 public void testApp() {
+	 
+	   simulateUser();
 
-		   boolean cleanExit = GreenRuntime.testUntilShutdownRequested(new Shutdown("127.0.0.1"), timeoutMS);				
-		   
-		  //TODO: this is broken and not detecting the shutdown message. 
-		  // assertTrue("Shutdown commands not detected.",cleanExit);
-		   
-			
-	    }
+	   boolean cleanExit = GreenRuntime.testConcurrentUntilShutdownRequested(new Shutdown("127.0.0.1"), timeoutMS);				
+
+	   assertTrue("Shutdown commands not detected.",cleanExit);
+	   //TODO: second URL should have shut down??
+		
+	 }
 
 	private void simulateUser() {
 		new Thread(()->{
@@ -40,7 +39,7 @@ public class AppTest {
 				httpsURLConnectionTrustAllCerts("127.0.0.1");
 
 				hitFirstURL();				
-				
+	
 				hitSecondURL();			
 			   
 		   }).start();
@@ -50,6 +49,10 @@ public class AppTest {
 		boolean waiting = true;				
 		while (waiting) {
 			try {
+				try {
+					Thread.sleep(100);
+				} catch (InterruptedException e) {
+				}
 				URLConnection con = url.openConnection();				
 				con.connect();
 			} catch (ConnectException ce) {

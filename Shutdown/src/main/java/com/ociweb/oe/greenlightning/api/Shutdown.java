@@ -25,6 +25,7 @@ public class Shutdown implements GreenApp
     	
     	HTTPServerConfig conf = c.useHTTP1xServer(8443)
     			.setHost(NetGraphBuilder.bindHost(host))
+    			.setDecryptionUnitsPerTrack(4)
     			.setDefaultPath("");
     	    	
     	int aRouteId = c.defineRoute().path("/shutdown?key=${key}").routeId();

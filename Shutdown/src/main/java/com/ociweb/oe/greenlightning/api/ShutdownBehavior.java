@@ -1,6 +1,5 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
@@ -19,7 +18,7 @@ public class ShutdownBehavior implements ShutdownListener, RestListener{
 	
     public ShutdownBehavior(GreenRuntime runtime, long keyFieldId) {
     	this.keyFieldId = keyFieldId;
-		this.channel = runtime.newCommandChannel().newHTTPResponseService();
+		this.channel = runtime.newCommandChannel().newHTTPResponseService(1000,100);
 
 	}
 	    	
@@ -33,13 +32,15 @@ public class ShutdownBehavior implements ShutdownListener, RestListener{
 
 		if (request.structured().isEqual(keyFieldId, PASS1)) {
 			if (channel.publishHTTPResponse(request, 200)) {
-				while(!channel.shutdown()){}
+				channel.triggerShutdownRuntime();
 				hasFirstKey = true;
+				System.out.println("first key");
 				return true;
 			}
 		} else if (hasFirstKey && request.structured().isEqual(keyFieldId, PASS2)) {
 			if (channel.publishHTTPResponse(request, 200)) {
 				hasSecondKey = true;
+				System.out.println("second key");
 				return true;
 			}
 		} else {
