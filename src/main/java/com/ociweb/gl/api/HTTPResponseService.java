@@ -420,6 +420,7 @@ public class HTTPResponseService {
 	/**
 	 * start shutdown of the runtime, this can be vetoed or postponed by any shutdown listeners
 	 */
+	public void triggerShutdownRuntime() {
 		
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
