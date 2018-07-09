@@ -32,7 +32,7 @@ public class ShutdownBehavior implements ShutdownListener, RestListener{
 
 		if (request.structured().isEqual(keyFieldId, PASS1)) {
 			if (channel.publishHTTPResponse(request, 200)) {
-				channel.triggerShutdownRuntime();
+				channel.requestShutdown();
 				hasFirstKey = true;
 				System.out.println("first key");
 				return true;
