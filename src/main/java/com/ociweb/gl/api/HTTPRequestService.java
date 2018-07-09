@@ -258,35 +258,17 @@ public class HTTPRequestService {
 		return false;
 	}
 
+	
 	/**
-	 *
-	 * @return true if msgCommandChannel.goHasRoom() <p> false otherwise
+	 * start shutdown of the runtime, this can be vetoed or postponed by any shutdown listeners
 	 */
-	public boolean shutdown() {
+	public void triggerShutdownRuntime() {
+		
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
-		    if (msgCommandChannel.goHasRoom()) {            	
-		    	if (null!=msgCommandChannel.goPipe) {
-		    		Pipe.publishEOF(msgCommandChannel.goPipe);            		
-		    	} else {
-		    		//must find one of these outputs to shutdown
-		    		if (!msgCommandChannel.sentEOF(msgCommandChannel.messagePubSub)) {
-		    			if (!msgCommandChannel.sentEOF(msgCommandChannel.httpRequest)) {
-		    				if (!msgCommandChannel.sentEOF(msgCommandChannel.netResponse)) {
-		    					if (!msgCommandChannel.sentEOFPrivate()) {
-		    						msgCommandChannel.secondShutdownMsg();
-		    					}
-		    				}            				
-		    			}
-		    		}
-		    	}
-		        return true;
-		    } else {
-		        return false;
-		    }
+			msgCommandChannel.builder.triggerShutdownProcess();
 		} finally {
 		    assert(msgCommandChannel.exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
 		}
 	}
-	
 }

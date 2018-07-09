@@ -715,31 +715,21 @@ public class PubSubService {
 		return false;
 	}
 
+	
 	/**
-	 * Used to shutdown a pipe //TODO: correct??
-	 * @return true or false
+	 * start shutdown of the runtime, this can be vetoed or postponed by any shutdown listeners
 	 */
-	public boolean shutdown() {
-
+	public void triggerShutdownRuntime() {
+		
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
-		    if (hasRoomFor(1)) { 
-		    	//logger.info("shutting down runtime.");
-		    	if (null!=msgCommandChannel.goPipe) {
-		    		Pipe.publishEOF(msgCommandChannel.goPipe);            		
-		    	} else {
-		    		//logger.info("sending EOF to cause shutdown");
-		    		msgCommandChannel.sentEOF(msgCommandChannel.messagePubSub);
-		    	}
-		        return true;
-		    } else {
-		        return false;
-		    }
+			msgCommandChannel.builder.triggerShutdownProcess();
 		} finally {
 		    assert(msgCommandChannel.exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
 		}
 	}
-
+	
+	
 	/**
 	 * Used to set delay of service in nanoseconds
 	 * @param durationNanos long duration in nanoseconds used to set delay time

@@ -167,16 +167,15 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	 */
 	public static boolean testUntilShutdownRequested(GreenApp app, long timeoutMS) {
 		GreenRuntime runtime = new GreenRuntime(app.getClass().getSimpleName());
-		
+
 		ScriptedNonThreadScheduler s = test(app, runtime);
- 
+ 		
         long limit = System.nanoTime() + (timeoutMS*1_000_000L);
         boolean result = true;
         boolean hangDectection = false;
 		s.startup(hangDectection);
     	                
 		while (!ScriptedNonThreadScheduler.isShutdownRequested(s)) {
-
 				s.run();
 				if (System.nanoTime() > limit) {
 					System.err.println("exit due to timeout");

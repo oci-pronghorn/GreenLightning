@@ -58,14 +58,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	protected final GraphManager gm;
 
     protected final String[] args;
-    
-    private StageScheduler scheduler;
+
      
     protected String telemetryHost;
     
     protected void setScheduler(StageScheduler scheduler) {
-    	this.scheduler = scheduler;
+    	builder.setScheduler(scheduler);
     }
+        
+	public StageScheduler getScheduler() {
+	      return builder.getScheduler();
+	}    
     
     //NOTE: keep short since the MessagePubSubStage will STOP consuming message until the one put on here
     //      is actually taken off and consumed.  We have little benefit to making this longer.
@@ -302,12 +305,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
 
 
-      
-    
-    public StageScheduler getScheduler() {
-        return scheduler;
-    }    
-
     public void shutdownRuntime() {
     	shutdownRuntime(3);
     }
@@ -319,55 +316,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	if (!isShutdownRequested()) {
     		logger.info("shutdownRuntime({}) with timeout",secondsTimeout);
     	
-	    	if (null == scheduler || null == builder) {
+	    	if ((null == builder) || (null == builder.getScheduler()) ) {
 	    		//logger.warn("No runtime activity was detected.");
 	    		System.exit(0);
 	    		return;
 	    	}
-	    	
-	    	final Runnable lastCallClean = new Runnable() {    		
-	    		@Override
-	    		public void run() {
-	    			
-	    			//all the software has now stopped so shutdown the hardware now.
-	    			builder.shutdown();
-	    			
-	    			if (null!=cleanShutdownRunnable) {
-	    				cleanShutdownRunnable.run();
-	    			}
-	    				    			
-	    		}    		
-	    	};
-	    	
-	    	final Runnable lastCallDirty = new Runnable() {    		
-	    		@Override
-	    		public void run() {
-	    			
-	    			//all the software has now stopped so shutdown the hardware now.
-	    			builder.shutdown();
-	    			
-	    			if (null!=dirtyShutdownRunnable) {
-	    				dirtyShutdownRunnable.run();
-	    			}
-	    			
-	    			
-	    		}    		
-	    	};
-	    	
-	    	//notify all the reactors to begin shutdown.
-	    	ReactiveListenerStage.requestSystemShutdown(builder, new Runnable() {
-	
-				@Override
-				public void run() {
-					
-					logger.info("Scheduler {} shutdown ", scheduler.getClass().getSimpleName());
-					scheduler.shutdown();
-				
-					scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCallClean, lastCallDirty);
-					
-				}
-	    		
-	    	});
+	    
+	    	builder.triggerShutdownProcess(secondsTimeout);
+
     	}
     }
 
@@ -399,11 +355,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		if (this.builder.isListeningToHTTPResponse(listener)) {
         	pipesCount++; //these are calls to URL responses        	
         }
-//        
-//        if ( (!this.builder.isAllPrivateTopics())
-//        	&& this.builder.isListeningToSubscription(listener)) {
-//        	pipesCount++;
-//        }
         
         if (this.builder.isListeningHTTPRequest(listener)) {
         	pipesCount += ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
@@ -423,12 +374,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
      
 			builder.registerHTTPClientId(builder.behaviorId(listener), netResponsePipeIdx);            
         }
-        
-//        if ((!this.builder.isAllPrivateTopics())
-//        	&& this.builder.isListeningToSubscription(listener)) {   
-//            inputPipes[--pipesCount] = buildPublishPipe(listener);
-//        }
-
         
         //if we push to this 1 pipe all the requests...
         //JoinStage to take N inputs and produce 1 output.
@@ -1024,16 +969,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		return runtime.builder.getSubPipeLookup();
 	}
 
-	private Runnable cleanShutdownRunnable;
-	private Runnable dirtyShutdownRunnable;
-	
 	
 	public void addCleanShutdownRunnable(Runnable cleanRunnable) {
-		this.cleanShutdownRunnable = cleanRunnable;
+		builder.setCleanShutdownRunnable(cleanRunnable);
 	}
 
 	public void addDirtyShutdownRunnable(Runnable dirtyRunnable) {
-		this.dirtyShutdownRunnable = dirtyRunnable;
+		builder.setDirtyShutdownRunnable(dirtyRunnable);
 	}
 
     

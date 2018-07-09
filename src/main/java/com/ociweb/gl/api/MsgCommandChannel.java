@@ -581,34 +581,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
         return aBool.compareAndSet(true, false);
     }
 
-    @Deprecated
-    public final boolean shutdown() {
-        assert(enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
-        try {
-            if (goHasRoom()) {            	
-            	if (null!=goPipe) {
-            		Pipe.publishEOF(this.goPipe);            		
-            	} else {
-            		//must find one of these outputs to shutdown
-            		if (!sentEOF(messagePubSub)) {
-            			if (!sentEOF(httpRequest)) {
-            				if (!sentEOF(netResponse)) {
-            					if (!sentEOFPrivate()) {
-            						secondShutdownMsg();
-            					}
-            				}            				
-            			}
-            		}
-            	}
-                return true;
-            } else {
-                return false;
-            }
-        } finally {
-            assert(exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
-        }
-    }
-
+ 
     //can be overridden to add shutdown done by another service.
 	protected void secondShutdownMsg() {
 		

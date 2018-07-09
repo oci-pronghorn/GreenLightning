@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.security.SecureRandom;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.ReentrantLock;
@@ -59,6 +60,8 @@ public class BuilderImpl implements Builder {
 	protected long timeTriggerRate;
 	protected long timeTriggerStart;
 
+	private Runnable cleanShutdownRunnable;
+	private Runnable dirtyShutdownRunnable;
     
     int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
     final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
@@ -117,6 +120,8 @@ public class BuilderImpl implements Builder {
 
 	protected int IDX_MSG = -1;
 	protected int IDX_NET = -1;
+	    
+    private StageScheduler scheduler;
 	   
     ///////
 	//These topics are enforced so that they only go from one producer to a single consumer
@@ -1789,6 +1794,78 @@ public class BuilderImpl implements Builder {
 
 	public IntHashTable getSubPipeLookup() {
 		return subscriptionPipeLookup;
+	}
+
+	public void setCleanShutdownRunnable(Runnable cleanRunnable) {
+		cleanShutdownRunnable = cleanRunnable;
+	}
+
+	public void setDirtyShutdownRunnable(Runnable dirtyRunnable) {
+		dirtyShutdownRunnable = dirtyRunnable;
+	}
+
+	public void triggerShutdownProcess() {
+		triggerShutdownProcess(3);
+	}
+	
+	public void triggerShutdownProcess(int secondsTimeout) {
+		
+		if (ReactiveListenerStage.isShutdownRequested(this)) {
+			return;//do not do again.
+		}
+		
+    	final Runnable lastCallClean = new Runnable() {    		
+    		@Override
+    		public void run() {
+    			
+    			//all the software has now stopped so shutdown the hardware now.
+    			shutdown();
+    			
+    			if (null!=cleanShutdownRunnable) {
+    				cleanShutdownRunnable.run();
+    			}
+    				    			
+    		}    		
+    	};
+    	
+    	final Runnable lastCallDirty = new Runnable() {    		
+    		@Override
+    		public void run() {
+    			
+    			//all the software has now stopped so shutdown the hardware now.
+    			shutdown();
+    			
+    			if (null!=dirtyShutdownRunnable) {
+    				dirtyShutdownRunnable.run();
+    			}
+    			
+    		}    		
+    	};
+    	
+    	//notify all the reactors to begin shutdown.
+    	ReactiveListenerStage.requestSystemShutdown(this, new Runnable() {
+
+			@Override
+			public void run() {
+				
+				logger.info("Scheduler {} shutdown ", scheduler.getClass().getSimpleName());
+				scheduler.shutdown();
+			
+				scheduler.awaitTermination(secondsTimeout, TimeUnit.SECONDS, lastCallClean, lastCallDirty);
+				
+			}
+    		
+    	});
+    	
+    	
+	}
+
+	public void setScheduler(StageScheduler s) {
+		this.scheduler = s;
+	}
+
+	public StageScheduler getScheduler() {
+		return this.scheduler;
 	}
 	
 	/////////////////////////////////////////////////////////////
