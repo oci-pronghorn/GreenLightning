@@ -38,7 +38,7 @@ public class HTTPServer implements GreenApp
     @Override
     public void declareConfiguration(Builder c) {
         
-		c.useHTTP1xServer(port).setHost(host);
+		c.useHTTP1xServer(port).setHost(host).setMaxResponseSize(1<<18);
 		
 		emptyResponseRouteId = c.defineRoute(HTTPHeaderDefaults.COOKIE)
 				                 .path("/testpageA?arg=#{myarg}").routeId();
@@ -82,7 +82,7 @@ public class HTTPServer implements GreenApp
         //splitResponseRouteId
         
         runtime.addRestListener(new ShutdownRestListener(runtime, keyFieldId))
-                  .includeRoutesByAssoc(shutdownRouteId);
+                  .includeRoutes(shutdownRouteId);
         
         //NOTE .includeAllRoutes() can be used to write a behavior taking all routes
 

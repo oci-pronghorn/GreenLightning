@@ -22,7 +22,7 @@ public class RestBehaviorHandoffResponder implements PubSubListener {
 		
 		boolean result = responder.readReqesterData(payload);
 		if (result) {
-			responder.respondWith(200, false, HTTPContentTypeDefaults.TXT, (w)->{w.writeUTF("sent by responder");});
+			responder.respondWith(200, false, HTTPContentTypeDefaults.TXT, (w)->{w.writeUTF8Text("sent by responder");});
 		}
 		
 		return result;

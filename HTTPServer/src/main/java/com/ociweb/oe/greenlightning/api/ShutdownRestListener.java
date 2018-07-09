@@ -35,9 +35,7 @@ public class ShutdownRestListener implements RestListener{
 			
 			if (responseService.publishHTTPResponse(request, 200)) {		
 				
-				while (!responseService.shutdown()){
-					logger.error("Checked for room yet the shutdown was blocked...");
-				}
+				responseService.requestShutdown();
 				
 				return true;
 			} 

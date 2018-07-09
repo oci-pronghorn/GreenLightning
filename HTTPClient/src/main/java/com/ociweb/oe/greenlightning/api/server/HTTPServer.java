@@ -81,7 +81,7 @@ public class HTTPServer implements GreenApp
         //splitResponseRouteId
         
         runtime.addRestListener(new ShutdownRestListener(runtime, keyFieldId))
-                  .includeRoutesByAssoc(shutdownRouteId);
+                  .includeRoutes(shutdownRouteId);
         
         //NOTE .includeAllRoutes() can be used to write a behavior taking all routes
 

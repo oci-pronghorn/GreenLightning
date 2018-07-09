@@ -41,7 +41,7 @@ public class AppTest {
    		    AtomicBoolean cleanExit = new AtomicBoolean(false);
 		    
 	   	    new Thread(()->{
-	   		    cleanExit.set(GreenRuntime.testUntilShutdownRequested(new HTTPServer(host, port, result), timeoutMS));
+	   		    cleanExit.set(GreenRuntime.testConcurrentUntilShutdownRequested(new HTTPServer(host, port, result), timeoutMS));
 	   		    done.set(true);
 	   	    }).start();
    		    
@@ -90,8 +90,7 @@ public class AppTest {
 					hitURL("https://"+host+":"+port+"/testPageC", "peanutbutter", "payload",
 							"beginning of text file\n" + "ending of text file\n");
 
-					// The binary data encoded in the payload below is due to the binary 2-byte-counted UTF write (utfWrite) performed by RestBehaviorHandoffResponder
-					hitURL("https://"+host+":"+port+"/testPageD", "peanutbutter2", "payload2", "\u0000\u0011sent by responder");
+					hitURL("https://"+host+":"+port+"/testPageD", "peanutbutter2", "payload2", "sent by responder");
 
 					hitURL("https://"+host+":"+port+"/shutdown?key=shutdown", null, null,
 							"");
