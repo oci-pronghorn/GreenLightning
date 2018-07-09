@@ -322,7 +322,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	    		return;
 	    	}
 	    
-	    	builder.triggerShutdownProcess(secondsTimeout);
+	    	builder.requestShutdown(secondsTimeout);
 
     	}
     }

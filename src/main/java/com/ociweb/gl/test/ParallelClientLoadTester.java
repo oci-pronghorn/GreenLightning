@@ -270,7 +270,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 							sendAttemptsSum, sendFailuresSum, timeoutsSum, responsesReceivedSum, responsesInvalidSum
 					);
 					//logger.info("shutting down load test");
-					cmd4.triggerShutdownRuntime();
+					cmd4.requestShutdown();
 					return true;
 				}
 			}
@@ -516,7 +516,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					Thread.yield();
 					if ((System.currentTimeMillis()-now) > 10_000) {
 						out.failedToStart(inFlightHTTPs);
-						cmd3.triggerShutdownRuntime();
+						cmd3.requestShutdown();
 					}
 				}
 				//must use message to startup the system

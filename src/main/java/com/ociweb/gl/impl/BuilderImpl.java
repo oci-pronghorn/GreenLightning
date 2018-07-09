@@ -1804,11 +1804,11 @@ public class BuilderImpl implements Builder {
 		dirtyShutdownRunnable = dirtyRunnable;
 	}
 
-	public void triggerShutdownProcess() {
-		triggerShutdownProcess(3);
+	public void requestShutdown() {
+		requestShutdown(3);
 	}
 	
-	public void triggerShutdownProcess(int secondsTimeout) {
+	public void requestShutdown(int secondsTimeout) {
 		
 		if (ReactiveListenerStage.isShutdownRequested(this)) {
 			return;//do not do again.
