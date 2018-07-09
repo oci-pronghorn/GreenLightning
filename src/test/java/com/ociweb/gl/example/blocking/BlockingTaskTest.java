@@ -12,13 +12,13 @@ public class BlockingTaskTest {
 	
 	
 	@Ignore
-	public void runTest() {
+	public void runIgnore() {
 		
 		//ClientSocketWriterStage.showWrites = true;
 		//ServerSocketReaderStage.showRequests = true;
 		//HTTP1xRouterStage.showHeader = true;
 		
-		boolean telemetry = false;  //must not be true when checked in.
+		boolean telemetry = true;  //must not be true when checked in.
 		int cyclesPerTrack = 100;
 		int parallelTracks = 4;
 		int timeoutMS = 600_000;

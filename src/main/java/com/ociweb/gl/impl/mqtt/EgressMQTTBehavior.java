@@ -7,6 +7,9 @@ import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.util.TrieParser;
+import com.ociweb.pronghorn.util.TrieParserReader;
+import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 
 public class EgressMQTTBehavior implements PubSubListener {
 
@@ -20,7 +23,7 @@ public class EgressMQTTBehavior implements PubSubListener {
 	private final int[] fieldRetain;
 	
 	private final Pipe<MQTTClientRequestSchema> output;
-	
+	private final TrieParser map;
 	
 	public static final EgressConverter copyConverter = new EgressConverter() {
 
@@ -47,6 +50,18 @@ public class EgressMQTTBehavior implements PubSubListener {
 		this.allTopicsMatch = isMatching(internalTopic,externalTopic,converter,fieldQOS,fieldRetain);
 		this.converter = converter;
 		this.output = output;
+		
+		if (!this.allTopicsMatch) {			
+			boolean ignoreCase = false; //MQTT is case sensitive
+			boolean skipDeepChecks = true; //this behavior is only subscribed to these topics so no others will appear
+			map = new TrieParser(externalTopic.length*20,2,skipDeepChecks,ignoreCase,ignoreCase);
+			int i = internalTopic.length;
+			while (--i>=0) {
+				map.setUTF8Value(internalTopic[i], i);
+			}
+		} else {
+			map = null;
+		}
 	}
 	
 	private boolean isMatching(CharSequence[] internalTopic, CharSequence[] externalTopic, EgressConverter[] converter,
@@ -98,7 +113,7 @@ public class EgressMQTTBehavior implements PubSubListener {
 	
 		if (PipeWriter.hasRoomForWrite(output)) {
 			
-			int i = internalTopic.length;
+			int i = 0;
 			if (allTopicsMatch) {
 				i = 0;//to select the common converter for all.
 				
@@ -114,21 +129,9 @@ public class EgressMQTTBehavior implements PubSubListener {
 				DataOutputBlobWriter.closeHighLevelField(stream, MQTTClientRequestSchema.MSG_PUBLISH_3_FIELD_TOPIC_23);
 				
 			} else {
-				boolean topicMatches = false;
-				//TODO: this is very bad, swap out with trie parser instead of linear search
-				while (--i >= 0) { 
-					CharSequence it = internalTopic[i];
-					if (it.length() == topic.length()) {
-						int j = it.length();
-						while (--j>=0 && (it.charAt(j)==topic.charAt(j))) {	
-						}
-						if (j<0) {
-							topicMatches = true;
-							break;
-						}
-					}					
-				}
-				assert (topicMatches) : "ERROR, this topic was not known " + topic;
+				//TODO: if the topic is private it is possible to have an even tighter connection without use of this TrieParser
+				i = (int)TrieParserReaderLocal.get().query(map, topic);				
+				assert (i>=0) : "ERROR, this topic was not known " + topic;
 				
 				PipeWriter.presumeWriteFragment(output, MQTTClientRequestSchema.MSG_PUBLISH_3);
 				

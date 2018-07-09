@@ -24,8 +24,7 @@ public class ChoosableLongField<T extends MessageSchema<T>> implements Choosable
 		if (!Pipe.hasContentToRead(pipe)) {
 			return -1;
 		} else {
-			StructuredReader reader = Pipe.peekInputStream(pipe, offsetToStream)
-					                      .structured();
+			StructuredReader reader = Pipe.peekInputStream(pipe, offsetToStream).structured();
 			return ((int)reader.readLong(fieldIdAssoc))%choiceCount;
 		}
 	}
