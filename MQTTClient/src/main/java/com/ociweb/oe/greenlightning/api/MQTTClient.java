@@ -58,7 +58,7 @@ public class MQTTClient implements GreenApp {
 
 		// Inject the timer that publishes topic/egress
 		TimeBehavior internalEgressTopicProducer = new TimeBehavior(runtime, internalEgressTopic);
-		runtime.addTimePulseListener(internalEgressTopicProducer);
+		runtime.addTimePulseListener("mytime",internalEgressTopicProducer);
 		// Convert the internal topic/egress to external for mqtt
 		runtime.bridgeTransmission(internalEgressTopic, externalEgressTopic, mqttConfig).setQoS(transQos);
 ;
@@ -66,12 +66,12 @@ public class MQTTClient implements GreenApp {
 		runtime.bridgeSubscription(internalIngressTopic, externalIngressTopic, mqttConfig).setQoS(subscribeQos);
 		// Listen to internal/topic/ingress and publish localtest
 		IngressBehavior mqttBrokerListener = new IngressBehavior(runtime, localTestTopic);
-		runtime.registerListener(mqttBrokerListener)
+		runtime.registerListener("mqttBrokerListener",mqttBrokerListener)
 				.addSubscription(internalIngressTopic, mqttBrokerListener::receiveMqttMessage);
 
 		// Inject the listener for "localtest"
 		EgressBehavior doTheBusiness = new EgressBehavior();
-		runtime.registerListener(doTheBusiness)
+		runtime.registerListener("EgressBehavior",doTheBusiness)
 				.addSubscription(localTestTopic, doTheBusiness::receiveTestTopic);
 	}
 }
