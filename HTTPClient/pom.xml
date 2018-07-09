@@ -52,7 +52,7 @@
   <dependencies>
   		<dependency>
 	  		<groupId>com.ociweb</groupId>
-            <artifactId>GreenLightning</artifactId>
+            <artifactId>greenlightning</artifactId>
             <version>[1.0.0-SNAPSHOT,1.1.0)</version>
     	</dependency>
 		<dependency>
