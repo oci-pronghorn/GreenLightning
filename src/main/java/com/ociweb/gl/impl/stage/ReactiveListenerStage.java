@@ -40,12 +40,14 @@ import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
+import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
+import com.ociweb.pronghorn.network.http.NetResponseJSONExtractionStage;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
@@ -64,6 +66,7 @@ import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
+import com.ociweb.pronghorn.util.parse.JSONStreamVisitorToChannel;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy implements ListenerFilter {
 
@@ -214,6 +217,19 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			//all the outputs are collected in outputPipes together, this can not be done any earler due to auto private topic feature
 			//if auto private topics has found them all to be topic then pub sub is disabled since it is not needed.
 			ChildClassScanner.visitUsedByClass(nameId, listener, gatherPipesVisitor, MsgCommandChannel.class);//populates outputPipes
+				
+			if (this.builder.isListeningToHTTPResponse(listener)) {
+				int behaviorId = builder.behaviorId(listener);		
+				
+				//this is needed to capture the undefined (session-less) responses so they come back to 
+				//the calling behavior. 
+				if (!builder.hasHTTPClientPipe(behaviorId) ) {
+					
+					inputPipes = PronghornStage.join(inputPipes,builder.buildNetResponsePipe());     
+					builder.registerHTTPClientId(behaviorId,builder.netResponsePipeIdxCounter++);            
+				}
+	        }
+			
 			
 			
 	        if ( (!this.builder.isAllPrivateTopics())
@@ -1610,19 +1626,44 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		ChildClassScanner.visitUsedByClass(nameId, listener, new PrivateTopicReg(this), MsgCommandChannel.class);		
 	}
 	
-	//TODO: deprecated and rename this method?? include  acceptHostResponses ?
 	@Override
-	public <E extends Enum<E>> ListenerFilter includeHTTPSession(ClientHostPortInstance... httpSessions) {
-		
-		//JSON parser known here??
-		
+	public <E extends Enum<E>> ListenerFilter acceptHostResponses(ClientHostPortInstance... httpSessions) {
+
+		int behaviorId = builder.behaviorId(listener);		
 		int j = httpSessions.length;
 		while(--j >= 0) {
+						
+			Pipe<NetResponseSchema> buildNetResponsePipe = builder.buildNetResponsePipe();
+			
+			//NOTE: this is not a good implementation and should be revisited at some point.
+			//     we could store the pipeId instead then use the graph to look them up directly.
+			int pipeIdx = builder.netResponsePipeIdxCounter++; //depends on graph returning the same order.
+			
+			
 			//register listener will set these values before we use include
-		    int pipeIdx = builder.lookupHTTPClientPipe(builder.behaviorId(listener));
 		    //we added one more uniqueId to the same pipeIdx given this listeners id
-		    builder.registerHTTPClientId(httpSessions[j].sessionId, pipeIdx);   
+		    builder.registerHTTPClientId(httpSessions[j].sessionId, pipeIdx); 
+
+			//this is needed to capture the undefined (session-less) responses so they come back to 
+			//the calling behavior. 
+			if (!builder.hasHTTPClientPipe(behaviorId) ) {    
+				builder.registerHTTPClientId(behaviorId, pipeIdx);            
+			}
+
 		    logger.trace("register session {} with pipe {}",httpSessions[j].sessionId,pipeIdx);
+		    
+		    JSONExtractorCompleted ex = httpSessions[j].jsonExtractor();
+		    if (null!=ex) {
+		    	Pipe<NetResponseSchema> secondPipe = builder.buildNetResponsePipe();
+		    			    	
+		    	new NetResponseJSONExtractionStage(builder.gm, ex, buildNetResponsePipe, secondPipe);
+		    	//the output pipe here goes into the inputs for our stage
+		    	buildNetResponsePipe = secondPipe;
+		    	
+		    }
+		    //grow
+		    inputPipes = PronghornStage.join(inputPipes, buildNetResponsePipe);
+		    
 		}
 		
 		return this;
