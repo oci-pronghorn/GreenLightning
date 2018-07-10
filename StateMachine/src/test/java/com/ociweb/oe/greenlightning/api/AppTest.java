@@ -33,7 +33,7 @@ public class AppTest {
 		    assertTrue(cleanExit);
 		    assertEquals(result.toString(), 17, rows.length);	
 		    int i = 0;
-		    int iterations = 3;
+		    int iterations = 2;
 		    while (--iterations>=0) {
 			    assertThat(rows[i++].toString(), startsWith("Green"));
 			    assertThat(rows[i++].toString(), endsWith("Go"));
