@@ -18,7 +18,7 @@ public class AppTest {
 	 public void testApp() {
 				
 
-		 	final boolean telemetry = true;
+		 	final boolean telemetry = false;
 		    final StringBuilder result = new StringBuilder();
 		    final long timeoutMS = 10_000*60;
 		
