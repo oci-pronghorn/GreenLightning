@@ -3,6 +3,7 @@ package com.ociweb.gl.api;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
@@ -13,7 +14,7 @@ import com.ociweb.pronghorn.pipe.Pipe;
 
 public class HTTPRequestService {
 
-	private final MsgCommandChannel<?> msgCommandChannel;
+	public final MsgCommandChannel<?> msgCommandChannel;
 	private final static Logger logger = LoggerFactory.getLogger(HTTPRequestService.class);
 	
 	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel) {
@@ -104,8 +105,10 @@ public class HTTPRequestService {
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
 					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100);
-							
-					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
+					
+					int lookupHTTPClientPipe = msgCommandChannel.builder.lookupTargetPipe(session, msgCommandChannel.listener);
+					
+					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
 					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
@@ -130,7 +133,9 @@ public class HTTPRequestService {
 					
 					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200);
 					
-					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
+					int lookupHTTPClientPipe = msgCommandChannel.builder.lookupTargetPipe(session, msgCommandChannel.listener);
+					
+					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
 					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);

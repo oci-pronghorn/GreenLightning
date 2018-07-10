@@ -64,7 +64,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
     protected static final long MS_TO_NS = 1_000_000;
          
-    Behavior listener;
+    public Behavior listener;
     private String behaviorName;
     
     //TODO: add GreenService class for getting API specific objects.

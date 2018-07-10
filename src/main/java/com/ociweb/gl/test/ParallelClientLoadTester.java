@@ -137,7 +137,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		int i = parallelTracks;
 		while (--i>=0) {
-			session[i]=new ClientHostPortInstance(config.host,config.port,i+1);
+			session[i]=new ClientHostPortInstance(config.host,config.port);
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 
@@ -338,7 +338,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		TrackHTTPResponseListener responder = new TrackHTTPResponseListener(runtime, track);
 		runtime.registerListener(RESPONDER_NAME, responder)
 		.addSubscription(CALL_TOPIC, responder::callMessage)
-				.includeHTTPSession(session[track]);
+				.acceptHostResponses(session[track]);
 	}
 
 

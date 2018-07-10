@@ -17,6 +17,6 @@ public class JSONClient implements GreenApp {
     @Override
     public void declareBehavior(GreenRuntime runtime) {
         // Inject business logic
-        runtime.registerListener(new JSONClientBehavior(runtime, session)).includeHTTPSession(session);
+        runtime.registerListener(new JSONClientBehavior(runtime, session)).acceptHostResponses(session);
     }
 }

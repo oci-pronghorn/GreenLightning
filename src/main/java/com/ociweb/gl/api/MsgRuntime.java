@@ -84,7 +84,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 	private PipeConfig<HTTPRequestSchema> fileRequestConfig;// = builder.restPipeConfig.grow2x();
 
-    private int netResponsePipeIdxCounter = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
     protected int netResponsePipeIdx = -1;
 
     
@@ -353,11 +352,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
     
     protected int addGreenPipesCount(Behavior listener, int pipesCount) {
-		
-		if (this.builder.isListeningToHTTPResponse(listener)) {
-        	pipesCount++; //these are calls to URL responses        	
-        }
-        
+
         if (this.builder.isListeningHTTPRequest(listener)) {
         	pipesCount += ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
         }
@@ -366,24 +361,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     
 	protected void populateGreenPipes(Behavior listener, int pipesCount, Pipe<?>[] inputPipes) {
-		
-		//if this listener is an HTTP listener then add its behavior id for this pipe
-		if (this.builder.isListeningToHTTPResponse(listener)) {
 
-        	inputPipes[--pipesCount] = buildNetResponsePipe();
-            
-        	netResponsePipeIdx = netResponsePipeIdxCounter++;
-     
-			builder.registerHTTPClientId(builder.behaviorId(listener), netResponsePipeIdx);            
-        }
-        
-        //if we push to this 1 pipe all the requests...
-        //JoinStage to take N inputs and produce 1 output.
-        //we use splitter for single pipe to 2 databases
-        //we use different group for parallel processing
-        //for mutiple we must send them all to the reactor.
-        
-        
 		if (this.builder.isListeningHTTPRequest(listener) ) {
         	
 			Pipe<HTTPRequestSchema>[] httpRequestPipes;
@@ -425,17 +403,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 	}
 
-	private Pipe<NetResponseSchema> buildNetResponsePipe() {
-				
-		Pipe<NetResponseSchema> netResponsePipe = new Pipe<NetResponseSchema>(builder.pcm.getConfig(NetResponseSchema.class)) {
-			@SuppressWarnings("unchecked")
-			@Override
-			protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
-				return new HTTPResponseReader(this, builder.httpSpec);
-			}
-		};
-		return netResponsePipe;
-	}
 
     /**
      * This pipe returns all the data this object has requested via subscriptions elsewhere.
@@ -900,10 +867,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     	
     	/////////////
-    	//INPUT
+    	//INPUT  
     	//add green features, count first then create the pipes
     	//NOTE: that each Behavior is inspected and will find Transducers which need inputs as well
     	/////////
+    	//TODO: now that we do this late this block can be moved...
     	int pipesCount = addGreenPipesCount(listener, 0);
         Pipe<?>[] inputPipes = new Pipe<?>[pipesCount];
         

@@ -105,6 +105,9 @@ public class BuilderImpl implements Builder {
 	private Pipe<MessagePubSub> tempPipeOfStartupSubscriptions;
 	/////////////////
 	/////////////////
+	
+    public int netResponsePipeIdxCounter = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
+   
     
     private long defaultSleepRateNS = 5_000;// should normally be between 900 and 20_000; 
     
@@ -204,6 +207,9 @@ public class BuilderImpl implements Builder {
     }
     
     
+    //TODO: replace with add only general int to Object hash table?
+    ////////////////////
+    ///////////////////
     private IntHashTable netPipeLookup = new IntHashTable(7);//Initial default size
 
 	/**
@@ -239,7 +245,16 @@ public class BuilderImpl implements Builder {
     	return IntHashTable.getItem(netPipeLookup, routeId);
     }
 
-
+	public boolean hasHTTPClientPipe(int routeId) {
+    	return IntHashTable.hasItem(netPipeLookup, routeId);
+    }
+///////////////////////////
+	////////////////
+	
+	
+	
+	
+	
 	/**
 	 *
 	 * @return index message
@@ -936,7 +951,7 @@ public class BuilderImpl implements Builder {
 
 		IntHashTable subscriptionPipeLookup2 = MsgRuntime.getSubPipeLookup(runtime); 
 		GraphManager gm = MsgRuntime.getGraphManager(runtime);
-		
+
 		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfTypeWithNoProducer(gm, NetResponseSchema.instance);
 		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfTypeWithNoProducer(gm, MessageSubscription.instance);
 		
@@ -968,6 +983,8 @@ public class BuilderImpl implements Builder {
 			masterAckIn[IDX_MSG] = new Pipe[messagePubSub.length];
 		}		
 		if (IDX_NET >= 0) {
+
+			assert(httpClientResponsePipes.length>0);
 			masterGoOut[IDX_NET] = new Pipe[httpClientResponsePipes.length];
 			masterAckIn[IDX_NET] = new Pipe[httpClientResponsePipes.length];
 		}		
@@ -1222,6 +1239,18 @@ public class BuilderImpl implements Builder {
 	public Pipe<PersistedBlobStoreConsumerSchema>[] serialStoreRequestReplay;
 	public Pipe<PersistedBlobStoreProducerSchema>[] serialStoreWrite;
 	
+
+	public Pipe<NetResponseSchema> buildNetResponsePipe() {
+				
+		Pipe<NetResponseSchema> netResponsePipe = new Pipe<NetResponseSchema>(pcm.getConfig(NetResponseSchema.class)) {
+			@SuppressWarnings("unchecked")
+			@Override
+			protected DataInputBlobReader<NetResponseSchema> createNewBlobReader() {
+				return new HTTPResponseReader(this, httpSpec);
+			}
+		};
+		return netResponsePipe;
+	}
 	
 	private void buildSerialStore(int id, 
 			                      NoiseProducer noiseProducer,
@@ -1875,6 +1904,16 @@ public class BuilderImpl implements Builder {
 	
 	public void messageRoutingRequired() {
 		messageRoutingRequired = true;
+	}
+
+	public int lookupTargetPipe(ClientHostPortInstance session, Behavior listener) {
+		int lookupHTTPClientPipe;
+		if (hasHTTPClientPipe(session.sessionId)) {
+			lookupHTTPClientPipe = lookupHTTPClientPipe(session.sessionId);
+		} else {
+			lookupHTTPClientPipe = lookupHTTPClientPipe(behaviorId(listener));
+		}
+		return lookupHTTPClientPipe;
 	}
 	
 	/////////////////////////////////////////////////////////////

@@ -1,13 +1,13 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.json.JSONExtractorCompleted;
-import com.ociweb.pronghorn.network.ClientCoordinator;
-import com.ociweb.pronghorn.util.TrieParser;
-
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.ociweb.json.JSONExtractorCompleted;
+import com.ociweb.pronghorn.network.ClientCoordinator;
+import com.ociweb.pronghorn.util.TrieParser;
 
 public class ClientHostPortInstance {
 	private final static AtomicInteger sessionCounter = new AtomicInteger(0);
@@ -36,15 +36,6 @@ public class ClientHostPortInstance {
 		this(host, port, sessionCounter.incrementAndGet(),null);
 	}
 
-	/**
-	 *
-	 * @param host String arg specifying host
-	 * @param port int arg specifying port number
-	 * @param sessionId int arg specifying the sessionId
-	 */
-	public ClientHostPortInstance(String host, int port, int sessionId) {
-		this(host, port, sessionId, null);
-	}
 
 	/**
 	 *
@@ -53,6 +44,7 @@ public class ClientHostPortInstance {
 	 * @param extractor optional JSON extractor
 	 */
 	public ClientHostPortInstance(String host, int port, JSONExtractorCompleted extractor) {
+		//NOTE: session counter values are each unique to the instance and found incrementing in a block for use in array lookups...
 		this(host, port, sessionCounter.incrementAndGet(), extractor);
 	}
 
@@ -60,10 +52,10 @@ public class ClientHostPortInstance {
 	 *
 	 * @param host String arg specifying host
 	 * @param port int arg specifying port number
-	 * @param sessionId int arg specifying the sessionId
+	 * @param sessionId int arg specifying the sessionId, this is internal an private
 	 * @param extractor optional JSON extractor
 	 */
-	public ClientHostPortInstance(String host, int port, int sessionId, JSONExtractorCompleted extractor) {
+	private ClientHostPortInstance(String host, int port, int sessionId, JSONExtractorCompleted extractor) {
 		this.host = host;
 		this.port = port;
 		if (port<=0 || port>65535) {
@@ -78,6 +70,10 @@ public class ClientHostPortInstance {
 		this.extractor = extractor;
 	}
 
+	public JSONExtractorCompleted jsonExtractor() {
+		return extractor;
+	}
+	
 	/**
 	 * Used to make host and port num a string
 	 * @return host and port num.
