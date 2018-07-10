@@ -14,6 +14,20 @@ public class MQTTClient implements GreenApp {
 	//to monitor call >    mosquitto_sub -v -t '#' -h 127.0.0.1
 	//to test call >       mosquitto_pub -h 127.0.0.1 -t 'external/topic/ingress' -m 'hello'
 
+	private final String writeTopic;
+	private final String readTopic;
+	private final String name;
+	
+	public MQTTClient(String writeTopic, String readTopic, String name) {
+		this.writeTopic = writeTopic;
+		this.readTopic = readTopic;
+		this.name = name;
+	}
+	
+	public MQTTClient() {
+		this("egress","ingress","MQTTClientTest");
+	}
+	
 	@Override
 	public void declareConfiguration(Builder builder) {
 		
@@ -22,15 +36,15 @@ public class MQTTClient implements GreenApp {
 		ScriptedNonThreadScheduler.debugStageOrder = null;
 	
 		
-		//final String brokerHost = "127.0.0.1"; //1883
+		final String brokerHost = "127.0.0.1"; //1883
 		//final String brokerHost = "172.16.10.28"; // Nathan's PC
 		//final String brokerHost = "thejoveexpress.local"; // Raspberry Pi0
 		
-		final String brokerHost = "test.mosquitto.org";
+		//final String brokerHost = "test.mosquitto.org";
 		final int port = 1883;//8883;
 		
 		// Create a single mqtt client
-		mqttConfig = builder.useMQTT(brokerHost, port, "MQTTClientTest",200) //default of 10 in flight
+		mqttConfig = builder.useMQTT(brokerHost, port, name, 200) //default of 10 in flight
 							
 			//	.useTLS()
 							.cleanSession(true)
@@ -47,10 +61,12 @@ public class MQTTClient implements GreenApp {
 	public void declareBehavior(final GreenRuntime runtime) {
 		// The external/internal topic translation is not necessary.
 		// The bridge calls may be made with one topic specified
-		final String internalEgressTopic = "internal/topic/egress";
-		final String externalEgressTopic = "external/topic/egress";
-		final String internalIngressTopic = "internal/topic/ingress";
-		final String externalIngressTopic = "external/topic/ingress";
+		final String internalEgressTopic = "internal/topic/"+writeTopic;
+		final String externalEgressTopic = "external/topic/"+writeTopic;
+		
+		final String internalIngressTopic = "internal/topic/"+readTopic;
+		final String externalIngressTopic = "external/topic/"+readTopic;
+		
 		final String localTestTopic = "localtest";
 
 		final MQTTQoS transQos = MQTTQoS.atLeastOnce;
@@ -64,6 +80,7 @@ public class MQTTClient implements GreenApp {
 ;
 		// Subscribe to MQTT topic/ingress (created by mosquitto_pub example in comment above)
 		runtime.bridgeSubscription(internalIngressTopic, externalIngressTopic, mqttConfig).setQoS(subscribeQos);
+		
 		// Listen to internal/topic/ingress and publish localtest
 		IngressBehavior mqttBrokerListener = new IngressBehavior(runtime, localTestTopic);
 		runtime.registerListener("mqttBrokerListener",mqttBrokerListener)

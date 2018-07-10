@@ -1,5 +1,7 @@
 package com.ociweb.oe.greenlightning.api;
 
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
@@ -15,7 +17,8 @@ public class AppTest {
 	 @Test
 	 public void testApp() {
 				
-		    
+
+		 	final boolean telemetry = true;
 		    final StringBuilder result = new StringBuilder();
 		    final long timeoutMS = 10_000*60;
 		
@@ -24,8 +27,9 @@ public class AppTest {
 		    //System.out.println("starting up client");
 	   	    
 	   	    //this test will hit the above server until it calls shutdown.
-		    GreenRuntime.testConcurrentUntilShutdownRequested(new HTTPClient(), timeoutMS);
+		    boolean cleanExit =  GreenRuntime.testConcurrentUntilShutdownRequested(new HTTPClient(telemetry), timeoutMS);
 		
+		    assertTrue(cleanExit);
 		    
 	 }
 	 

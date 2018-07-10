@@ -13,7 +13,9 @@ public class ShutdownBehavior implements PubSubListener {
 
 	@Override
 	public boolean message(CharSequence topic, ChannelReader payload) {
-		runtime.shutdownRuntime();
+		
+		//runtime.shutdownRuntime();
+		
 		return true;
 	}
 
