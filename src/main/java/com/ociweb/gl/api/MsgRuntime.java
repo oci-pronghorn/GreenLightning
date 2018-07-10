@@ -146,33 +146,33 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     }
     
 	public final <T,S> S bridgeSubscription(CharSequence topic, BridgeConfig<T,S> config) {		
-		long id = config.addSubscription(topic);
+		long id = ((BridgeConfigImpl<T,S>) config).addSubscription(topic);
 		keepBridge(config);
 		return config.subscriptionConfigurator(id);
 	}
 	public final <T,S> S bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config) {		
-		long id = config.addSubscription(internalTopic,extrnalTopic);
+		long id = ((BridgeConfigImpl<T,S>) config).addSubscription(internalTopic,extrnalTopic);
 		keepBridge(config);
 		return config.subscriptionConfigurator(id);
 	}
 	public final <T,S> S bridgeSubscription(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config, IngressConverter converter) {		
-		long id = config.addSubscription(internalTopic,extrnalTopic,converter);
+		long id = ((BridgeConfigImpl<T,S>) config).addSubscription(internalTopic,extrnalTopic,converter);
 		keepBridge(config);
 		return config.subscriptionConfigurator(id);
 	}
 	
 	public final <T,S> T bridgeTransmission(CharSequence topic, BridgeConfig<T,S> config) {		
-		long id = config.addTransmission(this, topic);
+		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(this, topic);
 		keepBridge(config);
 		return config.transmissionConfigurator(id);
 	}
-	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> bridge) {		
-		long id = bridge.addTransmission(this, internalTopic,extrnalTopic);
-		keepBridge(bridge);
-		return bridge.transmissionConfigurator(id);
+	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config) {		
+		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(this, internalTopic,extrnalTopic);
+		keepBridge(config);
+		return config.transmissionConfigurator(id);
 	}	
 	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config, EgressConverter converter) {		
-		long id = config.addTransmission(this, internalTopic,extrnalTopic, converter);
+		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(this, internalTopic,extrnalTopic, converter);
 		keepBridge(config);
 		return config.transmissionConfigurator(id);
 	}	
