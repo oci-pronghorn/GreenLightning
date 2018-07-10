@@ -35,7 +35,7 @@ public class AppTest {
    		    String host = "127.0.0.1";
 		    
    		    final StringBuilder result = new StringBuilder();
-   		    final long timeoutMS = 10_000;
+   		    final long timeoutMS = 20_000;
 			
    		    AtomicBoolean done = new AtomicBoolean(false);
    		    AtomicBoolean cleanExit = new AtomicBoolean(false);
