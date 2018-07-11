@@ -19,8 +19,9 @@ public class AppTest {
 	    {
 		    StringBuilder result = new StringBuilder();
 		    
-		    int timeoutMS = 20_000;
-			boolean cleanExit = GreenRuntime.testConcurrentUntilShutdownRequested(new StateMachine(result,10), timeoutMS);
+		    int timeoutMS = 120_000;
+			int rate = 200;//if this rate is much faster two different write outs may end up in the wrong order.
+			boolean cleanExit = GreenRuntime.testConcurrentUntilShutdownRequested(new StateMachine(result,rate), timeoutMS);
 		    
 		    /////////////////////////////
 		    //System.out.println(result);
@@ -33,7 +34,7 @@ public class AppTest {
 		    assertTrue(cleanExit);
 		    assertEquals(result.toString(), 17, rows.length);	
 		    int i = 0;
-		    int iterations = 2;
+		    int iterations = 3;
 		    while (--iterations>=0) {
 			    assertThat(rows[i++].toString(), startsWith("Green"));
 			    assertThat(rows[i++].toString(), endsWith("Go"));
