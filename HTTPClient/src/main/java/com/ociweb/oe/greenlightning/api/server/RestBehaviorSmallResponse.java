@@ -1,10 +1,10 @@
 package com.ociweb.oe.greenlightning.api.server;
 
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.RestListener;
+import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.util.AppendableProxy;
 
@@ -13,9 +13,16 @@ public class RestBehaviorSmallResponse implements RestListener {
 	private final HTTPResponseService cmd;
 	private final AppendableProxy console;
 	
+    public static final JSONRenderer<Object> renderer = new JSONRenderer<Object>()
+            .beginObject()
+            .integer("ID1", (x) -> 123)
+            .string("ID2", (x,w) -> {w.append("hello");})
+            .endObject();
+    
 	public RestBehaviorSmallResponse(GreenRuntime runtime, AppendableProxy console) {	
 		this.cmd = runtime.newCommandChannel().newHTTPResponseService();
 		this.console = console;
+		
 	}
 	
 	@Override
@@ -35,7 +42,7 @@ public class RestBehaviorSmallResponse implements RestListener {
 								false,
 				                HTTPContentTypeDefaults.TXT,
 				                (writer)-> {
-				                	writer.writeUTF8Text("beginning of text file\n");
+				                	renderer.render(writer, this);
 				                });
 
 	}

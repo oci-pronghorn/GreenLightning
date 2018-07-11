@@ -11,6 +11,7 @@ import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.StructuredReader;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListener, PubSubListener {
@@ -55,8 +56,16 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 		Payloadable payload = new Payloadable() {
 			@Override
 			public void read(ChannelReader reader) {
-				String readUTFOfLength = reader.readUTFOfLength(reader.available());
-				//System.out.println(readUTFOfLength);
+				
+				StructuredReader s = reader.structured();
+				int value1 = s.readInt(Fields.ID1);
+				String value2 = s.readText(Fields.ID2);
+				
+				//System.out.println(value1+"  "+value2);
+				
+				
+				//String readUTFOfLength = reader.readUTFOfLength(reader.available());
+				///System.out.println(readUTFOfLength);
 			}
 		};
 		

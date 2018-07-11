@@ -4,6 +4,8 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.json.JSONExtractorCompleted;
+import com.ociweb.json.JSONType;
 import com.ociweb.gl.api.ClientHostPortInstance;
 
 public class HTTPClient implements GreenApp
@@ -18,11 +20,26 @@ public class HTTPClient implements GreenApp
     @Override
     public void declareConfiguration(Builder c) {
     	//c.useInsecureNetClient();
-        session = c.useNetClient().createHTTP1xClient("127.0.0.1", 8088).finish();
+        JSONExtractorCompleted extractor =
+        		c.defineJSONSDecoder()
+        		 .begin()
+        		 .element(JSONType.TypeInteger)
+        		 .asField("ID1", Fields.ID1)
+        		 
+        		 .element(JSONType.TypeString)
+        		 .asField("ID2", Fields.ID2)
+        		 .finish();
+        		 
+		session = c.useNetClient()
+        		   .createHTTP1xClient("127.0.0.1", 8088)
+        		   .setExtractor(extractor)
+        		   .finish();
         
         if (telemetry) {
         	c.enableTelemetry();
         }
+        
+        //{"ID1":123,"ID2":"hello"}
     }
 
     @Override
@@ -30,7 +47,7 @@ public class HTTPClient implements GreenApp
     	
     	HTTPGetBehaviorSingle temp = new HTTPGetBehaviorSingle(runtime, session);
 		runtime.addStartupListener("startupBehavior",temp)
-		             //  .acceptHostResponses(session)  //this line is not needed when behavior also makes the reqeuest 
+		               .acceptHostResponses(session)  //this line is required to use JSON extraction even to self behavior as consumer 
 		               .addSubscription("next");
 			   	
 		//HTTPSession session = new HTTPSession("127.0.0.1",8088,0);
