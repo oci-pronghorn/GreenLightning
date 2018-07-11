@@ -41,6 +41,7 @@ import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.json.JSONExtractorCompleted;
+import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPRevision;
@@ -1654,6 +1655,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		    
 		    JSONExtractorCompleted ex = httpSessions[j].jsonExtractor();
 		    if (null!=ex) {
+		    
+		    	//add this JSON extraction to the struct associated with this session
+				ex.addToStruct(builder.gm.recordTypeData, ClientCoordinator.structureId(httpSessions[j].sessionId, builder.gm.recordTypeData));		    	
+				
 		    	Pipe<NetResponseSchema> secondPipe = builder.buildNetResponsePipe();
 		    			    	
 		    	new NetResponseJSONExtractionStage(builder.gm, ex, buildNetResponsePipe, secondPipe);

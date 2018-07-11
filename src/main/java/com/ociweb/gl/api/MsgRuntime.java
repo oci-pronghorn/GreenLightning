@@ -559,6 +559,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				planIncomingGroup);
 	}
 
+	public void declareBehavior(int tracks, DeclareBehavior db) {
+		//TODO: assert this is never called in old parallel code.
+		for (int i = 0; i < tracks; i++) {
+			//TODO: setup the instancee
+			//TODO: what about single server??
+			
+			db.declareBehavior(i);
+		}
+	}
+	
+	
 	private void buildModulesForServer(MsgApp app) {
 		////////////////////////
 		//create the working modules

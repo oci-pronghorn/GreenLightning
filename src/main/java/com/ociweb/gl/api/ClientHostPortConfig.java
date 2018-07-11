@@ -13,8 +13,9 @@ public class ClientHostPortConfig {
 		this.port = port;
 	}
 
-	public void setExtractor(JSONExtractorCompleted extractor) {
+	public ClientHostPortConfig setExtractor(JSONExtractorCompleted extractor) {
 		this.extractor = extractor;
+		return this;
 	}
 
 	public ClientHostPortInstance finish() {
