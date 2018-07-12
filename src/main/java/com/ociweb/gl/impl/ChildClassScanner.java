@@ -6,6 +6,7 @@ import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -64,9 +65,27 @@ public class ChildClassScanner {
 							if (!visitor.visit(obj, topParent, topName)) {
 								return false;
 							}                              
-						} else {      
-							//NOTE: using the TrieParser would be better here.... (faster startup)
+						} else {   
 							String name;
+							
+							//check for array
+							if (obj!=null && obj.getClass().isArray()) {
+								
+								int i = Array.getLength(obj);
+							    while(--i>=0) {
+							        Object arrayElement = Array.get(obj, i);
+							        
+							        if (!seen.contains(arrayElement)) {
+										seen.add(arrayElement);
+									    //recursive check for command channels
+										if (!visitUsedByClass(topName, arrayElement, depth+1, visitor, topParent, targetType, seen)) {
+											return false;
+										}
+									}
+							    }
+							} else
+							
+							//NOTE: using the TrieParser would be better here.... (faster startup)
 							if (    (obj!=null)
 									&& (obj.getClass()!=null)
 									&&  (!obj.getClass().isPrimitive()) 
