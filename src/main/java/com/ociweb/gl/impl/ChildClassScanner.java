@@ -73,18 +73,23 @@ public class ChildClassScanner {
 							//check for array
 							if (obj!=null && obj.getClass().isArray()) {
 								
-								int i = Array.getLength(obj);
-							    while(--i>=0) {
-							        Object arrayElement = Array.get(obj, i);
-							        
-							        if (!seen.contains(arrayElement)) {
-										seen.add(arrayElement);
-									    //recursive check for command channels
-										if (!visitUsedByClass(topName, arrayElement, depth+1, visitor, topParent, targetType, seen)) {
-											return false;
+								Class<?> cType = obj.getClass().getComponentType();
+								if ((!cType.isPrimitive()) &&
+								    (!cType.isAssignableFrom(CharSequence.class))) {
+																
+									int i = Array.getLength(obj);
+								    while(--i>=0) {
+								        Object arrayElement = Array.get(obj, i);
+								        
+								        if (!seen.contains(arrayElement)) {
+											seen.add(arrayElement);
+										    //recursive check for command channels
+											if (!visitUsedByClass(topName, arrayElement, depth+1, visitor, topParent, targetType, seen)) {
+												return false;
+											}
 										}
-									}
-							    }
+								    }
+								}
 							} else
 							
 							//NOTE: using the TrieParser would be better here.... (faster startup)
@@ -168,9 +173,11 @@ public class ChildClassScanner {
 		boolean result = visitUsedByClass(name, listener, 0, visitor, listener, target, new ArrayList<Object>());
 		long duration = System.nanoTime()-start;
 		
-		Appendables.appendNearestTimeUnit(System.out, duration);
-		System.out.println(" duration for scan to find all "+target.getSimpleName()+" instances inside "+listener.getClass().getSimpleName()+" "+name);
-		
+		//just report the longest duration
+		if (duration > 10_000_000) {
+			Appendables.appendNearestTimeUnit(System.out, duration);
+			System.out.println(" duration for scan to find all "+target.getSimpleName()+" instances inside "+listener.getClass().getSimpleName());
+		}
 		return result;
 	}
 
