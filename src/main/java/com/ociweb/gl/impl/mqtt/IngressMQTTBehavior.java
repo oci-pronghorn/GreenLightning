@@ -56,7 +56,16 @@ public class IngressMQTTBehavior implements TickListener {
       	if (null == connectionFeedbackTopic) {
       		conFeedbackService = null;
       	} else {
-      		conFeedbackService = cmd.newPubSubService(connectionFeedbackTopic.toString());
+      		int j = targetTopics.length;
+      	
+      		while (--j>=0 && (!internalTopicsSub[j].equals(connectionFeedbackTopic))) {      			
+      		}
+      		if (j>=0) {
+      			//do not create extra service if not needed because it will block the private topic logic
+      			conFeedbackService = targetTopics[j];
+      		} else {
+      			conFeedbackService = cmd.newPubSubService(connectionFeedbackTopic.toString());
+      		}
       	}
       	int j = externalTopicsSub.length;
       	externalTopicTrie = new TrieParser(j*20,2,false,false,false);

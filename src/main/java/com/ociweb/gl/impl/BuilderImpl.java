@@ -1672,9 +1672,11 @@ public class BuilderImpl implements Builder {
 			possiblePrivateTopicsProducerCount[possiblePrivateTopicsCount]++;
 			possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);
 		} else {		
-			
-			possiblePrivateCmds[id] = cmdChannel;
-			possiblePrivateTopicsProducerCount[id]++;
+            //only record once for same channel and topic pair
+			if (cmdChannel != possiblePrivateCmds[id]) {
+				possiblePrivateCmds[id] = cmdChannel;
+				possiblePrivateTopicsProducerCount[id]++;
+			}
 		}
 	}
 	
@@ -1689,6 +1691,10 @@ public class BuilderImpl implements Builder {
 			possiblePrivateBehaviors[possiblePrivateTopicsCount].add(listener);
 			
 			possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
+			
+			//new Exception("added topic "+topic+" now consumers total "+possiblePrivateBehaviors[possiblePrivateTopicsCount].size()+" position "+possiblePrivateTopicsCount).printStackTrace();;
+			
+			
 			possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);			
 		} else {
 			
@@ -1725,16 +1731,20 @@ public class BuilderImpl implements Builder {
 	
 	public void defineAutoDiscoveredPrivateTopcis() {
 		
-		logger.info("possible private topics {} ",possiblePrivateTopicsCount);
+		//new Exception("auto discover privat topics").printStackTrace();
+		
+		//logger.info("possible private topics {} ",possiblePrivateTopicsCount);
 		int actualPrivateTopicsFound = 0;
 		int i = possiblePrivateTopicsCount;
 		while (--i>=0) {			
 			
 			String topic = possiblePrivateTopicsTopic[i].toString();					
-			logger.info("possible private topic {} {}->{}",topic, possiblePrivateTopicsProducerCount[i], null==possiblePrivateBehaviors[i] ? -1 :possiblePrivateBehaviors[i].size());
-			
+			//logger.info("possible private topic {} {}->{}",topic, possiblePrivateTopicsProducerCount[i], null==possiblePrivateBehaviors[i] ? -1 :possiblePrivateBehaviors[i].size());
+			boolean madePrivate = false;
+			String reasonSkipped = "";
+			final int consumers = (null==possiblePrivateBehaviors[i]) ? 0 : possiblePrivateBehaviors[i].size();
 			if (possiblePrivateTopicsProducerCount[i]==1) {
-				if ((null!=possiblePrivateBehaviors[i]) && (possiblePrivateBehaviors[i].size()>=1)) {
+				if ((null!=possiblePrivateBehaviors[i]) && ((possiblePrivateBehaviors[i].size())>=1)) {
 					//may be valid check that is is not on the list.
 					if (!skipTopic(topic)) {
 						
@@ -1749,14 +1759,27 @@ public class BuilderImpl implements Builder {
 								String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
 								if (null!=consumerName) {
 									definePrivateTopic(topic, producerName, consumerName);
+									madePrivate = true;
 								}
 							}
+						} else {
+							reasonSkipped = "Reason: Behavior had no name";
 						}
+					} else {
+						reasonSkipped = "Reason: Explicitly set as not to be private in behavior";
 					}
+				} else {
+					reasonSkipped = "Reason: Must have 1 or more consumers";
 				}
+			} else {
+				reasonSkipped = "Reason: Must have single producer";
 			}
+			logger.info("MadePrivate: {} Topic: {} Producers: {} Consumers: {}   {} ", madePrivate, topic, possiblePrivateTopicsProducerCount[i], consumers, reasonSkipped);
+			
+			
 		}
 		
+		//hack test as we figure out what TODO: about this
 		if (actualPrivateTopicsFound == possiblePrivateTopicsCount && (!messageRoutingRequired)) {
 			isAllPrivateTopics = true;
 		}
