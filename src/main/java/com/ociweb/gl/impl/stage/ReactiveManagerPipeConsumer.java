@@ -47,7 +47,7 @@ public class ReactiveManagerPipeConsumer {
 				if (Pipe.isEmpty(localInputs[i]) || !Pipe.hasContentToRead(localInputs[i])) {
 					//most calls are stopping on this if
 				} else {
-					if (null!=localOperators[i]) {//skip if null, thisis for the TickListener
+					if (null!=localOperators && null!=localOperators[i]) {//skip if null, this is for the TickListener
 						localOperators[i].apply(i, localObj, localInputs[i], r);
 						if (Pipe.hasContentToRead(localInputs[i])) {
 							temp++;
