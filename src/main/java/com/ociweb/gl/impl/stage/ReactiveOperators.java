@@ -30,10 +30,11 @@ public class ReactiveOperators {
 	/**
 	 *
 	 * @param p Pipe arg used for Pipe.isForSchema
+	 * @Param doNotThrow boolean if the pipe does not match return null instead of throwing
 	 * @return operators.get(i) if (Pipe.isForSchema(p, schemas.get(i)))
 	 * @throws UnsupportedOperationException
 	 */
-	public ReactiveOperator getOperator(Pipe p) {
+	public ReactiveOperator getOperator(Pipe p, boolean doNotThrow) {
 		
 		int i = schemas.size();
 		while (--i>=0) {
@@ -47,7 +48,11 @@ public class ReactiveOperators {
 		while (--i>=0) {
 			text.append(schemas.get(i).getClass().getSimpleName()).append(",");
 		}
-		throw new UnsupportedOperationException("can not find operator by schema for pipe "+p+"\n in schemas "+text);
+		if (doNotThrow) {
+			return null;
+		} else {
+			throw new UnsupportedOperationException("can not find operator by schema for pipe "+p+"\n in schemas "+text);
+		}
 	}
 
 	/**

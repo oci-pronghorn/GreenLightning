@@ -185,8 +185,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 				}
 			}
 		}
-		
-		
+	
 		return new PubSubFixedTopicService(this, fixedTopic);
 	}
 	

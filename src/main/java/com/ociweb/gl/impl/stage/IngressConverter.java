@@ -1,12 +1,10 @@
 package com.ociweb.gl.impl.stage;
 
-import com.ociweb.gl.impl.schema.IngressMessages;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public interface IngressConverter {
 
-	void convertData(DataInputBlobReader<?> inputStream,
-            		 DataOutputBlobWriter<IngressMessages> outputStream);
+	void convertData(ChannelReader inputStream, ChannelWriter outputStream);
 	
 }

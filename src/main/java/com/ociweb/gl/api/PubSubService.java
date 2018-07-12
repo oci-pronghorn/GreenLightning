@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.schema.IngressMessages;
+import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -47,7 +48,14 @@ public class PubSubService {
 	 * @param messageCount int arg used in FieldReferenceOffsetManager.maxFragmentSize
 	 * @return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount)
 	 */
-	public boolean hasRoomFor(int messageCount) {
+	public boolean hasRoomFor(CharSequence topic, int messageCount) {
+		
+		int token =  null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topic);
+		if (token>=0) {
+			//private topics use their own pipe which must be checked.
+			return Pipe.hasRoomForWrite(msgCommandChannel.publishPrivateTopics.getPipe(token), messageCount * Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1));
+		}
+		
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
 		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
 	}

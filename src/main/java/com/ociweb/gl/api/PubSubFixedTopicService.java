@@ -5,6 +5,7 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.schema.IngressMessages;
+import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -22,13 +23,14 @@ public class PubSubFixedTopicService {
 	
 	
 	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String topic) {
+	
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;
 		this.topic = topic;
 		this.topicBytes = topic.getBytes();
 		
 		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, topic);
-		
+
 	}
 	
 	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String topic,
@@ -50,6 +52,7 @@ public class PubSubFixedTopicService {
 		msgCommandChannel.pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
 		
 		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, topic);
+
 		
 		
 	}
@@ -57,9 +60,13 @@ public class PubSubFixedTopicService {
 
 	private final int token() {
 		if (-2 == topicToken) {
-			topicToken = (null==msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topicBytes, 0, topicBytes.length));
+			topicToken = computeToken();
 		}
 		return topicToken;
+	}
+
+	private int computeToken() {
+		return null == msgCommandChannel.publishPrivateTopics ? -1 : msgCommandChannel.publishPrivateTopics.getToken(topicBytes, 0, topicBytes.length);
 	}
 
 	
@@ -69,6 +76,13 @@ public class PubSubFixedTopicService {
 	 * @return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount)
 	 */
 	public boolean hasRoomFor(int messageCount) {
+		
+		int token = token();
+		if (token>=0) {
+			//private topics use their own pipe which must be checked.
+			return Pipe.hasRoomForWrite(msgCommandChannel.publishPrivateTopics.getPipe(token), messageCount * Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1));
+		}
+		
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
 		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
 	}
@@ -416,10 +430,14 @@ public class PubSubFixedTopicService {
 		
 		int token = token();		
 		
-		if (token>=0) {
+		if (token >= 0) {
 			return msgCommandChannel.publishOnPrivateTopic(token, writable);
 		} else {
-		    if (msgCommandChannel.goHasRoom()  && 
+			
+			//if messagePubSub is null then this is a private topic but why is publishPrivateTopics null?
+			assert(null != msgCommandChannel.messagePubSub) : "pipe must not be null, topic: "+topic+" has privateTopicsPub:"+msgCommandChannel.publishPrivateTopics+"\n   cmd: "+msgCommandChannel.hashCode();
+		    
+			if (msgCommandChannel.goHasRoom()  && 
 		    	PipeWriter.tryWriteFragment(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103)) {
 				
 				PipeWriter.writeInt(msgCommandChannel.messagePubSub, MessagePubSub.MSG_PUBLISH_103_FIELD_QOS_5, WaitFor.All.policy());

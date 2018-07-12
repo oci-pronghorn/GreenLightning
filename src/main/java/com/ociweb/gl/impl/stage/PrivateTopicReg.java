@@ -17,11 +17,10 @@ class PrivateTopicReg implements ChildClassScannerVisitor<MsgCommandChannel> {
 	}
 
 	private Pipe<TrafficOrderSchema> target;
-
 	   
-	   public void init(Pipe<TrafficOrderSchema> target) {
-		   this.target = target;
-	   }
+    public void init(Pipe<TrafficOrderSchema> target) {
+	   this.target = target;
+    }
 
 	public boolean visit(MsgCommandChannel cmdChnl, Object topParent, String name) {
 		    MsgCommandChannel.setPrivateTopics(cmdChnl, reactiveListenerStage.publishPrivateTopics);	

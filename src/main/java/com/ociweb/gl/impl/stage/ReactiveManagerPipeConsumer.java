@@ -1,5 +1,6 @@
 package com.ociweb.gl.impl.stage;
 
+import com.ociweb.gl.impl.TickListenerBase;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 
@@ -7,40 +8,29 @@ public class ReactiveManagerPipeConsumer {
 
 	public final Pipe[] inputs;
 	private final ReactiveOperator[] operators;
-	public final Object obj;
-	
-//	private AtomicBoolean newWork = new AtomicBoolean(true);
-//	private final PipePublishListener newWorkListener = new PipePublishListener() {
-//		@Override
-//		public void published() {
-//			newWork.set(true);
-//		}
-//	};
+	public final Object behavior;
 	
 
-	public ReactiveManagerPipeConsumer(Object obj, ReactiveOperators operators, Pipe[] inputs) {
+	public ReactiveManagerPipeConsumer(Object behavior, ReactiveOperators operators, Pipe[] inputs) {
 		
-		this.obj = obj;
+		this.behavior = behavior;
 		this.inputs = inputs;
 		assert(PronghornStage.noNulls(inputs));
 		this.operators = new ReactiveOperator[inputs.length];
 		
+		boolean doNotThrow = (behavior instanceof TickListenerBase);
+		
 		int i = inputs.length;
 		while (--i>=0) {
-			this.operators[i] = operators.getOperator(inputs[i]);
+			this.operators[i] = operators.getOperator(inputs[i], doNotThrow);	
 		}
-		
-		//for the inputs register the head listener
-//		int j = inputs.length;
-//		while (--j>=0) {
-//			Pipe.addPubListener(inputs[j], newWorkListener);
-//		}
+
 	}
 	
 	public static final void process(ReactiveManagerPipeConsumer that, ReactiveListenerStage r) {
 		//only run if one of the inputs has received new data or have data.
 		//if (that.newWork.getAndSet(false)) {			
-			applyReactiveOperators(that, r, that.inputs, that.obj, that.operators, that.inputs.length); 
+			applyReactiveOperators(that, r, that.inputs, that.behavior, that.operators, that.inputs.length); 
 		//}
 	}
 

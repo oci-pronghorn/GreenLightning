@@ -448,22 +448,25 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 				PipeWriter.publishWrites(clientRequest);
 			}
 
-			boolean old = true;
-			if (old) {
-				//TODO: remove and use normal behavior...
-				IngressMQTTStage stage = new IngressMQTTStage(builder.gm, clientResponse,
-						new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), 
-						externalTopicsSub, internalTopicsSub, convertersSub, connectionFeedbackTopic);
-				GraphManager.addNota(builder.gm, GraphManager.DOT_BACKGROUND, MQTTClientGraphBuilder.BACKGROUND_COLOR, stage);
-	
-				//////////////////////////
-				
-			} else {
+//			boolean old = false;
+//			if (old) {
+//				//TODO: remove and use normal behavior...
+//				IngressMQTTStage stage = new IngressMQTTStage(builder.gm, clientResponse,
+//						new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), 
+//						externalTopicsSub, internalTopicsSub, convertersSub, connectionFeedbackTopic);
+//				GraphManager.addNota(builder.gm, GraphManager.DOT_BACKGROUND, MQTTClientGraphBuilder.BACKGROUND_COLOR, stage);
+//	
+//				//////////////////////////
+//				
+//			} else {
 				ListenerFilter registerListener = msgRuntime.registerListener("IngressMQTT",
-						new IngressMQTTBehavior(msgRuntime, externalTopicsSub, internalTopicsSub, convertersSub, 
-								                connectionFeedbackTopic, clientResponse));
+							new IngressMQTTBehavior(msgRuntime, externalTopicsSub, internalTopicsSub, convertersSub, 
+													connectionFeedbackTopic, clientResponse)
+						);	
+				
 				((ReactiveListenerStage)registerListener).addInputPronghornPipes(clientResponse);
-			}
+				
+		//	}
 		} else {
 			PipeCleanerStage.newInstance(builder.gm, clientResponse);
 		}

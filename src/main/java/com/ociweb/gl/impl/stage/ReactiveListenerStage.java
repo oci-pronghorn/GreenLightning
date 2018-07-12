@@ -36,6 +36,7 @@ import com.ociweb.gl.impl.PubSubMethodListenerBase;
 import com.ociweb.gl.impl.RestListenerBase;
 import com.ociweb.gl.impl.RestMethodListenerBase;
 import com.ociweb.gl.impl.StartupListenerBase;
+import com.ociweb.gl.impl.TickListenerBase;
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -133,6 +134,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     protected final Enum[] states;
     
     protected boolean timeEvents = false;
+    protected final TickListenerBase tickListener;
     
     /////////////////////
     //Listener Filters
@@ -196,6 +198,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
         
         builder.pendingInit(this);
         
+        if (listener instanceof TickListenerBase) {
+        	tickListener = (TickListenerBase)listener;
+        } else {
+        	tickListener = null;
+        }
+   
     }
     
     private final String nameId;
@@ -735,11 +743,15 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	    			return;
 	    		}
 	    	}
-	    	    	
-	        if (timeEvents) {         	
-				processTimeEvents(timeListener, timeTrigger);            
-			}
 	
+	        if (timeEvents) {         					        	
+	        	processTimeEvents(timeListener, timeTrigger);            	
+	        }
+	
+	        if (null != tickListener) {
+	        	tickListener.tickEvent();
+	        }
+	        
 		    //all local behaviors
 		    ReactiveManagerPipeConsumer.process(consumer, this);
 	

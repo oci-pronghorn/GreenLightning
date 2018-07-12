@@ -11,10 +11,5 @@ import com.ociweb.gl.impl.TimeListenerBase;
 @FunctionalInterface
 public interface TimeListener extends Behavior, TimeListenerBase {
 
-    /**
-     * Invoked when a time event is received from the {@link MsgRuntime}.
-     *
-     * @param time Time of the event in milliseconds since the UNIX epoch.
-     */
-    void timeEvent(long time, int iteration);
+
 }

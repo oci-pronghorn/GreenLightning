@@ -1,19 +1,25 @@
 package com.ociweb.gl.impl.stage;
 
-import com.ociweb.gl.api.MQTTConnectionFeedback;
-import com.ociweb.gl.api.MQTTConnectionStatus;
-import com.ociweb.pronghorn.pipe.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.ociweb.gl.impl.schema.IngressMessages;
-import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
-import com.ociweb.pronghorn.stage.PronghornStage;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-
 import static com.ociweb.gl.impl.schema.IngressMessages.MSG_PUBLISH_103;
 import static com.ociweb.gl.impl.schema.IngressMessages.MSG_PUBLISH_103_FIELD_PAYLOAD_3;
 import static com.ociweb.gl.impl.schema.IngressMessages.MSG_PUBLISH_103_FIELD_TOPIC_1;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ociweb.gl.api.MQTTConnectionFeedback;
+import com.ociweb.gl.api.MQTTConnectionStatus;
+import com.ociweb.gl.impl.schema.IngressMessages;
+import com.ociweb.pronghorn.network.schema.MQTTClientResponseSchema;
+import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
+import com.ociweb.pronghorn.pipe.DataInputBlobReader;
+import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeReader;
+import com.ociweb.pronghorn.pipe.PipeWriter;
+import com.ociweb.pronghorn.stage.PronghornStage;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class IngressMQTTStage extends PronghornStage {
 
@@ -29,12 +35,8 @@ public class IngressMQTTStage extends PronghornStage {
 	
 	public static final IngressConverter copyConverter = new IngressConverter() {		
 		@Override
-		public void convertData(DataInputBlobReader<?> inputStream,
-								DataOutputBlobWriter<IngressMessages> outputStream) {
-			
+		public void convertData(ChannelReader inputStream, ChannelWriter outputStream) {			
 			inputStream.readInto(outputStream, inputStream.available());
-			
-			
 		}
 	};
 		

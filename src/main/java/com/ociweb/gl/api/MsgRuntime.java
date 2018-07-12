@@ -559,15 +559,19 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				planIncomingGroup);
 	}
 
-	public void declareBehavior(int tracks, DeclareBehavior db) {
-		//TODO: assert this is never called in old parallel code.
-		for (int i = 0; i < tracks; i++) {
-			//TODO: setup the instancee
-			//TODO: what about single server??
-			
-			db.declareBehavior(i);
-		}
-	}
+//	////////////////
+//	//future feature
+//	//TODO: needs to proctect against mutliple servers configured at once
+//	//TODO: needs to add support to keep each parallel group separate.
+//	public void declareBehavior(int tracks, DeclareBehavior db) {
+//		//TODO: assert this is never called in old parallel code.
+//		for (int i = 0; i < tracks; i++) {
+//			//TODO: setup the instancee
+//			//TODO: what about single server??
+//			
+//			db.declareBehavior(i);
+//		}
+//	}
 	
 	
 	private void buildModulesForServer(MsgApp app) {
@@ -928,7 +932,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				
 				int c = consumers.size();
 				while (--c>=0) {
-					if (consumers.get(c).obj == child) {
+					if (consumers.get(c).behavior == child) {
 						//do not add this one it is already recorded
 						return true;
 					}
