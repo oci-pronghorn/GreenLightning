@@ -241,8 +241,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			
 			
 			
-	        if ( (!this.builder.isAllPrivateTopics())
-	            	&& this.builder.isListeningToSubscription(listener)) {
+	        if ( (!this.builder.isAllPrivateTopics()) && this.builder.isListeningToSubscription(listener)) {
 	        	///this is done late because if we have detected that pub sub router is not required it creates fewer pipes.	
 	    		builder.populateListenerIdentityHash(listener);
 	        	inputPipes = PronghornStage.join(inputPipes, MsgRuntime.buildMessageSubscriptionPipe(builder) );
@@ -250,6 +249,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 						
 			if (null!=behaviorName) {
 				
+				//TODO: if all the topics are private for this behavior we need to remove the pubSub pipes...
+				//TODO: private topics with n sources and 1 destination
 				
 				List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(nameId);
 				int i = sourceTopics.size();

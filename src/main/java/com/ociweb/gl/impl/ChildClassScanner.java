@@ -8,6 +8,7 @@ import com.ociweb.pronghorn.util.Appendables;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.Externalizable;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -74,9 +75,43 @@ public class ChildClassScanner {
 							if (obj!=null && obj.getClass().isArray()) {
 								
 								Class<?> cType = obj.getClass().getComponentType();
-								if ((!cType.isPrimitive()) &&
-								    (!cType.isAssignableFrom(CharSequence.class))) {
-																
+								if ((!cType.isPrimitive()) 
+									&& !cType.isSynthetic()
+								    && (!CharSequence.class.isAssignableFrom(cType))
+								    && (!String.class.isAssignableFrom(cType))
+								    && (!Externalizable.class.isAssignableFrom(cType))								    
+								    
+								    && (!(name=cType.getName()).startsWith("java.")) 
+									&& (!name.startsWith("[Ljava."))
+									&& (!name.startsWith("[["))
+									&& (!name.startsWith("[I"))
+									&& (!name.startsWith("[B"))
+									&& (!name.startsWith("[J"))
+									&& (!name.startsWith("[S"))
+									
+									&& (!name.startsWith("com.ociweb.pronghorn.stage."))
+									&& (!name.startsWith("[Lcom.ociweb.pronghorn.stage."))
+									
+									&& (!name.startsWith("com.ociweb.iot.hardware."))
+									&& (!name.startsWith("[Lcom.ociweb.iot.hardware."))
+																	
+									&& (!name.startsWith("com.ociweb.pronghorn.pipe."))  
+									&& (!name.startsWith("[Lcom.ociweb.pronghorn.pipe.")) 
+									
+									&& (!name.startsWith("com.ociweb.pronghorn.util."))  
+									&& (!name.startsWith("[Lcom.ociweb.pronghorn.util.")) 
+									
+									&& (!name.startsWith("com.ociweb.pronghorn.network."))  
+									&& (!name.startsWith("[Lcom.ociweb.pronghorn.network.")) 
+									
+									&& (!name.startsWith("com.ociweb.gl.impl."))  
+									&& (!name.startsWith("[Lcom.ociweb.gl.impl."))											
+									
+									&& (!name.startsWith("org.slf4j."))
+																				
+										) {
+										
+									
 									int i = Array.getLength(obj);
 								    while(--i>=0) {
 								        Object arrayElement = Array.get(obj, i);
@@ -119,12 +154,17 @@ public class ChildClassScanner {
 									
 									&& (!name.startsWith("com.ociweb.pronghorn.network."))  
 									&& (!name.startsWith("[Lcom.ociweb.pronghorn.network.")) 
-									
+																		
+									&& (!name.startsWith("com.ociweb.gl.impl."))  
+									&& (!name.startsWith("[Lcom.ociweb.gl.impl."))
+							
 									&& (!name.startsWith("org.slf4j."))
 									&& (!obj.getClass().isEnum())
 									&& (!(obj instanceof MsgRuntime))  
 									&& (!(obj instanceof ChannelWriter))  
-									&& (!(obj instanceof BuilderImpl)) 
+									&& (!(obj instanceof BuilderImpl))
+									&& (!(obj instanceof Externalizable))
+									
 									
 									&& !fields[f].isSynthetic()
 									&& fields[f].isAccessible() 
@@ -132,7 +172,7 @@ public class ChildClassScanner {
 								
 								if (!seen.contains(obj)) {
 									seen.add(obj);
-								                		//if (depth <3 && obj.getClass().getName().startsWith("[")) {
+								                		//if (depth >4 ) {
 								                		//	logger.info(depth+" "+obj.getClass().getName());
 								                		//}
 								
@@ -174,7 +214,7 @@ public class ChildClassScanner {
 		long duration = System.nanoTime()-start;
 		
 		//just report the longest duration
-		if (duration > 10_000_000) {
+		if (duration > 1_000_000) {
 			Appendables.appendNearestTimeUnit(System.out, duration);
 			System.out.println(" duration for scan to find all "+target.getSimpleName()+" instances inside "+listener.getClass().getSimpleName());
 		}

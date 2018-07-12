@@ -1664,6 +1664,7 @@ public class BuilderImpl implements Builder {
 	
 	public void possiblePrivateTopicProducer(MsgCommandChannel<?> cmdChannel, String topic) {
 
+		
 		int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
 		if (-1 == id) {
 			growPossiblePrivateTopics();			
