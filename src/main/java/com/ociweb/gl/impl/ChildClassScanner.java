@@ -123,7 +123,7 @@ public class ChildClassScanner {
 									
 									&& !fields[f].isSynthetic()
 									&& fields[f].isAccessible() 
-									&& depth<=11) { //stop recursive depth
+									&& depth<=9) { //stop recursive depth at this point...
 								
 								if (!seen.contains(obj)) {
 									seen.add(obj);
@@ -169,7 +169,7 @@ public class ChildClassScanner {
 		long duration = System.nanoTime()-start;
 		
 		Appendables.appendNearestTimeUnit(System.out, duration);
-		System.out.println(" duration for scan to find all "+target.getSimpleName()+" instances.");
+		System.out.println(" duration for scan to find all "+target.getSimpleName()+" instances inside "+listener.getClass().getSimpleName()+" "+name);
 		
 		return result;
 	}
