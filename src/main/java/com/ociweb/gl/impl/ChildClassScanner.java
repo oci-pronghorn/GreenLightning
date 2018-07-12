@@ -3,6 +3,8 @@ package com.ociweb.gl.impl;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
+import com.ociweb.pronghorn.util.Appendables;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,8 +164,14 @@ public class ChildClassScanner {
 	}
 
 	public static boolean visitUsedByClass(String name, Object listener, ChildClassScannerVisitor visitor, Class target) {
-	
-		return visitUsedByClass(name, listener, 0, visitor, listener, target, new ArrayList<Object>());
+		long start = System.nanoTime();
+		boolean result = visitUsedByClass(name, listener, 0, visitor, listener, target, new ArrayList<Object>());
+		long duration = System.nanoTime()-start;
+		
+		Appendables.appendNearestTimeUnit(System.out, duration);
+		System.out.println(" duration for scan to find all "+target.getSimpleName()+" instances.");
+		
+		return result;
 	}
 
 }
