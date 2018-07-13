@@ -956,6 +956,7 @@ public class BuilderImpl implements Builder {
 		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfTypeWithNoProducer(gm, MessageSubscription.instance);
 		
 		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, TrafficOrderSchema.instance);
+		
 		Pipe<ClientHTTPRequestSchema>[] httpClientRequestPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, ClientHTTPRequestSchema.instance);			
 		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfTypeWithNoConsumer(gm, MessagePubSub.instance);
 		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, IngressMessages.instance);
@@ -990,7 +991,7 @@ public class BuilderImpl implements Builder {
 		}		
 				
 		int copGoAck = commandChannelCount;
-		//logger.info("command channel count to be checked {}",copGoAck);
+		logger.info("\ncommand channel count to be checked {}",copGoAck);
 		while (--copGoAck>=0) {
 		
 			Pipe<TrafficReleaseSchema>[] goOut = new Pipe[eventSchemas];
@@ -998,22 +999,23 @@ public class BuilderImpl implements Builder {
 			
 			//only setup the go and in pipes if the cop is used.
 			if (null != orderPipes[copGoAck]) {
-				int features = getFeatures(gm, orderPipes[copGoAck]);
-				boolean hasConnections = false;
+
+				//this only returns the features associated with this order pipe, eg only the ones needing a cop.
+				final int features = getFeatures(gm, orderPipes[copGoAck]);
+		
 				if ((features&Behavior.DYNAMIC_MESSAGING) != 0) {
-					hasConnections = true;		 		
 			 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_MSG);
 				}
 				if ((features&Behavior.NET_REQUESTER) != 0) {
-					hasConnections = true;		 		
 			 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_NET);
 				}
+				logger.info("\nnew traffic cop for graph {}",gm.name);
 				TrafficCopStage.newInstance(gm, 
 											timeout, orderPipes[copGoAck], 
 											ackIn, goOut, 
 											runtime, this);
 			} else {
-				logger.info("oops get features skipped since no cops but needed for private topics");
+				logger.info("\noops get features skipped since no cops but needed for private topics");
 			}
 
 		}

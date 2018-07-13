@@ -342,6 +342,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   int featuresCount = Integer.bitCount(filteredFeatures);
 			   if (featuresCount>1 || featuresCount==USE_DELAY) {
 				   this.goPipe = newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
+				   System.out.println("new go pipe "+this.goPipe);
 			   } else {
 				   assert(null==goPipe);
 			   }
@@ -897,10 +898,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	 *
 	 * @param cmd MsgCommandChannel<?> arg used for goPipe
 	 * @param target Pipe<TrafficOrderSchema> arg used for goPipe
-	 * @return null if cmd.goPipe == null else if target.cmd.goPipe target
+	 * @return boolean, true if this cmdChannel uses this very same go pipe.
 	 */
 	public static boolean isGoPipe(MsgCommandChannel<?> cmd, Pipe<TrafficOrderSchema> target) {
-		return (null==cmd.goPipe) || (target==cmd.goPipe);
+		
+		return target==cmd.goPipe;
 	}
 
 

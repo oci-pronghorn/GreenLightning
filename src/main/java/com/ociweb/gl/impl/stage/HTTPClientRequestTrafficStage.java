@@ -71,6 +71,10 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 		this.ccm = ccm;
 		
 		assert(ccm.isTLS == hardware.getHTTPClientConfig().isTLS());
+		assert(PronghornStage.noNulls(goPipe));
+		assert(PronghornStage.noNulls(ackPipe));
+		
+		
 		
 		GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "lavenderblush", this);
 		GraphManager.addNota(graphManager, GraphManager.LOAD_MERGE, GraphManager.LOAD_MERGE, this);
@@ -171,6 +175,11 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 					                }
 			                	}
 	            		break;
+	            			case ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201:
+	            			{
+	            				throw new UnsupportedOperationException("not yet supporting fast http post");
+	            			}
+	            		//break;
 	            			case ClientHTTPRequestSchema.MSG_HTTPPOST_101:	            				
 				                {
 				            		final byte[] hostBack = Pipe.blob(requestPipe);

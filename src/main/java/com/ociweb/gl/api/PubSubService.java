@@ -739,50 +739,6 @@ public class PubSubService {
 		    assert(msgCommandChannel.exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
 		}
 	}
-	
-	
-	/**
-	 * Used to set delay of service in nanoseconds
-	 * @param durationNanos long duration in nanoseconds used to set delay time
-	 * @return true if msgCommandChannel.goHasRoom else false
-	 */
-	public boolean delay(long durationNanos) {
-		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
-		try {
-		    if (msgCommandChannel.goHasRoom()) {
-		    	MsgCommandChannel.publishBlockChannel(durationNanos, msgCommandChannel);
-		        return true;
-		    } else {
-		        return false;
-		    }
-		} finally {
-		    assert(msgCommandChannel.exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
-		}
-	}
 
-	/**
-	 * Used to set delay of service until some action takes place
-	 * @param msTime long duration in milliseconds used to set delay time
-	 * @return true if msgCommandChannel.goHasRoom else false
-	 */
-	public boolean delayUntil(long msTime) {
-		
-		//if there is no go pipe we can implement a delay by preventing any further publish...
-		//or it must be implemented by traffic cop..
-		
-		
-		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
-		try {
-		    if (msgCommandChannel.goHasRoom()) {
-		    	MsgCommandChannel.publishBlockChannelUntil(msTime, msgCommandChannel);
-		        return true;
-		    } else {
-		        return false;
-		    }
-		} finally {
-		    assert(msgCommandChannel.exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
-		}
-		
-	}
 	
 }

@@ -18,19 +18,19 @@ class GatherAllFeaturesAndSetReactor implements ChildClassScannerVisitor<MsgComm
 	}
 
 	private Pipe<TrafficOrderSchema> target;
-	   private int features;
+	private int features;
 	   
-	   public void init(Pipe<TrafficOrderSchema> target) {
+	public void init(Pipe<TrafficOrderSchema> target) {
 		   this.target = target;
 		   this.features = 0;
-	   }
+	}
 
-	   public boolean visit(MsgCommandChannel cmdChnl, Object topParent, String name) {	
+	public boolean visit(MsgCommandChannel cmdChnl, Object topParent, String name) {	
 			if (MsgCommandChannel.isGoPipe(cmdChnl, target)) {
 				features |= cmdChnl.initFeatures;
 			}
 			return true;//keep going
-	   }
+	}
 
 	/**
 	 *
