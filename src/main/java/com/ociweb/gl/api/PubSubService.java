@@ -766,6 +766,11 @@ public class PubSubService {
 	 * @return true if msgCommandChannel.goHasRoom else false
 	 */
 	public boolean delayUntil(long msTime) {
+		
+		//if there is no go pipe we can implement a delay by preventing any further publish...
+		//or it must be implemented by traffic cop..
+		
+		
 		assert(msgCommandChannel.enterBlockOk()) : "Concurrent usage error, ensure this never called concurrently";
 		try {
 		    if (msgCommandChannel.goHasRoom()) {

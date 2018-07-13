@@ -64,7 +64,7 @@ public class NamedMessagePassingTest {
 //		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9 ??
 				
 		boolean telemetry = true;  //must not be true when checked in.
-		long cycleRate = 4000; //larger rate should be used with greater volume..
+		long cycleRate = 2000; //larger rate should be used with greater volume..
 
 		
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
@@ -77,14 +77,14 @@ public class NamedMessagePassingTest {
 		
 		//2M is about 1 min
 		
-		int cyclesPerTrack = 3_000; //*(1+99_9999);// / 10;
+		int cyclesPerTrack = 1_000_000; //*(1+99_9999);// / 10;
 		int parallelTracks = 2;
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8081, "/test", telemetry);
 		
 		//TODO: the pipes between private topics may not be large enough for this...
-		config2.simultaneousRequestsPerTrackBits  = 3; // 126k for max volume
+		config2.simultaneousRequestsPerTrackBits  = 2; // 126k for max volume
 			
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(

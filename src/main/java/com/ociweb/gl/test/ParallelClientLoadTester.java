@@ -9,16 +9,17 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenAppParallel;
+import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestService;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
+import com.ociweb.gl.api.PubSubFixedTopicService;
 import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
@@ -184,8 +185,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			builder.setDefaultRate(rate);
 		}
 
-		builder.definePrivateTopic(2+Math.max(8, maxInFlight) ,0, CALL_TOPIC, RESPONDER_NAME, RESPONDER_NAME);
-
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
 		builder.defineUnScopedTopic(PROGRESS_TOPIC);
 
@@ -343,7 +342,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 
 	private class TrackHTTPResponseListener implements HTTPResponseListener, TimeListener, StartupListener, PubSubMethodListener {
+		private final PubSubFixedTopicService callService;
 		private final PubSubService cmd3;
+		
 		private final int track;
 		private final HTTPResponseListener validator;
 		private final HTTPRequestService cmd2;
@@ -365,8 +366,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
 			countDown = cyclesPerTrack;
-			cmd3 = runtime.newCommandChannel().newPubSubService(Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
-
+			
+			GreenCommandChannel newCommandChannel = runtime.newCommandChannel();
+			callService = newCommandChannel.newPubSubService(CALL_TOPIC,Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
+			cmd3 = newCommandChannel.newPubSubService(Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
+			
 			this.header = contentType != null ?
 					new HeaderWritable() {
 						@Override
@@ -511,12 +515,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			int i = inFlightHTTPs;
 			while (--i>=0) {
 								
-				while(!cmd3.publishTopic(CALL_TOPIC)) {
+				while(!callService.publishTopic()) {
 					//must publish this many to get the world moving
 					Thread.yield();
 					if ((System.currentTimeMillis()-now) > 10_000) {
 						out.failedToStart(inFlightHTTPs);
-						cmd3.requestShutdown();
+						callService.requestShutdown();
 					}
 				}
 				//must use message to startup the system
@@ -617,7 +621,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					isOk = cmd3.delay(durationNanos);
 				}
 				if (isOk) {
-					isOk = cmd3.publishTopic(CALL_TOPIC);
+					isOk = callService.publishTopic();
 				}
 			}
 			else {
