@@ -63,7 +63,7 @@ public class NamedMessagePassingTest {
 //		-XX:+UnlockDiagnosticVMOptions
 //		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9 ??
 				
-		boolean telemetry = true;  //must not be true when checked in.
+		boolean telemetry = false;  //must not be true when checked in.
 		long cycleRate = 2000; //larger rate should be used with greater volume..
 
 		
