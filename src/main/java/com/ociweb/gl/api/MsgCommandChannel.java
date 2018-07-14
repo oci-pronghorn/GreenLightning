@@ -87,7 +87,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 
 	PublishPrivateTopics publishPrivateTopics;	
 
-	protected PipeConfigManager pcm;
+	public final PipeConfigManager pcm;
 	private final int parallelInstanceId;
 
 
@@ -227,7 +227,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			}
 		}
 		
-		return new PubSubFixedTopicService(this,fixedTopic,queueLength,maxMessageSize);
+		return new PubSubFixedTopicService(this, fixedTopic, queueLength, maxMessageSize);
 	}
 	
 	/**

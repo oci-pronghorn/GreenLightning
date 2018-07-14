@@ -43,6 +43,10 @@ public class PubSubFixedTopicService {
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;  
 		
+		//NOTE: must set private topics in case we choose this
+		msgCommandChannel.pcm.ensureSize(MessagePrivate.class, queueLength, maxMessageSize);
+		
+		//NOTE: must set public topics in case we choose this
 		msgCommandChannel.pcm.ensureSize(MessagePubSub.class, queueLength, maxMessageSize);
 		
 		//also ensure consumers have pipes which can consume this.    		

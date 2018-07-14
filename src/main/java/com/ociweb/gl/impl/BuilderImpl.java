@@ -1443,6 +1443,21 @@ public class BuilderImpl implements Builder {
 				                            maxMessageSize, hideTopics,
 				                            this);
 		
+		defPrivateTopic(source, target, obj);
+		
+	}
+
+	void definePrivateTopic(PipeConfig<MessagePrivate> config, String topic, String source, String target) {
+		
+		boolean hideTopics = false;
+		PrivateTopic obj = new PrivateTopic(topic, config, hideTopics,
+				                            this);
+		
+		defPrivateTopic(source, target, obj);
+		
+	}
+	
+	private void defPrivateTopic(String source, String target, PrivateTopic obj) {
 		List<PrivateTopic> localSourceTopics = null;
 		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
 		if (sourceId<0) {
@@ -1466,7 +1481,6 @@ public class BuilderImpl implements Builder {
 			localTargetTopics = privateTargetTopics.get(targetId); 
 		}
 		localTargetTopics.add(obj);
-		
 	}
 
 	@Override
@@ -1751,7 +1765,8 @@ public class BuilderImpl implements Builder {
 					//may be valid check that is is not on the list.
 					if (!skipTopic(topic)) {
 						
-						String producerName = possiblePrivateCmds[i].behaviorName();
+						MsgCommandChannel msgCommandChannel = possiblePrivateCmds[i];
+						String producerName = msgCommandChannel.behaviorName();
 						if (null!=producerName) {
 							int j = possiblePrivateBehaviors[i].size();
 							if (j >= 1) {
@@ -1761,7 +1776,7 @@ public class BuilderImpl implements Builder {
 							while (--j>=0) {
 								String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
 								if (null!=consumerName) {
-									definePrivateTopic(topic, producerName, consumerName);
+									definePrivateTopic(msgCommandChannel.pcm.getConfig(MessagePrivate.class), topic, producerName, consumerName);
 									madePrivate = true;
 								}
 							}

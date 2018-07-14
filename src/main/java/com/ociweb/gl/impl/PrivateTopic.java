@@ -24,6 +24,13 @@ public class PrivateTopic {
 		this.builder = builder;
 	}
 	
+	public PrivateTopic(String topic, PipeConfig<MessagePrivate> config, boolean hideLabels,
+            BuilderImpl builder) {
+		this.topic = topic;
+		this.config = config;
+		this.builder = builder;
+	}
+	
 	public PrivateTopic(String topic, PipeConfig<MessagePrivate> config, BuilderImpl builder) {
 		this.topic = topic;
 		this.config = config;

@@ -21,6 +21,8 @@ import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
+import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
@@ -370,13 +372,15 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			countDown = cyclesPerTrack;
 			
 			GreenCommandChannel newCommandChannel = runtime.newCommandChannel();
-			callService = newCommandChannel.newPubSubService(CALL_TOPIC,Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
+			callService = newCommandChannel.newPubSubService(CALL_TOPIC,
+																Math.max(2+((durationNanos>0?2:1)*maxInFlight), PUB_MSGS), 
+																PUB_MSGS_SIZE);
 			pubService = newCommandChannel.newPubSubService(Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
 			delayService = newCommandChannel.newDelayService();
 						
 			httpClientService = runtime.newCommandChannel()
 					.newHTTPClientService(
-					2+maxInFlight, post!=null ? maxPayloadSize + 1024 : 0);
+					2+maxInFlight, post!=null ? maxPayloadSize + (1<<11) : 0);
 			
 			this.header = contentType != null ?
 					new HeaderWritable() {
