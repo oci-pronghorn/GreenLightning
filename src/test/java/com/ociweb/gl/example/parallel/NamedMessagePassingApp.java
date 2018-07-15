@@ -68,7 +68,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		
 		// "{\"key1\":\"789\",\"key2\":123}";
 		
-		builder.setGlobalSLALatencyNS(50_000_000);
+		builder.setGlobalSLALatencyNS(500_000_000);
 		
 		
 		JSONExtractor extractor =

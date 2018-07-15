@@ -176,7 +176,7 @@ public class HTTPRequestService {
 	 */
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
-		
+		assert(null!=session);
 		if (session.getConnectionId()<0) {
 			final long id = ClientCoordinator.lookup(
 					ClientCoordinator.lookupHostId(session.hostBytes), 

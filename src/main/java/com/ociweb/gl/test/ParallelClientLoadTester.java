@@ -353,6 +353,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private final HTTPResponseListener validator;
 		private final HTTPRequestService httpClientService;
 		private final HeaderWritable header;
+		private final HeaderWritable allHeaders;
+		
 		private final Writable writer;
 
 		private long countDown;
@@ -380,7 +382,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 						
 			httpClientService = runtime.newCommandChannel()
 					.newHTTPClientService(
-					2+maxInFlight, post!=null ? maxPayloadSize + (1<<11) : 0);
+							Math.min(2+maxInFlight,1<<10) //keeps from having giant pipes
+					
+					, post!=null ? maxPayloadSize + (1<<12) : 0);
 			
 			this.header = contentType != null ?
 					new HeaderWritable() {
@@ -400,6 +404,13 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			this.validator = validate != null ? validate.get() : null;
 
 
+			this.allHeaders = new HeaderWritable() {
+				@Override
+				public void write(HeaderWriter writer) {
+					header.write(writer);
+					writer.write(HTTPHeaderDefaults.CONNECTION, "close");
+				}		
+			};
 			
 		}
 
@@ -494,26 +505,16 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 
 		private boolean httpPostWithHeader() {
-			boolean wasSent;
-		
-			
-			if (callCounter<cyclesPerTrack) {
-		
-				
-				wasSent = httpClientService.httpPost(session[track], route, header, writer);
-			} else {
-
-				HeaderWritable allHeaders = new HeaderWritable() {
-					@Override
-					public void write(HeaderWriter writer) {
-						header.write(writer);
-						writer.write(HTTPHeaderDefaults.CONNECTION, "close");
-					}		
-				};
-				wasSent = httpClientService.httpPost(session[track], route, allHeaders, writer);
-				httpClientService.httpClose(session[track]);
-				if (wasSent) {
-					session[track] = null;//ensure never used after this point.
+			boolean wasSent = false;
+			if (null != session[track]) {			
+				if (callCounter<cyclesPerTrack) {
+					wasSent = httpClientService.httpPost(session[track], route, header, writer);
+				} else {
+					wasSent = httpClientService.httpPost(session[track], route, allHeaders, writer);
+					httpClientService.httpClose(session[track]);
+					if (wasSent) {
+						session[track] = null;//ensure never used after this point.
+					}
 				}
 			}
 			return wasSent;
