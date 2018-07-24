@@ -56,8 +56,11 @@ public class PubSubService {
 			return Pipe.hasRoomForWrite(msgCommandChannel.publishPrivateTopics.getPipe(token), messageCount * Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1));
 		}
 		
-		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
-		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
+		return 
+				(null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount))
+				&&
+			    (Pipe.hasRoomForWrite(msgCommandChannel.messagePubSub, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.messagePubSub))*messageCount));
+		
 	}
 
 	/**

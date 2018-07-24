@@ -26,7 +26,7 @@ public class TwitterConfigImpl extends BridgeConfigImpl<TwitterConfigTransmissio
 	}
 
 	@Override
-	public long addTransmission(MsgRuntime<?, ?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic) {
+	public long addTransmission(CharSequence internalTopic, CharSequence externalTopic) {
 		// TODO send this internal topic out to twitter.
 		//      can post to /twitter/user, name is not important?		
 		
@@ -35,8 +35,7 @@ public class TwitterConfigImpl extends BridgeConfigImpl<TwitterConfigTransmissio
 	}
 
 	@Override
-	public long addTransmission(MsgRuntime<?, ?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic,
-			EgressConverter converter) {
+	public long addTransmission(CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
 		// TODO Auto-generated method stub
 		return 0;
 	}

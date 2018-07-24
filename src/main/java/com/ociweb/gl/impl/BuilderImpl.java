@@ -107,7 +107,8 @@ public class BuilderImpl implements Builder {
 	/////////////////
 	
     public int netResponsePipeIdxCounter = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
-   
+	private final boolean enableAutoPrivateTopicDiscovery = true;
+	
     
     private long defaultSleepRateNS = 5_000;// should normally be between 900 and 20_000; 
     
@@ -1653,7 +1654,11 @@ public class BuilderImpl implements Builder {
 
 	public void initAllPendingReactors() {
 		if (null!=pendingReactiveStages) {
-			defineAutoDiscoveredPrivateTopcis();//must be done before the initRealStage call.
+
+			if (enableAutoPrivateTopicDiscovery) {			
+				defineAutoDiscoveredPrivateTopcis();//must be done before the initRealStage call.
+			}
+			
 			for(ReactiveListenerStage stage: pendingReactiveStages) {
 				stage.initRealStage();
 			}
@@ -1747,9 +1752,7 @@ public class BuilderImpl implements Builder {
 	}
 	
 	public void defineAutoDiscoveredPrivateTopcis() {
-		
-		//new Exception("auto discover privat topics").printStackTrace();
-		
+
 		//logger.info("possible private topics {} ",possiblePrivateTopicsCount);
 		int actualPrivateTopicsFound = 0;
 		int i = possiblePrivateTopicsCount;

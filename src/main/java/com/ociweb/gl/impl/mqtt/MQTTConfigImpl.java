@@ -22,6 +22,8 @@ import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.stage.test.PipeNoOp;
+import com.ociweb.pronghorn.util.ArrayGrow;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -323,10 +325,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	public long addSubscription(CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
 		
-		internalTopicsSub = grow(internalTopicsSub, internalTopic);
-		externalTopicsSub = grow(externalTopicsSub, externalTopic);
-		convertersSub = grow(convertersSub,IngressMQTTStage.copyConverter);
-		qosSub = grow(qosSub, subscriptionQoS);
+		internalTopicsSub = ArrayGrow.appendToArray(internalTopicsSub, internalTopic);
+		externalTopicsSub = ArrayGrow.appendToArray(externalTopicsSub, externalTopic);
+		convertersSub = ArrayGrow.appendToArray(convertersSub,IngressMQTTStage.copyConverter);
+		qosSub = ArrayGrow.appendToArray(qosSub, subscriptionQoS);
 		
 		assert(internalTopicsSub.length == externalTopicsSub.length);
 		assert(internalTopicsSub.length == convertersSub.length);
@@ -339,10 +341,10 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	public long addSubscription(CharSequence internalTopic, CharSequence externalTopic, IngressConverter converter) {
 		ensureConnected();
 		
-		internalTopicsSub = grow(internalTopicsSub, internalTopic);
-		externalTopicsSub = grow(externalTopicsSub, externalTopic);
-		convertersSub = grow(convertersSub,converter);
-		qosSub = grow(qosSub, subscriptionQoS);
+		internalTopicsSub = ArrayGrow.appendToArray(internalTopicsSub, internalTopic);
+		externalTopicsSub = ArrayGrow.appendToArray(externalTopicsSub, externalTopic);
+		convertersSub = ArrayGrow.appendToArray(convertersSub,converter);
+		qosSub = ArrayGrow.appendToArray(qosSub, subscriptionQoS);
 		
 		assert(internalTopicsSub.length == externalTopicsSub.length);
 		assert(internalTopicsSub.length == convertersSub.length);
@@ -353,16 +355,16 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 
 
 	@Override
-	public long addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic) {
+	public long addTransmission(CharSequence internalTopic, CharSequence externalTopic) {
 		ensureConnected();
 
 		//logger.trace("added subscription to {} in order to transmit out to  ",internalTopic, externalTopic);
 
-		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
-		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);
-		convertersXmit = grow(convertersXmit,EgressMQTTStage.copyConverter);
-		qosXmit = grow(qosXmit, transmissionFieldQOS);
-		retainXmit = grow(retainXmit, transmissionFieldRetain);		
+		internalTopicsXmit = ArrayGrow.appendToArray(internalTopicsXmit, internalTopic);
+		externalTopicsXmit = ArrayGrow.appendToArray(externalTopicsXmit, externalTopic);
+		convertersXmit = ArrayGrow.appendToArray(convertersXmit,EgressMQTTStage.copyConverter);
+		qosXmit = ArrayGrow.appendToArray(qosXmit, transmissionFieldQOS);
+		retainXmit = ArrayGrow.appendToArray(retainXmit, transmissionFieldRetain);		
 		
 		assert(internalTopicsXmit.length == externalTopicsXmit.length);
 		assert(internalTopicsXmit.length == convertersXmit.length);
@@ -373,13 +375,13 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	@Override
-	public long addTransmission(MsgRuntime<?,?> msgRuntime, CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
+	public long addTransmission(CharSequence internalTopic, CharSequence externalTopic, EgressConverter converter) {
 		ensureConnected();
 
-		internalTopicsXmit = grow(internalTopicsXmit, internalTopic);
-		externalTopicsXmit = grow(externalTopicsXmit, externalTopic);
-		convertersXmit = grow(convertersXmit,converter);
-		qosXmit = grow(qosXmit, transmissionFieldQOS);
+		internalTopicsXmit = ArrayGrow.appendToArray(internalTopicsXmit, internalTopic);
+		externalTopicsXmit = ArrayGrow.appendToArray(externalTopicsXmit, externalTopic);
+		convertersXmit = ArrayGrow.appendToArray(convertersXmit,converter);
+		qosXmit = ArrayGrow.appendToArray(qosXmit, transmissionFieldQOS);
 				
 		assert(internalTopicsXmit.length == externalTopicsXmit.length);
 		assert(internalTopicsXmit.length == convertersXmit.length);
@@ -388,43 +390,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		return internalTopicsXmit.length-1;
 	}
 
-	private EgressConverter[] grow(EgressConverter[] converters, EgressConverter converter) {
-		
-		int i = converters.length;
-		EgressConverter[] newArray = new EgressConverter[i+1];
-		System.arraycopy(converters, 0, newArray, 0, i);
-		newArray[i] = converter;
-		return newArray;
-	}
-
-	private int[] grow(int[] array, int newItem) {
-		
-		int i = array.length;
-		int[] newArray = new int[i+1];
-		System.arraycopy(array, 0, newArray, 0, i);
-		newArray[i] = newItem;
-		return newArray;
-	}
 	
-	private IngressConverter[] grow(IngressConverter[] converters, IngressConverter converter) {
-		
-		int i = converters.length;
-		IngressConverter[] newArray = new IngressConverter[i+1];
-		System.arraycopy(converters, 0, newArray, 0, i);
-		newArray[i] = converter;
-		return newArray;
-	}
-
-
-	private CharSequence[] grow(CharSequence[] topics, CharSequence topic) {
-		
-		int i = topics.length;
-		CharSequence[] newArray = new CharSequence[i+1];
-		System.arraycopy(topics, 0, newArray, 0, i);
-		newArray[i] = topic;
-		return newArray;
-	}
-
 	/**
 	 *
 	 * @param msgRuntime MsgRuntime<?, ?> arg used in EgressMQTTStage
@@ -448,25 +414,13 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 				PipeWriter.publishWrites(clientRequest);
 			}
 
-//			boolean old = false;
-//			if (old) {
-//				//TODO: remove and use normal behavior...
-//				IngressMQTTStage stage = new IngressMQTTStage(builder.gm, clientResponse,
-//						new Pipe<IngressMessages>(builder.pcm.getConfig(IngressMessages.class)), 
-//						externalTopicsSub, internalTopicsSub, convertersSub, connectionFeedbackTopic);
-//				GraphManager.addNota(builder.gm, GraphManager.DOT_BACKGROUND, MQTTClientGraphBuilder.BACKGROUND_COLOR, stage);
-//	
-//				//////////////////////////
-//				
-//			} else {
-				ListenerFilter registerListener = msgRuntime.registerListener("IngressMQTT",
+			ListenerFilter registerListener = msgRuntime.registerListener("IngressMQTT",
 							new IngressMQTTBehavior(msgRuntime, externalTopicsSub, internalTopicsSub, convertersSub, 
 													connectionFeedbackTopic, clientResponse)
 						);	
 				
-				((ReactiveListenerStage)registerListener).addInputPronghornPipes(clientResponse);
-				
-		//	}
+			((ReactiveListenerStage)registerListener).addInputPronghornPipes(clientResponse);
+			
 		} else {
 			PipeCleanerStage.newInstance(builder.gm, clientResponse);
 		}

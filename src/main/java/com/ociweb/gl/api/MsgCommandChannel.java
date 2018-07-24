@@ -17,6 +17,7 @@ import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
@@ -334,7 +335,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		   if (!isInit) {
 			   
 			   isInit = true;
-			   this.messagePubSub = ((this.initFeatures & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder);
+			   this.messagePubSub = ((this.initFeatures & DYNAMIC_MESSAGING) == 0) ? null : newPubSubPipe(pcm.getConfig(MessagePubSub.class), builder); 
 			   this.httpRequest   = ((this.initFeatures & NET_REQUESTER) == 0)     ? null : newNetRequestPipe(pcm.getConfig(ClientHTTPRequestSchema.class), builder);
 	
 			   int filteredFeatures = usedFeaturesNeedingCop();  
@@ -427,6 +428,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 		return null==goPipe || PipeWriter.hasRoomForWrite(goPipe);
 	}
 
+	public boolean goHasRoomFor(int messageCount) {
+
+		return (null==goPipe || Pipe.hasRoomForWrite(goPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(goPipe))*messageCount));
+	}
 
 	/**
 	 *

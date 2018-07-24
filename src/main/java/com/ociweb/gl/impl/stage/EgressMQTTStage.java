@@ -3,6 +3,7 @@ package com.ociweb.gl.impl.stage;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -27,7 +28,7 @@ public class EgressMQTTStage extends PronghornStage {
 
 		@Override
 		public void convert(ChannelReader inputStream,
-							DataOutputBlobWriter<?> outputStream) {
+							ChannelWriter outputStream) {
 			
 			inputStream.readInto(outputStream, inputStream.available());
 			

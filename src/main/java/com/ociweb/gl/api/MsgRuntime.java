@@ -162,17 +162,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 	
 	public final <T,S> T bridgeTransmission(CharSequence topic, BridgeConfig<T,S> config) {		
-		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(this, topic);
+		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(topic);
 		keepBridge(config);
 		return config.transmissionConfigurator(id);
 	}
 	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config) {		
-		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(this, internalTopic,extrnalTopic);
+		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(internalTopic, extrnalTopic);
 		keepBridge(config);
 		return config.transmissionConfigurator(id);
 	}	
 	public final <T,S> T bridgeTransmission(CharSequence internalTopic, CharSequence extrnalTopic, BridgeConfig<T,S> config, EgressConverter converter) {		
-		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(this, internalTopic,extrnalTopic, converter);
+		long id = ((BridgeConfigImpl<T,S>) config).addTransmission(internalTopic, extrnalTopic,converter);
 		keepBridge(config);
 		return config.transmissionConfigurator(id);
 	}	

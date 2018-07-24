@@ -4,6 +4,7 @@ import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeWriter;
@@ -29,7 +30,7 @@ public class EgressMQTTBehavior implements PubSubListener {
 
 		@Override
 		public void convert(ChannelReader inputStream,
-							DataOutputBlobWriter<?> outputStream) {
+							ChannelWriter outputStream) {
 			
 			inputStream.readInto(outputStream,inputStream.available());
 			

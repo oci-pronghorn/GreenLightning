@@ -104,4 +104,8 @@ public class ClientHostPortInstance {
 	public static int getSessionCount() {
 		return sessionCounter.get();
 	}
+
+	public boolean isFor(String host, int port) {
+		return (this.host.equals(host)) && (this.port==port);
+	}
 }

@@ -24,8 +24,8 @@ public class PubSubFixedTopicService {
 	
 	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String topic) {
 	
-		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;
+		this.msgCommandChannel = msgCommandChannel;
 		this.topic = topic;
 		this.topicBytes = topic.getBytes();
 		
@@ -36,12 +36,12 @@ public class PubSubFixedTopicService {
 	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String topic,
 								   int queueLength, int maxMessageSize) {
 		
+		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;  
 		this.msgCommandChannel = msgCommandChannel;
 		this.topic = topic;
 		this.topicBytes = topic.getBytes();
 		
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
-		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;  
 		
 		//NOTE: must set private topics in case we choose this
 		msgCommandChannel.pcm.ensureSize(MessagePrivate.class, queueLength, maxMessageSize);
@@ -310,6 +310,7 @@ public class PubSubFixedTopicService {
 		if (token >= 0) {
 			return msgCommandChannel.publishOnPrivateTopic(token, writable);
 		} else {
+			assert(!msgCommandChannel.builder.isAllPrivateTopics()) : "Internal error, useAllPrivate topics is set yet we found a non private topic.";
 			
 			//if messagePubSub is null then this is a private topic but why is publishPrivateTopics null?
 			assert(null != msgCommandChannel.messagePubSub) : "pipe must not be null, topic: "+topic+" has privateTopicsPub:"+msgCommandChannel.publishPrivateTopics+"\n   cmd: "+msgCommandChannel.hashCode();

@@ -44,6 +44,9 @@ public class PrivateTopic {
 	public Pipe<MessagePrivate> getPipe(int activeIndex) {
 		if (null==p) {
 			p = new Pipe[builder.parallelTracks()];
+			
+			//Pipe.customSchemaName(topic);
+			
 		}
 		
 		if (activeIndex>maxIndex) {
