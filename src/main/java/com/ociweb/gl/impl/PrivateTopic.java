@@ -3,6 +3,7 @@ package com.ociweb.gl.impl;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.util.CharSequenceToUTF8Local;
 
 public class PrivateTopic {
 
@@ -44,9 +45,6 @@ public class PrivateTopic {
 	public Pipe<MessagePrivate> getPipe(int activeIndex) {
 		if (null==p) {
 			p = new Pipe[builder.parallelTracks()];
-			
-			//Pipe.customSchemaName(topic);
-			
 		}
 		
 		if (activeIndex>maxIndex) {
@@ -70,6 +68,18 @@ public class PrivateTopic {
 		}
 		return result;
 
+	}
+
+	public void populatePrivateTopicPipeNames(byte[][] names) {
+		
+		byte[] topicBytes = topic.getBytes();
+		int x = p.length;
+		while (--x>=0) {
+			Pipe pipe = p[x];
+			if (null!=pipe) {
+				names[pipe.id] = topicBytes;
+			}			
+		}
 	}
 
 	

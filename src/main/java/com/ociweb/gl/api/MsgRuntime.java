@@ -1,10 +1,25 @@
 package com.ociweb.gl.api;
 
+import java.io.File;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.blocking.BlockableStageFactory;
 import com.ociweb.gl.api.blocking.BlockingBehavior;
 import com.ociweb.gl.api.blocking.BlockingBehaviorProducer;
 import com.ociweb.gl.api.blocking.ChoosableLongField;
-import com.ociweb.gl.impl.*;
+import com.ociweb.gl.impl.BridgeConfigImpl;
+import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.ChildClassScanner;
+import com.ociweb.gl.impl.ChildClassScannerVisitor;
+import com.ociweb.gl.impl.PrivateTopic;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -14,7 +29,6 @@ import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
-import com.ociweb.pronghorn.network.ServerConnectionStruct;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
@@ -23,7 +37,6 @@ import com.ociweb.pronghorn.network.schema.HTTPLogRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPLogResponseSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
-import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -34,20 +47,8 @@ import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.blocking.Choosable;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
-import com.ociweb.pronghorn.stage.scheduling.ScriptedFixedThreadsScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.net.URL;
-import java.util.ArrayList;
-import java.util.Enumeration;
-import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
@@ -66,7 +67,28 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     
     protected void setScheduler(StageScheduler scheduler) {
     	builder.setScheduler(scheduler);
+    	
+    	//now that we have the scheduler we know that the graph is fully complete.
+    	//this our only opportunity to inject any private topic names.    	
+    	populatePrivateTopicPipeNames();    	
     }
+
+	private void populatePrivateTopicPipeNames() {
+		try {
+			Field f = builder.gm.getClass().getDeclaredField("pipeDOTSchemaNames");
+			f.setAccessible(true);
+			byte[][] names = (byte[][])f.get(builder.gm);
+			builder.populatePrivateTopicPipeNames(names);
+		} catch (NoSuchFieldException e) {
+			logger.warn("unable to set names for private topic pipes.",e);
+		} catch (SecurityException e) {
+			logger.warn("unable to set names for private topic pipes.",e);
+		} catch (IllegalArgumentException e) {
+			logger.warn("unable to set names for private topic pipes.",e);
+		} catch (IllegalAccessException e) {
+			logger.warn("unable to set names for private topic pipes.",e);
+		}
+	}
         
 	public StageScheduler getScheduler() {
 	      return builder.getScheduler();

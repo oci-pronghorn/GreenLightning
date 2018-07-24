@@ -1959,6 +1959,20 @@ public class BuilderImpl implements Builder {
 		}
 		return lookupHTTPClientPipe;
 	}
+
+	public void populatePrivateTopicPipeNames(byte[][] names) {
+		
+		int t = privateSourceTopics.size();
+		while (--t>=0) {
+			List<PrivateTopic> local = privateSourceTopics.get(t);
+			if (null!=local) {
+				int l = local.size();
+				while (--l>=0) {
+					local.get(l).populatePrivateTopicPipeNames(names);
+				}
+			}
+		}
+	}
 	
 	/////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////
