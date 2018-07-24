@@ -702,12 +702,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     										visitAllStartups, 
     										StartupListenerTransducer.class);//populates outputPipes
 
-        
-        //Do last so we complete all the initializations first
-        if (listener instanceof StartupListener) {
-        	runStartupListener((StartupListenerBase)listener);
-        }        
-        startupCompleted=true;
+    	//NOTE: the startup listener logic can not be called here since we are waiting on all other behaviors and stages
+    	//      to also be started before we begin to do work. see top of run... that is where we call the startup listeners.
        
     }
 
@@ -730,49 +726,56 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 
     @Override
     public void run() {
- 
-    	if (!shutdownInProgress) {    		
-	    	if (isShutdownRequested(builder)) {	    		
-	    		if (!shutdownCompleted) {
-	    			beginShutdownIfNotVetoed();
-	    			if (shutdownInProgress) {
-	    				return;
-	    			}	    			
-	    		} else {
-	    			assert(shutdownCompleted);
-	    			assert(false) : "run should not have been called if this stage was shut down.";
-	    			return;
-	    		}
+    	if (startupCompleted) {
+	    	if (!shutdownInProgress) {    		
+		    	if (isShutdownRequested(builder)) {	    		
+		    		if (!shutdownCompleted) {
+		    			beginShutdownIfNotVetoed();
+		    			if (shutdownInProgress) {
+		    				return;
+		    			}	    			
+		    		} else {
+		    			assert(shutdownCompleted);
+		    			assert(false) : "run should not have been called if this stage was shut down.";
+		    			return;
+		    		}
+		    	}
+		
+		        if (timeEvents) {         					        	
+		        	processTimeEvents(timeListener, timeTrigger);            	
+		        }
+		
+		        if (null != tickListener) {
+		        	tickListener.tickEvent();
+		        }
+		        
+			    //all local behaviors
+			    ReactiveManagerPipeConsumer.process(consumer, this);
+		
+			    //each transducer
+			    int j = consumers.size();
+			    while(--j>=0) {
+			    	ReactiveManagerPipeConsumer.process(consumers.get(j),this);
+			    }
+	
+	    	} else {    		
+	    		//shutdown in progress logic
+	    		int i = outputPipes.length;    		
+	    		while (--i>=0) {
+	    			if ((null!=outputPipes[i]) && !Pipe.hasRoomForWrite(outputPipes[i], Pipe.EOF_SIZE)) {
+	    				return;//must wait for pipe to empty
+	    			}
+	    		}		
+	    		//now free to shut down, we know there is room to do so.
+	    		this.realStage.requestShutdown();    		
+	    		return;
 	    	}
-	
-	        if (timeEvents) {         					        	
-	        	processTimeEvents(timeListener, timeTrigger);            	
-	        }
-	
-	        if (null != tickListener) {
-	        	tickListener.tickEvent();
-	        }
-	        
-		    //all local behaviors
-		    ReactiveManagerPipeConsumer.process(consumer, this);
-	
-		    //each transducer
-		    int j = consumers.size();
-		    while(--j>=0) {
-		    	ReactiveManagerPipeConsumer.process(consumers.get(j),this);
-		    }
-
     	} else {    		
-    		//shutdown in progress logic
-    		int i = outputPipes.length;    		
-    		while (--i>=0) {
-    			if ((null!=outputPipes[i]) && !Pipe.hasRoomForWrite(outputPipes[i], Pipe.EOF_SIZE)) {
-    				return;//must wait for pipe to empty
-    			}
-    		}		
-    		//now free to shut down, we know there is room to do so.
-    		this.realStage.requestShutdown();    		
-    		return;
+    		//Do last so we complete all the initializations first
+    		if (listener instanceof StartupListener) {
+    			runStartupListener((StartupListenerBase)listener);
+    		}        
+    		startupCompleted=true;
     	}
     }
 

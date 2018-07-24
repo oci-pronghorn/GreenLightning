@@ -343,7 +343,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   int featuresCount = Integer.bitCount(filteredFeatures);
 			   if (featuresCount>1 || featuresCount==USE_DELAY) {
 				   this.goPipe = newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
-				   System.out.println("new go pipe "+this.goPipe);
+				  // System.out.println("new go pipe "+this.goPipe+" filtered features "+Integer.toBinaryString(filteredFeatures));
 			   } else {
 				   assert(null==goPipe);
 			   }
@@ -425,11 +425,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	 * @return null if goPipe == null else PipeWriter.hasRoomForWrite(goPipe)
 	 */
 	public boolean goHasRoom() {
-		return null==goPipe || PipeWriter.hasRoomForWrite(goPipe);
+		return goHasRoomFor(1);
 	}
 
 	public boolean goHasRoomFor(int messageCount) {
-
+		assert(null==goPipe || Pipe.isInit(goPipe)) : "not init yet";
 		return (null==goPipe || Pipe.hasRoomForWrite(goPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(goPipe))*messageCount));
 	}
 
@@ -461,6 +461,9 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	if (length>0) {//last count for go pipe
     		length++;
     		hasGoSpace = true;
+    	} else {
+    		//no need for this go Pipe since all the public topics became private,  NOTE: may be able to avoid this by creating pipe late...
+    		goPipe = null;
     	}
     	
     	length += exclusivePubSub.length;
@@ -525,6 +528,10 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     	
     	if (hasGoSpace) {//last pipe for go, may be null
     		results[idx++] = goPipe;
+    	} else {
+    		if (null!=goPipe) {
+    			throw new UnsupportedOperationException("Internal error, created go pipe but never used it.");
+    		}
     	}
     	
     	return results;
