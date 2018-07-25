@@ -56,6 +56,7 @@ public class TrafficCopStage extends PronghornStage {
     	super(graphManager, join(ackIn, primaryIn), goOut);
     	
     	assert(ackIn.length == goOut.length);
+    	
     	this.msAckTimeout = msAckTimeout;
         this.primaryIn = primaryIn;
         this.ackIn = ackIn;
@@ -118,6 +119,7 @@ public class TrafficCopStage extends PronghornStage {
     	
     	int maxIterations = 100;
         do {
+         
             ////////////////////////////////////////////////
             //check first if we are waiting for an ack back
             ////////////////////////////////////////////////
@@ -130,7 +132,6 @@ public class TrafficCopStage extends PronghornStage {
                     	logger.info(" *** Expected to get ack back from "+GraphManager.getRingProducer(graphManager, +ackIn[ackExpectedOn].id)+" within "+msAckTimeout+"ms \nExpected ack on pipe:"+ackIn[ackExpectedOn]);
                     
                     }
-                    
                     //must watch for shutdown signal while we are also watching for next ack.
                     detectShutdownInProgress();
                     
@@ -142,7 +143,7 @@ public class TrafficCopStage extends PronghornStage {
                     ackExpectedOn = -1;//clear value we are no longer waiting
                 }
             }
-            
+
             ////////////////////////////////////////////////////////
             //check second to roll up release messages for new stages from primaryIn
             ////////////////////////////////////////////////////////
