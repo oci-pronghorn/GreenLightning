@@ -343,7 +343,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 			   int featuresCount = Integer.bitCount(filteredFeatures);
 			   if (featuresCount>1 || featuresCount==USE_DELAY) {
 				   this.goPipe = newGoPipe(pcm.getConfig(TrafficOrderSchema.class));
-				   System.out.println("new go pipe "+this.goPipe+" filtered features "+Integer.toBinaryString(filteredFeatures));
+				 //  System.out.println("new go pipe "+this.goPipe+" filtered features "+Integer.toBinaryString(filteredFeatures));
 			   } else {
 				   assert(null==goPipe);
 			   }
