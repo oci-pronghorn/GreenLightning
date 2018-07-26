@@ -992,7 +992,7 @@ public class BuilderImpl implements Builder {
 		}		
 				
 		int copGoAck = commandChannelCount;
-		logger.info("\ncommand channel count to be checked {}",copGoAck);
+		//logger.info("\ncommand channel count to be checked {}",copGoAck);
 		while (--copGoAck>=0) {
 		
 			Pipe<TrafficReleaseSchema>[] goOut = new Pipe[eventSchemas];
