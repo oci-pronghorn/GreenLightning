@@ -634,21 +634,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					writer.writePackedLong(timeouts);
 					//writer.writePackedLong(responsesReceived);
 					writer.writePackedLong(responsesInvalid);
-				});
-				if (0==countDown) {
-					
-					//only end after all the inFlightMessages have returned.
-					pubService.publishTopic(ENDERS_TOPIC, writer -> {
-						writer.writePackedInt(track);
-						writer.writePackedLong(totalTime);
-						writer.writePackedLong(callCounter);
-						writer.writePackedLong(sendFailures);
-						writer.writePackedLong(timeouts);
-						writer.writePackedLong(responsesReceived);
-						writer.writePackedLong(responsesInvalid);
-					});
-				}
-				
+				});				
 				
 			}
 
