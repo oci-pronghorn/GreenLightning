@@ -23,6 +23,7 @@ import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.schema.MessagePrivate;
+import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
@@ -163,9 +164,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	public void declareConfiguration(Builder builder) {
 		if (insecureClient) {
 			builder.useInsecureNetClient();
-		}
-		else {
-			builder.useNetClient();
+		} else {
+			builder.useNetClient(TLSCertificates.defaultCerts);
 		}
 		
 		builder.setGlobalSLALatencyNS(20_000_000);
@@ -271,7 +271,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 							etr, testDuration, totalMessages, totalTimeSum, serverCallsPerSecond,
 							sendAttemptsSum, sendFailuresSum, timeoutsSum, responsesReceivedSum, responsesInvalidSum
 					);
-					//logger.info("shutting down load test");
+					logger.info("\nshutting down load test, all tracks have finished");
 					cmd4.requestShutdown();
 					return true;
 				}
@@ -326,8 +326,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				lastPercent = percentDone;
 			}
 
+			
 			if (100 == percentDone) {
-				return cmd4.publishTopic(ENDERS_TOPIC);
+				//System.out.println(percentDone+" published enders topic");
+				return cmd4.publishTopic(ENDERS_TOPIC);				
 			}
 			return true;
 		}
@@ -496,7 +498,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			} else {
 				wasSent = httpClientService.httpGet(session[track], route, writeClose);	
 				//add boolean for easier time of this.. :TODO: API change.
-				httpClientService.httpClose(session[track]);//we wrote the close header must follow with close.
+		
+				if (insecureClient) {
+					//TODO: urgent fix we need to not start the close too early when using TLS
+					//NOTE: when TLS is on this close happens too soon since we have a final handshake in it holds the last request				
+					httpClientService.httpClose(session[track]);//we wrote the close header must follow with close.
+				}
 				if (wasSent) {
 					session[track] = null;//ensure never used after this point.
 				}
@@ -511,7 +518,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					wasSent = httpClientService.httpPost(session[track], route, header, writer);
 				} else {
 					wasSent = httpClientService.httpPost(session[track], route, allHeaders, writer);
-					httpClientService.httpClose(session[track]);
+					if (insecureClient) {
+						//TODO: urgent fix we need to not start the close too early when using TLS
+						//NOTE: when TLS is on this close happens too soon since we have a final handshake in it holds the last request		
+						httpClientService.httpClose(session[track]);
+					}
 					if (wasSent) {
 						session[track] = null;//ensure never used after this point.
 					}
@@ -541,7 +552,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
-								
+			
 			if (reader.isConnectionClosed()) {
 				//server just axed connection and we got no notice..
 				out.connectionClosed(track);
@@ -608,7 +619,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					&& reader.isEndOfResponse()	
 					&& !validator.responseHTTP(reader)) {
 					responsesInvalid++;
-				} 
+				} 				
 			}
 			return lastResponseOk = nextCall();
 		}
@@ -624,6 +635,21 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					//writer.writePackedLong(responsesReceived);
 					writer.writePackedLong(responsesInvalid);
 				});
+				if (0==countDown) {
+					
+					//only end after all the inFlightMessages have returned.
+					pubService.publishTopic(ENDERS_TOPIC, writer -> {
+						writer.writePackedInt(track);
+						writer.writePackedLong(totalTime);
+						writer.writePackedLong(callCounter);
+						writer.writePackedLong(sendFailures);
+						writer.writePackedLong(timeouts);
+						writer.writePackedLong(responsesReceived);
+						writer.writePackedLong(responsesInvalid);
+					});
+				}
+				
+				
 			}
 
 			boolean isOk = true;
@@ -636,6 +662,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				}
 			}
 			else {
+				
 				if (0==countDown) {
 		
 					//only end after all the inFlightMessages have returned.
@@ -653,7 +680,19 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 			//upon failure should not count down
 			if (isOk) {
-				countDown--;
+				if (--countDown == 0) {
+					isOk = pubService.publishTopic(PROGRESS_TOPIC, writer-> {
+						writer.writePackedInt(track);
+						writer.writePackedLong(countDown);
+						//writer.writePackedLong(sendAttempts);
+						//writer.writePackedLong(sendFailures);
+						writer.writePackedLong(timeouts);
+						//writer.writePackedLong(responsesReceived);
+						writer.writePackedLong(responsesInvalid);
+					});
+					//we are now done sending all the requests, do not call for ender that must be done after last response 
+				    //this is dependent upon SSLEngineUnwrap releasing all its buffer data
+				}
 			}
 
 			return isOk;

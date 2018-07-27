@@ -11,21 +11,19 @@ import com.ociweb.pronghorn.util.TrieParser;
 
 public class ClientHostPortInstance {
 	private final static AtomicInteger sessionCounter = new AtomicInteger(0);
-
 	private final static Logger logger = LoggerFactory.getLogger(ClientHostPortInstance.class);
 	
-	final String host;
+	public final String host;
+	public final byte[] hostBytes;
+	
 	final int port;
 	public final int sessionId;
 	final int hostId;
-	final byte[] hostBytes;
 	final JSONExtractorCompleted extractor;
 	
 	//cache
 	private long connectionId=-1;
 
-	//TODO: add method to limit headers
-	private final TrieParser headers = null; //
 
 	/**
 	 *
@@ -106,6 +104,7 @@ public class ClientHostPortInstance {
 	}
 
 	public boolean isFor(String host, int port) {
+		
 		return (this.host.equals(host)) && (this.port==port);
 	}
 }

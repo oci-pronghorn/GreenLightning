@@ -1010,7 +1010,7 @@ public class BuilderImpl implements Builder {
 				if ((features&Behavior.NET_REQUESTER) != 0) {
 			 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_NET);
 				}
-				logger.info("\nnew traffic cop for graph {}",gm.name);
+				//logger.info("\nnew traffic cop for graph {}",gm.name);
 				TrafficCopStage.newInstance(gm, 
 											timeout, orderPipes[copGoAck], 
 											ackIn, goOut, 
