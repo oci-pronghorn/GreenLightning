@@ -909,7 +909,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return registerListenerImpl(null, listener);
     }
     
-    private ListenerFilter registerListenerImpl(final String id, final Behavior listener) {
+    private ListenerFilter registerListenerImpl(String id, final Behavior listener) {
+    	
+    	if (null == id) {
+    		//by default unless a name is given use the behavior
+    		id = listener.getClass().getSimpleName();  
+    	}
     	
     	////////////
     	//OUTPUT
