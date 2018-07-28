@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <archetype-descriptor name="basic">
+
+  <requiredProperties>
+       <requiredProperty key="mainClass"/>
+  </requiredProperties>
+
   <fileSets>
     <fileSet filtered="true" packaged="true">
       <directory>src/main/java</directory>

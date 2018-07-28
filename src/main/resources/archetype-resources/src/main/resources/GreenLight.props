@@ -1,1 +1,1 @@
-main=${package}.${artifactId}
+main=${package}.${mainClass}
