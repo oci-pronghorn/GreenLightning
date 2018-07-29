@@ -899,7 +899,7 @@ public class BuilderImpl implements Builder {
 										
 					@Override
 					public CompositeRoute path(CharSequence path) {
-						return routerConfig().registerCompositeRoute(ex.finish(), headers);
+						return routerConfig().registerCompositeRoute(ex.finish(), headers).path(path);
 					}					
 					
 					@Override
