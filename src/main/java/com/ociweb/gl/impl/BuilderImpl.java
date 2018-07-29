@@ -873,11 +873,23 @@ public class BuilderImpl implements Builder {
 	public final CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers) {
 		return routerConfig().registerCompositeRoute(extractor, headers);
 	}
+	
+//	@Override
+//	@Deprecated
+//	public final CompositePath defineRoute(HTTPHeader ... headers) {
+//		return routerConfig().registerCompositeRoute( headers);
+//	}
+	
 	@Override
 	public final RouteDefinition defineRoute(HTTPHeader ... headers) {
 		
 		return new RouteDefinition() {
-		
+	
+			@Override
+			public CompositeRoute path(CharSequence path) {
+				return routerConfig().registerCompositeRoute(headers).path(path);
+			}
+			
 			@Override
 			public ExtractedJSONFields parseJSON() {
 								
@@ -953,14 +965,12 @@ public class BuilderImpl implements Builder {
 				};
 			}			
 			
-			
-			@Override
-			public CompositeRoute path(CharSequence path) {
-				return routerConfig().registerCompositeRoute(headers);
-			}
+		
 
 		};
 	}
+	
+	
 	@Override
 	public final JSONExtractor defineJSONSDecoder() {
 		return new JSONExtractor();

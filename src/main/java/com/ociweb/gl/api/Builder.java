@@ -68,7 +68,7 @@ public interface Builder extends ArgumentProvider {
      */
 	@Deprecated
 	CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers);
-	
+	//CompositePath defineRoute(HTTPHeader ... headers);
 	RouteDefinition defineRoute(HTTPHeader ... headers);
 
 
