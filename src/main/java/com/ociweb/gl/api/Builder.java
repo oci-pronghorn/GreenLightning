@@ -66,8 +66,10 @@ public interface Builder extends ArgumentProvider {
      * Registers an allowed URL path that server can receive requests on
      * @return Reference used when registering request listeners
      */
+	@Deprecated
 	CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers);
-	CompositePath defineRoute(HTTPHeader ... headers);
+	
+	RouteDefinition defineRoute(HTTPHeader ... headers);
 
 
     /**
