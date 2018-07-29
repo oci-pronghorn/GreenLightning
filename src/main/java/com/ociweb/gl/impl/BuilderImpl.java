@@ -885,21 +885,23 @@ public class BuilderImpl implements Builder {
 		
 		return new RouteDefinition() {
 	
+			CompositeRoute route = null;
+			
 			@Override
 			public CompositeRoute path(CharSequence path) {
-				return routerConfig().registerCompositeRoute(headers).path(path);
+				return (null==route) ? routerConfig().registerCompositeRoute(headers).path(path) :  route;
 			}
 			
 			@Override
 			public ExtractedJSONFields parseJSON() {
 								
-				 JSONTable<JSONExtractor> ex = new JSONExtractor().begin();				
+				JSONTable<JSONExtractor> ex = new JSONExtractor().begin();		
 				
 				return new ExtractedJSONFields() {
 										
 					@Override
 					public CompositeRoute path(CharSequence path) {
-						return routerConfig().registerCompositeRoute(ex.finish(), headers).path(path);
+						return route = routerConfig().registerCompositeRoute(ex.finish(), headers).path(path);
 					}					
 					
 					@Override
