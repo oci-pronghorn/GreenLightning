@@ -1,7 +1,7 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.PubSubFixedTopicService;
 import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.PubSubService;
 import com.ociweb.pronghorn.pipe.ChannelReader;
@@ -9,14 +9,14 @@ import com.ociweb.pronghorn.pipe.ChannelReader;
 public class CountBehavior implements PubSubMethodListener {
 
 	private int count = 0;
-    private final CharSequence publishTopic;
-    private final PubSubService channel;
+
+    private final PubSubFixedTopicService channel;
     private final GreenRuntime runtime;
 	private final boolean doShutdown = true;
     
 	public CountBehavior(GreenRuntime runtime, CharSequence publishTopic) {
-		this.channel = runtime.newCommandChannel().newPubSubService();
-		this.publishTopic = publishTopic;
+		this.channel = runtime.newCommandChannel().newPubSubService(publishTopic.toString());
+
 		this.runtime = runtime;
 	}
 
@@ -25,7 +25,7 @@ public class CountBehavior implements PubSubMethodListener {
 		
 		if(count<6) {
 			
-			boolean result = channel.publishTopic(publishTopic);
+			boolean result = channel.publishTopic();
 			if (result) {
 				count++;
 			}
