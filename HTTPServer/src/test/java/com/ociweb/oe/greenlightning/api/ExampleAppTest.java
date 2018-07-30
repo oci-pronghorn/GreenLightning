@@ -10,7 +10,6 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
-import com.ociweb.oe.greenlightning.api.ExampleAppTest.Person;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 
