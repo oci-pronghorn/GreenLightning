@@ -744,26 +744,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe<ServerResponseSchema>[] outputs = new Pipe[1];		
 		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
 			
-		File rootPath = buildFilePath(path);
-		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, rootPath);
+		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, buildFilePath(path));
 				
 		return new StageRouteFilter(inputs[0], builder, parallelIndex);
-	}
-	
-	public RouteFilter addFileServer(String resourceRoot, String resourceDefault) {
-		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
-		
-		//due to internal implementation we must keep the same number of outputs as inputs.
-		Pipe<HTTPRequestSchema>[] inputs = new Pipe[1];
-		Pipe<ServerResponseSchema>[] outputs = new Pipe[1];		
-		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
-				
-		FileReadModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
-					
-		return new StageRouteFilter(inputs[0], builder, parallelIndex);
-				
 	}
 
+	public RouteFilter addResourceServer(String resourceRoot) {
+		return addResourceServer(resourceRoot,"index.html");
+	}
+	
+	
 	public RouteFilter addResourceServer(String resourceRoot, String resourceDefault) {
 		final int parallelIndex = (-1 == parallelInstanceUnderActiveConstruction) ? 0 : parallelInstanceUnderActiveConstruction;
 		
@@ -772,7 +762,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe<ServerResponseSchema>[] outputs = new Pipe[1];		
 		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
 				
-		ResourceModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
+		ResourceModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot.endsWith("/")?resourceRoot: (resourceRoot+'/'), resourceDefault);
 					
 		return new StageRouteFilter(inputs[0], builder, parallelIndex);
 				
