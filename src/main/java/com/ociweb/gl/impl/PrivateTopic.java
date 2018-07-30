@@ -13,6 +13,10 @@ public class PrivateTopic {
 	private final BuilderImpl builder;
 	
 	private final PipeConfig<MessagePrivate> config;
+
+	public String toString() {
+		return topic;
+	}
 	
 	public PrivateTopic(String topic, int messageCount, 
 			            int messageSize, boolean hideLabels,
@@ -73,12 +77,14 @@ public class PrivateTopic {
 	public void populatePrivateTopicPipeNames(byte[][] names) {
 		
 		byte[] topicBytes = topic.getBytes();
-		int x = p.length;
-		while (--x>=0) {
-			Pipe pipe = p[x];
-			if (null!=pipe) {
-				names[pipe.id] = topicBytes;
-			}			
+		if (null!=p) {
+			int x = p.length;
+			while (--x>=0) {
+				Pipe pipe = p[x];
+				if (null!=pipe) {
+					names[pipe.id] = topicBytes;
+				}			
+			}
 		}
 	}
 

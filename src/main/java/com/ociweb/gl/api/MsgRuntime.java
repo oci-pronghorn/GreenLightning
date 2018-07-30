@@ -913,7 +913,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	
     	if (null == id) {
     		//by default unless a name is given use the behavior
-    		id = listener.getClass().getSimpleName();  
+    		id = listener.getClass().getSimpleName();
     	}
     	
     	////////////

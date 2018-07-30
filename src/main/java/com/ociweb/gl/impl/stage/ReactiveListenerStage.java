@@ -2,6 +2,7 @@ package com.ociweb.gl.impl.stage;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -81,7 +82,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     
     protected Pipe<?>[]           inputPipes;
     protected Pipe<?>[]           outputPipes;
-        
+    
     protected long                      timeTrigger;
     protected long                      timeRate;   
     
@@ -253,15 +254,29 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				//TODO: private topics with n sources and 1 destination
 				
 				List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(nameId);
+				
+				System.out.println("YJY "+parallelInstance+"  "+behaviorName+" produces: "+
+				                       Arrays.toString(sourceTopics.toArray(new PrivateTopic[sourceTopics.size()])));
+				
 				int i = sourceTopics.size();
-				while (--i>=0) {				
-					outputPipes = PronghornStage.join(outputPipes, sourceTopics.get(i).getPipe(parallelInstance));				
+				while (--i>=0) {
+					PrivateTopic privateTopic = sourceTopics.get(i);
+					outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe(parallelInstance));				
 				}
+				
+				
+				
 							
 				List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(nameId);
+				
+				System.out.println("WTX "+parallelInstance+"  "+behaviorName+" consumes: "+
+	                       Arrays.toString(targetTopics.toArray(new PrivateTopic[targetTopics.size()])));
+				
+				
 				int j = targetTopics.size();
 				while (--j>=0) {
-					inputPipes = PronghornStage.join(inputPipes, targetTopics.get(j).getPipe(parallelInstance));
+					PrivateTopic privateTopic = targetTopics.get(j);
+					inputPipes = PronghornStage.join(inputPipes, privateTopic.getPipe(parallelInstance));
 				}
 				
 				
@@ -350,7 +365,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	        	GraphManager.addNota(graphManager, GraphManager.PRODUCER, GraphManager.PRODUCER, this.realStage);
 	        	
 	        } else {
-	        	timeListener = null;
+	        	timeListener = null; 
 	        }   
 	        
 	        if (listener instanceof StartupListener) {

@@ -69,7 +69,7 @@ public class BuilderImpl implements Builder {
     
     int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
     final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
-	
+
 	private Blocker channelBlocker;
 
 	public final GraphManager gm;
@@ -792,7 +792,7 @@ public class BuilderImpl implements Builder {
     				output.append('/');
     				Appendables.appendValue(output, parallelInstance);
     			} else {
-    				if (BuilderImpl.notUnscoped(reader, output)) {
+    				if (BuilderImpl.notUnscoped(TrieParserReaderLocal.get(), output)) {
     					//add suffix
         				output.append('/');
         				Appendables.appendValue(output, parallelInstance);
@@ -1417,24 +1417,26 @@ public class BuilderImpl implements Builder {
 	///////////////////////////////////
 	//fields supporting private topics
 	///////////////////////////////////
-	private final TrieParser privateTopicSource = new TrieParser();
-	private final TrieParser privateTopicTarget = new TrieParser();		
+	private final TrieParser privateTopicSource = new TrieParser(64, 2, false, false, false);
+	private final TrieParser privateTopicTarget = new TrieParser(64, 2, false, false, false);		
 	private final List<List<PrivateTopic>> privateSourceTopics = new ArrayList<List<PrivateTopic>>();
 	private final List<List<PrivateTopic>> privateTargetTopics = new ArrayList<List<PrivateTopic>>();
-	private final TrieParserReader reader = new TrieParserReader();
     private final List<String> dynamicTopicPublishers = new ArrayList<String>();
 	private final List<String> dynamicTopicSubscribers = new ArrayList<String>();
 	//TODO: MUST HAVE ARRAY OF TOPICS TO LOOK UP BY PIPE?
 	///////////////////////////////////		
 	
 	public List<PrivateTopic> getPrivateTopicsFromSource(String source) {
-		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
+				
+		byte[] bytes = CharSequenceToUTF8Local.get().convert(source).append(" ").asBytes();		
+		int sourceId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicSource, bytes, 0, bytes.length, Integer.MAX_VALUE);
 		List<PrivateTopic> result = (sourceId<0) ? Collections.EMPTY_LIST : privateSourceTopics.get(sourceId);		
 		return result;
 	}
 	
 	public List<PrivateTopic> getPrivateTopicsFromTarget(String target) {
-		int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, target);
+		byte[] bytes = CharSequenceToUTF8Local.get().convert(target).append(" ").asBytes();	
+		int targetId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicTarget, bytes, 0, bytes.length, Integer.MAX_VALUE);
 		List<PrivateTopic> result = (targetId<0) ? Collections.EMPTY_LIST: privateTargetTopics.get(targetId);
 		return result;
 	}	
@@ -1466,7 +1468,7 @@ public class BuilderImpl implements Builder {
 		if (targets.length<=1) {
 			throw new UnsupportedOperationException("only call this with multiple targets");
 		}
-				
+		
 		boolean hideTopics = false;
 		PrivateTopic sourcePT = new PrivateTopic(topic, 
 				                                 queueLength, 
@@ -1475,10 +1477,11 @@ public class BuilderImpl implements Builder {
 				                                 this);
 		
 		List<PrivateTopic> localSourceTopics = null;
-		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
+		byte[] bytes = CharSequenceToUTF8Local.get().convert(source).append(" ").asBytes();
+		int sourceId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicSource, bytes, 0, bytes.length, Integer.MAX_VALUE);
 		if (sourceId<0) {
 			localSourceTopics = new ArrayList<PrivateTopic>();			
-			privateTopicSource.setUTF8Value(source, privateSourceTopics.size());
+			privateTopicSource.setValue(bytes, privateSourceTopics.size());
 			privateSourceTopics.add(localSourceTopics);
 		} else {
 			localSourceTopics = privateSourceTopics.get(sourceId);
@@ -1500,10 +1503,11 @@ public class BuilderImpl implements Builder {
 				trgts[t] = trgtTopics[t].getPipe(pt);
 	
 				List<PrivateTopic> localTargetTopics = null;
-				int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, targets[t]);
+				byte[] tbytes = CharSequenceToUTF8Local.get().convert(targets[t]).append(" ").asBytes();
+				int targetId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicTarget, tbytes, 0, tbytes.length, Integer.MAX_VALUE);
 				if (targetId<0) {
 					localTargetTopics = new ArrayList<PrivateTopic>();
-					privateTopicTarget.setUTF8Value( targets[t], privateTargetTopics.size());
+					privateTopicTarget.setValue(tbytes, privateTargetTopics.size());
 					privateTargetTopics.add(localTargetTopics);
 				} else {
 					localTargetTopics = privateTargetTopics.get(targetId); 
@@ -1550,7 +1554,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	void definePrivateTopic(PipeConfig<MessagePrivate> config, String topic, String source, String target) {
-		
+
 		boolean hideTopics = false;
 		PrivateTopic obj = new PrivateTopic(topic, config, hideTopics,
 				                            this);
@@ -1560,28 +1564,32 @@ public class BuilderImpl implements Builder {
 	}
 	
 	private void defPrivateTopic(String source, String target, PrivateTopic obj) {
+
 		List<PrivateTopic> localSourceTopics = null;
-		int sourceId = (int)TrieParserReader.query(reader, privateTopicSource, source);
+		byte[] bytes = CharSequenceToUTF8Local.get().convert(source).append(" ").asBytes();
+		int sourceId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicSource, bytes, 0, bytes.length, Integer.MAX_VALUE);
 		if (sourceId<0) {
 			localSourceTopics = new ArrayList<PrivateTopic>();
-			//logger.info("record source '{}'",source);
-			privateTopicSource.setUTF8Value(source, privateSourceTopics.size());
-			privateSourceTopics.add(localSourceTopics);
+			privateTopicSource.setValue(bytes, privateSourceTopics.size());
+			privateSourceTopics.add(localSourceTopics);		
 		} else {
 			localSourceTopics = privateSourceTopics.get(sourceId);
 		}
+		
 		localSourceTopics.add(obj);
 		
 		List<PrivateTopic> localTargetTopics = null;
-		int targetId = (int)TrieParserReader.query(reader, privateTopicTarget, target);
+		byte[] tbytes = CharSequenceToUTF8Local.get().convert(target).append(" ").asBytes();
+		int targetId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicTarget, tbytes, 0, tbytes.length, Integer.MAX_VALUE);
 		if (targetId<0) {
 			localTargetTopics = new ArrayList<PrivateTopic>();
 			//logger.info("record target '{}'",target);
-			privateTopicTarget.setUTF8Value(target, privateTargetTopics.size());
+			privateTopicTarget.setValue(tbytes, privateTargetTopics.size());
 			privateTargetTopics.add(localTargetTopics);
 		} else {
 			localTargetTopics = privateTargetTopics.get(targetId); 
 		}
+		
 		localTargetTopics.add(obj);
 	}
 
@@ -1880,8 +1888,10 @@ public class BuilderImpl implements Builder {
 							while (--j>=0) {
 								String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
 								if (null!=consumerName) {
-									definePrivateTopic(msgCommandChannel.pcm.getConfig(MessagePrivate.class), topic, producerName, consumerName);
-									madePrivate = true;
+						
+										definePrivateTopic(msgCommandChannel.pcm.getConfig(MessagePrivate.class), topic, producerName, consumerName);
+										madePrivate = true;
+	
 								}
 							}
 						} else {
