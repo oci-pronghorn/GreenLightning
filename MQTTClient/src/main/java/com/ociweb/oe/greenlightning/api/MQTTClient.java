@@ -35,9 +35,9 @@ public class MQTTClient implements GreenApp {
 		
 		ScriptedNonThreadScheduler.debugStageOrder = null;
 	
-		
 		final String brokerHost = "127.0.0.1"; //1883
-		//final String brokerHost = "172.16.10.28"; // Nathan's PC
+		//final String brokerHost = "172.16.10.52"; 
+		
 		//final String brokerHost = "thejoveexpress.local"; // Raspberry Pi0
 		
 		//final String brokerHost = "test.mosquitto.org";
@@ -46,7 +46,7 @@ public class MQTTClient implements GreenApp {
 		// Create a single mqtt client
 		mqttConfig = builder.useMQTT(brokerHost, port, name, 200) //default of 10 in flight
 							
-			//	.useTLS()
+				//.useTLS()
 							.cleanSession(true)
 							.keepAliveSeconds(10)
 							.lastWill("last/will", false, MQTTQoS.atLeastOnce, blobWriter -> {blobWriter.writeBoolean(true);});
