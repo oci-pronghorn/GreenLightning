@@ -23,6 +23,7 @@ import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.*;
 import com.ociweb.pronghorn.network.http.CompositePath;
 import com.ociweb.pronghorn.network.http.CompositeRoute;
+import com.ociweb.pronghorn.network.http.FieldExtractionDefinitions;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.http.HTTPClientRequestStage;
 import com.ociweb.pronghorn.network.schema.*;
@@ -893,19 +894,20 @@ public class BuilderImpl implements Builder {
 			}
 			
 			@Override
-			public ExtractedJSONFields parseJSON() {
+			public ExtractedJSONFieldsForRoute parseJSON() {
 								
-				JSONTable<JSONExtractor> ex = new JSONExtractor().begin();		
 				
-				return new ExtractedJSONFields() {
-										
+				return new ExtractedJSONFieldsForRoute() {
+
 					@Override
 					public CompositeRoute path(CharSequence path) {
 						return route = routerConfig().registerCompositeRoute(ex.finish(), headers).path(path);
 					}					
 					
+					JSONTable<JSONExtractor> ex = new JSONExtractor().begin();
+					
 					@Override
-					public <T extends Enum<T>> ExtractedJSONFields stringField(boolean isAligned, JSONAccumRule accumRule,
+					public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(boolean isAligned, JSONAccumRule accumRule,
 																				String extractionPath, T field) {
 						Object temp = ex.element(JSONType.TypeString, isAligned, accumRule).asField(extractionPath, field);
 						assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -913,7 +915,7 @@ public class BuilderImpl implements Builder {
 					}
 					
 					@Override
-					public <T extends Enum<T>> ExtractedJSONFields stringField(String extractionPath, T field) {
+					public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(String extractionPath, T field) {
 						Object temp = ex.element(JSONType.TypeString, false, null).asField(extractionPath, field);
 						assert(temp == ex) : "internal error, the same instance should have been returned";
 						return this;
@@ -921,7 +923,7 @@ public class BuilderImpl implements Builder {
 	
 					
 					@Override
-					public <T extends Enum<T>> ExtractedJSONFields integerField(boolean isAligned, JSONAccumRule accumRule,
+					public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(boolean isAligned, JSONAccumRule accumRule,
 							String extractionPath, T field) {
 						Object temp = ex.element(JSONType.TypeInteger, isAligned, accumRule).asField(extractionPath, field);
 						assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -929,14 +931,14 @@ public class BuilderImpl implements Builder {
 					}
 					
 					@Override
-					public <T extends Enum<T>> ExtractedJSONFields integerField(String extractionPath, T field) {
+					public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(String extractionPath, T field) {
 						Object temp = ex.element(JSONType.TypeInteger, false, null).asField(extractionPath, field);
 						assert(temp == ex) : "internal error, the same instance should have been returned";
 						return this;
 					}
 					
 					@Override
-					public <T extends Enum<T>> ExtractedJSONFields decimalField(boolean isAligned, JSONAccumRule accumRule,
+					public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(boolean isAligned, JSONAccumRule accumRule,
 							String extractionPath, T field) {
 						Object temp = ex.element(JSONType.TypeDecimal, isAligned, accumRule).asField(extractionPath, field);
 						assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -944,14 +946,14 @@ public class BuilderImpl implements Builder {
 					}
 					
 					@Override
-					public <T extends Enum<T>> ExtractedJSONFields decimalField(String extractionPath, T field) {
+					public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(String extractionPath, T field) {
 						Object temp = ex.element(JSONType.TypeDecimal, false, null).asField(extractionPath, field);
 						assert(temp == ex) : "internal error, the same instance should have been returned";
 						return this;
 					}
 					
 					@Override
-					public <T extends Enum<T>> ExtractedJSONFields booleanField(boolean isAligned, JSONAccumRule accumRule,
+					public <T extends Enum<T>> ExtractedJSONFieldsForRoute booleanField(boolean isAligned, JSONAccumRule accumRule,
 							String extractionPath, T field) {
 						Object temp = ex.element(JSONType.TypeBoolean, isAligned, accumRule).asField(extractionPath, field);
 						assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -959,7 +961,7 @@ public class BuilderImpl implements Builder {
 					}
 					
 					@Override
-					public <T extends Enum<T>> ExtractedJSONFields booleanField(String extractionPath, T field) {
+					public <T extends Enum<T>> ExtractedJSONFieldsForRoute booleanField(String extractionPath, T field) {
 						Object temp = ex.element(JSONType.TypeBoolean, false, null).asField(extractionPath, field);
 						assert(temp == ex) : "internal error, the same instance should have been returned";
 						return this;

@@ -4,7 +4,7 @@ import com.ociweb.pronghorn.network.http.CompositeRoute;
 
 public interface RouteDefinition {
 
-	ExtractedJSONFields parseJSON();
+	ExtractedJSONFieldsForRoute parseJSON();
 			
 	CompositeRoute path(CharSequence path);
 	
