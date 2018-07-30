@@ -249,37 +249,18 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	        }
 						
 			if (null!=behaviorName) {
-				
-				//TODO: if all the topics are private for this behavior we need to remove the pubSub pipes...
-				//TODO: private topics with n sources and 1 destination
-				
 				List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(nameId);
-				
-				System.out.println("YJY "+parallelInstance+"  "+behaviorName+" produces: "+
-				                       Arrays.toString(sourceTopics.toArray(new PrivateTopic[sourceTopics.size()])));
-				
 				int i = sourceTopics.size();
 				while (--i>=0) {
 					PrivateTopic privateTopic = sourceTopics.get(i);
 					outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe(parallelInstance));				
-				}
-				
-				
-				
-							
+				}		
 				List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(nameId);
-				
-				System.out.println("WTX "+parallelInstance+"  "+behaviorName+" consumes: "+
-	                       Arrays.toString(targetTopics.toArray(new PrivateTopic[targetTopics.size()])));
-				
-				
 				int j = targetTopics.size();
 				while (--j>=0) {
 					PrivateTopic privateTopic = targetTopics.get(j);
 					inputPipes = PronghornStage.join(inputPipes, privateTopic.getPipe(parallelInstance));
 				}
-				
-				
 	        	List<PrivateTopic> privateTopicList = builder.getPrivateTopicsFromTarget(nameId);
 	            
 				
