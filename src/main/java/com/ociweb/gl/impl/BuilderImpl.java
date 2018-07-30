@@ -179,7 +179,8 @@ public class BuilderImpl implements Builder {
 	    
     public final ReactiveOperators operators;
 
-    private final Set<String> behaviorNames = new HashSet<String>();
+    //NOTE: needs re-work to be cleaned up
+    private final HashMap<String,AtomicInteger> behaviorNames = new HashMap<String,AtomicInteger>();
 
 	/**
 	 * a method to validate fullName and add it to behaviorNames
@@ -192,21 +193,21 @@ public class BuilderImpl implements Builder {
     	
     	String fullName = behaviorName;
     	//confirm stage name is not found..
-    	if (behaviorNames.contains(behaviorName)) {
+    	if (behaviorNames.containsKey(behaviorName)) {
     		throw new UnsupportedOperationException("Duplicate name detected: "+behaviorName);
     	}
     	
     	if (trackId>=0) {
     		fullName = behaviorName+"."+trackId;
     		//additional check for name+"."+trackId
-    		if (behaviorNames.contains(fullName)) {
+    		if (behaviorNames.containsKey(fullName)) {
         		throw new UnsupportedOperationException("Duplicate name detected: "+fullName);
         	}
     		//add the name+"."+name
-    		behaviorNames.add(fullName);//never add the root since we are watching that no one else did.
+    		behaviorNames.put(fullName,new AtomicInteger());//never add the root since we are watching that no one else did.
     	} else {
     		//add the stage name
-    		behaviorNames.add(behaviorName);
+    		behaviorNames.put(behaviorName,new AtomicInteger());
     	}
     	
     	return fullName;
@@ -2085,6 +2086,18 @@ public class BuilderImpl implements Builder {
 				}
 			}
 		}
+	}
+
+	public String generateBehaviorName(Behavior listener) {
+		
+		String base = listener.getClass().getSimpleName();
+		synchronized(behaviorNames) {		
+			if (!behaviorNames.containsKey(base)) {
+				behaviorNames.put(base, new AtomicInteger());			
+			}
+		}
+		return base+behaviorNames.get(base).incrementAndGet();
+		
 	}
 	
 	/////////////////////////////////////////////////////////////
