@@ -1,6 +1,5 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
@@ -12,12 +11,12 @@ import com.ociweb.pronghorn.util.Appendables;
 public class RestBehaviorEmptyResponse implements RestListener {
 
 	private final int cookieHeader = HTTPHeaderDefaults.COOKIE.ordinal();
-	private final long nameFieldId;
+
 	private final HTTPResponseService cmd;
 	private final AppendableProxy console;
 	
-	public RestBehaviorEmptyResponse(GreenRuntime runtime, long nameFieldId, AppendableProxy console) {
-		this.nameFieldId = nameFieldId;
+	public RestBehaviorEmptyResponse(GreenRuntime runtime,AppendableProxy console) {
+
 		this.cmd = runtime.newCommandChannel().newHTTPResponseService();
 		this.console = console;
 	}
@@ -25,7 +24,7 @@ public class RestBehaviorEmptyResponse implements RestListener {
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
-	    int argInt = request.structured().readInt(nameFieldId);
+	    int argInt = request.structured().readInt(Params.MYARG);
 	    
 	    Appendables.appendValue(console, "Arg Int: ", argInt, "\n");
 	    		

@@ -23,11 +23,12 @@ import static org.junit.Assert.fail;
 /**
  * Unit test for simple App.
  */
-public class AppTest { 
+public class SimpleTest { 
 
 	private static int port = 8089;
+	private static int telemetryPort = 8096;
 	private final int timeoutMS = 20_000;
-	private final static Logger logger = LoggerFactory.getLogger(AppTest.class);
+	private final static Logger logger = LoggerFactory.getLogger(SimpleTest.class);
 	
 	 @Test
 	  public void testApp() {
@@ -41,12 +42,12 @@ public class AppTest {
    		    AtomicBoolean cleanExit = new AtomicBoolean(false);
 		    
 	   	    new Thread(()->{
-	   		    cleanExit.set(GreenRuntime.testConcurrentUntilShutdownRequested(new HTTPServer(host, port, result), timeoutMS));
+	   		    cleanExit.set(GreenRuntime.testConcurrentUntilShutdownRequested(new HTTPServer(host, port, result, telemetryPort), timeoutMS));
 	   		    done.set(true);
 	   	    }).start();
-   		    
+   		   
    		    simulateUser(host);
-		 
+		
    		    while (!done.get()) {
    		    	Thread.yield();
    		    }

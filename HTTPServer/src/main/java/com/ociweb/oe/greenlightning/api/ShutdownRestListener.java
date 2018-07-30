@@ -14,20 +14,19 @@ public class ShutdownRestListener implements RestListener{
 
 	private HTTPResponseService responseService;
 	private GreenCommandChannel newCommandChannel;
-	private final long keyFieldId;
+
 	private final byte[] pass = "shutdown".getBytes();
 	private static final Logger logger = LoggerFactory.getLogger(ShutdownRestListener.class);
 	
-	public ShutdownRestListener(GreenRuntime runtime, long keyFieldId) {
+	public ShutdownRestListener(GreenRuntime runtime) {
 		this.newCommandChannel = runtime.newCommandChannel();
 		this.responseService = newCommandChannel.newHTTPResponseService();		
-		this.keyFieldId = keyFieldId;
 	}
 
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
-		if (request.structured().isEqual(keyFieldId, pass)) {
+		if (request.structured().isEqual(Params.KEY, pass)) {
 			
 			if (!responseService.hasRoomFor(2)) {//reponse then shutdown
 				return false;
