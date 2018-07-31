@@ -1476,14 +1476,22 @@ public class BuilderImpl implements Builder {
 	@Override
 	public void definePrivateTopic(int queueLength, int maxMessageSize, String topic, String source, String ... targets) {
 		
+		PipeConfig<MessagePrivate> config = new PipeConfig<MessagePrivate>(MessagePrivate.instance, queueLength, maxMessageSize);
+				
+		defPrivateTopics(config, topic, source, targets);
+				
+		
+		
+	}
+
+	public void defPrivateTopics(PipeConfig<MessagePrivate> config, String topic, String source, String... targets) {
 		if (targets.length<=1) {
 			throw new UnsupportedOperationException("only call this with multiple targets");
 		}
 		
 		boolean hideTopics = false;
 		PrivateTopic sourcePT = new PrivateTopic(topic, 
-				                                 queueLength, 
-				                                 maxMessageSize, 
+												 config, 
 				                                 hideTopics,
 				                                 this);
 		
@@ -1509,7 +1517,7 @@ public class BuilderImpl implements Builder {
 			PrivateTopic[] trgtTopics = new PrivateTopic[t];
 			while (--t>=0) {
 				
-				trgtTopics[t] = new PrivateTopic(topic, trgtConfig, this);
+				trgtTopics[t] = new PrivateTopic(sourcePT.topic, trgtConfig, this);
 				
 				trgts[t] = trgtTopics[t].getPipe(pt);
 	
@@ -1529,12 +1537,6 @@ public class BuilderImpl implements Builder {
 			ReplicatorStage.newInstance(gm, src, trgts);
 		
 		}
-		
-		
-		
-		
-		
-		
 	}
 	
 	//these are to stop some topics from becomming private.
@@ -1892,19 +1894,40 @@ public class BuilderImpl implements Builder {
 						String producerName = msgCommandChannel.behaviorName();
 						if (null!=producerName) {
 							int j = possiblePrivateBehaviors[i].size();
-							if (j >= 1) {
-								actualPrivateTopicsFound++;
-							}
-							
-							while (--j>=0) {
-								String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
+							PipeConfig<MessagePrivate> config = msgCommandChannel.pcm.getConfig(MessagePrivate.class);
+
+						    if (j==1) {
+						    	String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(0))).behaviorName();
 								if (null!=consumerName) {
-						
-										definePrivateTopic(msgCommandChannel.pcm.getConfig(MessagePrivate.class), topic, producerName, consumerName);
+										definePrivateTopic(config, topic, producerName, consumerName);
 										madePrivate = true;
 	
 								}
+						    	
+						    } else if (j>1) {
+						    	String[] names = new String[j];
+						    							    	
+								while (--j>=0) {
+									String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
+									if (null==consumerName) {
+										reasonSkipped ="Reason: one of the consuming behaviors have no name.";
+										break;
+									}
+									names[j] = consumerName;
+								}
+								if (j<0) {
+									defPrivateTopics(config, topic, producerName, names);
+									madePrivate = true;
+								}
+							
+						    }
+							
+							if (madePrivate) {
+								actualPrivateTopicsFound++;
 							}
+							
+							
+							
 						} else {
 							reasonSkipped = "Reason: Behavior had no name";
 						}
