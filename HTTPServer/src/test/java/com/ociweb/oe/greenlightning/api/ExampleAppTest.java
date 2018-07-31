@@ -28,6 +28,8 @@ public class ExampleAppTest {
 	}
 
 	static GreenRuntime runtime;
+	static StringBuilder console;
+	
 	static int port = 8050;
 	static int telemetryPort = 8097;
 	static String host = "127.0.0.1";
@@ -42,7 +44,7 @@ public class ExampleAppTest {
 	@BeforeClass
 	public static void startServer() {
 		
-		StringBuilder console = new StringBuilder();
+		console = new StringBuilder();
 		runtime = GreenRuntime.run(new HTTPServer(host,port,console,telemetryPort));
 		
 	}
@@ -141,6 +143,26 @@ public class ExampleAppTest {
 	//	assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
 
 	}
+	
+	@Test
+	public void pageBTest() {
+		
+		StringBuilder results = LoadTester.runClient(
+				()-> null, 
+				(r)->{					
+						return  (HTTPContentTypeDefaults.PLAIN==r.contentType()) 
+								&& "beginning of text file\n".equals(r.structured().readPayload().readUTFFully());
+					  }, 
+				"/testPageB", 
+				useTLS, telemetry, 
+				parallelTracks, cyclesPerTrack, 
+				host, port, timeoutMS);		
+		
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
+
+	}
+
+	
 	
 	
 }

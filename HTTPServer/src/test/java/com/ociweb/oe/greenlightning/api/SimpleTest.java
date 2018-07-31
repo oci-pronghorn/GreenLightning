@@ -2,6 +2,8 @@ package com.ociweb.oe.greenlightning.api;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.util.Appendables;
+
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,13 +32,13 @@ public class SimpleTest {
 	private final int timeoutMS = 20_000;
 	private final static Logger logger = LoggerFactory.getLogger(SimpleTest.class);
 	
-	 @Test
-	  public void testApp() {
+	 @Ignore
+	  public void movingThisApp() {
 		 
    		    String host = "127.0.0.1";
 		    
    		    final StringBuilder result = new StringBuilder();
-   		    final long timeoutMS = 20_000;
+   		    final long timeoutMS = 200_000;
 			
    		    AtomicBoolean done = new AtomicBoolean(false);
    		    AtomicBoolean cleanExit = new AtomicBoolean(false);
