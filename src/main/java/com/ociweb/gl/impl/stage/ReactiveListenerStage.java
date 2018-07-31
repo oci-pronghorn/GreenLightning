@@ -6,6 +6,8 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
+import javax.print.attribute.standard.MediaSize.Engineering;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,6 +41,8 @@ import com.ociweb.gl.impl.RestMethodListenerBase;
 import com.ociweb.gl.impl.StartupListenerBase;
 import com.ociweb.gl.impl.TickListenerBase;
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
+import com.ociweb.gl.impl.mqtt.EgressMQTTBehavior;
+import com.ociweb.gl.impl.mqtt.IngressMQTTBehavior;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
@@ -51,6 +55,7 @@ import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerb;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.http.NetResponseJSONExtractionStage;
+import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
@@ -335,6 +340,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	        	int shudownListenrCount = builder.liveShutdownListeners.incrementAndGet();
 	        	assert(shudownListenrCount>=0);
 	        }
+	        
+
 	
 	        GraphManager.addNota(graphManager, GraphManager.STAGE_NAME,
 					this.behaviorName, this.realStage);
@@ -353,13 +360,20 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	        	toStringDetails = toStringDetails+"StartupListener\n";
 	        }
 	        
+	        GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "burlywood2", this.realStage);
 	        
 	        if (listener instanceof RestListenerBase) {
 				GraphManager.addNota(graphManager, GraphManager.DOT_RANK_NAME, "ModuleStage", this.realStage);
 				
-			}
+			} else if (listener instanceof IngressMQTTBehavior) {
+	        	GraphManager.addNota(graphManager, GraphManager.DOT_RANK_NAME, "SocketReader", this.realStage);
+	        	GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, MQTTClientGraphBuilder.BACKGROUND_COLOR, this.realStage);
+	        } else if (listener instanceof EgressMQTTBehavior) {
+	        	GraphManager.addNota(graphManager, GraphManager.DOT_RANK_NAME, "SocketWriter", this.realStage);
+	        	GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, MQTTClientGraphBuilder.BACKGROUND_COLOR, this.realStage);
+	        }
 	        
-	        GraphManager.addNota(graphManager, GraphManager.DOT_BACKGROUND, "burlywood2", this.realStage);
+	        
 	        
 	        if (isolate) {
 	    		GraphManager.addNota(graphManager, 
