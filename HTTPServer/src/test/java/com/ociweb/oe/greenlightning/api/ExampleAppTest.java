@@ -162,7 +162,59 @@ public class ExampleAppTest {
 
 	}
 
+	@Test
+	public void pageATest() {
+		
+		console.setLength(0);
+		
+		StringBuilder results = LoadTester.runClient(
+				()-> null, 
+				(r)-> 0 == r.structured().readPayload().available(), 
+				"/testPageA?arg=42", 
+				useTLS, telemetry, 
+				1, 1, 
+				host, port, timeoutMS);		
+		
+		assertTrue(console.toString(), console.indexOf("Arg Int: 42\nCOOKIE: ")>=0); //test adds a cookie by default..
+
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);
+
+		
+	}
+	
+	@Test
+	public void pageCTest() {
+		
+		console.setLength(0);
+		
+		StringBuilder results = LoadTester.runClient(
+				()-> null, 
+				(r)-> 0 == r.structured().readPayload().available(), 
+				"/testPageC", 
+				useTLS, telemetry, 
+				1, 1, 
+				host, port, timeoutMS);		
+		
+		assertTrue(console.toString(), console.indexOf("COOKIE: ")>=0); //test adds a cookie by default..
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);		
+	}
 	
 	
-	
+	@Test
+	public void pageDTest() {
+		
+		console.setLength(0);
+		
+		StringBuilder results = LoadTester.runClient(
+				()-> (w)->w.append("payload"), 
+				(r)-> {
+						return "sent by responder".equals(r.structured().readPayload().readUTFFully());
+					},
+				"/testpageD", 
+				useTLS, telemetry, 
+				1, 1, 
+				host, port, timeoutMS);		
+		
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);		
+	}
 }

@@ -56,13 +56,7 @@ public class HTTPServer implements GreenApp
 		c.defineRoute(HTTPHeaderDefaults.COOKIE)
 				                  .path("/testpageC").routeId(Routes.LARGE_EXAMPLE);
 		c.defineRoute().path("/testpageD").routeId(Routes.SPLIT_EXAMPLE);
-		
-		//only do in test mode... 
-		//in production it is a bad idea to let clients turn off server.
-		c.defineRoute().path("/shutdown?key=${key}")
-						.associatedObject("key", Params.KEY)
-						.routeId(Routes.SHUTDOWN_EXAMPLE);
-		
+
 		c.defineRoute()
 		    .parseJSON()
 		    	.stringField( "person.name", Params.PERSON_NAME)
@@ -100,11 +94,7 @@ public class HTTPServer implements GreenApp
 		
         runtime.registerListener(new RestBehaviorHandoffResponder(runtime, console))
                  .addSubscription(topic);
-        
-        
-        runtime.addRestListener(new ShutdownRestListener(runtime))
-                  .includeRoutesByAssoc(Routes.SHUTDOWN_EXAMPLE);
-        
+  
         runtime.addRestListener(new RestBehaviorJsonResponce(runtime, console))
         		  .includeRoutesByAssoc(Routes.JSON_EXAMPLE);
         
