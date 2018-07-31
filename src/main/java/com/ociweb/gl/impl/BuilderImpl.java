@@ -2107,9 +2107,9 @@ public class BuilderImpl implements Builder {
 
 	public void populatePrivateTopicPipeNames(byte[][] names) {
 		
-		int t = privateSourceTopics.size();
-		while (--t>=0) {
-			List<PrivateTopic> local = privateSourceTopics.get(t);
+		int st = privateSourceTopics.size();
+		while (--st>=0) {
+			List<PrivateTopic> local = privateSourceTopics.get(st);
 			if (null!=local) {
 				int l = local.size();
 				while (--l>=0) {
@@ -2117,6 +2117,19 @@ public class BuilderImpl implements Builder {
 				}
 			}
 		}
+		
+		int tt = privateTargetTopics.size();
+		while (--tt>=0) {
+			List<PrivateTopic> local = privateTargetTopics.get(tt);
+			if (null!=local) {
+				int l = local.size();
+				while (--l>=0) {
+					local.get(l).populatePrivateTopicPipeNames(names);
+				}
+			}
+			
+		}
+		
 	}
 
 	public String generateBehaviorName(Behavior listener) {
