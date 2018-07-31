@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -762,7 +763,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		Pipe<ServerResponseSchema>[] outputs = new Pipe[1];		
 		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
 				
-		ResourceModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot.endsWith("/")?resourceRoot: (resourceRoot+'/'), resourceDefault);
+		ResourceModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
 					
 		return new StageRouteFilter(inputs[0], builder, parallelIndex);
 				
@@ -778,6 +779,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		if (null == fileRequestConfig) {
 			fileRequestConfig = builder.pcm.getConfig(HTTPRequestSchema.class).grow2x();
 		}
+		
 		inputs[idx] = builder.newHTTPRequestPipe(fileRequestConfig);
 		outputs[idx] = builder.newNetResponsePipe(builder.pcm.getConfig(ServerResponseSchema.class), parallelIndex);
 

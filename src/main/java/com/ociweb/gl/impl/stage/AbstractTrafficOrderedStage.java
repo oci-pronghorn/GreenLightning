@@ -67,7 +67,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 
 		super(graphManager, join(goPipe, inputData), join(ackPipe, otherResponse));
 	       
-		assert(inputData.length >= goPipe.length);
+		assert(inputData.length >= goPipe.length) : "input "+inputData.length+" vs go "+ goPipe.length;
 		
 		logger.info("Warning, 2ms latency may be introduced due to longer timeout on traffic stages. {}",this.getClass().getSimpleName());
 		

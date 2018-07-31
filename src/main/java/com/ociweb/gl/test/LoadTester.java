@@ -64,9 +64,10 @@ public class LoadTester {
 
 		StringBuilder captured = new StringBuilder();
 		testerConfig.target = captured;
-
+		
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload(); // calling get
 
+		
 		payload.post = testData;
 
 		payload.validate = new Supplier<HTTPResponseListener>() {

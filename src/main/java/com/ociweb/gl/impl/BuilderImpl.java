@@ -301,7 +301,7 @@ public class BuilderImpl implements Builder {
 			throw new RuntimeException("Server already enabled");
 		}
 		
-		return server = new HTTPServerConfigImpl(bindPort, pcm, gm.recordTypeData);
+		return server = new HTTPServerConfigImpl(bindPort, this.pcm, gm.recordTypeData);
 	}
 
 	public final HTTPServerConfig getHTTPServerConfig() {

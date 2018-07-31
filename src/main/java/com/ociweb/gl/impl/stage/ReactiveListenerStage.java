@@ -1645,9 +1645,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		int behaviorId = builder.behaviorId(listener);		
 		int j = httpSessions.length;
 		while(--j >= 0) {
-						
-			Pipe<NetResponseSchema> buildNetResponsePipe = builder.buildNetResponsePipe();
-			
+
 			//NOTE: this is not a good implementation and should be revisited at some point.
 			//     we could store the pipeId instead then use the graph to look them up directly.
 			int pipeIdx = builder.netResponsePipeIdxCounter++; //depends on graph returning the same order.
@@ -1663,22 +1661,26 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				builder.registerHTTPClientId(behaviorId, pipeIdx);            
 			}
 
-		    logger.trace("register session {} with pipe {}",httpSessions[j].sessionId,pipeIdx);
+		    logger.info("\nregister session {} with pipe {}",httpSessions[j].sessionId,pipeIdx);
 		    
+			Pipe<NetResponseSchema> buildNetResponsePipe = builder.buildNetResponsePipe();
+			
 		    JSONExtractorCompleted ex = httpSessions[j].jsonExtractor();
-		    if (null!=ex) {
+		    if (null != ex) {
 		    
 		    	//add this JSON extraction to the struct associated with this session
 				ex.addToStruct(builder.gm.recordTypeData, ClientCoordinator.structureId(httpSessions[j].sessionId, builder.gm.recordTypeData));		    	
+								
 				
-		    	Pipe<NetResponseSchema> secondPipe = builder.buildNetResponsePipe();
-		    			    	
+		    	Pipe<NetResponseSchema> secondPipe = builder.buildNetResponsePipe();		    			    	
 		    	new NetResponseJSONExtractionStage(builder.gm, ex, buildNetResponsePipe, secondPipe);
 		    	//the output pipe here goes into the inputs for our stage
-		    	buildNetResponsePipe = secondPipe;
+		    	buildNetResponsePipe = secondPipe;		    	
+		
 		    	
 		    }
-		    //grow
+		    
+		    //These are inputs to this reactive lister
 		    inputPipes = PronghornStage.join(inputPipes, buildNetResponsePipe);
 		    
 		}

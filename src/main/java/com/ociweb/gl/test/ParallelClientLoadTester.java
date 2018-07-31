@@ -392,6 +392,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					new HeaderWritable() {
 						@Override
 						public void write(HeaderWriter writer) {
+							
 							writer.writeUTF8(HTTPHeaderDefaults.COOKIE, 
 										    largeCookie);
 							
@@ -457,7 +458,11 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				
 				boolean wasSent;
 				if (null==writer) {
-					wasSent = httpGet();
+					if (header != null) {
+						wasSent = httpGetWithHeader();
+					} else {
+						wasSent = httpGet();
+					}
 				} else if (header != null) {
 					wasSent = httpPostWithHeader();
 				} else {
@@ -511,6 +516,32 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			return wasSent;
 		}
 
+		private boolean httpGetWithHeader() {
+			boolean wasSent;
+			
+			//Hack test
+			//if we close every call this should work fine but it does not
+			//this can be either side causing the issue and must be resolved.
+			
+			
+			if (callCounter<cyclesPerTrack) {
+				wasSent = httpClientService.httpGet(session[track], route, header);		
+			} else {
+				wasSent = httpClientService.httpGet(session[track], route, allHeaders);	
+				//add boolean for easier time of this.. :TODO: API change.
+		
+				if (insecureClient) {
+					//TODO: urgent fix we need to not start the close too early when using TLS
+					//NOTE: when TLS is on this close happens too soon since we have a final handshake in it holds the last request				
+					httpClientService.httpClose(session[track]);//we wrote the close header must follow with close.
+				}
+				if (wasSent) {
+					session[track] = null;//ensure never used after this point.
+				}
+			}
+			return wasSent;
+		}
+		
 		private boolean httpPostWithHeader() {
 			boolean wasSent = false;
 			if (null != session[track]) {			
