@@ -1051,17 +1051,16 @@ public class BuilderImpl implements Builder {
 		defaultSleepRateNS = Math.max(ns, MIN_CYCLE_RATE); //protect against negative and zero
 	}
 
-
 	public void buildStages(MsgRuntime runtime) {
 
 		IntHashTable subscriptionPipeLookup2 = MsgRuntime.getSubPipeLookup(runtime); 
 		GraphManager gm = MsgRuntime.getGraphManager(runtime);
 
-		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfTypeWithNoProducer(gm, NetResponseSchema.instance);
 		Pipe<MessageSubscription>[] subscriptionPipes = GraphManager.allPipesOfTypeWithNoProducer(gm, MessageSubscription.instance);
+		Pipe<NetResponseSchema>[] httpClientResponsePipes = GraphManager.allPipesOfTypeWithNoProducer(gm, NetResponseSchema.instance);
 		
-		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, TrafficOrderSchema.instance);
 		
+		Pipe<TrafficOrderSchema>[] orderPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, TrafficOrderSchema.instance);		
 		Pipe<ClientHTTPRequestSchema>[] httpClientRequestPipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, ClientHTTPRequestSchema.instance);			
 		Pipe<MessagePubSub>[] messagePubSub = GraphManager.allPipesOfTypeWithNoConsumer(gm, MessagePubSub.instance);
 		Pipe<IngressMessages>[] ingressMessagePipes = GraphManager.allPipesOfTypeWithNoConsumer(gm, IngressMessages.instance);
@@ -1090,9 +1089,9 @@ public class BuilderImpl implements Builder {
 		}		
 		if (IDX_NET >= 0) {
 
-			assert(httpClientResponsePipes.length>0);
-			masterGoOut[IDX_NET] = new Pipe[httpClientResponsePipes.length];
-			masterAckIn[IDX_NET] = new Pipe[httpClientResponsePipes.length];
+			assert(httpClientRequestPipes.length>0);
+			masterGoOut[IDX_NET] = new Pipe[httpClientRequestPipes.length];
+			masterAckIn[IDX_NET] = new Pipe[httpClientRequestPipes.length];
 		}		
 				
 		int copGoAck = commandChannelCount;
@@ -1126,6 +1125,9 @@ public class BuilderImpl implements Builder {
 		}
 				
 		initChannelBlocker(maxGoPipeId);
+
+
+
 		
 		buildHTTPClientGraph(runtime, httpClientResponsePipes, httpClientRequestPipes, masterGoOut, masterAckIn);
 		
@@ -1171,6 +1173,11 @@ public class BuilderImpl implements Builder {
 			int outputsCount = 8; //Multipler per session for total connections ,count of pipes to channel writer
 			int clientWriters = 1; //count of channel writer stages
 
+			int releaseCount = 1024;
+			int responseUnwrapCount = 2;
+			int clientWrapperCount = 2;
+	
+			
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					
 			//BUILD GRAPH
@@ -1187,6 +1194,11 @@ public class BuilderImpl implements Builder {
 				//this one has much lower latency and should be used if possible
 				new HTTPClientRequestStage(gm, ccm, netRequestPipes, clientRequests);
 			} else {	
+				
+				assert(netRequestPipes.length == masterGoOut[IDX_NET].length);
+				assert(masterAckIn[IDX_NET].length == masterGoOut[IDX_NET].length);
+				
+				
 				logger.info("Warning, the slower HTTP Client Request code was called. 2ms latency may be introduced.");
 				
 				//this may stay for as long as 2ms before returning due to timeout of
@@ -1198,10 +1210,6 @@ public class BuilderImpl implements Builder {
 						clientRequests);
 			}
 
-			int releaseCount = 1024;
-			int responseUnwrapCount = 2;
-			int clientWrapperCount = 2;
-	
 			
 			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
 												responseQueue, clientRequests, 
