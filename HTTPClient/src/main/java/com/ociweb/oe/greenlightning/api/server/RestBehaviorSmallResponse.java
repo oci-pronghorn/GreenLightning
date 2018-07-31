@@ -15,8 +15,8 @@ public class RestBehaviorSmallResponse implements RestListener {
 	
     public static final JSONRenderer<Object> renderer = new JSONRenderer<Object>()
             .beginObject()
-            .integer("ID1", (x) -> 123)
-            .string("ID2", (x,w) -> {w.append("hello");})
+            .integer("age", (x) -> 123)
+            .string("name", (x,w) -> {w.append("bob");})
             .endObject();
     
 	public RestBehaviorSmallResponse(GreenRuntime runtime, AppendableProxy console) {	

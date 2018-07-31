@@ -2,16 +2,18 @@ package com.ociweb.oe.greenlightning.api;
 
 
 import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.json.JSONExtractorCompleted;
-import com.ociweb.json.JSONType;
-import com.ociweb.gl.api.ClientHostPortInstance;
+import com.ociweb.gl.api.HTTPClientConfig;
 
 public class HTTPClient implements GreenApp
 {
-    private ClientHostPortInstance session;
+    private ClientHostPortInstance session1;
+    private ClientHostPortInstance session2;
+    
     private boolean telemetry;
+    private StringBuilder console = new StringBuilder();
     
     public HTTPClient(boolean telemetry) {
     	this.telemetry = telemetry;
@@ -20,40 +22,38 @@ public class HTTPClient implements GreenApp
     @Override
     public void declareConfiguration(Builder c) {
     	//c.useInsecureNetClient();
-        JSONExtractorCompleted extractor =
-        		c.defineJSONSDecoder()
-        		 .begin()
-        		 .element(JSONType.TypeInteger)
-        		 .asField("ID1", Fields.ID1)
-        		 
-        		 .element(JSONType.TypeString)
-        		 .asField("ID2", Fields.ID2)
-        		 .finish();
-        		 
-		session = c.useNetClient()
+
+		HTTPClientConfig netClientConfig = c.useInsecureNetClient();//NetClient();
+		session1 = netClientConfig
         		   .createHTTP1xClient("127.0.0.1", 8088)
-        		   .setExtractor(extractor)
+	       		   .parseJSON()
+	       		    .integerField("age", Fields.AGE) 
+			    	.stringField("name", Fields.NAME)
         		   .finish();
+		
+		session2 = netClientConfig
+     		   		.createHTTP1xClient("127.0.0.1", 8088)     		   		
+	       		    .parseJSON()	       		   
+	       		     .integerField("age", Fields.AGE)
+			      	 .stringField("name", Fields.NAME)     		   
+			      	.finish();
         
         if (telemetry) {
         	c.enableTelemetry();
         }
-        
-        //{"ID1":123,"ID2":"hello"}
     }
 
     @Override
     public void declareBehavior(GreenRuntime runtime) {
     	
-    	HTTPGetBehaviorSingle temp = new HTTPGetBehaviorSingle(runtime, session);
-		runtime.addStartupListener("startupBehavior",temp)
-		               .acceptHostResponses(session)  //this line is required to use JSON extraction even to self behavior as consumer 
-		               .addSubscription("next");
+    	HTTPGetBehaviorSingle temp = new HTTPGetBehaviorSingle(runtime, session1);
 			   	
-		//HTTPSession session = new HTTPSession("127.0.0.1",8088,0);
-    	//runtime.addResponseListener(new HTTPResponse()).includeHTTPSession(session);    	
-    	//runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, session));
-    	    	
+    	runtime.addResponseListener(new HTTPResponse(console)).acceptHostResponses(session2);    	
+    	runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, session2));
+
+    	runtime.addStartupListener("startupBehavior",temp)
+							    	.acceptHostResponses(session1)  //this line is required to use JSON extraction even to self behavior as consumer 
+							    	.addSubscription("next");
     	
     	runtime.addPubSubListener("shutdownBehavior",new ShutdownBehavior(runtime)).addSubscription("shutdown");
     	

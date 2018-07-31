@@ -35,12 +35,15 @@ public class HTTPServer implements GreenApp
     @Override
     public void declareConfiguration(Builder c) {
         
-    	c.limitThreads(2);//limiting the threads
     	
     	HTTPServerConfig conf = c.useHTTP1xServer(8088)
-    			.setHost(host);
+    			.setHost(host)
     			
-    			//.useInsecureServer();
+    			.useInsecureServer()
+    			
+    			.setConcurrentChannelsPerDecryptUnit(4)
+    			.setConcurrentChannelsPerEncryptUnit(4);
+    			
     			
 		
 		//emptyResponseRouteId = c.registerRoute("/testpageA?arg=#{myarg}", cookieHeader);
