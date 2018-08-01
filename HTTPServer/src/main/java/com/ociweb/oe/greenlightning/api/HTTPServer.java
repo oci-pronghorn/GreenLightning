@@ -6,6 +6,7 @@ import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.json.JSONType;
 import com.ociweb.json.decode.JSONExtractor;
+import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
@@ -17,29 +18,35 @@ public class HTTPServer implements GreenApp
 	private final String host;
 	private final int port;
 	private final int telemetryPort;
+	private final boolean isTLS;
 	
-	public HTTPServer(String host, int port, Appendable console, int telemetryPort) {
+	public HTTPServer(String host, int port, Appendable console, int telemetryPort, boolean isTLS) {
 		this.host = host;
 		this.console = Appendables.proxy(console);
 		this.port = port;
 		this.telemetryPort = telemetryPort;
+		this.isTLS = isTLS;
 	}
 
-	public HTTPServer(int port, Appendable console, int telemetryPort) {
+	public HTTPServer(int port, Appendable console, int telemetryPort, boolean isTLS) {
 		this.host = null;
 		this.console = Appendables.proxy(console);
 		this.port = port;
 		this.telemetryPort = telemetryPort;
+		this.isTLS = isTLS;
 	}
 	
     @Override
     public void declareConfiguration(Builder c) {
         
-		c.useHTTP1xServer(port)
+		HTTPServerConfig server = c.useHTTP1xServer(port)
 		 .setHost(host)
 		 .setTracks(2)
-		 .setConcurrentChannelsPerDecryptUnit(2)
 		 .setMaxResponseSize(1<<18);
+		
+		if (!isTLS) {
+			server.useInsecureServer();
+		}
 		
 		if (telemetryPort>0) {
 			c.enableTelemetry(telemetryPort);

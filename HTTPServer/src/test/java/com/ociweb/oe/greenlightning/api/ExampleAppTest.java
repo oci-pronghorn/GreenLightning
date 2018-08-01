@@ -11,6 +11,7 @@ import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.http.HTTP1xResponseParserStage;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class ExampleAppTest {
@@ -35,17 +36,17 @@ public class ExampleAppTest {
 	static String host = "127.0.0.1";
 	
 	int timeoutMS = 60_000;	
-	boolean useTLS = true;
 	boolean telemetry = false;
-	int parallelTracks = 2;
 	int cyclesPerTrack = 100;
 
+	static boolean useTLS = true;
+	int parallelTracks = 2; //NOTE: this number must be lower than the server connections when using TLS because rounds of handshake may cause hang.
 	
 	@BeforeClass
 	public static void startServer() {
 		
 		console = new StringBuilder();
-		runtime = GreenRuntime.run(new HTTPServer(host,port,console,telemetryPort));
+		runtime = GreenRuntime.run(new HTTPServer(host,port,console,telemetryPort, useTLS));
 		
 	}
 		
@@ -68,8 +69,12 @@ public class ExampleAppTest {
 		StringBuilder results = LoadTester.runClient(
 				()->testData, 
 				(r)->{
-						return "{\"name\":\"bob\",\"isLegal\":true}".equals(r.structured().readPayload().readUTFFully())
-								&& (HTTPContentTypeDefaults.JSON == r.contentType());
+						String readUTFFully = r.structured().readPayload().readUTFFully();
+						boolean isMatch = "{\"name\":\"bob\",\"isLegal\":true}".equals(readUTFFully);
+						if (!isMatch) {
+							System.out.println("bad response: "+readUTFFully);
+						}
+						return isMatch && (HTTPContentTypeDefaults.JSON == r.contentType());
 					  }, 
 				"/testJSON", 
 				useTLS, telemetry, 
@@ -114,8 +119,19 @@ public class ExampleAppTest {
 		StringBuilder results = LoadTester.runClient(
 				()-> null, 
 				(r)->{
-						return  (HTTPContentTypeDefaults.HTML==r.contentType()) 
-								&& "hello world".equals(r.structured().readPayload().readUTFFully());
+						String payload = r.structured().readPayload().readUTFFully();
+						boolean matches = 200==r.statusCode()
+							&& (HTTPContentTypeDefaults.HTML==r.contentType()) 
+							&& "hello world".equals(payload);
+						if (!matches) {
+							
+							System.out.println("response code: "+r.statusCode());
+							System.out.println("content type: "+r.contentType());
+							System.out.println("payload: "+payload);
+							
+						}						
+						return  matches;
+						
 					  }, 
 				"/files/index.html", 
 				useTLS, telemetry, 
