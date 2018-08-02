@@ -26,6 +26,7 @@ import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.IngressConverter;
+import com.ociweb.gl.impl.stage.PendingStageBuildable;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
@@ -51,6 +52,7 @@ import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
+import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
@@ -830,15 +832,24 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     ///////////////////////////
 	//end of file server
 	///////////////////////////
-
-	//adding support for blocking
+	
+	
+	public <T extends BlockingBehavior> void registerBlockingListener(
+			Class<T> clazz,
+			Object chosserFieldAssoc,
+			int threadsCount,
+			long timeoutNS, String topicIn, String topicOut) {
+		registerBlockingListener(null, clazz, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
+	}
+	
+	
 	public <T extends BlockingBehavior> void registerBlockingListener(
 			String behaviorName,
 			Class<T> clazz,
 			Object chosserFieldAssoc,
 			int threadsCount,
-			long timeoutNS) {
-		registerBlockingListener(behaviorName, new BlockingBehaviorProducer() {
+			long timeoutNS, String topicIn, String topicOut) {
+		registerBlockingListener(null==behaviorName?builder.generateBehaviorNameFromClass(clazz):behaviorName, new BlockingBehaviorProducer() {
 			@Override
 			public BlockingBehavior produce() {
 				try {
@@ -847,30 +858,67 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					throw new RuntimeException(e);
 				}
 			}
-		}, chosserFieldAssoc, threadsCount, timeoutNS);
+		}, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
 	}
 
-	//adding support for blocking
-	public <T extends BlockingBehavior> void registerBlockingListener(
+	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> void registerBlockingListener(
+			P producer,
+			Object chosserFieldAssoc,
+			int threadsCount,
+			long timeoutNS, String topicIn, String topicOut) {
+		registerBlockingListener(null, producer, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
+	}
+	
+	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> void registerBlockingListener(
 			String behaviorName,
-			BlockingBehaviorProducer producer,
+			P producer,
 			Object chooserFieldAssoc,
 			int threadsCount,
-			long timeoutNS) {
+			long timeoutNS, 
+			String topicIn,
+			String topicOut) {
 	
-		if (null==behaviorName) {
-			throw new UnsupportedOperationException("All blocking behaviors must be named.");
+		if (null == behaviorName) {
+			//by default unless a name is given use the behavior
+			behaviorName = builder.generateBehaviorName(producer);
 		}
-		String behaviorNameLocal = builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);
+	
+		byte[] track = parallelInstanceUnderActiveConstruction<0 ? null : BuilderImpl.trackNameBuilder(parallelInstanceUnderActiveConstruction);
+		
+		BuilderImpl.buildTrackTopic(topicIn, track);
+		
+		builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);	
+		
+//		builder.possiblePrivateTopicConsumer(BuilderImpl.buildTrackTopic(topicIn, track), behaviorName);		
+//		builder.possiblePrivateTopicProducer(null, behaviorName,BuilderImpl.buildTrackTopic(topicOut, track));
 				
-		List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(behaviorName);
-		if (1 != sourceTopics.size()) {
-			throw new UnsupportedOperationException("Blocking behavior only supports 1 private source topic at this time. found:"+sourceTopics.size());
-		}
-		List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(behaviorName);
-		if (1 != targetTopics.size()) {
-			throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
-		}
+		
+		final String name = behaviorName;
+		PendingStageBuildable pendingBuilder = new PendingStageBuildable() {
+
+			@Override
+			public void initRealStage() {
+			
+				List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(name);
+				if (1 != sourceTopics.size()) {
+					throw new UnsupportedOperationException("Blocking behavior only supports 1 private source topic at this time. found:"+sourceTopics.size());
+				}
+				List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(name);
+				if (1 != targetTopics.size()) {
+					throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
+				}
+				
+				buildBlockingStage(producer, chooserFieldAssoc, threadsCount, timeoutNS, sourceTopics, targetTopics);
+								
+			}
+		};
+		builder.pendingInit(pendingBuilder);
+		
+	}
+	
+
+	private <P extends BlockingBehaviorProducer> void buildBlockingStage(P producer, Object chooserFieldAssoc,
+			int threadsCount, long timeoutNS, List<PrivateTopic> sourceTopics, List<PrivateTopic> targetTopics) {
 		
 		Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);				
 		assert(null!=input);		
@@ -883,7 +931,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				chooserFieldAssoc, threadsCount, BlockableStageFactory.streamOffset(input));
 		
 		BlockableStageFactory.buildBlockingSupportStage(gm, timeoutNS, threadsCount, input, output, timeout, producer, chooser);
-	
 	}
 	
 	

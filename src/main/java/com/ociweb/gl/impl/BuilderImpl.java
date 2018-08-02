@@ -232,10 +232,6 @@ public class BuilderImpl implements Builder {
 			//must grow first since we are adding many entries
 			netPipeLookup = IntHashTable.doubleSize(netPipeLookup);			
 		}
-				
-		//TODO: netPipeLookup is the entry point for JSON extraction??
-		//      we need to store extractor so its done when we do the lookup.
-				
 		boolean addedItem = IntHashTable.setItem(netPipeLookup, uniqueId, pipeIdx);
         if (!addedItem) {
         	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"
@@ -1170,13 +1166,15 @@ public class BuilderImpl implements Builder {
 			int responseQueue = 10;
 			
 			//must be adjusted together
-			int outputsCount = 8; //Multipler per session for total connections ,count of pipes to channel writer
-			int clientWriters = 1; //count of channel writer stages
 
 			int releaseCount = 1024;
-			int responseUnwrapCount = 2;
-			int clientWrapperCount = 2;
+			int responseUnwrapCount = this.client.isTLS()? 2 : 1;
+			int clientWrapperCount = this.client.isTLS()? 2 : 1;
+			int outputsCount = clientWrapperCount*(this.client.isTLS()? 2 : 1); //Multipler per session for total connections ,count of pipes to channel writer
 	
+			//due to deadlocks which may happen in TLS handshake we must have as many or more clientWriters
+			//as we have SSLEngineUnwrapStages so each can complete its handshake
+			int clientWriters = responseUnwrapCount; //count of channel writer stages, can be larger than Unwrap count if needed
 			
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					
@@ -1562,7 +1560,9 @@ public class BuilderImpl implements Builder {
 				                            maxMessageSize, hideTopics,
 				                            this);
 		
-		defPrivateTopic(source, target, obj);
+		privateTopicsFromProducer(source).add(obj);
+		
+		privateTopicsFromConsumer(target).add(obj);
 		
 	}
 
@@ -1572,38 +1572,40 @@ public class BuilderImpl implements Builder {
 		PrivateTopic obj = new PrivateTopic(topic, config, hideTopics,
 				                            this);
 		
-		defPrivateTopic(source, target, obj);
+		privateTopicsFromProducer(source).add(obj);
+		
+		privateTopicsFromConsumer(target).add(obj);
 		
 	}
-	
-	private void defPrivateTopic(String source, String target, PrivateTopic obj) {
 
-		List<PrivateTopic> localSourceTopics = null;
-		byte[] bytes = CharSequenceToUTF8Local.get().convert(source).append(" ").asBytes();
-		int sourceId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicSource, bytes, 0, bytes.length, Integer.MAX_VALUE);
-		if (sourceId<0) {
-			localSourceTopics = new ArrayList<PrivateTopic>();
-			privateTopicSource.setValue(bytes, privateSourceTopics.size());
-			privateSourceTopics.add(localSourceTopics);		
-		} else {
-			localSourceTopics = privateSourceTopics.get(sourceId);
-		}
-		
-		localSourceTopics.add(obj);
-		
+	
+	private List<PrivateTopic> privateTopicsFromConsumer(String target) {
 		List<PrivateTopic> localTargetTopics = null;
 		byte[] tbytes = CharSequenceToUTF8Local.get().convert(target).append(" ").asBytes();
 		int targetId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicTarget, tbytes, 0, tbytes.length, Integer.MAX_VALUE);
 		if (targetId<0) {
 			localTargetTopics = new ArrayList<PrivateTopic>();
 			//logger.info("record target '{}'",target);
-			privateTopicTarget.setValue(tbytes, privateTargetTopics.size());
+			privateTopicTarget.setValue(tbytes, targetId = privateTargetTopics.size());
 			privateTargetTopics.add(localTargetTopics);
 		} else {
 			localTargetTopics = privateTargetTopics.get(targetId); 
 		}
-		
-		localTargetTopics.add(obj);
+		return localTargetTopics;
+	}
+
+	private List<PrivateTopic> privateTopicsFromProducer(String source) {
+		List<PrivateTopic> localSourceTopics = null;
+		byte[] bytes = CharSequenceToUTF8Local.get().convert(source).append(" ").asBytes();
+		int sourceId = (int)TrieParserReader.query(TrieParserReaderLocal.get(), privateTopicSource, bytes, 0, bytes.length, Integer.MAX_VALUE);
+		if (sourceId<0) {
+			localSourceTopics = new ArrayList<PrivateTopic>();
+			privateTopicSource.setValue(bytes, sourceId = privateSourceTopics.size());
+			privateSourceTopics.add(localSourceTopics);		
+		} else {
+			localSourceTopics = privateSourceTopics.get(sourceId);
+		}
+		return localSourceTopics;
 	}
 
 	@Override
@@ -1763,28 +1765,28 @@ public class BuilderImpl implements Builder {
 	}
 
 	 
-	private ArrayList<ReactiveListenerStage> pendingReactiveStages = new ArrayList<ReactiveListenerStage>();
+	private ArrayList<PendingStageBuildable> pendingStagesToBuild = new ArrayList<PendingStageBuildable>();
 	
 	/**
 	 * Store the reactive listeners until they are all created.
 	 * The actual stages are created at once after they are all registered.
-	 * @param reactiveListenerStage
+	 * @param buildable
 	 */
-	public void pendingInit(ReactiveListenerStage<?> reactiveListenerStage) {
-		pendingReactiveStages.add(reactiveListenerStage);
+	public void pendingInit(PendingStageBuildable buildable) {
+		pendingStagesToBuild.add(buildable);
 	}
 
 	public void initAllPendingReactors() {
-		if (null!=pendingReactiveStages) {
+		if (null!=pendingStagesToBuild) {
 
 			if (enableAutoPrivateTopicDiscovery) {			
 				defineAutoDiscoveredPrivateTopcis();//must be done before the initRealStage call.
 			}
 			
-			for(ReactiveListenerStage stage: pendingReactiveStages) {
+			for(PendingStageBuildable stage: pendingStagesToBuild) {
 				stage.initRealStage();
 			}
-			pendingReactiveStages = null;
+			pendingStagesToBuild = null;
 		}
 	}
 
@@ -1929,7 +1931,7 @@ public class BuilderImpl implements Builder {
 							
 							
 						} else {
-							reasonSkipped = "Reason: Behavior had no name";
+							reasonSkipped = "Reason: Producer had no name";
 						}
 					} else {
 						reasonSkipped = "Reason: Explicitly set as not to be private in behavior";
@@ -2132,17 +2134,43 @@ public class BuilderImpl implements Builder {
 		
 	}
 
-	public String generateBehaviorName(Behavior listener) {
+	public String generateBehaviorName(Object listener) {
 		
-		String base = listener.getClass().getSimpleName();
+		return generateBehaviorNameFromClass(listener.getClass());
+		
+	}
+
+	public String generateBehaviorNameFromClass(Class<? extends Object> clazz) {
+		String base = clazz.getSimpleName();
 		synchronized(behaviorNames) {		
 			if (!behaviorNames.containsKey(base)) {
 				behaviorNames.put(base, new AtomicInteger());			
 			}
 		}
 		return base+behaviorNames.get(base).incrementAndGet();
-		
 	}
+
+	public static String buildTrackTopic(final CharSequence baseTopic, final byte[] track) {
+
+		if (null != track) {
+			if (hasNoUnscopedTopics()) {//normal case where topics are scoped
+				return baseTopic+new String(track);
+			} else {
+				//if scoped then add suffix
+				if ((-1 == TrieParserReaderLocal.get().query(unScopedTopics, baseTopic))) {
+					return baseTopic+new String(track);
+				}
+			}
+		}
+		return baseTopic.toString();
+	}
+
+	//common method for building topic suffix
+	public static byte[] trackNameBuilder(int parallelInstanceId) {
+		return parallelInstanceId<0 ? null : ( "/"+Integer.toString(parallelInstanceId)).getBytes();
+	}
+
+
 	
 	/////////////////////////////////////////////////////////////
 	/////////////////////////////////////////////////////////////

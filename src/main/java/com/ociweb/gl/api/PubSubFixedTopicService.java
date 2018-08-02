@@ -22,23 +22,23 @@ public class PubSubFixedTopicService {
     private int topicToken = -2; //lazy loaded by design
 	
 	
-	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String topic) {
+	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String baseTopic, String trackTopic) {
 	
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;
 		this.msgCommandChannel = msgCommandChannel;
-		this.topic = topic;
+		this.topic = trackTopic;
 		this.topicBytes = topic.getBytes();
 		
 		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, topic);
 
 	}
 	
-	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String topic,
+	public PubSubFixedTopicService(MsgCommandChannel<?> msgCommandChannel, String baseTopic, String trackTopic,
 								   int queueLength, int maxMessageSize) {
 		
 		msgCommandChannel.initFeatures |= MsgCommandChannel.DYNAMIC_MESSAGING;  
 		this.msgCommandChannel = msgCommandChannel;
-		this.topic = topic;
+		this.topic = trackTopic;
 		this.topicBytes = topic.getBytes();
 		
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);

@@ -110,7 +110,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
        this.pcm = pcm;
        this.parallelInstanceId = parallelInstanceId;
               
-       this.track = parallelInstanceId<0 ? null : trackNameBuilder(parallelInstanceId);
+       this.track = parallelInstanceId<0 ? null : BuilderImpl.trackNameBuilder(parallelInstanceId);
     }
 
     
@@ -174,22 +174,13 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	 * Used to create a new pubsub service for a fixed topic
 	 * @return new PubSubFixedTopicService
 	 */
-	public PubSubFixedTopicService newPubSubService(String fixedTopic) {
+	public PubSubFixedTopicService newPubSubService(final String baseTopic) {
 		
-		if (null != track) {
-			if (BuilderImpl.hasNoUnscopedTopics()) {//normal case where topics are scoped
-				fixedTopic = fixedTopic+new String(track);
-			} else {
-				//if scoped then add suffix
-				if ((-1 == TrieParserReaderLocal.get().query(BuilderImpl.unScopedTopics, fixedTopic))) {
-					fixedTopic = fixedTopic+new String(track);
-				}
-			}
-		}
+		String trackTopic = BuilderImpl.buildTrackTopic(baseTopic, track);
 	
-		return new PubSubFixedTopicService(this, fixedTopic);
+		return new PubSubFixedTopicService(this, baseTopic, trackTopic);
 	}
-	
+
 	/**
 	 *
 	 * @param cmd MsgCommandChannel arg
@@ -215,20 +206,11 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	 * @param maxMessageSize int to be passed to PubSubService
 	 * @return new PubSubFixedTopicService
 	 */
-	public PubSubFixedTopicService newPubSubService(String fixedTopic, int queueLength, int maxMessageSize) {
+	public PubSubFixedTopicService newPubSubService(String baseTopic, int queueLength, int maxMessageSize) {
+			
+		String trackTopic = BuilderImpl.buildTrackTopic(baseTopic, track);
 		
-		if (null != track) {
-			if (BuilderImpl.hasNoUnscopedTopics()) {//normal case where topics are scoped
-				fixedTopic = fixedTopic+new String(track);
-			} else {
-				//if scoped then add suffix
-				if ((-1 == TrieParserReaderLocal.get().query(BuilderImpl.unScopedTopics, fixedTopic))) {
-					fixedTopic = fixedTopic+new String(track);
-				}
-			}
-		}
-		
-		return new PubSubFixedTopicService(this, fixedTopic, queueLength, maxMessageSize);
+		return new PubSubFixedTopicService(this, baseTopic, trackTopic, queueLength, maxMessageSize);
 	}
 	
 	/**
@@ -279,13 +261,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     ////////////////////////////////////
     
     
-    //common method for building topic suffix
-	static byte[] trackNameBuilder(int parallelInstanceId) {
-		return( "/"+Integer.toString(parallelInstanceId)).getBytes();
-	}
-
-
-	public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
+    public static boolean isTooSmall(int queueLength, int maxMessageSize, PipeConfig<?> config) {
 		return queueLength>config.minimumFragmentsOnPipe() || maxMessageSize>config.maxVarLenSize();
 	}
 
