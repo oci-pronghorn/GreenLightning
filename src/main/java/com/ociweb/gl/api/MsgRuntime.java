@@ -889,8 +889,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);	
 		
-//		builder.possiblePrivateTopicConsumer(BuilderImpl.buildTrackTopic(topicIn, track), behaviorName);		
-//		builder.possiblePrivateTopicProducer(null, behaviorName,BuilderImpl.buildTrackTopic(topicOut, track));
+	//	builder.possiblePrivateTopicConsumer(BuilderImpl.buildTrackTopic(topicIn, track), behaviorName);		
+		//builder.possiblePrivateTopicProducer(null, behaviorName,BuilderImpl.buildTrackTopic(topicOut, track));
 				
 		
 		final String name = behaviorName;

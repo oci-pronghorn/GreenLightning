@@ -1830,6 +1830,7 @@ public class BuilderImpl implements Builder {
 	
 	public void possiblePrivateTopicConsumer(ReactiveListenerStage listener, CharSequence topic, int track) {
 			
+		
 		//do not want to confuse all the tracks while looking for private topics, we only look at no track and first track
 		if (track<=0) {
 			int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);

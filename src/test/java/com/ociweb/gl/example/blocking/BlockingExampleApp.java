@@ -4,6 +4,7 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenAppParallel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseService;
+import com.ociweb.gl.api.PubSubFixedTopicService;
 import com.ociweb.gl.api.PubSubService;
 import com.ociweb.json.JSONExtractorImpl;
 import com.ociweb.json.JSONExtractorCompleted;
@@ -54,8 +55,8 @@ public class BlockingExampleApp implements GreenAppParallel {
 		builder.usePrivateTopicsExclusively();			
 		
 //		//TODO: need better errors when these strings are wrong
-		builder.definePrivateTopic("testTopicA", "restListener", "blocker");
-		builder.definePrivateTopic("testTopicB", "blocker", "restResponder");
+//		builder.definePrivateTopic("testTopicA", "restListener", "blocker");
+//		builder.definePrivateTopic("testTopicB", "blocker", "restResponder");
 		
 //		builder.definePrivateTopic("testTopicA", "restListener", "restResponder");
 		
@@ -78,9 +79,9 @@ public class BlockingExampleApp implements GreenAppParallel {
 	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {
 		
-		PubSubService pub = runtime.newCommandChannel().newPubSubService();		
+		PubSubFixedTopicService pub = runtime.newCommandChannel().newPubSubService("testTopicA");		
 		runtime.addRestListener("restListener",(r)->{
-			return pub.publishTopic("testTopicA",(w)->{
+			return pub.publishTopic((w)->{
 				
 				//System.err.println("reading data from "+r.getConnectionId()+":"+r.getSequenceCode());
 				
@@ -108,7 +109,9 @@ public class BlockingExampleApp implements GreenAppParallel {
 				},
 				Fields.connectionId,
 				threadsCount, 
-				timeoutNS);
+				timeoutNS,
+				"testTopicA",
+				"testTopicB");
 		
 		HTTPResponseService resp = runtime.newCommandChannel().newHTTPResponseService();		
 		runtime.addPubSubListener("restResponder",(t,p)-> {
@@ -117,7 +120,7 @@ public class BlockingExampleApp implements GreenAppParallel {
 					p.structured().readLong(Fields.connectionId),
 					p.structured().readLong(Fields.sequenceId),
 					200);
-		}).addSubscription("testTopicA"); 
+		}).addSubscription("testTopicB"); 
 		//TODO: add better message if this subscription is missing.
 		
 		
