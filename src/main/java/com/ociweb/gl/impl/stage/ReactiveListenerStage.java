@@ -76,7 +76,7 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 import com.ociweb.pronghorn.util.parse.JSONStreamVisitorToChannel;
 
-public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy implements ListenerFilter {
+public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy implements ListenerFilter, PendingStageBuildable {
 
     private static final int SIZE_OF_PRIVATE_MSG_PUB = Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1);
 	private static final int SIZE_OF_MSG_STATECHANGE = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_STATECHANGED_71);
@@ -261,6 +261,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 					outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe(parallelInstance));				
 				}		
 				List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(nameId);
+				//System.out.println("private topics for "+nameId+" "+targetTopics.size());
 				int j = targetTopics.size();
 				while (--j>=0) {
 					PrivateTopic privateTopic = targetTopics.get(j);
@@ -809,26 +810,26 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	@Override    
     public void shutdown() {
 		
-		assert(!shutdownCompleted) : "already shut down why was this called a second time?";
-
-		Pipe.publishEOF(outputPipes);	
-		
-		if (builder.totalLiveReactors.decrementAndGet()==0) {
-			//ready for full system shutdown.
-			if (null != builder.lastCall) {				
-				new Thread(
-						new Runnable() {							
-							public void run() {
-								builder.lastCall.run();
-								builder.shutdownIsComplete = true;
+		if  (!shutdownCompleted) {
+			Pipe.publishEOF(outputPipes);	
+			
+			if (builder.totalLiveReactors.decrementAndGet()==0) {
+				//ready for full system shutdown.
+				if (null != builder.lastCall) {				
+					new Thread(
+							new Runnable() {							
+								public void run() {
+									builder.lastCall.run();
+									builder.shutdownIsComplete = true;
+								}
 							}
-						}
-						).start();
-			} else {
-				builder.shutdownIsComplete = true;
+							).start();
+				} else {
+					builder.shutdownIsComplete = true;
+				}
 			}
+			shutdownCompleted = true;
 		}
-		shutdownCompleted = true;
     }
 
     
@@ -1476,20 +1477,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				CharSequence topic, 
 				CallableStaticMethod<T> method) {
 		
-		CharSequence scopedTopic = topic;
-		if (parallelInstance>=0) { 
-			if (BuilderImpl.hasNoUnscopedTopics()) {
-				//add suffix..
-				scopedTopic = topic+"/"+String.valueOf(parallelInstance);
-			} else {
-				if (-1 == TrieParserReaderLocal.get().query(BuilderImpl.unScopedTopics, topic)) {
-					//add suffix
-					scopedTopic = topic+"/"+String.valueOf(parallelInstance);
-				}
-			}
-		}
-		
+		String scopedTopic = BuilderImpl.buildTrackTopic(topic, BuilderImpl.trackNameBuilder(parallelInstance));
+
+		assert(null!=this.behaviorName);
 		builder.possiblePrivateTopicConsumer(this, scopedTopic);
+				
+		
 		
 		if (null == methods) {
 			methodLookup = new TrieParser(16,1,false,false,false);
@@ -1521,19 +1514,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	public final ListenerFilter addSubscription(CharSequence topic) {		
 		if (!startupCompleted && listener instanceof PubSubMethodListenerBase) {
 	
-			CharSequence scopedTopic = topic;
-			if (parallelInstance>=0) { 
-				if (BuilderImpl.hasNoUnscopedTopics()) {
-					//add suffix..
-					scopedTopic = topic+"/"+String.valueOf(parallelInstance);
-				} else {
-					if (-1 == TrieParserReaderLocal.get().query(BuilderImpl.unScopedTopics, topic)) {
-						//add suffix
-						scopedTopic = topic+"/"+String.valueOf(parallelInstance);
-					}
-				}
-			}
+			String scopedTopic = BuilderImpl.buildTrackTopic(topic, BuilderImpl.trackNameBuilder(parallelInstance));
 			
+			assert(null!=this.behaviorName);
 			builder.possiblePrivateTopicConsumer(this, scopedTopic);
 						
 			builder.addStartupSubscription(topic, System.identityHashCode(listener), parallelInstance);		
