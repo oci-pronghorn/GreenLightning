@@ -89,7 +89,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
 	PublishPrivateTopics publishPrivateTopics;	
 
 	public final PipeConfigManager pcm;
-	private final int parallelInstanceId;
+	public final int parallelInstanceId;
 
 
     public MsgCommandChannel(GraphManager gm, B hardware,

@@ -1807,48 +1807,53 @@ public class BuilderImpl implements Builder {
 	private int[] possiblePrivateTopicsProducerCount = new int[16];
 	private CharSequence[] possiblePrivateTopicsTopic = new CharSequence[16];
 	
-	public void possiblePrivateTopicProducer(MsgCommandChannel<?> cmdChannel, String topic) {
-
+	public void possiblePrivateTopicProducer(MsgCommandChannel<?> cmdChannel, String topic, int track) {
+		//do not want to confuse all the tracks while looking for private topics, we only look at no track and first track
+		if (track<=0) {
 		
-		int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
-		if (-1 == id) {
-			growPossiblePrivateTopics();			
-			possiblePrivateCmds[possiblePrivateTopicsCount] = cmdChannel;
-			possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
-			possiblePrivateTopicsProducerCount[possiblePrivateTopicsCount]++;
-			possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);
-		} else {		
-            //only record once for same channel and topic pair
-			if (cmdChannel != possiblePrivateCmds[id]) {
-				possiblePrivateCmds[id] = cmdChannel;
-				possiblePrivateTopicsProducerCount[id]++;
+			int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
+			if (-1 == id) {
+				growPossiblePrivateTopics();			
+				possiblePrivateCmds[possiblePrivateTopicsCount] = cmdChannel;
+				possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
+				possiblePrivateTopicsProducerCount[possiblePrivateTopicsCount]++;
+				possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);
+			} else {		
+	            //only record once for same channel and topic pair
+				if (cmdChannel != possiblePrivateCmds[id]) {
+					possiblePrivateCmds[id] = cmdChannel;
+					possiblePrivateTopicsProducerCount[id]++;
+				}
 			}
 		}
 	}
 	
-	public void possiblePrivateTopicConsumer(ReactiveListenerStage listener, CharSequence topic) {
+	public void possiblePrivateTopicConsumer(ReactiveListenerStage listener, CharSequence topic, int track) {
+			
+		//do not want to confuse all the tracks while looking for private topics, we only look at no track and first track
+		if (track<=0) {
+			int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
+			if (-1 == id) {
+				growPossiblePrivateTopics();			
+				if (null==possiblePrivateBehaviors[possiblePrivateTopicsCount]) {
+					possiblePrivateBehaviors[possiblePrivateTopicsCount] = new ArrayList();
+				}
+				possiblePrivateBehaviors[possiblePrivateTopicsCount].add(listener);
 				
-		int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
-		if (-1 == id) {
-			growPossiblePrivateTopics();			
-			if (null==possiblePrivateBehaviors[possiblePrivateTopicsCount]) {
-				possiblePrivateBehaviors[possiblePrivateTopicsCount] = new ArrayList();
+				possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
+				
+				//new Exception("added topic "+topic+" now consumers total "+possiblePrivateBehaviors[possiblePrivateTopicsCount].size()+" position "+possiblePrivateTopicsCount).printStackTrace();;
+				
+				
+				possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);			
+			} else {
+				
+				if (null==possiblePrivateBehaviors[id]) {
+					possiblePrivateBehaviors[id] = new ArrayList();
+				}
+				possiblePrivateBehaviors[id].add(listener);
+				
 			}
-			possiblePrivateBehaviors[possiblePrivateTopicsCount].add(listener);
-			
-			possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
-			
-			//new Exception("added topic "+topic+" now consumers total "+possiblePrivateBehaviors[possiblePrivateTopicsCount].size()+" position "+possiblePrivateTopicsCount).printStackTrace();;
-			
-			
-			possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);			
-		} else {
-			
-			if (null==possiblePrivateBehaviors[id]) {
-				possiblePrivateBehaviors[id] = new ArrayList();
-			}
-			possiblePrivateBehaviors[id].add(listener);
-			
 		}
 	}
 
@@ -1882,7 +1887,10 @@ public class BuilderImpl implements Builder {
 		int i = possiblePrivateTopicsCount;
 		while (--i>=0) {			
 			
-			String topic = possiblePrivateTopicsTopic[i].toString();					
+			String topic = possiblePrivateTopicsTopic[i].toString();
+			
+			
+			
 			//logger.info("possible private topic {} {}->{}",topic, possiblePrivateTopicsProducerCount[i], null==possiblePrivateBehaviors[i] ? -1 :possiblePrivateBehaviors[i].size());
 			boolean madePrivate = false;
 			String reasonSkipped = "";
@@ -1927,9 +1935,6 @@ public class BuilderImpl implements Builder {
 							if (madePrivate) {
 								actualPrivateTopicsFound++;
 							}
-							
-							
-							
 						} else {
 							reasonSkipped = "Reason: Producer had no name";
 						}
@@ -1943,7 +1948,6 @@ public class BuilderImpl implements Builder {
 				reasonSkipped = "Reason: Must have single producer";
 			}
 			logger.info("MadePrivate: {} Topic: {} Producers: {} Consumers: {}   {} ", madePrivate, topic, possiblePrivateTopicsProducerCount[i], consumers, reasonSkipped);
-			
 			
 		}
 		

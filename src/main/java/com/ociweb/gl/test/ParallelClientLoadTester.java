@@ -189,8 +189,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
-		builder.defineUnScopedTopic(PROGRESS_TOPIC);
-
+		builder.defineUnScopedTopic(PROGRESS_TOPIC);		
+		
 	}
 
 	@Override
@@ -222,6 +222,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private int lastPercent = 0;
 		private long lastTime = 0;
 		private int enderCounter;
+		private boolean done = false;
 
 		Progress(GreenRuntime runtime) {
 			this.cmd4 = runtime.newCommandChannel().newPubSubService(Math.max(PUB_MSGS, maxInFlight), PUB_MSGS_SIZE);
@@ -235,6 +236,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		boolean enderMessage(CharSequence topic, ChannelReader payload) {
 			if (topic.equals(ENDERS_TOPIC)) {
+				
 				if (payload.hasRemainingBytes()) {
 					int track = payload.readPackedInt();
 					long totalTime = payload.readPackedLong();
@@ -251,7 +253,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					responsesReceivedSum += responsesReceived;
 					responsesInvalidSum += responsesInvalid;
 					
-					//logger.info("Finished track {} remaining {}",track,(parallelTracks-enderCounter));
+					logger.info("Finished track {} remaining {}",track,(parallelTracks-enderCounter));
 				}
 				
 				
@@ -278,6 +280,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 			return true;
 		}
+		
+		
 		
 		boolean progressMessage(CharSequence topic, ChannelReader payload) {
 			int track = payload.readPackedInt();
@@ -325,11 +329,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				lastTime = now;
 				lastPercent = percentDone;
 			}
-
 			
-			if (100 == percentDone) {
-				//System.out.println(percentDone+" published enders topic");
-				return cmd4.publishTopic(ENDERS_TOPIC);				
+			if (100 == percentDone && (!done)) {
+				System.out.println("received "+percentDone+"% of requests on all tracks");
+				boolean result = cmd4.publishTopic(ENDERS_TOPIC);	
+				if (result) {
+					done = true;					
+				}
+				return result;
 			}
 			return true;
 		}
@@ -527,7 +534,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if (callCounter<cyclesPerTrack) {
 				wasSent = httpClientService.httpGet(session[track], route, header);		
 			} else {
-				wasSent = httpClientService.httpGet(session[track], route, allHeaders);	
+				//TODO: sending close may cause the last message to be dropped. needs urgent review
+				wasSent = httpClientService.httpGet(session[track], route, header);	
 				//add boolean for easier time of this.. :TODO: API change.
 		
 				if (insecureClient) {
@@ -678,38 +686,34 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					isOk = callService.publishTopic();
 				}
 			}
-			else {
-				
-				if (0==countDown) {
 		
-					//only end after all the inFlightMessages have returned.
-					isOk = pubService.publishTopic(ENDERS_TOPIC, writer -> {
-						writer.writePackedInt(track);
-						writer.writePackedLong(totalTime);
-						writer.writePackedLong(callCounter);
-						writer.writePackedLong(sendFailures);
-						writer.writePackedLong(timeouts);
-						writer.writePackedLong(responsesReceived);
-						writer.writePackedLong(responsesInvalid);
-					});
-				}
-			}
-
-			//upon failure should not count down
-			if (isOk) {
-				if (--countDown == 0) {
-					isOk = pubService.publishTopic(PROGRESS_TOPIC, writer-> {
-						writer.writePackedInt(track);
-						writer.writePackedLong(countDown);
-						//writer.writePackedLong(sendAttempts);
-						//writer.writePackedLong(sendFailures);
-						writer.writePackedLong(timeouts);
-						//writer.writePackedLong(responsesReceived);
-						writer.writePackedLong(responsesInvalid);
-					});
-					//we are now done sending all the requests, do not call for ender that must be done after last response 
-				    //this is dependent upon SSLEngineUnwrap releasing all its buffer data
-				}
+			if (0==countDown) {
+				boolean clean = pubService.publishTopic(PROGRESS_TOPIC, writer-> {
+					writer.writePackedInt(track);
+					writer.writePackedLong(countDown);
+					//writer.writePackedLong(sendAttempts);
+					//writer.writePackedLong(sendFailures);
+					writer.writePackedLong(timeouts);
+					//writer.writePackedLong(responsesReceived);
+					writer.writePackedLong(responsesInvalid);
+				});
+				//only end after all the inFlightMessages have returned.
+				clean &= pubService.publishTopic(ENDERS_TOPIC, writer -> {
+					writer.writePackedInt(track);
+					writer.writePackedLong(totalTime);
+					writer.writePackedLong(callCounter);
+					writer.writePackedLong(sendFailures);
+					writer.writePackedLong(timeouts);
+					writer.writePackedLong(responsesReceived);
+					writer.writePackedLong(responsesInvalid);
+				});
+				assert(clean) :"unable to end test clean";
+				//System.out.println("publish enders clean:"+clean+"  "+track);
+				
+			} else if (isOk) { //upon failure should not count down
+				--countDown;
+			} else {
+			    logger.warn("Unable to send request, will try again.");
 			}
 
 			return isOk;

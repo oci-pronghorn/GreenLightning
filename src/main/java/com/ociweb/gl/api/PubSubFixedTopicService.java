@@ -29,7 +29,7 @@ public class PubSubFixedTopicService {
 		this.topic = trackTopic;
 		this.topicBytes = topic.getBytes();
 		
-		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, topic);
+		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, baseTopic, msgCommandChannel.parallelInstanceId);
 
 	}
 	
@@ -55,7 +55,7 @@ public class PubSubFixedTopicService {
 		//IngressMessages Confirm that MQTT ingress is big enough as well			
 		msgCommandChannel.pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
 		
-		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, topic);
+		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, baseTopic, msgCommandChannel.parallelInstanceId);
 
 		
 		

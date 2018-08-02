@@ -261,7 +261,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 					outputPipes = PronghornStage.join(outputPipes, privateTopic.getPipe(parallelInstance));				
 				}		
 				List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(nameId);
-				//System.out.println("private topics for "+nameId+" "+targetTopics.size());
+								
 				int j = targetTopics.size();
 				while (--j>=0) {
 					PrivateTopic privateTopic = targetTopics.get(j);
@@ -1480,8 +1480,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		String scopedTopic = BuilderImpl.buildTrackTopic(topic, BuilderImpl.trackNameBuilder(parallelInstance));
 
 		assert(null!=this.behaviorName);
-		builder.possiblePrivateTopicConsumer(this, scopedTopic);
-				
+		builder.possiblePrivateTopicConsumer(this, topic, parallelInstance);
 		
 		
 		if (null == methods) {
@@ -1517,7 +1516,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			String scopedTopic = BuilderImpl.buildTrackTopic(topic, BuilderImpl.trackNameBuilder(parallelInstance));
 			
 			assert(null!=this.behaviorName);
-			builder.possiblePrivateTopicConsumer(this, scopedTopic);
+			builder.possiblePrivateTopicConsumer(this, topic, parallelInstance);
 						
 			builder.addStartupSubscription(topic, System.identityHashCode(listener), parallelInstance);		
 			
