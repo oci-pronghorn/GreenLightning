@@ -14,15 +14,8 @@ import com.ociweb.pronghorn.struct.StructType;
 
 public class BlockingExampleApp implements GreenAppParallel {
 
-	static final JSONExtractorCompleted extractor = 
-			new JSONExtractorImpl()
-			.newPath(JSONType.TypeString).completePath("key1","name_a", Fields.key1)
-			.newPath(JSONType.TypeInteger).completePath("key2","name_b", Fields.key2);
-	
 	
 	private boolean telemetry;
-	//TODO: these two fields will be removed...
-	private long chooserLongFieldId;
 	
 	public BlockingExampleApp(boolean telemetry) {
 		this.telemetry = telemetry;
@@ -45,30 +38,20 @@ public class BlockingExampleApp implements GreenAppParallel {
 			
 		}
 
-
-		//TODO: associate routes with enums as well as routeIds...
-		//TODO: as long as the con/seq is recorded before the header add predefined fields for these??
-		builder.defineRoute(extractor)
+		builder.defineRoute().parseJSON()
+					.stringField("key1", Field.KEY1)
+					.integerField("key2", Field.KEY2)
 		       .path("/test")
-			   .routeId(Structs.route);
+			   .routeId(Struct.ROUTE);
 		
 		builder.usePrivateTopicsExclusively();			
-		
-//		//TODO: need better errors when these strings are wrong
-//		builder.definePrivateTopic("testTopicA", "restListener", "blocker");
-//		builder.definePrivateTopic("testTopicB", "blocker", "restResponder");
-		
-//		builder.definePrivateTopic("testTopicA", "restListener", "restResponder");
-		
-		int structId = builder.defineStruct()
-				.addField("connectionId", StructType.Long, 0, Fields.connectionId)
-				.addField("sequenceId", StructType.Long, 0, Fields.sequenceId)
-			    //.addFields(extractor)  TODO: this would be nicer.
-				.addField("key1", StructType.Text, 0, Fields.key1)
-			    .addField("key2", StructType.Integer, 0, Fields.key2)		   
-		        .register(Structs.data);			
-		
-		chooserLongFieldId = builder.lookupFieldByIdentity(structId, Fields.connectionId);
+
+		builder.defineStruct()
+				.addField("connectionId", StructType.Long, 0, Field.CONNECTION_ID)
+				.addField("sequenceId", StructType.Long, 0, Field.SEQUENCE_ID)
+				.addField("key1", StructType.Text, 0, Field.KEY1)
+			    .addField("key2", StructType.Integer, 0, Field.KEY2)		   
+		        .register(Struct.DATA);			
 		
 	}
 
@@ -82,22 +65,15 @@ public class BlockingExampleApp implements GreenAppParallel {
 		PubSubFixedTopicService pub = runtime.newCommandChannel().newPubSubService("testTopicA");		
 		runtime.addRestListener("restListener",(r)->{
 			return pub.publishTopic((w)->{
+				w.structured().writeLong(Field.CONNECTION_ID, r.getConnectionId());
+				w.structured().writeLong(Field.SEQUENCE_ID, r.getSequenceCode());
 				
-				//System.err.println("reading data from "+r.getConnectionId()+":"+r.getSequenceCode());
+				w.structured().writeInt(Field.KEY2, r.structured().readInt(Field.KEY2));
+				w.structured().writeText(Field.KEY1,r.structured().readText(Field.KEY1));								
 				
-				w.structured().writeLong(Fields.connectionId, r.getConnectionId());
-				w.structured().writeLong(Fields.sequenceId, r.getSequenceCode());
-				
-				//TODO: w.copy(r); //new method to send all matching data?
-				w.structured().writeInt(Fields.key2, r.structured().readInt(Fields.key2));
-				
-				//Not GC free, TODO: need to update...
-				w.structured().writeText(Fields.key1,r.structured().readText(Fields.key1));
-								
-				
-				w.structured().selectStruct(Structs.data); 
+				w.structured().selectStruct(Struct.DATA); 
 			});
-		}).includeRoutesByAssoc(Structs.route); //TODO: need better error message when this is missing.
+		}).includeRoutesByAssoc(Struct.ROUTE); //TODO: need better error message when this is missing.
 		
 		int threadsCount = 16;
 		long timeoutNS = 120_000_000_000L;
@@ -107,7 +83,7 @@ public class BlockingExampleApp implements GreenAppParallel {
 				()->{
 					return new BlockingBehaviorExample();
 				},
-				Fields.connectionId,
+				Field.CONNECTION_ID,
 				threadsCount, 
 				timeoutNS,
 				"testTopicA",
@@ -117,8 +93,8 @@ public class BlockingExampleApp implements GreenAppParallel {
 		runtime.addPubSubListener("restResponder",(t,p)-> {
 				
 			return resp.publishHTTPResponse(
-					p.structured().readLong(Fields.connectionId),
-					p.structured().readLong(Fields.sequenceId),
+					p.structured().readLong(Field.CONNECTION_ID),
+					p.structured().readLong(Field.SEQUENCE_ID),
 					200);
 		}).addSubscription("testTopicB"); 
 		//TODO: add better message if this subscription is missing.

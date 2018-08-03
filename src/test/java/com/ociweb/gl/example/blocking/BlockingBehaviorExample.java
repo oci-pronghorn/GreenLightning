@@ -20,12 +20,12 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 		assert(-1 == connectionId);
 		assert(-1 == sequenceId);
 		
-		connectionId = reader.structured().readLong(Fields.connectionId);
-		sequenceId = reader.structured().readLong(Fields.sequenceId);
+		connectionId = reader.structured().readLong(Field.CONNECTION_ID);
+		sequenceId = reader.structured().readLong(Field.SEQUENCE_ID);
 		key1Value.setLength(0);
 				
 	    //TODO: resolve this.. reader.structured().readText(Fields.key1, key1Value);
-		key2 = reader.structured().readInt(Fields.key2);		
+		key2 = reader.structured().readInt(Field.KEY2);		
 		
 	}
 
@@ -40,9 +40,9 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 	@Override
 	public void finish(ChannelWriter writer) {
 		
-		writer.structured().writeLong(Fields.connectionId, connectionId);
-		writer.structured().writeLong(Fields.sequenceId, sequenceId);
-		writer.structured().selectStruct(Structs.data); //TODO: need better error when missing.
+		writer.structured().writeLong(Field.CONNECTION_ID, connectionId);
+		writer.structured().writeLong(Field.SEQUENCE_ID, sequenceId);
+		writer.structured().selectStruct(Struct.DATA); //TODO: need better error when missing.
 
 		connectionId=-1;
 		sequenceId=-1;
