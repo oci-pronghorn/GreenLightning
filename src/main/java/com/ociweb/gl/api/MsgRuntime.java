@@ -870,6 +870,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	}
 	
 	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> void registerBlockingListener(
+			P producer,	Object chosserFieldAssoc, String topicIn, String topicOut) {
+		int threadsCount = 64;//default
+		long timeoutNS = 60*1_000_000_000;//default 1m
+		registerBlockingListener(null, producer, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
+	}
+	
+	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> void registerBlockingListener(
 			String behaviorName,
 			P producer,
 			Object chooserFieldAssoc,
@@ -880,7 +887,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	
 		if (null == behaviorName) {
 			//by default unless a name is given use the behavior
-			behaviorName = builder.generateBehaviorName(producer);
+			behaviorName = topicIn+"->"+topicOut;
 		}
 	
 		final String name = behaviorName;
