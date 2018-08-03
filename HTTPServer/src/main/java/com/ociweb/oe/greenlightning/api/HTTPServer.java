@@ -51,25 +51,14 @@ public class HTTPServer implements GreenApp
 		if (telemetryPort>0) {
 			c.enableTelemetry(telemetryPort);
 		}
-		
-		c.defineRoute(HTTPHeaderDefaults.COOKIE)
-				                 .path("/testpageA?arg=#{myarg}")
-		
-				                ///TODO: urgent fix.. allso add lambda here for validation..
-				    //             .path("/testpageA")////TODO: this should be possible  but not working why?
-				                 
-				                 .defaultInteger("myarg", 111)
-				                 .associatedObject("myarg", Field.MYARG)
-				                 .routeId(Struct.EMPTY_EXAMPLE);
-		
-		c.defineRoute().path("/testpageB").routeId(Struct.SMALL_EXAMPLE);
+
 		c.defineRoute(HTTPHeaderDefaults.COOKIE)
 				                  .path("/testpageC").routeId(Struct.LARGE_EXAMPLE);
 		c.defineRoute().path("/testpageD").routeId(Struct.SPLIT_EXAMPLE);
 
 		c.defineRoute()
 		    .parseJSON()
-		    	.stringField( "person.name", Field.PERSON_NAME)
+  		    	.stringField( "person.name", Field.PERSON_NAME)
 		    	.integerField("person.age",  Field.PERSON_AGE)
 		    .path("/testJSON")
 			.routeId(Struct.JSON_EXAMPLE);
@@ -81,7 +70,19 @@ public class HTTPServer implements GreenApp
 		c.defineRoute()
 	     	.path("/files/${path}")
 	     	.routeId(Struct.FILES_EXAMPLE);
-
+		
+		c.defineRoute(HTTPHeaderDefaults.COOKIE)
+				                 .path("/testpageA?arg=#{myarg}")
+		
+				                ///TODO: urgent fix.. allso add lambda here for validation..
+				        //         .path("/testpageA")////TODO: this should be possible  but not working why?
+		
+				                 .refineInteger("myarg", Field.MYARG, 111)
+				                 
+				                 .routeId(Struct.EMPTY_EXAMPLE);
+		
+		c.defineRoute().path("/testpageB").routeId(Struct.SMALL_EXAMPLE);
+		
     }
     
     @Override
