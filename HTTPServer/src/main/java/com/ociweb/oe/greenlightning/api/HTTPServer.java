@@ -98,10 +98,8 @@ public class HTTPServer implements GreenApp
         		 .includeRoutesByAssoc(Struct.LARGE_EXAMPLE);
                 
         
-        int threadsCount = 20;        
-		long timeoutNS = 1_000_000_000;
-		
-	//	runtime.registerBlockingListener(()->new BlockingExample(), Field.CONNECTION_ID, threadsCount, timeoutNS);
+		//TODO: add blocking exmple here
+		//runtime.registerBlockingListener(()->new BlockingExample(), Field.CONNECTION_ID, threadsCount, timeoutNS);
         
         
         String topic = "httpData";
