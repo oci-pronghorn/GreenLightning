@@ -75,19 +75,14 @@ public class BlockingExampleApp implements GreenAppParallel {
 			});
 		}).includeRoutesByAssoc(Struct.ROUTE); //TODO: need better error message when this is missing.
 		
-		int threadsCount = 16;
-		long timeoutNS = 120_000_000_000L;
-		
 		//blocker will relay data\
-		runtime.registerBlockingListener("blocker",
+		runtime.registerBlockingListener(
 				()->{
+					//Must be created new every time this lambda is called
+					//This lambda is called once per thread on startup
 					return new BlockingBehaviorExample();
 				},
-				Field.CONNECTION_ID,
-				threadsCount, 
-				timeoutNS,
-				"testTopicA",
-				"testTopicB");
+				Field.CONNECTION_ID, "testTopicA", "testTopicB");
 		
 		HTTPResponseService resp = runtime.newCommandChannel().newHTTPResponseService();		
 		runtime.addPubSubListener("restResponder",(t,p)-> {
