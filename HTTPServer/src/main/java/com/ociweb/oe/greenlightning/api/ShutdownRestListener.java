@@ -26,7 +26,7 @@ public class ShutdownRestListener implements RestListener{
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
-		if (request.structured().isEqual(Params.KEY, pass)) {
+		if (request.structured().isEqual(Field.KEY, pass)) {
 			
 			if (!responseService.hasRoomFor(2)) {//reponse then shutdown
 				return false;

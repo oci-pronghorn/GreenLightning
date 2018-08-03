@@ -54,62 +54,71 @@ public class HTTPServer implements GreenApp
 		
 		c.defineRoute(HTTPHeaderDefaults.COOKIE)
 				                 .path("/testpageA?arg=#{myarg}")
-				    //             .path("/testpageA?A=#{myarg}")////TODO: this should be possible  but not working why?
-				                 .defaultInteger("myarg", 111)
-				                 .associatedObject("myarg", Params.MYARG)
-				                 .routeId(Routes.EMPTY_EXAMPLE);
 		
-		c.defineRoute().path("/testpageB").routeId(Routes.SMALL_EXAMPLE);
+				                ///TODO: urgent fix.. allso add lambda here for validation..
+				    //             .path("/testpageA")////TODO: this should be possible  but not working why?
+				                 
+				                 .defaultInteger("myarg", 111)
+				                 .associatedObject("myarg", Field.MYARG)
+				                 .routeId(Struct.EMPTY_EXAMPLE);
+		
+		c.defineRoute().path("/testpageB").routeId(Struct.SMALL_EXAMPLE);
 		c.defineRoute(HTTPHeaderDefaults.COOKIE)
-				                  .path("/testpageC").routeId(Routes.LARGE_EXAMPLE);
-		c.defineRoute().path("/testpageD").routeId(Routes.SPLIT_EXAMPLE);
+				                  .path("/testpageC").routeId(Struct.LARGE_EXAMPLE);
+		c.defineRoute().path("/testpageD").routeId(Struct.SPLIT_EXAMPLE);
 
 		c.defineRoute()
 		    .parseJSON()
-		    	.stringField( "person.name", Params.PERSON_NAME)
-		    	.integerField("person.age",  Params.PERSON_AGE)
+		    	.stringField( "person.name", Field.PERSON_NAME)
+		    	.integerField("person.age",  Field.PERSON_AGE)
 		    .path("/testJSON")
-			.routeId(Routes.JSON_EXAMPLE);
+			.routeId(Struct.JSON_EXAMPLE);
 		
 		c.defineRoute()
 		     .path("/resources/${path}")
-		     .routeId(Routes.RESOURCES_EXAMPLE);
+		     .routeId(Struct.RESOURCES_EXAMPLE);
 
 		c.defineRoute()
 	     	.path("/files/${path}")
-	     	.routeId(Routes.FILES_EXAMPLE);
+	     	.routeId(Struct.FILES_EXAMPLE);
 
     }
     
     @Override
     public void declareBehavior(GreenRuntime runtime) {
 
-        runtime.addRestListener(new RestBehaviorEmptyResponse(runtime, console))
-                 .includeRoutesByAssoc(Routes.EMPTY_EXAMPLE);
+        runtime.registerListener(new RestBehaviorEmptyResponse(runtime, console))
+                 .includeRoutesByAssoc(Struct.EMPTY_EXAMPLE);
         
-        runtime.addRestListener(new RestBehaviorSmallResponse(runtime, console))
-        		.includeRoutesByAssoc(Routes.SMALL_EXAMPLE);
+        runtime.registerListener(new RestBehaviorSmallResponse(runtime, console))
+        		.includeRoutesByAssoc(Struct.SMALL_EXAMPLE);
         
-        runtime.addRestListener(new RestBehaviorLargeResponse(runtime, console))
-        		 .includeRoutesByAssoc(Routes.LARGE_EXAMPLE);
+        runtime.registerListener(new RestBehaviorLargeResponse(runtime, console))
+        		 .includeRoutesByAssoc(Struct.LARGE_EXAMPLE);
+                
+        
+        int threadsCount = 20;        
+		long timeoutNS = 1_000_000_000;
+		
+	//	runtime.registerBlockingListener(()->new BlockingExample(), Field.CONNECTION_ID, threadsCount, timeoutNS);
         
         
         String topic = "httpData";
 
         runtime.registerListener(new RestBehaviorHandoff(runtime, topic))
-        		 .includeRoutesByAssoc(Routes.SPLIT_EXAMPLE);
+        		 .includeRoutesByAssoc(Struct.SPLIT_EXAMPLE);
 		
         runtime.registerListener(new RestBehaviorHandoffResponder(runtime, console))
                  .addSubscription(topic);
   
-        runtime.addRestListener(new RestBehaviorJsonResponce(runtime, console))
-        		  .includeRoutesByAssoc(Routes.JSON_EXAMPLE);
+        runtime.registerListener(new RestBehaviorJsonResponce(runtime, console))
+        		  .includeRoutesByAssoc(Struct.JSON_EXAMPLE);
         
     	runtime.addResourceServer("exampleSite")
-		         .includeRoutesByAssoc(Routes.RESOURCES_EXAMPLE);
+		         .includeRoutesByAssoc(Struct.RESOURCES_EXAMPLE);
 
     	runtime.addFileServer("./src/main/resources/exampleSite") 
-				 .includeRoutesByAssoc(Routes.FILES_EXAMPLE);
+				 .includeRoutesByAssoc(Struct.FILES_EXAMPLE);
 				        
         
         //NOTE .includeAllRoutes() can be used to write a behavior taking all routes

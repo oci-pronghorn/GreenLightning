@@ -31,11 +31,11 @@ public class RestBehaviorJsonResponce implements RestListener {
 	public boolean restRequest(HTTPRequestReader request) {
 		StructuredReader record = request.structured();
 		
-		int age = record.readInt(Params.PERSON_AGE);
+		int age = record.readInt(Field.PERSON_AGE);
 		isLegal = age>=21;
 		
 		name.setLength(0);
-		record.readText(Params.PERSON_NAME, name);
+		record.readText(Field.PERSON_NAME, name);
 				
 		return responseService.publishHTTPResponse(request, 200, 
 				 HTTPContentTypeDefaults.JSON, w-> {

@@ -24,7 +24,7 @@ public class RestBehaviorEmptyResponse implements RestListener {
 	@Override
 	public boolean restRequest(HTTPRequestReader request) {
 		
-	    int argInt = request.structured().readInt(Params.MYARG);
+	    int argInt = request.structured().readInt(Field.MYARG);
 	    
 	    Appendables.appendValue(console, "Arg Int: ", argInt, "\n");
 	    		

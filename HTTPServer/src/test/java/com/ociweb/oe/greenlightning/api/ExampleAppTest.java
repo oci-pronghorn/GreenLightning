@@ -187,7 +187,7 @@ public class ExampleAppTest {
 				()-> null, 
 				(r)-> 0 == r.structured().readPayload().available(), 
 				"/testPageA?arg=42", 
-				useTLS, telemetry, 
+				useTLS, true,//telemetry, 
 				1, 1, 
 				host, port, timeoutMS);		
 		
