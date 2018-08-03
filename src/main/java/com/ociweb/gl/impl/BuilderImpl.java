@@ -330,14 +330,14 @@ public class BuilderImpl implements Builder {
 	 * A method to append pipe mapping and group ids when invoked by builder
 	 * @param pipe Pipe<HTTPRequestSchema> arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
 	 * @param parallelId int arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
-	 * @param groupIds int arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
+	 * @param routeIds int arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
 	 * @return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds)
 	 */
 	public final boolean appendPipeMappingIncludingGroupIds(Pipe<HTTPRequestSchema> pipe,
 											            int parallelId,
-											            int ... groupIds) {
+											            int ... routeIds) {
 		lazyCreatePipeLookupMatrix();
-		return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds);
+		return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, routeIds);
 	}
 
 	/**
@@ -377,14 +377,14 @@ public class BuilderImpl implements Builder {
 
 	/**
 	 *
-	 * @param r int arg used as index in collectedHTTPRequestPipes array
-	 * @param p int arg used as index in collectedHTTPRequestPipes array
+	 * @param track int arg used as index in collectedHTTPRequestPipes array
+	 * @param route int arg used as index in collectedHTTPRequestPipes array
 	 * @return null!= collectedHTTPRequestPipes ? collectedHTTPRequestPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>()
 	 */
-	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int r, int p) {
-		assert(null== collectedHTTPRequestPipes || r< collectedHTTPRequestPipes.length);
-		assert(null== collectedHTTPRequestPipes || p< collectedHTTPRequestPipes[r].length) : "p "+p+" vs "+ collectedHTTPRequestPipes[r].length;
-		return null!= collectedHTTPRequestPipes ? collectedHTTPRequestPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>();
+	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int track, int route) {
+		assert(null== collectedHTTPRequestPipes || track< collectedHTTPRequestPipes.length);
+		assert(null== collectedHTTPRequestPipes || route< collectedHTTPRequestPipes[track].length) : "p "+route+" vs "+ collectedHTTPRequestPipes[track].length;
+		return null!= collectedHTTPRequestPipes ? collectedHTTPRequestPipes[track][route] : new ArrayList<Pipe<HTTPRequestSchema>>();
 	}
 	
 	

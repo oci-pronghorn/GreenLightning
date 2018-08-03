@@ -1278,6 +1278,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		int[] routeIds = new int[r];
 		while (--r >= 0) {
 			routeIds[r] = builder.routerConfig().lookupRouteIdByIdentity(assocRouteObjects[r]);
+
 		}		
 		includeRoutes(routeIds);
 		return this;
@@ -1293,8 +1294,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			for(int i = 0; i<inputPipes.length; i++) {
 				//we only expect to find a single request pipe
 				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
-					final int p = parallelInstance==-1?count:parallelInstance;
+					final int p = parallelInstance==-1 ? count : parallelInstance;
 					final Pipe<HTTPRequestSchema> pipe = (Pipe<HTTPRequestSchema>) inputPipes[i];
+					
 					restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(pipe, p, routeIds);
 					count++;
 				}

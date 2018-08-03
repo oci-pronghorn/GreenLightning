@@ -11,8 +11,8 @@ import com.ociweb.pronghorn.network.ClientSocketWriterStage;
 public class BlockingTaskTest {
 	
 	
-	@Test
-	public void blockingTest() {
+	@Ignore
+	public void blockingTestDisabled() {
 		
 		//ClientSocketWriterStage.showWrites = true;
 		//ServerSocketReaderStage.showRequests = true;
