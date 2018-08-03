@@ -883,17 +883,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			behaviorName = builder.generateBehaviorName(producer);
 		}
 	
+		final String name = behaviorName;
+		behaviorName = builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);	
+		
 		byte[] track = parallelInstanceUnderActiveConstruction<0 ? null : BuilderImpl.trackNameBuilder(parallelInstanceUnderActiveConstruction);
 		
-		BuilderImpl.buildTrackTopic(topicIn, track);
-		
-		builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);	
-		
-	//	builder.possiblePrivateTopicConsumer(BuilderImpl.buildTrackTopic(topicIn, track), behaviorName);		
-		//builder.possiblePrivateTopicProducer(null, behaviorName,BuilderImpl.buildTrackTopic(topicOut, track));
-				
-		
-		final String name = behaviorName;
+						
 		PendingStageBuildable pendingBuilder = new PendingStageBuildable() {
 
 			@Override
@@ -908,32 +903,48 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
 				}
 				
-				buildBlockingStage(producer, chooserFieldAssoc, threadsCount, timeoutNS, sourceTopics, targetTopics);
-								
+				System.out.println(targetTopics.size());
+				System.out.println(sourceTopics.size());
+				
+				
+				Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);				
+				assert(null!=input);		
+				Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);
+				assert(null!=output);
+				Pipe<MessagePrivate> timeout = output;
+				assert(input!=output);
+					
+				System.out.println(parallelInstanceUnderActiveConstruction+" "+input);
+			    System.out.println(parallelInstanceUnderActiveConstruction+" "+output);
+				
+				Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(
+						chooserFieldAssoc, threadsCount, BlockableStageFactory.streamOffset(input));
+				
+				BlockableStageFactory.buildBlockingSupportStage(gm, timeoutNS, threadsCount, input, output, timeout, producer, chooser);
+				
+				
+				
+			}
+
+			@Override
+			public String behaviorName() {
+				return name;
 			}
 		};
+
+		BuilderImpl.buildTrackTopic(topicIn, track);
+		
+		builder.possiblePrivateTopicProducer(pendingBuilder, topicOut, parallelInstanceUnderActiveConstruction);		
+		builder.possiblePrivateTopicConsumer(pendingBuilder, topicIn,  parallelInstanceUnderActiveConstruction);
 		builder.pendingInit(pendingBuilder);
+		
+		
+		
+		
 		
 	}
 	
 
-	private <P extends BlockingBehaviorProducer> void buildBlockingStage(P producer, Object chooserFieldAssoc,
-			int threadsCount, long timeoutNS, List<PrivateTopic> sourceTopics, List<PrivateTopic> targetTopics) {
-		
-		Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);				
-		assert(null!=input);		
-		Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);
-		assert(null!=output);
-		Pipe<MessagePrivate> timeout = output;
-		assert(input!=output);
-			
-		Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(
-				chooserFieldAssoc, threadsCount, BlockableStageFactory.streamOffset(input));
-		
-		BlockableStageFactory.buildBlockingSupportStage(gm, timeoutNS, threadsCount, input, output, timeout, producer, chooser);
-	}
-	
-	
 	///////////////////////////
 	
 	
@@ -953,7 +964,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	if (null == id) {
     		//by default unless a name is given use the behavior
     		id = builder.generateBehaviorName(listener);
-
     	}
     	
     	////////////
@@ -987,7 +997,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		if (transducerAutowiring) {
 			inputPipes = autoWireTransducers(id, listener, inputPipes, consumers);
 		}
-        
 		
         return builder.createReactiveListener(gm, listener, 
         		                                inputPipes, outputPipes, consumers,

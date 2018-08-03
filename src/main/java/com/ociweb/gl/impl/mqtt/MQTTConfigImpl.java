@@ -234,7 +234,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	}
 
 	@Override
-	public MQTTBridge transmissionOoS(MQTTQoS qos) {
+	public MQTTBridge transmissionQoS(MQTTQoS qos) {
 		transmissionFieldQOS = qos.getSpecification();
 		return this;
 	}

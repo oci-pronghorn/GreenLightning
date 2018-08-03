@@ -27,6 +27,7 @@ public class PrivateTopic {
 			this.config.hideLabels(); //private topics can clutter if they show all the details.
 		}
 		this.builder = builder;
+		assert(null!=config);
 	}
 	
 	public PrivateTopic(String topic, PipeConfig<MessagePrivate> config, boolean hideLabels,
@@ -34,12 +35,14 @@ public class PrivateTopic {
 		this.topic = topic;
 		this.config = config;
 		this.builder = builder;
+		assert(null!=config);
 	}
 	
 	public PrivateTopic(String topic, PipeConfig<MessagePrivate> config, BuilderImpl builder) {
 		this.topic = topic;
 		this.config = config;
 		this.builder = builder;
+		assert(null!=config);
 	}
 
 	private int maxIndex = Integer.MAX_VALUE;

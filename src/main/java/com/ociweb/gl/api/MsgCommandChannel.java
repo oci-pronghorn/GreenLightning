@@ -11,6 +11,7 @@ import com.ociweb.gl.impl.file.SerialStoreProducer;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessagePubSub;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
+import com.ociweb.gl.impl.stage.BehaviorNameable;
 import com.ociweb.gl.impl.stage.PublishPrivateTopics;
 import com.ociweb.pronghorn.network.HTTPUtilResponse;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
@@ -35,7 +36,7 @@ import com.ociweb.pronghorn.util.TrieParserReaderLocal;
  * Represents a dedicated channel for communicating with a single device
  * or resource on an IoT system.
  */
-public class MsgCommandChannel<B extends BuilderImpl> {
+public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameable{
 
 	final TrieParserReader READER = new TrieParserReader(true);
 
@@ -114,7 +115,7 @@ public class MsgCommandChannel<B extends BuilderImpl> {
     }
 
     
-    public String behaviorName() {
+    public String behaviorName() { //part of namable..
     	return behaviorName;
     }
     

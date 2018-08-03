@@ -43,14 +43,6 @@ public class BlockingTaskTest {
 				new ParallelClientLoadTester(config2, payload),
 				timeoutMS);
 
-		//wait for telemetry to update
-//		try {
-//			Thread.sleep(2_000);
-//		} catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-		
 		//TODO: assert some things about these results.
 	}
 	

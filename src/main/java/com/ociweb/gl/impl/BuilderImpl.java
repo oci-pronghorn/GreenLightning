@@ -1569,8 +1569,7 @@ public class BuilderImpl implements Builder {
 	void definePrivateTopic(PipeConfig<MessagePrivate> config, String topic, String source, String target) {
 
 		boolean hideTopics = false;
-		PrivateTopic obj = new PrivateTopic(topic, config, hideTopics,
-				                            this);
+		PrivateTopic obj = new PrivateTopic(topic, config, hideTopics, this);
 		
 		privateTopicsFromProducer(source).add(obj);
 		
@@ -1783,7 +1782,8 @@ public class BuilderImpl implements Builder {
 				defineAutoDiscoveredPrivateTopcis();//must be done before the initRealStage call.
 			}
 			
-			for(PendingStageBuildable stage: pendingStagesToBuild) {
+			for(int i = 0; i < pendingStagesToBuild.size(); i++) {			
+				PendingStageBuildable stage = pendingStagesToBuild.get(i);	
 				stage.initRealStage();
 			}
 			pendingStagesToBuild = null;
@@ -1798,54 +1798,49 @@ public class BuilderImpl implements Builder {
 	
 	private TrieParser possibleTopics = new TrieParser();
 	private int possiblePrivateTopicsCount = 0;
-	private MsgCommandChannel[] possiblePrivateCmds = new MsgCommandChannel[16];
+	private BehaviorNameable[] possiblePrivateCmds = new BehaviorNameable[16];
 	
 	//ReactiveListenerStage
-	private ArrayList[] possiblePrivateBehaviors = new ArrayList[16];
+	private ArrayList<PendingStageBuildable>[] possiblePrivateBehaviors = new ArrayList[16];
 	
 	
 	private int[] possiblePrivateTopicsProducerCount = new int[16];
 	private CharSequence[] possiblePrivateTopicsTopic = new CharSequence[16];
 	
-	public void possiblePrivateTopicProducer(MsgCommandChannel<?> cmdChannel, String topic, int track) {
+	public void possiblePrivateTopicProducer(BehaviorNameable producer, String topic, int track) {
 		//do not want to confuse all the tracks while looking for private topics, we only look at no track and first track
 		if (track<=0) {
 		
 			int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
 			if (-1 == id) {
 				growPossiblePrivateTopics();			
-				possiblePrivateCmds[possiblePrivateTopicsCount] = cmdChannel;
+				possiblePrivateCmds[possiblePrivateTopicsCount] = producer;
 				possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
 				possiblePrivateTopicsProducerCount[possiblePrivateTopicsCount]++;
 				possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);
 			} else {		
 	            //only record once for same channel and topic pair
-				if (cmdChannel != possiblePrivateCmds[id]) {
-					possiblePrivateCmds[id] = cmdChannel;
+				if (producer != possiblePrivateCmds[id]) {
+					possiblePrivateCmds[id] = producer;
 					possiblePrivateTopicsProducerCount[id]++;
 				}
 			}
 		}
 	}
 	
-	public void possiblePrivateTopicConsumer(ReactiveListenerStage listener, CharSequence topic, int track) {
+	public void possiblePrivateTopicConsumer(PendingStageBuildable listener, CharSequence topic, int track) {
 			
-		
+		assert(null!=listener.behaviorName());
 		//do not want to confuse all the tracks while looking for private topics, we only look at no track and first track
 		if (track<=0) {
 			int id = (int)TrieParserReaderLocal.get().query(possibleTopics, topic);
 			if (-1 == id) {
 				growPossiblePrivateTopics();			
 				if (null==possiblePrivateBehaviors[possiblePrivateTopicsCount]) {
-					possiblePrivateBehaviors[possiblePrivateTopicsCount] = new ArrayList();
+					possiblePrivateBehaviors[possiblePrivateTopicsCount] = new ArrayList<PendingStageBuildable>();
 				}
-				possiblePrivateBehaviors[possiblePrivateTopicsCount].add(listener);
-				
+				possiblePrivateBehaviors[possiblePrivateTopicsCount].add(listener);				
 				possiblePrivateTopicsTopic[possiblePrivateTopicsCount]=topic;
-				
-				//new Exception("added topic "+topic+" now consumers total "+possiblePrivateBehaviors[possiblePrivateTopicsCount].size()+" position "+possiblePrivateTopicsCount).printStackTrace();;
-				
-				
 				possibleTopics.setUTF8Value(topic, possiblePrivateTopicsCount++);			
 			} else {
 				
@@ -1862,7 +1857,7 @@ public class BuilderImpl implements Builder {
 	private void growPossiblePrivateTopics() {
 		if (possiblePrivateTopicsCount == possiblePrivateBehaviors.length) {
 			//grow
-			MsgCommandChannel[] newCmds = new MsgCommandChannel[possiblePrivateTopicsCount*2];
+			BehaviorNameable[] newCmds = new BehaviorNameable[possiblePrivateTopicsCount*2];
 			System.arraycopy(possiblePrivateCmds, 0, newCmds, 0, possiblePrivateTopicsCount);
 			possiblePrivateCmds = newCmds;
 			
@@ -1901,16 +1896,23 @@ public class BuilderImpl implements Builder {
 					//may be valid check that is is not on the list.
 					if (!skipTopic(topic)) {
 						
-						MsgCommandChannel msgCommandChannel = possiblePrivateCmds[i];
-						String producerName = msgCommandChannel.behaviorName();
+						BehaviorNameable producer = possiblePrivateCmds[i];
+						String producerName = producer.behaviorName();
 						if (null!=producerName) {
 							int j = possiblePrivateBehaviors[i].size();
-							PipeConfig<MessagePrivate> config = msgCommandChannel.pcm.getConfig(MessagePrivate.class);
+							
+							PipeConfig<MessagePrivate> config = (producer instanceof MsgCommandChannel) ?
+									                            ((MsgCommandChannel)producer).pcm.getConfig(MessagePrivate.class) :
+									                            null;
 
 						    if (j==1) {
-						    	String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(0))).behaviorName();
+						    	String consumerName = (possiblePrivateBehaviors[i].get(0)).behaviorName();
 								if (null!=consumerName) {
-										definePrivateTopic(config, topic, producerName, consumerName);
+										if (null!=config) {
+											definePrivateTopic(config, topic, producerName, consumerName);
+										} else {
+											definePrivateTopic(topic, producerName, consumerName);
+										}
 										madePrivate = true;
 	
 								}
@@ -1919,7 +1921,7 @@ public class BuilderImpl implements Builder {
 						    	String[] names = new String[j];
 						    							    	
 								while (--j>=0) {
-									String consumerName = ((ReactiveListenerStage)(possiblePrivateBehaviors[i].get(j))).behaviorName();
+									String consumerName = (possiblePrivateBehaviors[i].get(j)).behaviorName();
 									if (null==consumerName) {
 										reasonSkipped ="Reason: one of the consuming behaviors have no name.";
 										break;
@@ -1927,7 +1929,11 @@ public class BuilderImpl implements Builder {
 									names[j] = consumerName;
 								}
 								if (j<0) {
-									defPrivateTopics(config, topic, producerName, names);
+									if (null!=config) {
+										defPrivateTopics(config, topic, producerName, names);
+									} else {
+										definePrivateTopic(topic, producerName, names);
+									}
 									madePrivate = true;
 								}
 							

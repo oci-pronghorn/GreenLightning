@@ -102,7 +102,7 @@ public class BlockingExampleApp implements GreenAppParallel {
 		int threadsCount = 16;
 		long timeoutNS = 120_000_000_000L;
 		
-		//blocker will relay data
+		//blocker will relay data\
 		runtime.registerBlockingListener("blocker",
 				()->{
 					return new BlockingBehaviorExample();

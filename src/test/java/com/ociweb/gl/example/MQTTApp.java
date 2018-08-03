@@ -22,7 +22,7 @@ public class MQTTApp implements GreenApp {
 
 		mqttConfig = builder.useMQTT("127.0.0.1", MQTTBridge.defaultPort, "my name")
 							.cleanSession(true)
-							.transmissionOoS(MQTTQoS.exactlyOnce)
+							.transmissionQoS(MQTTQoS.exactlyOnce)
 							.subscriptionQoS(MQTTQoS.exactlyOnce) //TODO: do tests for will and retain
 							.keepAliveSeconds(10); //TODO: test with 2 seconds or less to make pings go.
 		

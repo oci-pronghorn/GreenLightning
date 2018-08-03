@@ -18,6 +18,6 @@ public interface MQTTBridge extends BridgeConfig<MQTTConfigTransmission, MQTTCon
 	MQTTBridge lastWill(CharSequence topic, boolean retain, MQTTQoS qos, Writable payload);
 	MQTTBridge connectionFeedbackTopic(CharSequence connectFeedbackTopic);
 	MQTTBridge subscriptionQoS(MQTTQoS qos);
-	MQTTBridge transmissionOoS(MQTTQoS qos);
+	MQTTBridge transmissionQoS(MQTTQoS qos);
 	MQTTBridge transmissionRetain(boolean value);
 }
