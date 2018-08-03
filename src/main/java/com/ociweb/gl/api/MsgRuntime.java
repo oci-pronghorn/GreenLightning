@@ -884,11 +884,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		}
 	
 		final String name = behaviorName;
+		final int capturedTrack = parallelInstanceUnderActiveConstruction;
+		
 		behaviorName = builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);	
 		
 		byte[] track = parallelInstanceUnderActiveConstruction<0 ? null : BuilderImpl.trackNameBuilder(parallelInstanceUnderActiveConstruction);
 		
-						
 		PendingStageBuildable pendingBuilder = new PendingStageBuildable() {
 
 			@Override
@@ -907,23 +908,18 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				System.out.println(sourceTopics.size());
 				
 				
-				Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);				
+				Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(capturedTrack);				
 				assert(null!=input);		
-				Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(parallelInstanceUnderActiveConstruction);
+				Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(capturedTrack);
 				assert(null!=output);
 				Pipe<MessagePrivate> timeout = output;
 				assert(input!=output);
-					
-				System.out.println(parallelInstanceUnderActiveConstruction+" "+input);
-			    System.out.println(parallelInstanceUnderActiveConstruction+" "+output);
 				
 				Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(
 						chooserFieldAssoc, threadsCount, BlockableStageFactory.streamOffset(input));
 				
 				BlockableStageFactory.buildBlockingSupportStage(gm, timeoutNS, threadsCount, input, output, timeout, producer, chooser);
-				
-				
-				
+
 			}
 
 			@Override

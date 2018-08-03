@@ -51,9 +51,9 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 
 	@Override
 	public void timeout(ChannelWriter writer) {
-		throw new RuntimeException("not yet supported");
 		
-		//finish(writer);
+		System.out.println("this took too long to run..");
+		
 	}
 
 }
