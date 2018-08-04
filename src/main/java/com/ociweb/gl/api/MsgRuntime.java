@@ -29,6 +29,7 @@ import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.PendingStageBuildable;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
+import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
@@ -395,7 +396,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
         	int i = httpRequestPipes.length;        	
         	assert(i>0) : "This listens to Rest requests but none have been routed here";        
-        	while (--i >= 0) {        
+        	while (--i >= 0) {
         		inputPipes[--pipesCount] = httpRequestPipes[i];                		
         	}
         }
@@ -651,21 +652,21 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		    	ArrayList<Pipe<HTTPRequestSchema>> requestPipes = builder.buildFromRequestArray(t, routeIndex);
 		    	
 		    	//with a single pipe just pass it one, otherwise use the replicator to fan out from a new single pipe.
-		    	int size = requestPipes.size();
+		    	final int size = requestPipes.size();
 		    	totalRequestPipes += size;
 		    	
-				if (1==size) {
-		    		fromRouterToModules[t][routeIndex] = 
-		    				requestPipes.get(0);
+				if (1 == size) {
+		    		fromRouterToModules[t][routeIndex] = requestPipes.get(0);
+		    		
 		    	} else {
 		    		//we only create a pipe when we are about to use the replicator
-		    		fromRouterToModules[t][routeIndex] =  
-		    				builder.newHTTPRequestPipe(builder.pcm.getConfig(HTTPRequestSchema.class));		    		
-		    		if (0==size) {
+		    		fromRouterToModules[t][routeIndex] = builder.newHTTPRequestPipe(builder.pcm.getConfig(HTTPRequestSchema.class));		    		
+		    		if (0 == size) {
 		    			logger.info("warning there are routes without any consumers");
 		    			//we have no consumer so tie it to pipe cleaner		    		
 		    			forPipeCleaner.add(fromRouterToModules[t][routeIndex]);
 		    		} else {
+		    			assert(requestPipes.size() == size);
 		    			ReplicatorStage.newInstance(gm, fromRouterToModules[t][routeIndex], requestPipes.toArray(new Pipe[requestPipes.size()]));	
 		    		}
 		    	}
@@ -689,9 +690,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		int spaceForEchos = serverCoord.connectionStruct().inFlightPayloadSize();
 		
-		int j = trackCounts;
-		while (--j>=0) {
-			Pipe<ServerResponseSchema>[] temp = fromModulesToOrderSuper[j] = builder.buildToOrderArray(j);			
+		int trackId = trackCounts;
+		while (--trackId>=0) {
+			Pipe<ServerResponseSchema>[] temp = fromModulesToOrderSuper[trackId] = builder.buildToOrderArray(trackId);			
 			//this block is required to make sure the ordering stage has room
 			int c = temp.length;
 			while (--c>=0) {
@@ -700,10 +701,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			}		
 		}
 		serverConfig.ensureServerCanWrite(spaceForEchos+errConfig.maxVarLenSize());
-		final HTTP1xRouterStageConfig routerConfig1 = routerConfig;
-		
-		
-		
 		//TODO: use ServerCoordinator to hold information about log?
 		Pipe<HTTPLogRequestSchema>[] reqLog = new Pipe[trackCounts];
 		Pipe<HTTPLogResponseSchema>[] resLog = new Pipe[trackCounts];
@@ -712,7 +709,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		NetGraphBuilder.buildLogging(gm, serverCoord, reqLog, resLog);
 		
 		NetGraphBuilder.buildRouters(gm, serverCoord, acks,
-				fromModulesToOrderSuper, fromRouterToModules, routerConfig1, catchAll, reqLog, perTrackFromNet);
+				fromModulesToOrderSuper, fromRouterToModules, routerConfig, catchAll, reqLog, perTrackFromNet);
 
 		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, handshakeIncomingGroup);
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
@@ -872,7 +869,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> void registerBlockingListener(
 			P producer,	Object chosserFieldAssoc, String topicIn, String topicOut) {
 		int threadsCount = 64;//default
-		long timeoutNS = 60*1_000_000_000;//default 1m
+		long timeoutNS = 60L*1_000_000_000L;//default 1m
 		registerBlockingListener(null, producer, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
 	}
 	

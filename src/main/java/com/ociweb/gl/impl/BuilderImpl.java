@@ -439,14 +439,14 @@ public class BuilderImpl implements Builder {
 
 	/**
 	 *
-	 * @param r int arg used in collectedServerResponsePipes
+	 * @param track int arg used in collectedServerResponsePipes
 	 * @return (Pipe<ServerResponseSchema>[]) list.toArray(new Pipe[list.size()])
 	 */
-	public final Pipe<ServerResponseSchema>[] buildToOrderArray(int r) {
+	public final Pipe<ServerResponseSchema>[] buildToOrderArray(int track) {
 		if (null==collectedServerResponsePipes || collectedServerResponsePipes.length==0) {
 			return new Pipe[0];
 		} else {
-			ArrayList<Pipe<ServerResponseSchema>> list = collectedServerResponsePipes[r];
+			ArrayList<Pipe<ServerResponseSchema>> list = collectedServerResponsePipes[track];
 			return (Pipe<ServerResponseSchema>[]) list.toArray(new Pipe[list.size()]);
 		}
 	}

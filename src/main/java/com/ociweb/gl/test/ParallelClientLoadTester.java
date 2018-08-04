@@ -155,6 +155,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 		}	
 		
+		
 		this.validate = null==payload? null : payload.validate;
 
 		this.out = out;
@@ -189,8 +190,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
-		builder.defineUnScopedTopic(PROGRESS_TOPIC);		
+		builder.defineUnScopedTopic(PROGRESS_TOPIC);	
 		
+		//in order so slow the rate we require this topic to public, this way the cop is involved
+		if (durationNanos>0) {
+			builder.definePublicTopics(CALL_TOPIC);
+		}
 	}
 
 	@Override
@@ -331,7 +336,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 			
 			if (100 == percentDone && (!done)) {
-				System.out.println("received "+percentDone+"% of requests on all tracks");
+				logger.trace("received {}% of requests on all tracks",percentDone);
 				boolean result = cmd4.publishTopic(ENDERS_TOPIC);	
 				if (result) {
 					done = true;					
