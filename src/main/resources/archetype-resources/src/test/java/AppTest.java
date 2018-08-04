@@ -15,11 +15,12 @@ public class AppTest {
 
 	
 	 @Test
-	    public void testApp()
-	    {
+	 public void testApp() {
 		    int timeoutMS = 2000;
 		    GreenRuntime.testUntilShutdownRequested(new ${mainClass}(), timeoutMS);
 		    	    
 			
-	    }
+	 }
+	 
+	 
 }
