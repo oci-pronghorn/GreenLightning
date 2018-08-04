@@ -13,6 +13,7 @@ import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.http.HTTP1xResponseParserStage;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class ExampleAppTest {
 
@@ -116,6 +117,8 @@ public class ExampleAppTest {
 	@Test
 	public void fileCallTest() {
 		
+		GraphManager.showPipeIdOnTelemetry=true;
+		
 		StringBuilder results = LoadTester.runClient(
 				()-> null, 
 				(r)->{
@@ -187,10 +190,10 @@ public class ExampleAppTest {
 				()-> null, 
 				(r)-> 0 == r.structured().readPayload().available(), 
 				"/testPageA?arg=42", 
-				useTLS, true,//telemetry, 
+				useTLS, telemetry, 
 				1, 1, 
 				host, port, timeoutMS);		
-		
+
 		assertTrue(console.toString(), console.indexOf("Arg Int: 42\nCOOKIE: ")>=0); //test adds a cookie by default..
 
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);

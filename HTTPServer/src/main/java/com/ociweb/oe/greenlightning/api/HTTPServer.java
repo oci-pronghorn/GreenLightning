@@ -8,6 +8,8 @@ import com.ociweb.json.JSONType;
 import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.network.http.CompositeRouteFinish;
+import com.ociweb.pronghorn.network.http.CompositeRouteImpl;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -51,38 +53,28 @@ public class HTTPServer implements GreenApp
 		if (telemetryPort>0) {
 			c.enableTelemetry(telemetryPort);
 		}
-
+				
 		c.defineRoute(HTTPHeaderDefaults.COOKIE)
-				                  .path("/testpageC").routeId(Struct.LARGE_EXAMPLE);
-		c.defineRoute().path("/testpageD").routeId(Struct.SPLIT_EXAMPLE);
-
-		c.defineRoute()
-		    .parseJSON()
-  		    	.stringField( "person.name", Field.PERSON_NAME)
-		    	.integerField("person.age",  Field.PERSON_AGE)
-		    .path("/testJSON")
-			.routeId(Struct.JSON_EXAMPLE);
-		
-		c.defineRoute()
-		     .path("/resources/${path}")
-		     .routeId(Struct.RESOURCES_EXAMPLE);
-
-		c.defineRoute()
-	     	.path("/files/${path}")
-	     	.routeId(Struct.FILES_EXAMPLE);
-		
-		c.defineRoute(HTTPHeaderDefaults.COOKIE)
-				                 .path("/testpageA?arg=#{myarg}")
-		
-				                ///TODO: urgent fix.. allso add lambda here for validation..
-				        //         .path("/testpageA")////TODO: this should be possible  but not working why?
-		
-				                 .refineInteger("myarg", Field.MYARG, 111)
+                .path("/testpageA?arg=#{myarg}")
+                .path("/testpagesA?arg=#{myarg}")
+                .path("/testpageA?f=g")
+                .refineInteger("myarg", Field.MYARG, 111)
+                .routeId(Struct.EMPTY_EXAMPLE);
+                
+                
+       	c.defineRoute()
+    		    .parseJSON()
+      		    	.stringField( "person.name", Field.PERSON_NAME)
+    		    	.integerField("person.age",  Field.PERSON_AGE)
+    		    .path("/testJSON")
+    			.routeId(Struct.JSON_EXAMPLE);       
+                
 				                 
-				                 .routeId(Struct.EMPTY_EXAMPLE);
-		
-		c.defineRoute().path("/testpageB").routeId(Struct.SMALL_EXAMPLE);
-		
+        c.defineRoute().path("/resources/${path}").routeId(Struct.RESOURCES_EXAMPLE);
+        c.defineRoute().path("/files/${path}").routeId(Struct.FILES_EXAMPLE);
+        c.defineRoute().path("/testpageB").routeId(Struct.SMALL_EXAMPLE);
+		c.defineRoute(HTTPHeaderDefaults.COOKIE).path("/testpageC").routeId(Struct.LARGE_EXAMPLE);				                 
+		c.defineRoute().path("/testpageD").routeId(Struct.SPLIT_EXAMPLE);
     }
     
     @Override
