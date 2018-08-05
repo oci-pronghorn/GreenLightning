@@ -13,7 +13,6 @@ import com.ociweb.gl.impl.stage.*;
 import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
 import com.ociweb.json.JSONExtractorImpl;
 import com.ociweb.json.JSONType;
-import com.ociweb.json.JSONAccumRule;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
@@ -22,7 +21,6 @@ import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.*;
 import com.ociweb.pronghorn.network.http.CompositePath;
-import com.ociweb.pronghorn.network.http.CompositeRoute;
 import com.ociweb.pronghorn.network.http.FieldExtractionDefinitions;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.http.HTTPClientRequestStage;
@@ -41,7 +39,6 @@ import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructRegistry;
 import com.ociweb.pronghorn.util.*;
 import com.ociweb.json.decode.JSONExtractor;
-import com.ociweb.json.decode.JSONTable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -879,96 +876,8 @@ public class BuilderImpl implements Builder {
 //	}
 	
 	@Override
-	public final RouteDefinition defineRoute(HTTPHeader ... headers) {
-		
-		return new RouteDefinition() {
-	
-			CompositeRoute route = null;
-			
-			@Override
-			public CompositeRoute path(CharSequence path) {
-				return (null==route) ? routerConfig().registerCompositeRoute(headers).path(path) :  route;
-			}
-			
-			@Override
-			public ExtractedJSONFieldsForRoute parseJSON() {
-								
-				
-				return new ExtractedJSONFieldsForRoute() {
-
-					@Override
-					public CompositeRoute path(CharSequence path) {
-						return route = routerConfig().registerCompositeRoute(ex.finish(), headers).path(path);
-					}					
-					
-					JSONTable<JSONExtractor> ex = new JSONExtractor().begin();
-					
-					@Override
-					public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(boolean isAligned, JSONAccumRule accumRule,
-																				String extractionPath, T field) {
-						Object temp = ex.element(JSONType.TypeString, isAligned, accumRule).asField(extractionPath, field);
-						assert(temp == ex) : "internal error, the same instance should have been returned";
-						return this;
-					}
-					
-					@Override
-					public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(String extractionPath, T field) {
-						Object temp = ex.element(JSONType.TypeString, false, null).asField(extractionPath, field);
-						assert(temp == ex) : "internal error, the same instance should have been returned";
-						return this;
-					}
-	
-					
-					@Override
-					public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(boolean isAligned, JSONAccumRule accumRule,
-							String extractionPath, T field) {
-						Object temp = ex.element(JSONType.TypeInteger, isAligned, accumRule).asField(extractionPath, field);
-						assert(temp == ex) : "internal error, the same instance should have been returned";
-						return this;
-					}
-					
-					@Override
-					public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(String extractionPath, T field) {
-						Object temp = ex.element(JSONType.TypeInteger, false, null).asField(extractionPath, field);
-						assert(temp == ex) : "internal error, the same instance should have been returned";
-						return this;
-					}
-					
-					@Override
-					public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(boolean isAligned, JSONAccumRule accumRule,
-							String extractionPath, T field) {
-						Object temp = ex.element(JSONType.TypeDecimal, isAligned, accumRule).asField(extractionPath, field);
-						assert(temp == ex) : "internal error, the same instance should have been returned";
-						return this;
-					}
-					
-					@Override
-					public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(String extractionPath, T field) {
-						Object temp = ex.element(JSONType.TypeDecimal, false, null).asField(extractionPath, field);
-						assert(temp == ex) : "internal error, the same instance should have been returned";
-						return this;
-					}
-					
-					@Override
-					public <T extends Enum<T>> ExtractedJSONFieldsForRoute booleanField(boolean isAligned, JSONAccumRule accumRule,
-							String extractionPath, T field) {
-						Object temp = ex.element(JSONType.TypeBoolean, isAligned, accumRule).asField(extractionPath, field);
-						assert(temp == ex) : "internal error, the same instance should have been returned";
-						return this;
-					}
-					
-					@Override
-					public <T extends Enum<T>> ExtractedJSONFieldsForRoute booleanField(String extractionPath, T field) {
-						Object temp = ex.element(JSONType.TypeBoolean, false, null).asField(extractionPath, field);
-						assert(temp == ex) : "internal error, the same instance should have been returned";
-						return this;
-					}
-				};
-			}			
-			
-		
-
-		};
+	public final RouteDefinition defineRoute(HTTPHeader ... headers) {		
+		return new RouteDefinitionImpl(this.routerConfig(), headers);
 	}
 	
 	

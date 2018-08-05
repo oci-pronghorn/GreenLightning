@@ -2,11 +2,8 @@ package com.ociweb.gl.impl.stage;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
-
-import javax.print.attribute.standard.MediaSize.Engineering;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +54,6 @@ import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.http.NetResponseJSONExtractionStage;
 import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
-import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
@@ -70,11 +66,8 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadProducerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.NonThreadScheduler;
-import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
-import com.ociweb.pronghorn.util.TrieParserReaderLocal;
-import com.ociweb.pronghorn.util.parse.JSONStreamVisitorToChannel;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy implements ListenerFilter, PendingStageBuildable {
 
@@ -878,7 +871,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	    	  if (null!=restRequestReader && 
     	    	      routeId<restRequestReader.length &&
     	    	      null!=restRequestReader[routeId]) {
-    	    		  
+    	    	
     	    		  if (!restRequestReader[routeId].restRequest(listener, reader)) {
     	    			  Pipe.resetTail(p);
 		            	  return;//continue later and repeat this same value.
