@@ -74,6 +74,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 	private static final int PUB_MSGS      = 8000;
 	private static final int PUB_MSGS_SIZE = 48;
+	private long minFinished;
 
 	public ParallelClientLoadTester(
 			int cyclesPerTrack,
@@ -258,7 +259,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					responsesReceivedSum += responsesReceived;
 					responsesInvalidSum += responsesInvalid;
 					
-					logger.info("Finished track {} remaining {}",track,(parallelTracks-enderCounter));
+					//logger.info("Finished track {} remaining {}",track,(parallelTracks-enderCounter));
 				}
 				
 				
@@ -310,15 +311,23 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			long sumTimeouts = 0;
 			//long sumResponsesReceived = 0;
 			long sumResponsesInvalid = 0;
-			int i = parallelTracks;
-			while (--i >= 0) {
-				sumFinished += this.finished[i];
+			int trackId = parallelTracks;
+			long minFin = Long.MAX_VALUE;
+			while (--trackId >= 0) {
+				
+				long f = this.finished[trackId];
+				if (f < minFin) {
+					minFin = f;
+				}
+				
+				sumFinished += f;
 				//sumSendAttempts += this.sendAttempts[track];
 				//sumSendFailures += this.sendFailures[track];
 				sumTimeouts += this.timeouts[track];
 				//sumResponsesReceived += this.responsesReceived[i];
-				sumResponsesInvalid += this.responsesInvalid[i];
+				sumResponsesInvalid += this.responsesInvalid[trackId];
 			}
+			minFinished = minFin;
 
 			long totalRequests = cyclesPerTrack * parallelTracks;
 			int percentDone = (int)((100L * sumFinished) / totalRequests);
@@ -441,7 +450,19 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			
 		}
 
+		private int x = 0;
+		
 		boolean callMessage(CharSequence topic, ChannelReader payload) {
+
+			//slow down the tracks far ahead of the others
+			long gap = (cyclesPerTrack-countDown) - minFinished;
+			if (gap > 2000) {
+				if (0!=(15&x++)) {
+					//if non zero we delay making this call
+					return false;
+				}
+			}
+			
 			return makeCall();
 		}
 
