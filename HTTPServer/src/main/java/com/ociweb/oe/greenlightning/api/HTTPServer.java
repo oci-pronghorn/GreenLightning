@@ -58,7 +58,7 @@ public class HTTPServer implements GreenApp
                 .path("/testpageA?arg=#{myarg}")
                 .path("/testpagesA?arg=#{myarg}")
                 .path("/testpageA?f=g")
-                .refineInteger("myarg", Field.MYARG, 111)
+                .refineInteger("myarg", Field.MYARG, 111,v -> v>0)
                 .routeId(Struct.EMPTY_EXAMPLE);
                 
                 

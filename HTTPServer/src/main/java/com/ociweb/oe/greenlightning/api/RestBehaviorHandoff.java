@@ -3,7 +3,6 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.PubSubFixedTopicService;
-import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.RestListener;
 
 public class RestBehaviorHandoff implements RestListener {

@@ -20,12 +20,12 @@ public class RestBehaviorHandoffResponder implements PubSubListener {
 	@Override
 	public boolean message(CharSequence topic, ChannelReader payload) {
 		
-		boolean result = responder.readReqesterData(payload);
-		if (result) {
-			responder.respondWith(200, false, HTTPContentTypeDefaults.TXT, (w)->{w.writeUTF("sent by responder");});
+		if (responder.readReqesterData(payload)) {
+			return responder.respondWith(200, false, HTTPContentTypeDefaults.TXT, (w)->{w.writeUTF("sent by responder");});
+		} else {
+			return false;
 		}
 		
-		return result;
 	}
 	
 }
