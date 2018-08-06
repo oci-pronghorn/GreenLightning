@@ -129,13 +129,6 @@ public interface Builder extends ArgumentProvider {
      * @param ns default rate in nanoseconds
      */
 	void setDefaultRate(long ns);
-
-    /**
-     * Define a variable on a URL route
-     * @param routeId route id for URL route
-     * @param fieldName field name for URL route
-     */
-	long fieldId(int routeId, byte[] fieldName);
 	
 	/*
 	 * The default in-flight messages is 10

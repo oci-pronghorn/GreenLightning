@@ -270,11 +270,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return (L) registerListenerImpl(id, listener);
     }
     
-   
-    public long fieldId(int routeId, byte[] fieldName) {
-    	return builder.fieldId(routeId, fieldName);
-    }    
-    
     protected void logStageScheduleRates() {
         int totalStages = GraphManager.countStages(gm);
            for(int i=1;i<=totalStages;i++) {

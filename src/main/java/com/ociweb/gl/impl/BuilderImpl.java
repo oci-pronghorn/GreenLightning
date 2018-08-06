@@ -1,6 +1,36 @@
 package com.ociweb.gl.impl;
 
-import com.ociweb.gl.api.*;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.security.SecureRandom;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ociweb.gl.api.ArgumentParser;
+import com.ociweb.gl.api.Behavior;
+import com.ociweb.gl.api.Builder;
+import com.ociweb.gl.api.ClientHostPortInstance;
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.HTTPClientConfig;
+import com.ociweb.gl.api.HTTPRequestReader;
+import com.ociweb.gl.api.HTTPResponseReader;
+import com.ociweb.gl.api.ListenerTransducer;
+import com.ociweb.gl.api.MsgCommandChannel;
+import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.NetResponseWriter;
+import com.ociweb.gl.api.RouteDefinition;
+import com.ociweb.gl.api.TelemetryConfig;
+import com.ociweb.gl.api.TimeTrigger;
 import com.ociweb.gl.api.transducer.HTTPResponseListenerTransducer;
 import com.ociweb.gl.api.transducer.PubSubListenerTransducer;
 import com.ociweb.gl.api.transducer.RestListenerTransducer;
@@ -8,50 +38,73 @@ import com.ociweb.gl.api.transducer.StateChangeListenerTransducer;
 import com.ociweb.gl.impl.http.client.HTTPClientConfigImpl;
 import com.ociweb.gl.impl.http.server.HTTPResponseListenerBase;
 import com.ociweb.gl.impl.mqtt.MQTTConfigImpl;
-import com.ociweb.gl.impl.schema.*;
-import com.ociweb.gl.impl.stage.*;
+import com.ociweb.gl.impl.schema.IngressMessages;
+import com.ociweb.gl.impl.schema.MessagePrivate;
+import com.ociweb.gl.impl.schema.MessagePubSub;
+import com.ociweb.gl.impl.schema.MessageSubscription;
+import com.ociweb.gl.impl.schema.TrafficAckSchema;
+import com.ociweb.gl.impl.schema.TrafficOrderSchema;
+import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
+import com.ociweb.gl.impl.stage.BehaviorNameable;
+import com.ociweb.gl.impl.stage.HTTPClientRequestTrafficStage;
+import com.ociweb.gl.impl.stage.MessagePubSubTrafficStage;
+import com.ociweb.gl.impl.stage.PendingStageBuildable;
+import com.ociweb.gl.impl.stage.ReactiveListenerStage;
+import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
+import com.ociweb.gl.impl.stage.ReactiveOperators;
+import com.ociweb.gl.impl.stage.ReactiveProxyStage;
+import com.ociweb.gl.impl.stage.TrafficCopStage;
 import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
-import com.ociweb.json.JSONExtractorImpl;
-import com.ociweb.json.JSONType;
 import com.ociweb.json.JSONExtractorCompleted;
+import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.HTTPServerConfigImpl;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
-import com.ociweb.pronghorn.network.config.*;
+import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeader;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
+import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
+import com.ociweb.pronghorn.network.config.HTTPSpecification;
+import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.http.CompositePath;
-import com.ociweb.pronghorn.network.http.FieldExtractionDefinitions;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.http.HTTPClientRequestStage;
-import com.ociweb.pronghorn.network.schema.*;
-import com.ociweb.pronghorn.pipe.*;
+import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
+import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
+import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
+import com.ociweb.pronghorn.network.schema.NetResponseSchema;
+import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
+import com.ociweb.pronghorn.pipe.DataInputBlobReader;
+import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
+import com.ociweb.pronghorn.pipe.MessageSchema;
+import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
+import com.ociweb.pronghorn.pipe.PipeConfigManager;
+import com.ociweb.pronghorn.pipe.PipeWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.PronghornStageProcessor;
 import com.ociweb.pronghorn.stage.file.FileGraphBuilder;
 import com.ociweb.pronghorn.stage.file.NoiseProducer;
-import com.ociweb.pronghorn.stage.file.schema.*;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadProducerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
+import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructRegistry;
-import com.ociweb.pronghorn.util.*;
-import com.ociweb.json.decode.JSONExtractor;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.security.SecureRandom;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
+import com.ociweb.pronghorn.util.Appendables;
+import com.ociweb.pronghorn.util.Blocker;
+import com.ociweb.pronghorn.util.CharSequenceToUTF8;
+import com.ociweb.pronghorn.util.CharSequenceToUTF8Local;
+import com.ociweb.pronghorn.util.TrieParser;
+import com.ociweb.pronghorn.util.TrieParserReader;
+import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 
 public class BuilderImpl implements Builder {
 
@@ -854,29 +907,16 @@ public class BuilderImpl implements Builder {
 		assert(trackCount>0);
 		parallelismTracks = trackCount;
 	}
-
-	
-	private final TrieParserReader localReader = new TrieParserReader(true);
-	
-	@Override
-	public long fieldId(int routeId, byte[] fieldName) {	
-		return TrieParserReader.query(localReader, this.routeExtractionParser(routeId), fieldName, 0, fieldName.length, Integer.MAX_VALUE);
-	}
 	
 	@Override
 	@Deprecated
 	public final CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers) {
 		return routerConfig().registerCompositeRoute(extractor, headers);
 	}
-	
-//	@Override
-//	@Deprecated
-//	public final CompositePath defineRoute(HTTPHeader ... headers) {
-//		return routerConfig().registerCompositeRoute( headers);
-//	}
+
 	
 	@Override
-	public final RouteDefinition defineRoute(HTTPHeader ... headers) {		
+	public final RouteDefinition defineRoute(HTTPHeader ... headers) {			
 		return new RouteDefinitionImpl(this.routerConfig(), headers);
 	}
 	
@@ -888,10 +928,6 @@ public class BuilderImpl implements Builder {
 	@Override
 	public final JSONExtractor defineJSONSDecoder(boolean writeDot) {
 		return new JSONExtractor(writeDot);
-	}
-
-	public final TrieParser routeExtractionParser(int route) {
-		return routerConfig().extractionParser(route).getRuntimeParser();
 	}
 	
 	public final int routeExtractionParserIndexCount(int route) {
