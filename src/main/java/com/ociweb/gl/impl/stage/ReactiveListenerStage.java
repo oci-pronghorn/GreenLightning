@@ -1652,7 +1652,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				builder.registerHTTPClientId(behaviorId, pipeIdx);            
 			}
 
-		    logger.info("\nregister session {} with pipe {}",httpSessions[j].sessionId,pipeIdx);
+		   // logger.info("\nregister session {} with pipe {}",httpSessions[j].sessionId,pipeIdx);
 		    
 			Pipe<NetResponseSchema> buildNetResponsePipe = builder.buildNetResponsePipe();
 			
