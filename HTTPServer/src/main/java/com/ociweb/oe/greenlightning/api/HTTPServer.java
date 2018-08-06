@@ -56,9 +56,10 @@ public class HTTPServer implements GreenApp
 				
 		c.defineRoute(HTTPHeaderDefaults.COOKIE)
                 .path("/testpageA?arg=#{myarg}")
-                .path("/testpagesA?arg=#{myarg}")
+                .path("/testpagesA?arg=#{myarg}&name=${name}")
                 .path("/testpageA?f=g")
                 .refineInteger("myarg", Field.MYARG, 111, (n,v) -> !n && v>0)
+                .associatedObject("name", Field.PERSON_NAME)
                 .routeId(Struct.EMPTY_EXAMPLE);
                 
                 

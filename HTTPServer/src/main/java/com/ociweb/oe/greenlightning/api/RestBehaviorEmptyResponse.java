@@ -26,8 +26,16 @@ public class RestBehaviorEmptyResponse implements RestListener {
 		
 	    int argInt = request.structured().readInt(Field.MYARG);
 	    
-	    Appendables.appendValue(console, "Arg Int: ", argInt, "\n");
-	    		
+	    if (-1 == argInt) {
+		    if (request.structured().isNull(Field.MYARG)) {
+		    	console.append("Arg is NULL\n ");
+		    } else {
+		    	Appendables.appendValue(console, "Arg Int: ", argInt, "\n");
+		    }
+	    } else {	    
+	    	Appendables.appendValue(console, "Arg Int: ", argInt, "\n");
+	    }
+	    
 	    request.structured().identityVisit(HTTPHeaderDefaults.COOKIE, (id,reader,field)-> {
 			
 			console.append("COOKIE: ");

@@ -189,12 +189,32 @@ public class ExampleAppTest {
 		StringBuilder results = LoadTester.runClient(
 				()-> null, 
 				(r)-> 0 == r.structured().readPayload().available(), 
-				"/testPageA?arg=42", 
+				"/testpageA?arg=42", 
 				useTLS, telemetry, 
 				1, 1, 
 				host, port, timeoutMS);		
 
 		assertTrue(console.toString(), console.indexOf("Arg Int: 42\nCOOKIE: ")>=0); //test adds a cookie by default..
+
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);
+
+		
+	}
+	
+	@Test
+	public void pageADefaultTest() {
+		
+		console.setLength(0);
+		
+		StringBuilder results = LoadTester.runClient(
+				()-> null, 
+				(r)-> 0 == r.structured().readPayload().available(), 
+				"/testpageA?f=g", 
+				useTLS, telemetry, 
+				1, 1, 
+				host, port, timeoutMS);		
+
+		assertTrue(console.toString(), console.indexOf("Arg Int: 111\nCOOKIE: ")>=0); //test adds a cookie by default..
 
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);
 
