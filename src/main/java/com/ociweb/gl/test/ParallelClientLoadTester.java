@@ -47,7 +47,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
     private final int maxInFlightMask;
     private int warmupCount = 20_000;
 
-	public static long LOG_LATENCY_LIMIT =  2_000_000_000L; //3_000_000_000L;//3sec	
+	public static long LOG_LATENCY_LIMIT =  20_000_000_000L; //20sec	
     
 	private final ParallelClientLoadTesterOutput out;
 	private final Supplier<Writable> post;
