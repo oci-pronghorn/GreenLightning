@@ -11,7 +11,7 @@ import com.ociweb.pronghorn.pipe.RawDataSchema;
 
 public class HTTPResponder {
 
-	private final HTTPResponseService commandChannel;
+	private final HTTPResponseService responseService;
 	
 	private long connectionId;
 	private long sequenceCode;
@@ -36,7 +36,7 @@ public class HTTPResponder {
 	    int maximumMessages = 4;
 	    
        // responseRelayChannel.ensureHTTPServerResponse(500, 1024);
-	    this.commandChannel = commandChannel.newHTTPResponseService(maximumMessages, maximumPayloadSize);
+	    this.responseService = commandChannel.newHTTPResponseService(maximumMessages, maximumPayloadSize);
 	    	    
 	    //temp space for only if they appear out of order.
 		this.pipe = RawDataSchema.instance.newPipe(maximumMessages, maximumPayloadSize);
@@ -66,12 +66,12 @@ public class HTTPResponder {
 			
 			if (null==headers) {
 				//custom call
-				commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
+				responseService.publishHTTPResponse(connectionId, sequenceCode, 
                                                    statusCode, hasContinuation, 
                                                    contentType, writable);
 			} else {
 				//full headers call
-				commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
+				responseService.publishHTTPResponse(connectionId, sequenceCode, 
                         						   hasContinuation, headers, 200, writable);
 			}
 			connectionId = -1;
@@ -80,7 +80,13 @@ public class HTTPResponder {
 		} else {
 			if (connectionId>=0 && sequenceCode>=0) {
 			    //will not pick up new data, waiting for these to be consumed.
-				return false;
+				if (connectionId != reader.readPackedLong()) {
+					return false;
+				}
+				if (sequenceCode != reader.readPackedLong()) {
+					return false;
+				}
+				return true;
 			} else {
 				//wait for a following call
 				
@@ -106,7 +112,7 @@ public class HTTPResponder {
 
 		if (connectionId>=0 && sequenceCode>=0) {
 			
-			if (commandChannel.publishHTTPResponse(connectionId, sequenceCode, 
+			if (responseService.publishHTTPResponse(connectionId, sequenceCode, 
 				                           hasContinuation, headers, 200, writable)) {
 			    connectionId = -1;
 			    sequenceCode = -1;
@@ -155,10 +161,12 @@ public class HTTPResponder {
     public boolean respondWith(int statusCode, boolean hasContinuation, HTTPContentType contentType, Writable writable) {
 		
     	if (connectionId>=0 && sequenceCode>=0) {
-    		boolean publishResult = commandChannel.publishHTTPResponse(connectionId, sequenceCode,
+    		boolean publishResult = responseService.publishHTTPResponse(connectionId, sequenceCode,
 				                           statusCode, hasContinuation, contentType, writable);
-		    connectionId = -1;
-		    sequenceCode = -1; 
+    		if (publishResult) {
+    			connectionId = -1;
+    			sequenceCode = -1; 
+    		}
 		    return publishResult;
     	} else {
     		
