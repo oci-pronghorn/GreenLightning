@@ -7,23 +7,16 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.Writable;
-import com.ociweb.gl.test.LoadTester;
-import com.ociweb.json.encode.JSONRenderer;
-import com.ociweb.oe.greenlightning.api.HTTPServer;
-import com.ociweb.oe.greenlightning.api.ExampleAppTest.Person;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class WebTest {
 	
-	GreenRuntime runtime;
+	static GreenRuntime runtime;
 	
 	static int port = 8050;
 	static int telemetryPort = 8097;
 	static String host = "127.0.0.1";	
 	static int timeoutMS = 60_000;	
-	static bboolean telemetry = false;
+	static boolean telemetry = false;
 	static int cyclesPerTrack = 100;
 	static boolean useTLS = true;
 	static int parallelTracks = 2;
