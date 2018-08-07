@@ -18,6 +18,9 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 		
 	ListenerFilter includeRoute(int routeId, CallableRestRequestReader callable);
 	
+	public ListenerFilter includeRoutesByAssoc(Object ... assocRouteObjects);
+	public ListenerFilter includeRoutesByAssoc(Object assocRouteObject, final CallableRestRequestReader callable);
+	public <T extends Behavior> ListenerFilter includeRoutesByAssoc(Object assocRouteObject, final CallableStaticRestRequestReader<T> callable);
 	
 	/**
 	 * Add subscription to this topic to this listener at startup.
@@ -61,6 +64,7 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 	<E extends Enum<E>> ListenerFilter acceptHostResponses(ClientHostPortInstance ... httpSessions);
 
 	ListenerFilter SLALatencyNS(long latency);
+
 
 	
 }

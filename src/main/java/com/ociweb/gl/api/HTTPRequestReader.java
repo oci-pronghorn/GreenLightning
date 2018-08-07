@@ -1,7 +1,6 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.http.server.HTTPPayloadReader;
-import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.http.FieldExtractionDefinitions;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
@@ -15,6 +14,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	private long sequenceCode;
 	private int revisionId;
 	private int routeId;
+	private Object routeAssoc;
 	private int requestContext;
 	private HTTPVerbDefaults verb;
 	private final boolean hasNoRoutes;
@@ -75,8 +75,9 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		return HTTPVerbDefaults.TRACE == verb;
 	}
 
-	public void setRouteId(int pathId) {
-		this.http1xRouterStageConfig.getRouteIdForPathId(pathId);		
+	public void setRouteId(int routeId, Object routeAssoc) {
+		this.routeId = routeId;
+		this.routeAssoc = routeAssoc;
 	}
 
 	public int getRouteId() {
@@ -128,6 +129,10 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 		} else {
 			throw new UnsupportedOperationException("this method can only be used when no routes have been defined.");
 		}
+	}
+
+	public Object getRouteAssoc() {
+		return routeAssoc;
 	}
 	
 
