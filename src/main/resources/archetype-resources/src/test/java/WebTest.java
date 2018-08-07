@@ -1,4 +1,4 @@
-package $
+package ${package};
 
 import static org.junit.Assert.assertTrue;
 
@@ -14,8 +14,6 @@ import com.ociweb.oe.greenlightning.api.HTTPServer;
 import com.ociweb.oe.greenlightning.api.ExampleAppTest.Person;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
-
-{package};
 
 public class WebTest {
 	
