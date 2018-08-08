@@ -1348,14 +1348,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				//every JSON request needs its own ring.
 				Pipe<HTTPRequestSchema> jsonPipe = builder.newHTTPRequestPipe(pipeConfig);
 				inputPipes = PronghornStage.join(inputPipes, jsonPipe);
-				restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(jsonPipe, track, routeIds);
-								
+				restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(jsonPipe, track, routeIds);								
 			}
-			
-			System.out.println("gorw input pipes to "+Arrays.toString(inputPipes).replaceAll(",", "\n"));
-			
-		}
-		
+		}		
 	}
 	
 	@Override
