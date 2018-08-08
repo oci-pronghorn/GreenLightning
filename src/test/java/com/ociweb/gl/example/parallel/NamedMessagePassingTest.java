@@ -1,11 +1,15 @@
 package com.ociweb.gl.example.parallel;
 
+import static org.junit.Assert.assertTrue;
+
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 
 public class NamedMessagePassingTest {
 	
@@ -63,11 +67,19 @@ public class NamedMessagePassingTest {
 //		-XX:+UnlockDiagnosticVMOptions
 //		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9 ??
 				
-		boolean telemetry = false;  //must not be true when checked in.
-		long cycleRate = 2_000; //larger rate should be used with greater volume..
-
 		
-		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
+		//GraphManager.showThreadIdOnTelemetry = true;
+		//GraphManager.showScheduledRateOnTelemetry = true;
+		
+		boolean telemetry = true;  //must not be true when checked in.
+		long cycleRate = 4_000; //larger rate should be used with greater volume..
+
+		//note only 4 threads in use and this should probably be 3
+		//ScriptedNonThreadScheduler.debugStageOrder = System.out;
+		//if we want more volume we should use more threads this can be 5x greater..
+		
+		int serverTracks = 2;
+		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate,serverTracks));
 		
 		ParallelClientLoadTesterPayload payload 
 				= new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
@@ -75,14 +87,16 @@ public class NamedMessagePassingTest {
 		
 		//spikes are less frequent when the wifi network is off...
 		
-		int cyclesPerTrack = 40_000; //*(1+99_9999);
-		int parallelTracks = 2;//40;//12; //4 is the max for the server for parallel loads
+		int cyclesPerTrack = 2_000; //*(1+99_9999);
+		int parallelTracks = 4;//40;//12; //4 is the max for the server for parallel loads
 
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8081, "/test", telemetry);
+		assertTrue(0==config2.durationNanos);
 		
-		config2.simultaneousRequestsPerTrackBits  = 10; // 126k for max volume
+		
+		config2.simultaneousRequestsPerTrackBits  = 3;//10; // 126k for max volume
 
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config2, payload),

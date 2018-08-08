@@ -16,18 +16,20 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 	private long fieldA;
 	private long fieldB;
 		
+	private int tracks;
     private boolean chunked = false;
 
 	public enum Fields {nameA, nameB , urlArg;}
 	
 	
 	public static void main(String[] args) {
-		GreenRuntime.run(new NamedMessagePassingApp(false,4000));
+		GreenRuntime.run(new NamedMessagePassingApp(true,4000,2));
 	}
 	
-	public NamedMessagePassingApp(boolean telemetry, long rate) {
+	public NamedMessagePassingApp(boolean telemetry, long rate, int tracks) {
 		this.telemetry = telemetry;
 		this.rate = rate;
+		this.tracks = tracks;
 	}
 	
 	@Override
@@ -61,24 +63,19 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		//since they require a router to manage the interTrack communication.	
 		///////////////////////////
 				
-		builder.parallelTracks(2); //TODO: mutiple tracks is breaking the auto private topic detection...
-		
+		builder.parallelTracks(tracks);		
 		builder.setDefaultRate(rate);
 
 		
 		// "{\"key1\":\"789\",\"key2\":123}";
 		
 		builder.setGlobalSLALatencyNS(500_000_000);
-		
-		
-		JSONExtractor extractor =
-				builder.defineJSONSDecoder().begin()
-					.element(JSONType.TypeString).asField("key1",Fields.nameA)
-		        	.element(JSONType.TypeInteger).asField("key2",Fields.nameB)
-				.finish();
-		
-		
-		int aRouteId = builder.defineRoute(extractor).path("/te${value}")
+	
+		int aRouteId = builder.defineRoute()
+				.parseJSON()
+						.stringField("key1",Fields.nameA)
+			        	.integerField("key2",Fields.nameB)
+				.path("/te${value}")
 				        .associatedObject("value", Fields.urlArg)
 				        .routeId();
 		
