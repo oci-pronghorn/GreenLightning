@@ -25,7 +25,7 @@ public class RestResponder implements PubSubListener{
             .endObject();
 	
 	private ChannelReader payloadW;	
-	private Writable w = new Writable() {
+	private final Writable w = new Writable() {
 		@Override
 		public void write(ChannelWriter writer) {
 			jsonRenderer.render(writer, payloadW);
@@ -34,7 +34,7 @@ public class RestResponder implements PubSubListener{
 
 	public RestResponder(GreenRuntime runtime, boolean chunked) {
 		newCommandChannel = runtime.newCommandChannel();
-		cmd = newCommandChannel.newHTTPResponseService(1<<12,250);
+		cmd = newCommandChannel.newHTTPResponseService(1<<14,250);
 		useChunked = chunked;
 	}
 	
@@ -42,9 +42,15 @@ public class RestResponder implements PubSubListener{
 	public boolean message(CharSequence topic, ChannelReader payload) {
 		payloadW = payload;
 		
-		if (useChunked) {
+		if (!useChunked) {
+			return cmd.publishHTTPResponse(
+					payload.readPackedLong(), 
+					payload.readPackedLong(), 
+					200, false, HTTPContentTypeDefaults.JSON, w);
+		
+		} else {
 			if (cmd.hasRoomFor(2)) {
-						
+				
 				long connectionId = payload.readPackedLong();
 				long sequenceCode = payload.readPackedLong();
 				
@@ -52,24 +58,18 @@ public class RestResponder implements PubSubListener{
 						connectionId, 
 						sequenceCode, 
 						200, true, HTTPContentTypeDefaults.JSON, w);
-							
+				
 				//TODO: another issue, The end of the continuation MUST be non zero length!!.
 				cmd.publishHTTPResponseContinuation(
 						connectionId, 
 						sequenceCode, 
 						false, (w)->{w.append("hello");});
 				
-				   
+				
 				return true;
 			} else {
 				return false;
 			}
-		
-		} else {
-			return cmd.publishHTTPResponse(
-					payload.readPackedLong(), 
-					payload.readPackedLong(), 
-					200, false, HTTPContentTypeDefaults.JSON, w);
 		}
 	}
 
