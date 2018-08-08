@@ -4,12 +4,8 @@ package com.ociweb.oe.greenlightning.api;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.json.JSONType;
-import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
-import com.ociweb.pronghorn.network.http.CompositeRouteFinish;
-import com.ociweb.pronghorn.network.http.CompositeRouteImpl;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -58,7 +54,7 @@ public class HTTPServer implements GreenApp
                 .path("/testpageA?arg=#{myarg}")
                 .path("/testpagesA?arg=#{myarg}&name=${name}")
                 .path("/testpageA?f=g")
-                .refineInteger("myarg", Field.MYARG, 111, (n,v) -> !n && v>0)
+                .refineInteger("myarg", Field.MYARG, 111, (v) -> v>0)
                 .associatedObject("name", Field.PERSON_NAME)
                 .routeId(Struct.EMPTY_EXAMPLE);
                 
