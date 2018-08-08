@@ -376,7 +376,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     protected int addGreenPipesCount(Behavior listener, int pipesCount) {
 
         if (this.builder.isListeningHTTPRequest(listener)) {
-        	pipesCount += ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
+        	int trackInstances = ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
+        	pipesCount += trackInstances;
         }
 		return pipesCount;
 	}
@@ -386,8 +387,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
 		if (this.builder.isListeningHTTPRequest(listener) ) {
         	
-			Pipe<HTTPRequestSchema>[] httpRequestPipes;
-        	httpRequestPipes = ListenerConfig.newHTTPRequestPipes(builder,  ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction));
+        	int trackInstances = ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
+        	Pipe<HTTPRequestSchema>[] httpRequestPipes = ListenerConfig.newHTTPRequestPipes(builder,  trackInstances);
 
         	int i = httpRequestPipes.length;        	
         	assert(i>0) : "This listens to Rest requests but none have been routed here";        

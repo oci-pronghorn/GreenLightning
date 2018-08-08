@@ -1,6 +1,8 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.json.JSONAccumRule;
+import com.ociweb.json.JSONAligned;
+import com.ociweb.json.JSONRequired;
 import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.json.decode.JSONTable;
 import com.ociweb.pronghorn.struct.ByteSequenceValidator;
@@ -21,7 +23,7 @@ final class ExtractedJSONFieldsForClientImpl implements ExtractedJSONFieldsForCl
 	JSONTable<JSONExtractor> ex = new JSONExtractor().begin();
 
 	@Override
-	public <T extends Enum<T>> ExtractedJSONFieldsForClient stringField(boolean isAligned, JSONAccumRule accumRule,
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient stringField(JSONAligned isAligned, JSONAccumRule accumRule,
 																String extractionPath, T field) {
 		Object temp = ex.stringField(isAligned, accumRule, extractionPath, field);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -36,7 +38,7 @@ final class ExtractedJSONFieldsForClientImpl implements ExtractedJSONFieldsForCl
 	}
 
 	@Override
-	public <T extends Enum<T>> ExtractedJSONFieldsForClient integerField(boolean isAligned, JSONAccumRule accumRule,
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient integerField(JSONAligned isAligned, JSONAccumRule accumRule,
 			String extractionPath, T field) {
 		Object temp = ex.integerField(isAligned, accumRule,extractionPath, field);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -51,7 +53,7 @@ final class ExtractedJSONFieldsForClientImpl implements ExtractedJSONFieldsForCl
 	}
 
 	@Override
-	public <T extends Enum<T>> ExtractedJSONFieldsForClient decimalField(boolean isAligned, JSONAccumRule accumRule,
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient decimalField(JSONAligned isAligned, JSONAccumRule accumRule,
 			String extractionPath, T field) {
 		Object temp = ex.decimalField(isAligned, accumRule, extractionPath, field);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -66,7 +68,7 @@ final class ExtractedJSONFieldsForClientImpl implements ExtractedJSONFieldsForCl
 	}
 
 	@Override
-	public <T extends Enum<T>> ExtractedJSONFieldsForClient booleanField(boolean isAligned, JSONAccumRule accumRule,
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient booleanField(JSONAligned isAligned, JSONAccumRule accumRule,
 			String extractionPath, T field) {
 		Object temp = ex.booleanField(isAligned, accumRule, extractionPath, field);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -87,47 +89,64 @@ final class ExtractedJSONFieldsForClientImpl implements ExtractedJSONFieldsForCl
 
 	@Override
 	public <T extends Enum<T>> ExtractedJSONFieldsForClient integerField(String extractionPath, T field,
-			LongValidator validator) {
-		// TODO Auto-generated method stub
-		return null;
+			JSONRequired required, LongValidator validator) {
+		Object temp = ex.integerField(extractionPath, field, required, validator);
+		assert(temp == ex) : "internal error, the same instance should have been returned";
+		return this;
 	}
 
 	@Override
 	public <T extends Enum<T>> ExtractedJSONFieldsForClient stringField(String extractionPath, T field,
-			ByteSequenceValidator validator) {
-		Object temp = ex.stringField(extractionPath, field, validator);
+			JSONRequired required, ByteSequenceValidator validator) {
+		Object temp = ex.stringField(extractionPath, field, required, validator);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
 		return this;
 	}
 
 	@Override
 	public <T extends Enum<T>> ExtractedJSONFieldsForClient decimalField(String extractionPath, T field,
-			DecimalValidator validator) {
-		Object temp = ex.decimalField(extractionPath, field, validator);
+			JSONRequired required, DecimalValidator validator) {
+		Object temp = ex.decimalField(extractionPath, field, required, validator);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
 		return this;
 	}
 
 	@Override
-	public <T extends Enum<T>> ExtractedJSONFieldsForClient integerField(boolean isAligned,
-			JSONAccumRule accumRule, String extractionPath, T field, LongValidator validator) {
-		Object temp = ex.integerField(isAligned, accumRule,extractionPath, field, validator);
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient integerField(JSONAligned isAligned,
+			JSONAccumRule accumRule, String extractionPath, T field, JSONRequired required, LongValidator validator) {
+		Object temp = ex.integerField(isAligned, accumRule,extractionPath, field, required, validator);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
 		return this;
 	}
 
 	@Override
-	public <T extends Enum<T>> ExtractedJSONFieldsForClient stringField(boolean isAligned,
-			JSONAccumRule accumRule, String extractionPath, T field, ByteSequenceValidator validator) {
-		Object temp = ex.stringField(isAligned, accumRule,extractionPath, field, validator);
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient stringField(JSONAligned isAligned,
+			JSONAccumRule accumRule, String extractionPath, T field, JSONRequired required, ByteSequenceValidator validator) {
+		Object temp = ex.stringField(isAligned, accumRule,extractionPath, field, required, validator);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
 		return this;
 	}
 
 	@Override
-	public <T extends Enum<T>> ExtractedJSONFieldsForClient decimalField(boolean isAligned,
-			JSONAccumRule accumRule, String extractionPath, T field, DecimalValidator validator) {
-		Object temp = ex.decimalField(isAligned, accumRule,extractionPath, field, validator);
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient decimalField(JSONAligned isAligned,
+			JSONAccumRule accumRule, String extractionPath, T field, JSONRequired required, DecimalValidator validator) {
+		Object temp = ex.decimalField(isAligned, accumRule,extractionPath, field, required, validator);
+		assert(temp == ex) : "internal error, the same instance should have been returned";
+		return this;
+	}
+
+	@Override
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient booleanField(String extractionPath, T field,
+			JSONRequired isRequired) {
+		Object temp = ex.booleanField(extractionPath, field, isRequired);
+		assert(temp == ex) : "internal error, the same instance should have been returned";
+		return this;
+	}
+
+	@Override
+	public <T extends Enum<T>> ExtractedJSONFieldsForClient booleanField(JSONAligned isAligned, JSONAccumRule accumRule,
+			String extractionPath, T field, JSONRequired isRequired) {
+		Object temp = ex.booleanField(isAligned, accumRule, extractionPath, field, isRequired);
 		assert(temp == ex) : "internal error, the same instance should have been returned";
 		return this;
 	}

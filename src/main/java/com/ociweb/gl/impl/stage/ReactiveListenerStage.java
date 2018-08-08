@@ -224,8 +224,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			//extract pipes used by listener and use cmdChannelUsageChecker to confirm its not re-used
 			//all the outputs are collected in outputPipes together, this can not be done any earler due to auto private topic feature
 			//if auto private topics has found them all to be topic then pub sub is disabled since it is not needed.
-			ChildClassScanner.visitUsedByClass(nameId, listener, gatherPipesVisitor, MsgCommandChannel.class);//populates outputPipes
-				
+			ChildClassScanner.visitUsedByClass(nameId, listener, gatherPipesVisitor, MsgCommandChannel.class);//populates outputPipes	
+			
 			if (this.builder.isListeningToHTTPResponse(listener)) {
 				int behaviorId = builder.behaviorId(listener);		
 				
@@ -825,11 +825,28 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		}
     }
 
+   
     
+	private boolean isNextInSequence(Pipe<HTTPRequestSchema> p) {
+		
+		//NOTE: every complete MSG_RESTREQUEST_300 will increment the sequence number and come as 1 message from the router.
+		
+		// here we just need to make sure that we see the next number.
+		// no need to check if we only have 1 input however.
+		// need array of Int positions just like we have for the order sequence  4 mb possibly...
+		// TODO: how do we know when to switch back to zero?
+		
+		
+		// TODO Auto-generated method stub
+		return true;
+	}
+	
+	
+	
     final void consumeRestRequest(Object listener, Pipe<HTTPRequestSchema> p) {
 		
-    	  while (Pipe.hasContentToRead(p)) {                
-              
+    	  while (Pipe.hasContentToRead(p) && isNextInSequence(p)) {                
+             
     		  Pipe.markTail(p);             
               int msgIdx = Pipe.takeMsgIdx(p);
     	  
@@ -851,8 +868,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				  reader.setRevisionId(revision);
     	    	  int context = Pipe.takeInt(p);   	    	  
     	    	  
-    	    	  reader.setRouteId(routeId);
-    	    	  
+    	    	  reader.setRouteId(routeId, graphManager.recordTypeData.structAssociatedObject(DataInputBlobReader.getStructType(reader)));
+    	    	      	    	  
     	    	  assert(parallelIdx<OrderSupervisorStage.CLOSE_CONNECTION_MASK);
     	    	  
     	    	  //if (0!=(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context)) {
@@ -900,8 +917,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	
 	}
 
-    
-    
+
 	final void consumeNetResponse(Object listener, Pipe<NetResponseSchema> p) {
 
     	 while (Pipe.hasContentToRead(p)) {                
@@ -1265,39 +1281,58 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		}
 	}
 	
-	@Override
-	public ListenerFilter includeRoutesByAssoc(Object ... assocRouteObjects) {
-		int r = assocRouteObjects.length;
-		int[] routeIds = new int[r];
-		while (--r >= 0) {
-			routeIds[r] = builder.routerConfig().lookupRouteIdByIdentity(assocRouteObjects[r]);
 
-		}		
-		includeRoutes(routeIds);
-		return this;
-	}
 	
 	
 	@Override
 	public final ListenerFilter includeRoutes(int... routeIds) {
 
-		if (listener instanceof RestListener) {
-	
-			int count = 0;
-			for(int i = 0; i<inputPipes.length; i++) {
-				//we only expect to find a single request pipe
-				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
-					final int p = parallelInstance==-1 ? count : parallelInstance;
-					final Pipe<HTTPRequestSchema> pipe = (Pipe<HTTPRequestSchema>) inputPipes[i];
-					
-					restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(pipe, p, routeIds);
-					count++;
-				}
-			}
+		if (listener instanceof RestListener) {	
+			addRoutesToPipeMapping(routeIds);
 			return this;
 		} else {
 			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
 		}
+	}
+
+	private void addRoutesToPipeMapping(int ... routeIds) {
+		
+		///new 
+		// every route is given 1 pipe and added
+		// do not add pipe in green block
+		// OR just split out those with JSON..
+		// CAN create one pipe per route but then Reactor may process out of order!!!!! 
+		//    must have new reactor per each but then we have no shared state
+		//    mutiple pipes consume too much memory...
+		//    must introduce new stage to RE-order the incommming pipe data... eg multiple JSON parsers???
+		// OR add order aware work pick up in the Operations !!!  this keeps us from doing extra copy1!!
+		//   Then every JSON extractor gets its own all others are together
+		
+//		if (null!=builder.routerConfig().JSONExtractor(routeIdx)) {
+//			//first one found?			
+//		};
+		
+		
+		
+		
+		
+		
+		/////////////
+		//old design
+		///////////
+		
+		int count = 0;
+		for(int i = 0; i<inputPipes.length; i++) {
+			//we only expect to find a single request pipe
+			if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
+				final int p = parallelInstance==-1 ? count : parallelInstance;
+				final Pipe<HTTPRequestSchema> pipe = (Pipe<HTTPRequestSchema>) inputPipes[i];
+				
+				restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(pipe, p, routeIds);
+				count++;
+			}
+		}
+		System.out.println("total request pipes found "+count);
 	}
 	
 	@Override
@@ -1394,6 +1429,27 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		return this;
 	}	
 	
+	public ListenerFilter includeRoutesByAssoc(Object ... assocRouteObjects) {
+		int r = assocRouteObjects.length;
+		int[] routeIds = new int[r];
+		while (--r >= 0) {
+			routeIds[r] = builder.routerConfig().lookupRouteIdByIdentity(assocRouteObjects[r]);
+
+		}		
+		includeRoutes(routeIds);
+		return this;
+	}
+	
+	public ListenerFilter includeRoutesByAssoc(Object assocRouteObject, final CallableRestRequestReader callable) {
+		return includeRoute(builder.routerConfig().lookupRouteIdByIdentity(assocRouteObject), callable);
+		
+	}
+	
+	public <T extends Behavior> ListenerFilter includeRoutesByAssoc(Object assocRouteObject, final CallableStaticRestRequestReader<T> callable) {
+		return includeRoute(builder.routerConfig().lookupRouteIdByIdentity(assocRouteObject), callable);
+		
+	}
+	
 	public final ListenerFilter includeRoute(int routeId, final CallableRestRequestReader callable) {
 		
 		if (null==restRequestReader) {
@@ -1414,6 +1470,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				return callable.restRequest(request);
 			}			
 		};
+		addRoutesToPipeMapping(routeId);
 		return this;
 	}
 
@@ -1436,7 +1493,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			}
 		}		
 		restRequestReader[routeId] = callable;
-		
+		addRoutesToPipeMapping(routeId);
 		return this;
 	}
 

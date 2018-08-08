@@ -42,8 +42,7 @@ public class ListenerConfig {
 		PipeConfig<HTTPRequestSchema> pipeConfig = builder.pcm.getConfig(HTTPRequestSchema.class).grow2x();
 		int idx = restRequests.length;
 		while (--idx>=0) {
-			Pipe<HTTPRequestSchema> pipe = builder.newHTTPRequestPipe(pipeConfig);
-			restRequests[idx] = pipe;
+			restRequests[idx] = builder.newHTTPRequestPipe(pipeConfig);
 		}
 		return restRequests;
 	}

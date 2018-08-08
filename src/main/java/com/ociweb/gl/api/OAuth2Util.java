@@ -1,6 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.json.JSONType;
 import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
@@ -22,7 +21,9 @@ public class OAuth2Util {
 	//TODO: add TLS round trip test for ping
 	//      double check the MQTT data
 	
-	
+	public enum BearerField{
+		ACCESS_TOKEN, TOKEN_TYPE, EXPIRES_IN, REFRESH_TOKEN, SCOPE
+	}
 	
 	public static void buildBearerExtractor() {
 		//TODO: add enum for these fields
@@ -31,13 +32,11 @@ public class OAuth2Util {
 		JSONExtractor ex = new JSONExtractor();
 		
 		JSONExtractor ready = ex.begin()
-				
-		.element(JSONType.TypeString).asField("access_token", "access_token") //MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3
-		.element(JSONType.TypeString).asField("token_type", "token_type") // token_type Expected = "bearer";
-		.element(JSONType.TypeInteger).asField("expires_in", "expires_in")	//3600	
-		.element(JSONType.TypeString).asField("refresh_token", "refresh_token") //MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3
-		.element(JSONType.TypeString).asField("scope", "scope") //create
-		
+				.stringField("access_token", BearerField.ACCESS_TOKEN) //MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3
+				.stringField("token_type", BearerField.TOKEN_TYPE) // token_type Expected = "bearer";
+				.integerField("expires_in", BearerField.EXPIRES_IN)	//3600	
+				.stringField("refresh_token", BearerField.REFRESH_TOKEN) //MTQ0NjJkZmQ5OTM2NDE1ZTZjNGZmZjI3
+				.stringField("scope", BearerField.SCOPE) //create
 		.finish();
 		
 		

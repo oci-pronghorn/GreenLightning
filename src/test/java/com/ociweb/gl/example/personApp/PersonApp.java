@@ -14,11 +14,11 @@ public class PersonApp implements GreenApp {
 	public void declareConfiguration(Builder builder) {
 		JSONExtractor jsonDecoder = builder.defineJSONSDecoder()
 			.begin()
-			.element(JSONType.TypeString).asField("firstName",GreenField.firstName)
-			.element(JSONType.TypeString).asField("lastName",GreenField.lastName)
-			.element(JSONType.TypeBoolean).asField("enabled",GreenField.enabled)
-			.element(JSONType.TypeInteger).asField("age",GreenField.age)
-			.element(JSONType.TypeInteger).asField("id",GreenField.id)
+			.stringField("firstName",GreenField.firstName)
+			.stringField("lastName",GreenField.lastName)
+			.booleanField("enabled",GreenField.enabled)
+			.integerField("age",GreenField.age)
+			.integerField("id",GreenField.id)
 			.finish();
 		
 		builder.defineRoute(jsonDecoder).path("/people").routeId(GreenStruct.person);
