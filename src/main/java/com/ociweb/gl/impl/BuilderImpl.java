@@ -384,37 +384,26 @@ public class BuilderImpl implements Builder {
 	 * @return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds)
 	 */
 	public final boolean appendPipeMappingIncludingGroupIds(Pipe<HTTPRequestSchema> pipe,
-											            int parallelId,
+											            int track,
 											            int ... routeIds) {
 		lazyCreatePipeLookupMatrix();
-		return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, routeIds);
+		return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, track, collectedHTTPRequestPipes, routeIds);
 	}
 
 	/**
 	 * A method to append pipe mapping but not including group ids when invoked by builder
 	 * @param pipe Pipe<HTTPRequestSchema> arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
 	 * @param parallelId int arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
-	 * @param groupIds int arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
+	 * @param routeIds int arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
 	 * @return routerConfig().appendPipeIdMappingForExcludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds)
 	 */
 	public final boolean appendPipeMappingExcludingGroupIds(Pipe<HTTPRequestSchema> pipe,
 					                            int parallelId,
-					                            int ... groupIds) {
+					                            int ... routeIds) {
 		lazyCreatePipeLookupMatrix();
-		return routerConfig().appendPipeIdMappingForExcludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds);
+		return routerConfig().appendPipeIdMappingForExcludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, routeIds);
 	}
 
-	/**
-	 *
-	 * @param pipe Pipe<HTTPRequestSchema> arg used for routerConfig().appendPipeIdMappingForAllGroupIds
-	 * @param parallelId int arg used for routerConfig().appendPipeIdMappingForAllGroupIds
-	 * @return routerConfig().appendPipeIdMappingForAllGroupIds(pipe, parallelId, collectedHTTPRequestPipes)
-	 */
-	public final boolean appendPipeMappingAllGroupIds(Pipe<HTTPRequestSchema> pipe,
-									int parallelId) {
-		lazyCreatePipeLookupMatrix();
-		return routerConfig().appendPipeIdMappingForAllGroupIds(pipe, parallelId, collectedHTTPRequestPipes);
-	}
 
 	/**
 	 *

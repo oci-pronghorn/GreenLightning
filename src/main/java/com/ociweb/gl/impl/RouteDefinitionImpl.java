@@ -3,6 +3,8 @@ package com.ociweb.gl.impl;
 import com.ociweb.gl.api.ExtractedJSONFieldsForRoute;
 import com.ociweb.gl.api.RouteDefinition;
 import com.ociweb.json.JSONAccumRule;
+import com.ociweb.json.JSONAligned;
+import com.ociweb.json.JSONRequired;
 import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.json.decode.JSONTable;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
@@ -41,7 +43,7 @@ final class RouteDefinitionImpl implements RouteDefinition {
 			JSONTable<JSONExtractor> ex = new JSONExtractor().begin();
 			
 			@Override
-			public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(boolean isAligned, JSONAccumRule accumRule,
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(JSONAligned isAligned, JSONAccumRule accumRule,
 																		String extractionPath, T field) {
 										
 				Object temp = ex.stringField(isAligned, accumRule, extractionPath, field);
@@ -58,7 +60,7 @@ final class RouteDefinitionImpl implements RouteDefinition {
 
 			
 			@Override
-			public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(boolean isAligned, JSONAccumRule accumRule,
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(JSONAligned isAligned, JSONAccumRule accumRule,
 					String extractionPath, T field) {
 				Object temp = ex.integerField(isAligned, accumRule, extractionPath, field);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -73,7 +75,7 @@ final class RouteDefinitionImpl implements RouteDefinition {
 			}
 			
 			@Override
-			public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(boolean isAligned, JSONAccumRule accumRule,
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(JSONAligned isAligned, JSONAccumRule accumRule,
 					String extractionPath, T field) {
 				Object temp = ex.decimalField(isAligned, accumRule, extractionPath, field);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -88,7 +90,7 @@ final class RouteDefinitionImpl implements RouteDefinition {
 			}
 			
 			@Override
-			public <T extends Enum<T>> ExtractedJSONFieldsForRoute booleanField(boolean isAligned, JSONAccumRule accumRule,
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute booleanField(JSONAligned isAligned, JSONAccumRule accumRule,
 					String extractionPath, T field) {
 				Object temp = ex.booleanField(isAligned, accumRule, extractionPath, field);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
@@ -104,49 +106,65 @@ final class RouteDefinitionImpl implements RouteDefinition {
 
 			@Override
 			public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(String extractionPath, T field,
-					LongValidator validator) {
-				Object temp = ex.integerField(extractionPath, field, validator);
+					JSONRequired required, LongValidator validator) {
+				Object temp = ex.integerField(extractionPath, field, required, validator);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
 				return this;
 			}
 
 			@Override
 			public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(String extractionPath, T field,
-					ByteSequenceValidator validator) {
-				Object temp = ex.stringField(extractionPath, field, validator);
+					JSONRequired required, ByteSequenceValidator validator) {
+				Object temp = ex.stringField(extractionPath, field, required, validator);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
 				return this;
 			}
 
 			@Override
 			public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(String extractionPath, T field,
-					DecimalValidator validator) {
-				Object temp = ex.decimalField(extractionPath, field, validator);
+					JSONRequired required, DecimalValidator validator) {
+				Object temp = ex.decimalField(extractionPath, field, required, validator);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
 				return this;
 			}
 
 			@Override
-			public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(boolean isAligned,
-					JSONAccumRule accumRule, String extractionPath, T field, LongValidator validator) {
-				Object temp = ex.integerField(isAligned, accumRule, extractionPath, field, validator);
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute integerField(JSONAligned isAligned,
+					JSONAccumRule accumRule, String extractionPath, T field, JSONRequired required, LongValidator validator) {
+				Object temp = ex.integerField(isAligned, accumRule, extractionPath, field, required, validator);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
 				return this;
 			}
 
 			@Override
-			public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(boolean isAligned,
-					JSONAccumRule accumRule, String extractionPath, T field, ByteSequenceValidator validator) {
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute stringField(JSONAligned isAligned,
+					JSONAccumRule accumRule, String extractionPath, T field, JSONRequired required, ByteSequenceValidator validator) {
 				
-				Object temp = ex.stringField(isAligned, accumRule, extractionPath, field, validator);
+				Object temp = ex.stringField(isAligned, accumRule, extractionPath, field, required, validator);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
 				return this;
 			}
 
 			@Override
-			public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(boolean isAligned,
-					JSONAccumRule accumRule, String extractionPath, T field, DecimalValidator validator) {
-				Object temp = ex.decimalField(isAligned, accumRule, extractionPath, field, validator);
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute decimalField(JSONAligned isAligned,
+					JSONAccumRule accumRule, String extractionPath, T field, JSONRequired required, DecimalValidator validator) {
+				Object temp = ex.decimalField(isAligned, accumRule, extractionPath, field, required, validator);
+				assert(temp == ex) : "internal error, the same instance should have been returned";
+				return this;
+			}
+
+			@Override
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute booleanField(String extractionPath, T field,
+					JSONRequired isRequired) {
+				Object temp = ex.booleanField(extractionPath, field, isRequired);
+				assert(temp == ex) : "internal error, the same instance should have been returned";
+				return this;
+			}
+
+			@Override
+			public <T extends Enum<T>> ExtractedJSONFieldsForRoute booleanField(JSONAligned isAligned,
+					JSONAccumRule accumRule, String extractionPath, T field, JSONRequired isRequired) {
+				Object temp = ex.booleanField(isAligned, accumRule, extractionPath, field, isRequired);
 				assert(temp == ex) : "internal error, the same instance should have been returned";
 				return this;
 			}

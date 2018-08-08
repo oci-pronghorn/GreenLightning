@@ -51,8 +51,13 @@ public class StageRouteFilter implements RouteFilter {
 	@Override
 	public RouteFilter includeAllRoutes() {
 		
-		builder.appendPipeMappingAllGroupIds(input, parallelIndex);
-
+		int[] routes = new int[builder.routerConfig().totalRoutesCount()];
+		int i = routes.length;
+		while (--i>=0) {
+			routes[i]=i;
+		}
+		includeRoutes(routes);
+		
 		return this;
 	}
 

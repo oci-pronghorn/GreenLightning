@@ -2,6 +2,7 @@ package com.ociweb.gl.impl.stage;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -13,6 +14,7 @@ import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
+import com.ociweb.gl.api.ListenerConfig;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
@@ -58,6 +60,7 @@ import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
@@ -325,6 +328,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 							
 			}
 			
+			System.out.println("input pipes "+Arrays.toString(inputPipes).replaceAll(",", "\n"));
 			
 			
 			this.realStage = new ReactiveProxyStage(this, graphManager, consumerJoin(inputPipes, consumers.iterator()), outputPipes);
@@ -680,16 +684,22 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	
     };
     
-
+    private int consumeRequestMask;
+    private int[] consumeRequestSequence;
+    private long[] consumeRequestConnection;
     
     @Override
     public void startup() {              
- 
+    	
     	//////////////////////////////////////////////////////////////////
     	//ALL operators have been added to operators so it can be used to create consumers as needed
     	consumer = new ReactiveManagerPipeConsumer(listener, builder.operators, inputPipes);
     	    	
     	if (listener instanceof RestListener) {
+    		
+    		consumeRequestMask = (1<<builder.getHTTPServerConfig().getMaxConnectionBits())-1;
+    		consumeRequestSequence = new int[1<<builder.getHTTPServerConfig().getMaxConnectionBits()];
+    		consumeRequestConnection = new long[consumeRequestSequence.length];
     		if (!restRoutesDefined) {
     			throw new UnsupportedOperationException("a RestListener requires a call to includeRoutes() first to define which routes it consumes.");
     		}
@@ -708,7 +718,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 
     	//NOTE: the startup listener logic can not be called here since we are waiting on all other behaviors and stages
     	//      to also be started before we begin to do work. see top of run... that is where we call the startup listeners.
-       
+    	  	
+    	
     }
 
 	private void runStartupListener(StartupListenerBase startupListener) {
@@ -746,11 +757,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		    	}
 		
 		        if (timeEvents) {         					        	
-		        	processTimeEvents(timeListener, timeTrigger);            	
+		        	processTimeEvents(timeListener, timeTrigger);
+		        	realStage.didWork();
 		        }
 		
 		        if (null != tickListener) {
 		        	tickListener.tickEvent();
+		        	realStage.didWork();
 		        }
 		        
 			    //all local behaviors
@@ -774,10 +787,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	    		this.realStage.requestShutdown();    		
 	    		return;
 	    	}
-    	} else {    		
+    	} else {    
+
     		//Do last so we complete all the initializations first
     		if (listener instanceof StartupListener) {
     			runStartupListener((StartupListenerBase)listener);
+    			realStage.didWork();
     		}        
     		startupCompleted=true;
     	}
@@ -825,19 +840,34 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		}
     }
 
-   
+    private void clearNextInSequence(long chnl, int seq) {
+    	assert(consumeRequestConnection[(int)(chnl&consumeRequestMask)]==chnl) : "internal error";    	
+    	consumeRequestSequence[(int)(chnl&consumeRequestMask)]=seq;
+    }
     
 	private boolean isNextInSequence(Pipe<HTTPRequestSchema> p) {
-		
-		//NOTE: every complete MSG_RESTREQUEST_300 will increment the sequence number and come as 1 message from the router.
-		
-		// here we just need to make sure that we see the next number.
-		// no need to check if we only have 1 input however.
-		// need array of Int positions just like we have for the order sequence  4 mb possibly...
-		// TODO: how do we know when to switch back to zero?
-		
-		
-		// TODO Auto-generated method stub
+
+		if (Pipe.peekMsg(p, HTTPRequestSchema.MSG_RESTREQUEST_300)) {
+			long chnl = Pipe.peekLong(p, HTTPRequestSchema.MSG_RESTREQUEST_300_FIELD_CHANNELID_21);
+			int seq  = Pipe.peekInt(p, HTTPRequestSchema.MSG_RESTREQUEST_300_FIELD_SEQUENCE_26);
+			
+			int idxPos = (int)(chnl&consumeRequestMask);
+			
+			if (seq==0) {
+				//starting fresh, wipe out old connection
+				consumeRequestSequence[idxPos] = 0;
+				consumeRequestConnection[idxPos] = chnl;
+			} else {
+				if (consumeRequestConnection[idxPos] == chnl) {
+					//connection is still live is the the right index
+					return (consumeRequestSequence[idxPos]==(seq-1));
+				} else {
+					//this is an old discontinued connection so we should drop it
+					Pipe.skipNextFragment(p);
+					return Pipe.hasContentToRead(p);					
+				}
+			}
+		}
 		return true;
 	}
 	
@@ -903,7 +933,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			              }
     	    		  }
     	    	  }
-
+    	    	  clearNextInSequence(connectionId, sequenceNo);
     	      } else {
     	    	  logger.error("unrecognized message on {} ",p);
     	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);
@@ -1262,19 +1292,17 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	@Override
 	public final ListenerFilter includeAllRoutes() {
 		
+		
 		restRoutesDefined = true;
 		
 		if (listener instanceof RestMethodListenerBase) {
-			int count = 0;
-			int i =	inputPipes.length;
+			
+			int[] routes = new int[builder.routerConfig().totalRoutesCount()];
+			int i = routes.length;
 			while (--i>=0) {
-				//we only expect to find a single request pipe
-				if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {					   
-					int p = parallelInstance==-1?count:parallelInstance;
-					builder.appendPipeMappingAllGroupIds((Pipe<HTTPRequestSchema>) inputPipes[i], p);
-					count++;
-				}
+				routes[i]=i;
 			}
+			includeRoutes(routes);
 			return this;
 		} else {
 			throw new UnsupportedOperationException("The Listener must be an instance of "+RestListener.class.getSimpleName()+" in order to call this method.");
@@ -1295,44 +1323,39 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		}
 	}
 
+	
+	private int pipeIndexForNonJSONRequests = -1;
+	
 	private void addRoutesToPipeMapping(int ... routeIds) {
+
+		final int track = parallelInstance==-1 ? 0 : parallelInstance;
+		int i = routeIds.length;
+		while (--i>=0) {
 		
-		///new 
-		// every route is given 1 pipe and added
-		// do not add pipe in green block
-		// OR just split out those with JSON..
-		// CAN create one pipe per route but then Reactor may process out of order!!!!! 
-		//    must have new reactor per each but then we have no shared state
-		//    mutiple pipes consume too much memory...
-		//    must introduce new stage to RE-order the incommming pipe data... eg multiple JSON parsers???
-		// OR add order aware work pick up in the Operations !!!  this keeps us from doing extra copy1!!
-		//   Then every JSON extractor gets its own all others are together
-		
-//		if (null!=builder.routerConfig().JSONExtractor(routeIdx)) {
-//			//first one found?			
-//		};
-		
-		
-		
-		
-		
-		
-		/////////////
-		//old design
-		///////////
-		
-		int count = 0;
-		for(int i = 0; i<inputPipes.length; i++) {
-			//we only expect to find a single request pipe
-			if (Pipe.isForSchema(inputPipes[i], HTTPRequestSchema.class)) {		
-				final int p = parallelInstance==-1 ? count : parallelInstance;
-				final Pipe<HTTPRequestSchema> pipe = (Pipe<HTTPRequestSchema>) inputPipes[i];
+			PipeConfig<HTTPRequestSchema> pipeConfig = builder.pcm.getConfig(HTTPRequestSchema.class);
+			
+			if (null==builder.routerConfig().JSONExtractor(routeIds[i])) {
+				//this route does not use JSON so we can join them together
+				if (-1 == pipeIndexForNonJSONRequests) {//the one ring to rule them all was not yet forged.					
+					pipeIndexForNonJSONRequests = inputPipes.length;
+					inputPipes = PronghornStage.join(inputPipes, builder.newHTTPRequestPipe(pipeConfig));
+				}
 				
-				restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(pipe, p, routeIds);
-				count++;
+				restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(
+						       (Pipe<HTTPRequestSchema>) inputPipes[pipeIndexForNonJSONRequests], track, routeIds);
+			
+			} else {
+				//every JSON request needs its own ring.
+				Pipe<HTTPRequestSchema> jsonPipe = builder.newHTTPRequestPipe(pipeConfig);
+				inputPipes = PronghornStage.join(inputPipes, jsonPipe);
+				restRoutesDefined |= builder.appendPipeMappingIncludingGroupIds(jsonPipe, track, routeIds);
+								
 			}
+			
+			System.out.println("gorw input pipes to "+Arrays.toString(inputPipes).replaceAll(",", "\n"));
+			
 		}
-		System.out.println("total request pipes found "+count);
+		
 	}
 	
 	@Override

@@ -372,60 +372,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     private static IntHashTable getUsageChecker() {
     	return cmdChannelUsageChecker;
     }
-    
-    protected int addGreenPipesCount(Behavior listener, int pipesCount) {
-
-        if (this.builder.isListeningHTTPRequest(listener)) {
-        	int trackInstances = ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
-        	pipesCount += trackInstances;
-        }
-		return pipesCount;
-	}
-
-    
-	protected void populateGreenPipes(Behavior listener, int pipesCount, Pipe<?>[] inputPipes) {
-
-		if (this.builder.isListeningHTTPRequest(listener) ) {
-        	
-        	int trackInstances = ListenerConfig.computeParallel(builder, parallelInstanceUnderActiveConstruction);
-        	Pipe<HTTPRequestSchema>[] httpRequestPipes = ListenerConfig.newHTTPRequestPipes(builder,  trackInstances);
-
-        	int i = httpRequestPipes.length;        	
-        	assert(i>0) : "This listens to Rest requests but none have been routed here";        
-        	while (--i >= 0) {
-        		inputPipes[--pipesCount] = httpRequestPipes[i];                		
-        	}
-        }
-		
-		////////////////
-		////////////////
-		
-		
-		if (listener instanceof SerialStoreProducerAckListener) {
-			//TODO: I am an ack listener but to which serial ID?
-			
-			// inputPipes[--pipesCount] =
-			
-		}
-		
-		
-		if (listener instanceof SerialStoreReleaseAckListener) {
-			//TODO: I am an ack listener but to which serial ID?
-			
-			// inputPipes[--pipesCount] =
-			
-		}
-		
-		if (listener instanceof SerialStoreReplayListener) {
-			//TODO: I am an ack listener but to which serial ID?
-			
-			// inputPipes[--pipesCount] =
-			
-		}
-		
-		
-	}
-
 
     /**
      * This pipe returns all the data this object has requested via subscriptions elsewhere.
@@ -970,26 +916,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	//assigns the listener and id to any CommandChannels so they know where they belong for private topics later...
     	ChildClassScanner.visitUsedByClass(id, listener, listenerAndNameVisitor, MsgCommandChannel.class);//populates outputPipes
 
-    	
-    	/////////////
-    	//INPUT  
-    	//add green features, count first then create the pipes
-    	//NOTE: that each Behavior is inspected and will find Transducers which need inputs as well
-    	/////////
-    	//TODO: now that we do this late this block can be moved...
-    	int pipesCount = addGreenPipesCount(listener, 0);
-        Pipe<?>[] inputPipes = new Pipe<?>[pipesCount];
-        
-        populateGreenPipes(listener, pipesCount, inputPipes);                
- 
-        
-        //////////////////////
-        //////////////////////
         
         //this is empty when transducerAutowiring is off
         final ArrayList<ReactiveManagerPipeConsumer> consumers = new ArrayList<ReactiveManagerPipeConsumer>(); 
         
         //extract this into common method to be called in GL and FL
+        Pipe<?>[] inputPipes = new Pipe<?>[0];
 		if (transducerAutowiring) {
 			inputPipes = autoWireTransducers(id, listener, inputPipes, consumers);
 		}

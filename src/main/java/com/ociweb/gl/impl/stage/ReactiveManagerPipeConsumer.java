@@ -49,6 +49,7 @@ public class ReactiveManagerPipeConsumer {
 				} else {
 					if (null!=localOperators && null!=localOperators[i]) {//skip if null, this is for the TickListener
 						localOperators[i].apply(i, localObj, localInputs[i], r);
+						r.realStage.didWork();
 						if (Pipe.hasContentToRead(localInputs[i])) {
 							temp++;
 							passes++;

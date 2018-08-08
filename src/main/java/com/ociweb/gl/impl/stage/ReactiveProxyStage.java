@@ -48,5 +48,9 @@ public class ReactiveProxyStage extends PronghornStage {
 	public int getFeatures(Pipe<TrafficOrderSchema> orderPipe) {
 		return proxy.getFeatures(orderPipe);
 	}
+
+	public void didWork() {
+		this.didWorkMonitor.published();
+	}
 	
 }
