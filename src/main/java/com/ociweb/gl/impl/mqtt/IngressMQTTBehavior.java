@@ -44,7 +44,7 @@ public class IngressMQTTBehavior implements TickListener {
 		assert(convertersSub.length == internalTopicsSub.length);
 		
       	PipeConfigManager pcm = new PipeConfigManager(4, MsgRuntime.defaultCommandChannelLength, MsgRuntime.defaultCommandChannelMaxPayload);
-      	MsgCommandChannel cmd = msgRuntime.builder.newCommandChannel(-1,  pcm);  
+      	MsgCommandChannel cmd = MsgRuntime.builder(msgRuntime).newCommandChannel(-1,  pcm);  
       	
       	//one service per each internal topic, this allows each to become "private" when possible
       	PubSubFixedTopicService[] targetTopics = new PubSubFixedTopicService[internalTopicsSub.length];

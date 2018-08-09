@@ -171,7 +171,6 @@ public class BuilderImpl implements Builder {
 
 	protected ReentrantLock devicePinConfigurationLock = new ReentrantLock();
 
-	private MQTTConfigImpl mqtt = null;
 	private HTTPServerConfigImpl server = null;
 	private TelemetryConfigImpl telemetry = null;
 	private HTTPClientConfigImpl client = null;
@@ -730,10 +729,10 @@ public class BuilderImpl implements Builder {
 										  final	Runnable dirtyRunnable) {
 
 		final StageScheduler scheduler = 
-				 runtime.builder.threadLimit>0 ?				
+				MsgRuntime.builder(runtime).threadLimit>0 ?				
 		         StageScheduler.defaultScheduler(gm, 
-		        		 runtime.builder.threadLimit, 
-		        		 runtime.builder.threadLimitHard) :
+		        		 MsgRuntime.builder(runtime).threadLimit, 
+		        		 MsgRuntime.builder(runtime).threadLimitHard) :
 		         StageScheduler.defaultScheduler(gm);
 
 		runtime.addCleanShutdownRunnable(cleanRunnable);
@@ -1102,7 +1101,9 @@ public class BuilderImpl implements Builder {
 			//must be adjusted together
 
 			int releaseCount = 1024;
-			int responseUnwrapCount = this.client.isTLS()? 2 : 1;
+			
+			int responseUnwrapCount = this.client.isTLS()? this.client.getUnwrapCount() : 1;
+			
 			int clientWrapperCount = this.client.isTLS()? 2 : 1;
 			int outputsCount = clientWrapperCount*(this.client.isTLS()? 2 : 1); //Multipler per session for total connections ,count of pipes to channel writer
 	
@@ -1209,6 +1210,18 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {
+		
+		PipeConfigManager localPCM = pcm;
+		
+		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
+		long rate = defaultSleepRateNS>200_000?defaultSleepRateNS/4:defaultSleepRateNS;
+		
+		return buildMQTTBridge(gm, host, port, clientId, maxInFlight, maxMessageLength, localPCM, rate);
+	}
+
+	private static MQTTConfigImpl buildMQTTBridge(GraphManager gm, CharSequence host, int port, CharSequence clientId, 
+													int maxInFlight, int maxMessageLength, 
+													PipeConfigManager localPCM, long rate) {
 		ClientCoordinator.registerDomain(host);		
 		if (maxInFlight>(1<<15)) {
 			throw new UnsupportedOperationException("Does not suppport more than "+(1<<15)+" in flight");
@@ -1217,17 +1230,14 @@ public class BuilderImpl implements Builder {
 			throw new UnsupportedOperationException("Specification does not support values larger than 256M");
 		}
 		 
-		pcm.ensureSize(MessageSubscription.class, maxInFlight, maxMessageLength);
+		localPCM.ensureSize(MessageSubscription.class, maxInFlight, maxMessageLength);
 		
-		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
-		long rate = defaultSleepRateNS>200_000?defaultSleepRateNS/4:defaultSleepRateNS;
 
 		MQTTConfigImpl mqttBridge = new MQTTConfigImpl(host, port, clientId,
-				                    this, rate, 
+				                    gm, rate, 
 				                    (short)maxInFlight, maxMessageLength);
-		mqtt = mqttBridge;
 		mqttBridge.beginDeclarations();
-		return mqtt;
+		return mqttBridge;
 	}
 	
 	@Override

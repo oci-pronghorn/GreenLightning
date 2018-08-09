@@ -50,14 +50,13 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	
 	private final short maxInFlight;
 	private int maximumLenghOfVariableLengthFields;
-	//
-	private final BuilderImpl builder;
-	//
+
 	private BridgeConfigStage configStage = BridgeConfigStage.Construction;
 	
 	private Pipe<MQTTClientRequestSchema> clientRequest;
 	private Pipe<MQTTClientResponseSchema> clientResponse;
 	private final long rate;
+	private final GraphManager gm;
 	
 	private int subscriptionQoS = 0;
 
@@ -65,13 +64,13 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	private int transmissionFieldRetain = 0;
 	
 	public MQTTConfigImpl(CharSequence host, int port, CharSequence clientId,
-			       BuilderImpl builder, long rate, 
+			       GraphManager gm, long rate, 
 			       short maxInFlight, int maxMessageLength) {
 		
 		this.host = host;
 		this.port = port;
 		this.clientId = clientId;
-		this.builder = builder;
+		this.gm = gm;
 		this.rate = rate;
 		this.maxInFlight = maxInFlight;
 		this.maximumLenghOfVariableLengthFields = maxMessageLength;
@@ -292,7 +291,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 				logger.warn("no user or pass has been set for this MQTT client connection");
 			}
 			
-			MQTTClientGraphBuilder.buildMQTTClientGraph(builder.gm, certificates,
+			MQTTClientGraphBuilder.buildMQTTClientGraph(gm, certificates,
 					                              maxInFlight,
 					                              maximumLenghOfVariableLengthFields, 
 					                              clientRequest, clientResponse, rate, 
@@ -422,7 +421,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			((ReactiveListenerStage)registerListener).addInputPronghornPipes(clientResponse);
 			
 		} else {
-			PipeCleanerStage.newInstance(builder.gm, clientResponse);
+			PipeCleanerStage.newInstance(gm, clientResponse);
 		}
 		
 		if (internalTopicsXmit.length>0) {
@@ -441,7 +440,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 			((ReactiveListenerStage)registerListener).addOutputPronghornPipes(clientRequest);
 
 		} else {
-			PipeNoOp.newInstance(builder.gm, clientRequest);			
+			PipeNoOp.newInstance(gm, clientRequest);			
 		}
 	}
 

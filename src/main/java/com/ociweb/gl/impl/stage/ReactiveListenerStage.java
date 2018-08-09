@@ -327,10 +327,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		        
 							
 			}
-			
-			System.out.println("input pipes "+Arrays.toString(inputPipes).replaceAll(",", "\n"));
-			
-			
+
 			this.realStage = new ReactiveProxyStage(this, graphManager, consumerJoin(inputPipes, consumers.iterator()), outputPipes);
 			
 	        if (listener instanceof ShutdownListener) {
@@ -695,7 +692,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	//ALL operators have been added to operators so it can be used to create consumers as needed
     	consumer = new ReactiveManagerPipeConsumer(listener, builder.operators, inputPipes);
     	    	
-    	if (listener instanceof RestListener) {
+    	if (listener instanceof RestMethodListenerBase) {
     		
     		consumeRequestMask = (1<<builder.getHTTPServerConfig().getMaxConnectionBits())-1;
     		consumeRequestSequence = new int[1<<builder.getHTTPServerConfig().getMaxConnectionBits()];
