@@ -35,7 +35,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 	private final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
 	
-    private final String route;
+    private final Supplier<String> route;
 	private final boolean insecureClient;
     private final int parallelTracks;
     private final long cyclesPerTrack;
@@ -507,34 +507,45 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 			
 		}
+		
+		String cachedRoute;
 
 		private boolean httpPost() {
 			
+			if (null==cachedRoute) {
+				cachedRoute = route.get();
+			}
+			
 			boolean wasSent;
 			if (callCounter<cyclesPerTrack) {
-				wasSent = httpClientService.httpPost(session[track], route, writer);
+				wasSent = httpClientService.httpPost(session[track], cachedRoute, writer);
 			} else {
-				wasSent = httpClientService.httpPost(session[track], route, writeClose, writer);
+				wasSent = httpClientService.httpPost(session[track], cachedRoute, writeClose, writer);
 				httpClientService.httpClose(session[track]);
 				if (wasSent) {
 					session[track] = null;//ensure never used after this point.
 				}
+			}
+			if (wasSent) {
+				cachedRoute = null;
 			}
 			return wasSent;
 		}
 
 		private boolean httpGet() {
 			boolean wasSent;
-			
+			if (null==cachedRoute) {
+				cachedRoute = route.get();
+			}
 			//Hack test
 			//if we close every call this should work fine but it does not
 			//this can be either side causing the issue and must be resolved.
 			
 			
 			if (callCounter<cyclesPerTrack) {
-				wasSent = httpClientService.httpGet(session[track], route);		
+				wasSent = httpClientService.httpGet(session[track], cachedRoute);		
 			} else {
-				wasSent = httpClientService.httpGet(session[track], route, writeClose);	
+				wasSent = httpClientService.httpGet(session[track], cachedRoute, writeClose);	
 				//add boolean for easier time of this.. :TODO: API change.
 		
 				if (insecureClient) {
@@ -545,23 +556,28 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				if (wasSent) {
 					session[track] = null;//ensure never used after this point.
 				}
+			}
+			if (wasSent) {
+				cachedRoute = null;
 			}
 			return wasSent;
 		}
 
 		private boolean httpGetWithHeader() {
 			boolean wasSent;
-			
+			if (null==cachedRoute) {
+				cachedRoute = route.get();
+			}
 			//Hack test
 			//if we close every call this should work fine but it does not
 			//this can be either side causing the issue and must be resolved.
 			
 			
 			if (callCounter<cyclesPerTrack) {
-				wasSent = httpClientService.httpGet(session[track], route, header);		
+				wasSent = httpClientService.httpGet(session[track], cachedRoute, header);		
 			} else {
 				//TODO: sending close may cause the last message to be dropped. needs urgent review
-				wasSent = httpClientService.httpGet(session[track], route, header);	
+				wasSent = httpClientService.httpGet(session[track], cachedRoute, header);	
 				//add boolean for easier time of this.. :TODO: API change.
 		
 				if (insecureClient) {
@@ -573,16 +589,24 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					session[track] = null;//ensure never used after this point.
 				}
 			}
+			if (wasSent) {
+				cachedRoute = null;
+			}
 			return wasSent;
 		}
 		
 		private boolean httpPostWithHeader() {
 			boolean wasSent = false;
+			
+			if (null==cachedRoute) {
+				cachedRoute = route.get();
+			}
+			
 			if (null != session[track]) {			
 				if (callCounter<cyclesPerTrack) {
-					wasSent = httpClientService.httpPost(session[track], route, header, writer);
+					wasSent = httpClientService.httpPost(session[track], cachedRoute, header, writer);
 				} else {
-					wasSent = httpClientService.httpPost(session[track], route, allHeaders, writer);
+					wasSent = httpClientService.httpPost(session[track], cachedRoute, allHeaders, writer);
 					if (insecureClient) {
 						//TODO: urgent fix we need to not start the close too early when using TLS
 						//NOTE: when TLS is on this close happens too soon since we have a final handshake in it holds the last request		
@@ -592,6 +616,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 						session[track] = null;//ensure never used after this point.
 					}
 				}
+			}
+			if (wasSent) {
+				cachedRoute = null;
 			}
 			return wasSent;
 		}

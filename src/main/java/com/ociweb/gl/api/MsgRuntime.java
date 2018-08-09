@@ -854,10 +854,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 					throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
 				}
 				
-				System.out.println(targetTopics.size());
-				System.out.println(sourceTopics.size());
-				
-				
 				Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(capturedTrack);				
 				assert(null!=input);		
 				Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(capturedTrack);

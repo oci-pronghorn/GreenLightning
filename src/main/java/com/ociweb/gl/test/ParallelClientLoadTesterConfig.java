@@ -1,12 +1,14 @@
 package com.ociweb.gl.test;
 
+import java.util.function.Supplier;
+
 import com.ociweb.gl.api.ArgumentProvider;
 import com.ociweb.gl.api.TelemetryConfig;
 
 public class ParallelClientLoadTesterConfig {
     public String host = "127.0.0.1";
     public int port = 8080;
-    public String route = "";
+    public Supplier<String> route;
     public boolean insecureClient = true;
     public int parallelTracks = 4;
     public int cyclesPerTrack = 1;
@@ -29,7 +31,11 @@ public class ParallelClientLoadTesterConfig {
     public void inject(ArgumentProvider args) {
         host = args.getArgumentValue("--host", "-h", host);
         port = args.getArgumentValue("--port", "-p", port);
-        route = args.getArgumentValue("--route", "-r", route);
+        String routeIn = args.getArgumentValue("--route", "-r", "");
+        route = new Supplier<String>() {
+        	public String get() {return routeIn;};
+        };
+        
         insecureClient = args.getArgumentValue("--insecure", "-is", insecureClient);
         parallelTracks = args.getArgumentValue("--tracks", "-t", parallelTracks);
         cyclesPerTrack = args.getArgumentValue("--cycles", "-c", cyclesPerTrack);
@@ -45,11 +51,13 @@ public class ParallelClientLoadTesterConfig {
     public ParallelClientLoadTesterConfig(
             int cyclesPerTrack,
             int port,
-            String route,
+            final String routeIn,
             boolean enableTelemetry) {
         this.cyclesPerTrack = cyclesPerTrack;
         this.port = port;
-        this.route = route;
+        this.route = new Supplier<String>() {
+        	public String get() {return routeIn;};
+        };
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
 
     }
@@ -58,12 +66,14 @@ public class ParallelClientLoadTesterConfig {
             int parallelTracks,
             int cyclesPerTrack,
             int port,
-            String route,
+            String routeIn,
             boolean enableTelemetry) {
         this.parallelTracks = parallelTracks;
         this.cyclesPerTrack = cyclesPerTrack;
         this.port = port;
-        this.route = route;
+        this.route = new Supplier<String>() {
+        	public String get() {return routeIn;};
+        };
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
 
     }
@@ -72,12 +82,28 @@ public class ParallelClientLoadTesterConfig {
             int parallelTracks,
             int cyclesPerTrack,
             int port,
-            String route,
+            Supplier<String> routeSupplier,
+            boolean enableTelemetry) {
+        this.parallelTracks = parallelTracks;
+        this.cyclesPerTrack = cyclesPerTrack;
+        this.port = port;
+        this.route = routeSupplier;
+        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
+
+    }
+    
+    public ParallelClientLoadTesterConfig(
+            int parallelTracks,
+            int cyclesPerTrack,
+            int port,
+            String routeIn,
             boolean enableTelemetry, Appendable target) {
         this.parallelTracks = parallelTracks;
         this.cyclesPerTrack = cyclesPerTrack;
         this.port = port;
-        this.route = route;
+        this.route = new Supplier<String>() {
+        	public String get() {return routeIn;};
+        };
         this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
 
         this.target = target;

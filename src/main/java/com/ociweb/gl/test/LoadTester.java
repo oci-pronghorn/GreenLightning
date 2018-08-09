@@ -82,5 +82,35 @@ public class LoadTester {
 
 		return captured;
 	}
+	
+	public static <T> StringBuilder runClient(Supplier<Writable> testData,
+			HTTPResponseListener validator, Supplier<String> route, boolean useTLS, boolean telemetry, int parallelTracks,
+			int cyclesPerTrack, String host, int port, int timeoutMS) {
+
+		ParallelClientLoadTesterConfig testerConfig = new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack,
+				port, route, telemetry);
+		testerConfig.insecureClient = !useTLS;
+		testerConfig.host = host;
+
+		StringBuilder captured = new StringBuilder();
+		testerConfig.target = captured;
+		
+		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload(); // calling get
+
+		
+		payload.post = testData;
+
+		payload.validate = new Supplier<HTTPResponseListener>() {
+			@Override
+			public HTTPResponseListener get() {
+				return validator;
+			}
+		};
+
+		GreenRuntime.testConcurrentUntilShutdownRequested(new ParallelClientLoadTester(testerConfig, payload),
+				timeoutMS);
+
+		return captured;
+	}
 
 }
