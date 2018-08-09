@@ -7,9 +7,8 @@ import com.ociweb.pronghorn.network.TLSCertificates;
 
 public class HTTPClientConfigImpl implements HTTPClientConfig {
     private TLSCertificates certificates;
-    //TODO: set these vales when we turn on the client usage??
-    private int connectionsInBit = 3;
-    private int maxPartialResponse = 10;
+    private int unwrapCount = 2;//default
+    
     private BridgeConfigStage configStage = BridgeConfigStage.Construction;
 
     public HTTPClientConfigImpl(TLSCertificates certificates) {
@@ -38,4 +37,13 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     public void finalizeDeclareConnections() {
         this.configStage = BridgeConfigStage.DeclareBehavior;
     }
+
+    public void setUnwrapCount(int unwrapCount) {
+    	assert(unwrapCount>0);
+    	this.unwrapCount = unwrapCount;
+    }
+    
+	public int getUnwrapCount() {
+		return unwrapCount;
+	}
 }

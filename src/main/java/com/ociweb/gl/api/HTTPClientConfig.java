@@ -6,4 +6,6 @@ public interface HTTPClientConfig {
     boolean isTLS();
     TLSCertificates getCertificates();
     ClientHostPortConfig createHTTP1xClient(String host, int port);
+    void setUnwrapCount(int unwrapCount);
+    
 }

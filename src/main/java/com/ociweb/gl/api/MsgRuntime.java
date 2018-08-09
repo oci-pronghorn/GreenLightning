@@ -61,7 +61,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 
     
     protected static final int nsPerMS = 1_000_000;
-	public B builder;
+    public B builder;
 
 	protected final GraphManager gm;
 
@@ -78,6 +78,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	populatePrivateTopicPipeNames();    	
     }
 
+    public static BuilderImpl builder(MsgRuntime that) {
+    	return that.builder;
+    }
+    
 	private void populatePrivateTopicPipeNames() {
 		try {
 			Field f = builder.gm.getClass().getDeclaredField("pipeDOTSchemaNames");
