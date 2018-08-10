@@ -10,13 +10,26 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class LoadTester {
 
-	public static <T> StringBuilder runClient(JSONRenderer<T> jsonRenderer, 
+	
+	public static <T, A extends Appendable> A runClient(JSONRenderer<T> jsonRenderer, 
+			  Supplier<T> testObject,
+		      HTTPResponseListener validator, 
+	          String route, boolean useTLS, boolean telemetry,
+	          int parallelTracks, int cyclesPerTrack, 
+	          String host, int port,
+	          int timeoutMS
+			) {
+		return (A) runClient(jsonRenderer,testObject,validator,route,useTLS,telemetry, parallelTracks, cyclesPerTrack, host, port, timeoutMS, new StringBuilder());
+	}
+	
+	public static <T, A extends Appendable> A runClient(JSONRenderer<T> jsonRenderer, 
 													  Supplier<T> testObject,
 												      HTTPResponseListener validator, 
 											          String route, boolean useTLS, boolean telemetry,
 											          int parallelTracks, int cyclesPerTrack, 
 											          String host, int port,
-											          int timeoutMS
+											          int timeoutMS,
+											          A captured
 													) {
 		
 		
@@ -24,7 +37,6 @@ public class LoadTester {
 		testerConfig.insecureClient = !useTLS;
 		testerConfig.host = host;
 		
-		StringBuilder captured = new StringBuilder();
 		testerConfig.target = captured;
 	
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload(); //calling get

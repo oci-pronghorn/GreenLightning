@@ -184,7 +184,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 		builder.parallelTracks(session.length);
 
-		builder.setTimerPulseRate(200_000);
+		builder.setTimerPulseRate(20_000); //check for progress every 20 seconds
 		
 		if (rate != null) {
 			builder.setDefaultRate(rate);
@@ -363,7 +363,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		TrackHTTPResponseListener responder = new TrackHTTPResponseListener(runtime, track);
 		runtime.registerListener(RESPONDER_NAME, responder)
 		.addSubscription(CALL_TOPIC, responder::callMessage)
-				.acceptHostResponses(session[track]);
+		.acceptHostResponses(session[track]);
 	}
 
 
@@ -487,25 +487,15 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		};
 		
 		private boolean doHTTPCall() {
-			if (httpClientService.hasRoomFor(2)) {
-				
-				boolean wasSent;
+			if (httpClientService.hasRoomFor(2)) {				
 				if (null==writer) {
-					if (header != null) {
-						wasSent = httpGetWithHeader();
-					} else {
-						wasSent = httpGet();
-					}
-				} else if (header != null) {
-					wasSent = httpPostWithHeader();
-				} else {
-					wasSent = httpPost();
+					return (header != null) ? httpGetWithHeader() : httpGet();   
+				} else { 
+					return (header != null) ? httpPostWithHeader() : httpPost();
 				}
-				return wasSent;
 			} else {
 				return false;
 			}
-			
 		}
 		
 		String cachedRoute;
@@ -646,7 +636,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		public boolean responseHTTP(HTTPResponseReader reader) {
 			
 			if (reader.isConnectionClosed()) {
-				//server just axed connection and we got no notice..
+				//server or internal subsystem just axed connection and we got no notice..
 				out.connectionClosed(track);
 				
 				if (inFlightHead[track]>inFlightTail[track]) {
@@ -655,6 +645,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					timeouts+=totalMissing;
 					
 					logger.info("Connection closed, Expecting {} responses which will never arrive, resending http call(s)",totalMissing);
+										
 					callCounter-=totalMissing;
 					//we must re-request the call
 					//keep the clock rolling since this is a penalty against the server
@@ -772,16 +763,22 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			return isOk;
 		}
 
+		long lastProgressCheck = -1;
+		
 		@Override
 		public void timeEvent(long time, int iteration) {
 			
-			StringBuilder builder = new StringBuilder();
-			
-			Appendables.appendEpochTime(builder, time);
-			builder.append(" send request for track "+track+"  "+callCounter+" vs "+cyclesPerTrack);
-						
-			System.err.println(builder);
-	
+			if (lastProgressCheck != callCounter) {
+				lastProgressCheck = callCounter;
+			} else {			
+				if (callCounter!=cyclesPerTrack) {
+					StringBuilder builder = new StringBuilder(); 
+					Appendables.appendValue(Appendables.appendValue(Appendables.appendValue(
+							Appendables.appendEpochTime(builder.append("\n"), time)
+							           .append(" status for track: "),track), " progress:", callCounter), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
+					System.out.print(builder);
+				}
+			}
 		}
 
 	}
