@@ -1294,6 +1294,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		
 		if (listener instanceof RestMethodListenerBase) {
 			
+			if (0==builder.routerConfig().totalRoutesCount()) {
+				builder.defineRoute().path("${path}").routeId();
+			}
+			
 			int[] routes = new int[builder.routerConfig().totalRoutesCount()];
 			int i = routes.length;
 			while (--i>=0) {
@@ -1732,7 +1736,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		    if (null != ex) {
 		    	
 		    	//add this JSON extraction to the struct associated with this session
-				ex.addToStruct(builder.gm.recordTypeData, builder.getClientCoordinator().structureId(httpSessions[j].sessionId, builder.gm.recordTypeData));		    	
+				ex.addToStruct(builder.gm.recordTypeData, 
+						       ClientCoordinator.structureId(httpSessions[j].sessionId, builder.gm.recordTypeData));		    	
 								
 				
 		    	Pipe<NetResponseSchema> secondPipe = builder.buildNetResponsePipe();		    			    	

@@ -51,6 +51,9 @@ public class StageRouteFilter implements RouteFilter {
 	@Override
 	public RouteFilter includeAllRoutes() {
 		
+		if (0==builder.routerConfig().totalRoutesCount()) {
+			builder.defineRoute().path("${path}").routeId();
+		}		
 		int[] routes = new int[builder.routerConfig().totalRoutesCount()];
 		int i = routes.length;
 		while (--i>=0) {

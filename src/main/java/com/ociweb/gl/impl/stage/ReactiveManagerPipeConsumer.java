@@ -29,29 +29,26 @@ public class ReactiveManagerPipeConsumer {
 	
 	public static final void process(ReactiveManagerPipeConsumer that, ReactiveListenerStage r) {
 		//only run if one of the inputs has received new data or have data.
-		//if (that.newWork.getAndSet(false)) {			
-			applyReactiveOperators(that, r, that.inputs, that.behavior, that.operators, that.inputs.length); 
-		//}
+		applyReactiveOperators(that, r, that.inputs, that.behavior, that.operators, that.inputs.length); 
+
 	}
 
 	private static void applyReactiveOperators(ReactiveManagerPipeConsumer that, ReactiveListenerStage r,
 			Pipe[] localInputs, Object localObj, ReactiveOperator[] localOperators, int count) {
 		int passes = 0;
 		int countDown = -2;
-		int temp = 0;
-		
+
 		do {
-			temp = 0;
 			int i = count;
 			while (--i >= 0) {
-				if (Pipe.isEmpty(localInputs[i]) || !Pipe.hasContentToRead(localInputs[i])) {
+				Pipe pipe = localInputs[i];
+				if (Pipe.isEmpty(pipe) || !Pipe.hasContentToRead(pipe)) {
 					//most calls are stopping on this if
 				} else {
 					if (null!=localOperators && null!=localOperators[i]) {//skip if null, this is for the TickListener
-						localOperators[i].apply(i, localObj, localInputs[i], r);
+						localOperators[i].apply(i, localObj, pipe, r);
 						r.realStage.didWork();
-						if (Pipe.hasContentToRead(localInputs[i])) {
-							temp++;
+						if (Pipe.hasContentToRead(pipe)) {		
 							passes++;
 						}
 					}
@@ -61,10 +58,7 @@ public class ReactiveManagerPipeConsumer {
 				countDown = passes;
 			}
 		} while (--countDown>=0);
-		
-		//if (temp>0) {
-		//	that.newWork.set(true);
-		//}
+
 	}
 
 	/**
