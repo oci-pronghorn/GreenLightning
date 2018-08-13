@@ -36,7 +36,7 @@ public class EchoTaskTest {
 		
 		ParallelClientLoadTesterConfig config2 = 
 				new ParallelClientLoadTesterConfig(parallelTracks, 
-						cyclesPerTrack, 8084, "/test", telemetry);
+						cyclesPerTrack, 6084, "/test", telemetry);
 		
 		config2.simultaneousRequestsPerTrackBits  = 0;
 		config2.telemetryHost="127.0.0.1";

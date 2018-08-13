@@ -19,7 +19,7 @@ public class EchoExampleApp implements GreenApp {
 	
 	@Override
 	public void declareConfiguration(Builder builder) {
-		builder.useHTTP1xServer(8084)
+		builder.useHTTP1xServer(6084)
 	       .useInsecureServer()
 	       .echoHeaders(128, HTTPHeaderDefaults.DNT, HTTPHeaderDefaults.STRICT_TRANSPORT_SECURITY)
 	       .setHost("127.0.0.1");
