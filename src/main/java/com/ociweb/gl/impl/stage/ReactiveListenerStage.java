@@ -1730,9 +1730,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			
 		    JSONExtractorCompleted ex = httpSessions[j].jsonExtractor();
 		    if (null != ex) {
-		    
+		    	
 		    	//add this JSON extraction to the struct associated with this session
-				ex.addToStruct(builder.gm.recordTypeData, ClientCoordinator.structureId(httpSessions[j].sessionId, builder.gm.recordTypeData));		    	
+				ex.addToStruct(builder.gm.recordTypeData, builder.getClientCoordinator().structureId(httpSessions[j].sessionId, builder.gm.recordTypeData));		    	
 								
 				
 		    	Pipe<NetResponseSchema> secondPipe = builder.buildNetResponsePipe();		    			    	
