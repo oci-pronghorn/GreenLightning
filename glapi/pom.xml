@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.ociweb.oe.greenlightning.api</groupId>
+  <artifactId>glapi</artifactId>
+  <version>1</version>
+  <packaging>pom</packaging>
+ 
+  <modules>
+    <module>Startup</module>
+    <module>Timer</module>
+    <module>StateMachine</module>
+    <module>PubSub</module>
+    <module>HTTPClient</module>
+    <module>HTTPServer</module>
+    <module>Shutdown</module>
+    <module>MQTTClient</module>
+  </modules>
+  
+</project>

@@ -1,0 +1,33 @@
+#!/bin/bash
+
+if [[ $# < 1 ]]
+then
+    echo -e "usage:\n\t$0 <file to process>"
+    exit -1
+fi
+
+# set -x
+for file
+do
+    while read line 
+    do 
+        if [[ $line =~ ^.include\ \"(.*)\" ]]
+        then
+            if [[ -r ${BASH_REMATCH[1]} ]]
+            then
+                # todo: if the triple graves are followed by a language name, the 
+                # included file will have syntax highlighting, e.g., ```java
+                echo
+                echo \`\`\`\j\a\v\a 
+                cat "${BASH_REMATCH[1]}"
+                echo \`\`\` 
+                echo
+            else
+                echo "#### ERROR:  could not read file ${BASH_REMATCH[1]}"
+            fi
+        else 
+            echo "$line"
+        fi    
+    done < "$file"
+done
+# set +

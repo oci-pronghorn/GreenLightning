@@ -1,0 +1,5 @@
+package com.ociweb.oe.greenlightning.api;
+
+public enum Struct {
+	EMPTY_EXAMPLE, SMALL_EXAMPLE, LARGE_EXAMPLE, SPLIT_EXAMPLE, JSON_EXAMPLE, RESOURCES_EXAMPLE, FILES_EXAMPLE
+}
