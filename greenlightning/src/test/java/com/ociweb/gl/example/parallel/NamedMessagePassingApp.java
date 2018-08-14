@@ -40,7 +40,9 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		       //.logTraffic(false)
 		       //TODO: confirm that 404 comes back when we get requests too large..
 		       .setDecryptionUnitsPerTrack(2)
+		       .setConcurrentChannelsPerDecryptUnit(2)
 		       .setEncryptionUnitsPerTrack(2)
+		       .setConcurrentChannelsPerEncryptUnit(2)
 		       .setMaxRequestSize(1<<17)
 		       .setMaxResponseSize(1<<16)
 		       .setHost("127.0.0.1");		

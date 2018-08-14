@@ -24,6 +24,8 @@ public class HTTPResponder {
 	private final Pipe<RawDataSchema> pipe;
 	private final Writable writable;
 
+	//TODO: add support for capturing the closed message!!
+	
 	/**
 	 *
 	 * @param commandChannel MsgCommandChannel arg used to make newHTTPResponseService

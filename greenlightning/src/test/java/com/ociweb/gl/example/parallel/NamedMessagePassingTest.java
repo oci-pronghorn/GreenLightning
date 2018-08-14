@@ -72,35 +72,30 @@ public class NamedMessagePassingTest {
 		//GraphManager.showScheduledRateOnTelemetry = true;
 		
 		boolean telemetry = true;  //must not be true when checked in.
-		long cycleRate = 4_000; //larger rate should be used with greater volume..
+		long cycleRate = 6_000; //larger rate should be used with greater volume..
 
 		//note only 4 threads in use and this should probably be 3
 		//ScriptedNonThreadScheduler.debugStageOrder = System.out;
 		//if we want more volume we should use more threads this can be 5x greater..
 		
-		int serverTracks = 2;
+		int serverTracks = 4;
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate,serverTracks));
 		
-		ParallelClientLoadTesterPayload payload 
-				= new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
-		
-		
-		//spikes are less frequent when the wifi network is off...
-		
-		int cyclesPerTrack = 2_000; //*(1+99_9999);
-		int parallelTracks = 4;//40;//12; //4 is the max for the server for parallel loads
+		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
+
+		//spikes are less frequent when the wifi network is off
+		int cyclesPerTrack = 4_000; //*(1+99_9999);
+		int parallelTracks = 1;
 
 		
-		ParallelClientLoadTesterConfig config2 = 
-				new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8081, "/test", telemetry);
+		ParallelClientLoadTesterConfig config2 = new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8081, "/test", telemetry);
 		assertTrue(0==config2.durationNanos);
 		
-		
-		config2.simultaneousRequestsPerTrackBits  = 3;//10; // 126k for max volume
+		config2.simultaneousRequestsPerTrackBits  = 0;//10; // 126k for max volume
 
 		GreenRuntime.testConcurrentUntilShutdownRequested(
-				new ParallelClientLoadTester(config2, payload),
-				5*60*60_000); //5 hours
+															new ParallelClientLoadTester(config2, payload),
+															5*60*60_000); //5 hours
 		
 		//average resources per page is about 100
 		//for 100 calls we expect the slowest to be 100 micros

@@ -1,328 +1,58 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>com.ociweb</groupId>
-    <artifactId>greenlightning</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
-
-    <name>${project.artifactId}</name>
-    <description>Open Edge - Green Lightning Micro-Service Runtime</description>
-    <url>https://github.com/oci-pronghorn/GreenLightning</url>
-    <licenses>
-        <license>
-            <name>BSD-3 License</name>
-            <url>https://opensource.org/licenses/BSD-3-Clause</url>
-        </license>
-    </licenses>
-    <developers>
-        <developer>
-            <name>Nathan Tippy</name>
-            <email>info@objectcomputing.com</email>
-            <organization>ObjectComputing</organization>
-            <organizationUrl>http://www.ObjectComputing.com</organizationUrl>
-        </developer>
-    </developers>
-
-    <scm>
-        <connection>scm:git:git://github.com/oci-pronghorn/GreenLightning.git</connection>
-        <url>https://github.com/oci-pronghorn/GreenLightning</url>
-        <developerConnection>scm:git:ssh://git@github.com/oci-pronghorn/GreenLightning.git</developerConnection>
-        <tag>HEAD</tag>
-    </scm>
-
-    <properties>
-  		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-
-	    <java.bootstrap.classes>
-	      ${java.home}/lib/rt.jar
-	    </java.bootstrap.classes>
-	    <java.cryptographic.extension.classes>
-	      ${java.home}/lib/jce.jar
-	    </java.cryptographic.extension.classes>
-	    <java.secure.socket.extension.classes>
-	      ${java.home}/lib/jsse.jar
-	    </java.secure.socket.extension.classes>
-	    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-   </properties>
-
-    <profiles>
-        <profile>
-            <id>cloudbees</id>
-            <distributionManagement>
-                <repository>
-                    <id>cloudbees.release</id>
-                    <url>dav:https://repository-pronghorn.forge.cloudbees.com/release</url>
-                </repository>
-            </distributionManagement>
-        </profile>
-        <profile>
-            <id>disable-java8-doclint</id>
-            <activation>
-                <jdk>[1.8,)</jdk>
-            </activation>
-            <properties>
-                <additionalparam>-Xdoclint:none</additionalparam>
-            </properties>
-        </profile>
-        <profile>
-            <id>mvn-central</id>
-            <distributionManagement>
-                <snapshotRepository>
-                    <id>ossrh</id>
-                    <url>https://oss.sonatype.org/content/repositories/snapshots
-                    </url> <!-- Maven central repos for snapshot and release -->
-                </snapshotRepository>
-                <repository>
-                    <id>ossrh</id>
-                    <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-                </repository>
-            </distributionManagement>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-release-plugin</artifactId>
-                        <version>2.5.3</version>
-                    </plugin>
-                    <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.6.8</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <serverId>ossrh</serverId>
-                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
-                        </configuration>
-                    </plugin>
-
-                    <plugin>
-                        <groupId>org.apache.maven.plugins</groupId>
-                        <artifactId>maven-gpg-plugin</artifactId>
-                        <version>1.6</version>
-                        <executions>
-                            <execution>
-                                <id>sign-artifacts</id>
-                                <phase>verify</phase>
-                                <goals>
-                                    <goal>sign</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
-   
-    <dependencies>
-        <dependency>
-            <groupId>com.ociweb</groupId>
-            <artifactId>pronghorn</artifactId>
-            <version>[1.0.2-SNAPSHOT]</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.25</version>
-        </dependency>
-
-        <!-- Testing dependencies. -->
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <version>4.12</version>
-            <type>jar</type>
-            <scope>test</scope>
-            <optional>false</optional>
-        </dependency>
-    </dependencies>
-
-  <repositories>
-    
-    <repository>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-        <checksumPolicy>warn</checksumPolicy>
-      </snapshots>
-      <id>repository-pronghorn.forge.cloudbees.com-snapshot</id>
-      <name>Snapshot Repo for Pronghorn</name>
-      <url>https://repository-pronghorn.forge.cloudbees.com/snapshot</url>
-      <layout>default</layout>
-    </repository>
-    
-    <repository>
-      <releases>
-        <enabled>true</enabled>
-        <updatePolicy>always</updatePolicy>
-        <checksumPolicy>warn</checksumPolicy>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>repository-pronghorn.forge.cloudbees.com-release</id>
-      <name>Release Repo for Pronghorn</name>
-      <url>https://repository-pronghorn.forge.cloudbees.com/release</url>
-      <layout>default</layout>
-    </repository>
-        
-  </repositories>
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.ociweb</groupId>
+  <artifactId>open-edge-greenlightning</artifactId>
+  <version>1.0.0-SNAPSHOT</version>
+  <packaging>pom</packaging>
+ 
+  <modules>  
+    <module>greenlightning</module>
+  </modules>
   
-    <build>
-    
-       <extensions>
-			<extension>
-			<groupId>org.apache.maven.wagon</groupId>
-			<artifactId>wagon-webdav-jackrabbit</artifactId>
-			<version>2.2</version>
-			</extension>
-  	   </extensions>
-    
-        <plugins>
-        	 	  
-          <plugin>
-	        <groupId>org.apache.maven.plugins</groupId>
-	        <artifactId>maven-surefire-plugin</artifactId>
-	        <version>2.19</version>
-	        <configuration>
-	            <argLine>-Xms2g</argLine> <!-- needed for test to start up servers  -->
-	        </configuration>
-	      </plugin>
-      
-          <plugin>
-	        <groupId>org.apache.maven.plugins</groupId>
-	        <artifactId>maven-source-plugin</artifactId>
-	        <version>3.0.1</version>
-	        <executions>
-	          <execution>
-	            <id>attach-sources</id>
-	            <phase>verify</phase>
-	            <goals>
-              		<goal>jar-no-fork</goal>
-              		<goal>test-jar-no-fork</goal>
-                </goals>
-	          </execution>
-	        </executions>
-	      </plugin>
-	      	      
-	      <plugin>
-                   <groupId>org.apache.maven.plugins</groupId>
-                   <artifactId>maven-compiler-plugin</artifactId>
-                   <version>3.2</version>
-                   <configuration>
-                     
-		          	<fork>true</fork>
-		            <source>1.8</source>
-		            <target>1.8</target>
-		            <testSource>1.8</testSource>
-		            <testTarget>1.8</testTarget>
-               
-                   </configuration>
-          </plugin>
-                    
-          <plugin>
-	        <groupId>org.apache.maven.plugins</groupId>
-		    <artifactId>maven-javadoc-plugin</artifactId>
-		    <version>2.9</version>
-		    <executions>
-		        <execution>
-		            <id>attach-javadocs</id>
-		            <goals>
-		                <goal>jar</goal>
-		            </goals>
-		            <configuration>
-		              <failOnError>false</failOnError>
-		            </configuration>
-		        </execution>
-		    </executions>
-	      </plugin>
-                    
-	      <plugin>
-	        <groupId>org.apache.maven.plugins</groupId>
-	        <artifactId>maven-release-plugin</artifactId>
-	        <version>2.5.3</version>
-	      </plugin>
-      	   
-         <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-shade-plugin</artifactId>
-            <version>2.4.3</version>
-            <executions>
-                <execution>
-                    <id>greenLightning</id>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>shade</goal>
-                    </goals>
-                    <configuration>
-                        <finalName>gl</finalName>
-                        <filters>
-                            <filter>
-                                <artifact>*jnr-ffi:jnr-ffi*</artifact>
-                                <excludes>
-                                    <exclude>**/jni/**</exclude>
-                                </excludes>
-                            </filter>
-                        </filters>
-                        
-                          <transformers>
-			                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-			                  <manifestEntries>
-			                    <Main-Class>com.ociweb.GreenLightning</Main-Class>			                 
-			                  </manifestEntries>
-			                </transformer>
-			              </transformers>
-                            
-                    </configuration>
-                </execution>
-               
-                        
-            </executions>
+  <reporting>
+    <plugins>
+        <plugin>
+           <groupId>org.apache.maven.plugins</groupId>
+           <artifactId>maven-surefire-report-plugin</artifactId>
+           <version>2.22.0</version>
         </plugin>
-     
-     <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-jar-plugin</artifactId>
-        <version>2.6</version>
-        <configuration>
-          <archive>
-            <manifest>
-              <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
-              <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
-            </manifest>
-            <!--  manifestEntries>
-              <Build-Time>${maven.build.timestamp}</Build-Time>
-            </manifestEntries -->
-          </archive>
-        </configuration>
-      </plugin>            
-        
-	<plugin>
-	    <groupId>com.excelsiorjet</groupId>
-	    <artifactId>excelsior-jet-maven-plugin</artifactId>
-	    <version>0.9.5</version>
-	    <configuration>
-	        <mainClass>com.ociweb.GreenLightning</mainClass>
-		<profileStartup>false</profileStartup>
-		<runtime>
-		    <flavor>server</flavor>
-		</runtime>
-		<packageFiles>
-		    <packageFile>
-			<path>LICENSE</path>
-			<type>file</type>
-			<packagePath>/</packagePath>
-		    </packageFile>
-		</packageFiles>
-	    </configuration>
-	</plugin>
-        </plugins>
-    </build>
-
-
+        <plugin>
+          <groupId>org.jacoco</groupId>
+          <artifactId>jacoco-maven-plugin</artifactId>
+          <version>0.8.2-SNAPSHOT</version>
+           <reportSets>
+              <reportSet>
+                <reports>
+                  <!-- select non-aggregate reports -->
+                  <report>report</report>
+                </reports>
+              </reportSet>
+            </reportSets>
+        </plugin>
+    </plugins>
+  </reporting>
 
 </project>
+
+
+
+ <!-- 
+  need to pull the latest? 
+ 
+  setup workspace:
+  put this file in the root of your git folder
+  clone the following into your git folder
+  
+  git clone https://github.com/oci-pronghorn/greenlightning.git
+  git clone https://github.com/oci-pronghorn/greenlighter.git
+  git clone https://github.com/oci-pronghorn/greenlightning-api.git
+   
+ 
+  tobuild:  
+            mvn -offline -T 1C -f open-edge-pom.xml install
+            mvn -f open-edge-pom.xml install
+            
+ -->
+
+
