@@ -8,7 +8,8 @@
  
   <modules>  
     <module>greenlightning</module>
-    <module>greenlighter</module>    
+    <module>greenlighter</module>
+    <module>glapi</module>        
   </modules>
   
   <reporting>
