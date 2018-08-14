@@ -8,6 +8,7 @@
  
   <modules>  
     <module>greenlightning</module>
+    <module>greenlighter</module>    
   </modules>
   
   <reporting>
