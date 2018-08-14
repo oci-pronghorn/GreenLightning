@@ -15,3 +15,11 @@ buildNumber.properties
 /.attach_pid*
 /MonitorResults
 /MonitorResults.svg
+=======
+.idea/
+*.iml
+
+# Avoid ignoring Maven wrapper jar file (.jar files are usually ignored)
+!/.mvn/wrapper/maven-wrapper.jar
+/.classpath
+/.project
