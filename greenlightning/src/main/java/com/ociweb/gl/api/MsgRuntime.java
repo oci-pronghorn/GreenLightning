@@ -377,37 +377,37 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return cmdChannelUsageChecker;
     }
 
-    /**
-     * This pipe returns all the data this object has requested via subscriptions elsewhere.
-     * @param listener
-     */
-	public Pipe<MessageSubscription> buildPublishPipe(Behavior listener) {
-		
-		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
-		if (builder.isAllPrivateTopics()) {
-			throw new RuntimeException("oops");
-		}
-		
-		
-		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe(builder);		
-		builder.populateListenerIdentityHash(listener);
-				
-		return subscriptionPipe;
-	}
-	
-	public Pipe<MessageSubscription> buildPublishPipe(int listenerHash) {
-		
-		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
-		if (builder.isAllPrivateTopics()) {
-			throw new RuntimeException("oops");
-		}
-		
-		
-		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe(builder);	
-		builder.populateListenerIdentityHash(listenerHash);
-
-		return subscriptionPipe;
-	}
+//    /**
+//     * This pipe returns all the data this object has requested via subscriptions elsewhere.
+//     * @param listener
+//     */
+//	public Pipe<MessageSubscription> buildPublishPipe(Behavior listener) {
+//		
+//		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
+//		if (builder.isAllPrivateTopics()) {
+//			throw new RuntimeException("oops");
+//		}
+//		
+//		
+//		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe(builder);		
+//		builder.populateListenerIdentityHash(listener);
+//				
+//		return subscriptionPipe;
+//	}
+//	
+//	public Pipe<MessageSubscription> buildPublishPipe(int listenerHash) {
+//		
+//		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
+//		if (builder.isAllPrivateTopics()) {
+//			throw new RuntimeException("oops");
+//		}
+//		
+//		
+//		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe(builder);	
+//		builder.populateListenerIdentityHash(listenerHash);
+//
+//		return subscriptionPipe;
+//	}
 
 	public static Pipe<MessageSubscription> buildMessageSubscriptionPipe(BuilderImpl b) {
 		

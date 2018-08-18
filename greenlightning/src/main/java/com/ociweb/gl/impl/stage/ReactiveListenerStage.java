@@ -95,7 +95,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     protected boolean shutdownCompleted;
     private boolean shutdownInProgress;
     
-
+	
+	private int totalSupscriptions = 0;
+	
    
     ///////////////////////////
     private int httpClientPipeId = Integer.MIN_VALUE; ///unused
@@ -243,10 +245,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			
 			
 			
-	        if ( (!this.builder.isAllPrivateTopics()) && this.builder.isListeningToSubscription(listener)) {
-	        	///this is done late because if we have detected that pub sub router is not required it creates fewer pipes.	
-	    		builder.populateListenerIdentityHash(listener);
-	        	inputPipes = PronghornStage.join(inputPipes, MsgRuntime.buildMessageSubscriptionPipe(builder) );
+	        if ( (!this.builder.isAllPrivateTopics()) 
+	        	&& this.builder.isListeningToSubscription(listener)) {
+	        	
+	        	//do not create this pipe if all the subscriptions have been detected as private subscriptions
+	        	List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(nameId);	        	
+	        	if (targetTopics.size() != totalSupscriptions) {
+		        	///this is done late because if we have detected that pub sub router is not required it creates fewer pipes.	
+		    		builder.populateListenerIdentityHash(listener);
+		        	inputPipes = PronghornStage.join(inputPipes, MsgRuntime.buildMessageSubscriptionPipe(builder) );
+	        	}
 	        }
 						
 			if (null!=behaviorName) {
@@ -945,76 +953,73 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	}
 
 
-	final void consumeNetResponse(Object listener, Pipe<NetResponseSchema> p) {
+	final void consumeNetResponse(Object listener, Pipe<NetResponseSchema> pipeIn) {
 
-    	 while (Pipe.hasContentToRead(p)) {                
+    	 while (Pipe.hasContentToRead(pipeIn)) {                
              
-       		 Pipe.markTail(p);
+       		 Pipe.markTail(pipeIn);
     		 
-             int msgIdx = Pipe.takeMsgIdx(p);
+             final int msgIdx = Pipe.takeMsgIdx(pipeIn);
              
              //logger.info("response from HTTP request. Type is {} ",msgIdx);
              
              switch (msgIdx) {
 	             case NetResponseSchema.MSG_RESPONSE_101:
 
-	            	 long ccId1 = Pipe.takeLong(p);
-	            	 int flags = Pipe.takeInt(p);
+	            	 long ccId1 = Pipe.takeLong(pipeIn);
+	            	 int flags = Pipe.takeInt(pipeIn);
 	            	 
 	            	 //NOTE: this HTTPResponseReader object will show up n times in a row until
 	            	 //      the full file is complete.  No files will be interleaved.
-            		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.inputStream(p);
-	            	 reader.openLowLevelAPIField();
-	            	 
+            		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.openInputStream(pipeIn);
+	            		            	 
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
-	
-	            	 final short statusId = reader.readShort();	
-
-				     reader.setStatusCode(statusId);
-				     
-				     reader.setConnectionId(ccId1);
-				     
-				     //logger.trace("data avail {} status {} ",reader.available(),statusId);
-				     
-            	 	            	 
-	            	 reader.setFlags(flags);
-	 
-	            	 if (!((HTTPResponseListener)listener).responseHTTP(reader)) {
-	            		 Pipe.resetTail(p);
-	            		 //logger.info("CONTINUE LATER");
-	            		 return;//continue later and repeat this same value.
+	            	 if (reader.available()>=2) {
+					     reader.setStatusCode(reader.readShort());
+					     reader.setConnectionId(ccId1);
+		            	 reader.setFlags(flags);
+		 
+		            	 if (!((HTTPResponseListener)listener).responseHTTP(reader)) {
+		            		 Pipe.resetTail(pipeIn);
+		            		 //logger.info("CONTINUE LATER");
+		            		 return;//continue later and repeat this same value.
+		            	 }
+	            	 } else {
+	            		 //if we did not get the status then this was closed mid stream and must not respond
 	            	 }
-	                 
 	            	 
 	            	 break;
 	             case NetResponseSchema.MSG_CONTINUATION_102:
-	            	 long fieldConnectionId = Pipe.takeLong(p);
-	            	 int flags2 = Pipe.takeInt(p);
+	            	 long fieldConnectionId = Pipe.takeLong(pipeIn);
+	            	 int flags2 = Pipe.takeInt(pipeIn);
 	            	 
-            		 HTTPResponseReader continuation = (HTTPResponseReader)Pipe.inputStream(p);
-            		 continuation.openLowLevelAPIField();
-            		 continuation.setFlags(flags2);
+            		 HTTPResponseReader continuation = (HTTPResponseReader)Pipe.openInputStream(pipeIn);
             		 
+            		 continuation.setFlags(flags2);
+            		 continuation.setConnectionId(fieldConnectionId);
             		 //logger.trace("continuation with "+Integer.toHexString(flags2)+" avail "+continuation.available());
             		 
 	            	 if (!((HTTPResponseListener)listener).responseHTTP(continuation)) {
-						 Pipe.resetTail(p);
+						 Pipe.resetTail(pipeIn);
 						 return;//continue later and repeat this same value.
 					 }
             		 
 	            	 break;
 	             case NetResponseSchema.MSG_CLOSED_10:
 
-	            	 HTTPResponseReader hostReader = (HTTPResponseReader)Pipe.inputStream(p);
-	            	 hostReader.openLowLevelAPIField();
-	            	 
+	            	 long connectionId = Pipe.takeLong(pipeIn);
+	            	 int sessionId = Pipe.takeInt(pipeIn);
+
+	            	 HTTPResponseReader hostReader = (HTTPResponseReader)Pipe.openInputStream(pipeIn);
+	            	 	            	 
+	            	 int port = Pipe.takeInt(pipeIn);//the caller does not care which port we were on.
+	            	 	            	 
 	            	 hostReader.setFlags(ServerCoordinator.END_RESPONSE_MASK | 
 	            			             ServerCoordinator.CLOSE_CONNECTION_MASK);
-	            	 
-	            	 int port = Pipe.takeInt(p);//the caller does not care which port we were on.
+	            	 hostReader.setConnectionId(connectionId);
 					
 	            	 if (!((HTTPResponseListener)listener).responseHTTP(hostReader)) {
-	            		 Pipe.resetTail(p);
+	            		 Pipe.resetTail(pipeIn);
 	            		 return;//continue later and repeat this same value.
 	            	 }	            	 
 	            	 
@@ -1023,11 +1028,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	            	 //shutdown request, just consume at this point.	            	 
 	            	 break;
 	             default:
-	                 throw new UnsupportedOperationException("Unknown id: "+msgIdx);
+	                 throw new UnsupportedOperationException("Unknown id: "+msgIdx+"  "+pipeIn);
              }
             
-             Pipe.confirmLowLevelRead(p, Pipe.sizeOf(p,msgIdx));
-             Pipe.releaseReadLock(p);
+             Pipe.confirmLowLevelRead(pipeIn, Pipe.sizeOf(NetResponseSchema.instance, msgIdx));
+             Pipe.releaseReadLock(pipeIn);
              
              
     	 }
@@ -1552,7 +1557,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 
 		assert(null!=this.behaviorName);
 		builder.possiblePrivateTopicConsumer(this, topic, parallelInstance);
-		
+		totalSupscriptions++;
 		
 		if (null == methods) {
 			methodLookup = new TrieParser(16,1,false,false,false);
@@ -1579,11 +1584,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		//
 		return this;
 	}
-	
+
 	@Override
 	public final ListenerFilter addSubscription(CharSequence topic) {		
 		if (!startupCompleted && listener instanceof PubSubMethodListenerBase) {
 	
+			totalSupscriptions++;
 			String scopedTopic = BuilderImpl.buildTrackTopic(topic, BuilderImpl.trackNameBuilder(parallelInstance));
 			
 			assert(null!=this.behaviorName);

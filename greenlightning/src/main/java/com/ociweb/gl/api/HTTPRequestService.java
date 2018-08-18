@@ -37,7 +37,8 @@ public class HTTPRequestService {
 	 * @return has room
 	 */
 	public boolean hasRoomFor(int messageCount) {		
-		assert(msgCommandChannel.httpRequest!=null) : "Client side HTTP Request must be enabled";    	
+		assert(msgCommandChannel.httpRequest!=null) : "Client side HTTP Request must be enabled";    
+		
 		return Pipe.hasRoomForWrite(msgCommandChannel.httpRequest, 
 				FieldReferenceOffsetManager.maxFragmentSize(
 						Pipe.from(msgCommandChannel.httpRequest))*messageCount);
@@ -60,6 +61,7 @@ public class HTTPRequestService {
 			Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);	
 			Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
 			Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
+			
 			Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
 			Pipe.publishWrites(msgCommandChannel.httpRequest);
 		        		
@@ -177,11 +179,18 @@ public class HTTPRequestService {
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		assert(null!=session);
+		
+	//	System.err.println("post "+session.getConnectionId());
+		
 		if (session.getConnectionId()<0) {
+			
+			int lookupHostId = ClientCoordinator.lookupHostId(session.hostBytes);
+			
 			final long id = ClientCoordinator.lookup(
-					ClientCoordinator.lookupHostId(session.hostBytes), 
-					session.port, 
-					session.sessionId);
+														lookupHostId, 
+														session.port, 
+														session.sessionId);
+	//		System.err.println("lookup "+id+"  "+lookupHostId);
 			if (id>=0) {
 				session.setConnectionId(id);
 			}
@@ -189,28 +198,29 @@ public class HTTPRequestService {
 		
 		if (msgCommandChannel.goHasRoom() ) { 
 	
+			int lookupHTTPClientPipe = msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId);
+			
+//	System.out.println("YYY "+lookupHTTPClientPipe+"  "+session.sessionId);
+			
 			if (session.getConnectionId()<0) {
-	
+			
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, 
-							      ClientHTTPRequestSchema.MSG_HTTPPOST_101);
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101);
 					
-					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
+					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);					
 					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
 					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
 						
-					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
-					DataOutputBlobWriter.openField(hw);
+					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.openOutputStream(msgCommandChannel.httpRequest);
 					if (null!=headers) {
 						headers.write(msgCommandChannel.headerWriter.target(hw));
 					}
 					hw.closeLowLevelField();
 					
-					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(msgCommandChannel.httpRequest);
-					DataOutputBlobWriter.openField(pw);
+					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.openOutputStream(msgCommandChannel.httpRequest);
 					payload.write(pw);
 					pw.closeLowLevelField();
 					
@@ -226,28 +236,27 @@ public class HTTPRequestService {
 				
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {					
 
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201);
-					
-					Pipe.addIntValue(msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId), msgCommandChannel.httpRequest);
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201);			
+					long conId = session.getConnectionId();
+
+					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
 					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
-					Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
+					Pipe.addLongValue(conId, msgCommandChannel.httpRequest);
 						
 					//path
 					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
 						
 					//headers
-					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
-					DataOutputBlobWriter.openField(hw);
-					if (null!=headers) {
+					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.openOutputStream(msgCommandChannel.httpRequest);
+				    if (null!=headers) {
 						headers.write(msgCommandChannel.headerWriter.target(hw));
 					}
 					hw.closeLowLevelField();
 					
 					//payload
-					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.outputStream(msgCommandChannel.httpRequest);
-					DataOutputBlobWriter.openField(pw);
+					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.openOutputStream(msgCommandChannel.httpRequest);
 					payload.write(pw);
 					pw.closeLowLevelField();
 					

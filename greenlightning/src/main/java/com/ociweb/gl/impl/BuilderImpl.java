@@ -1123,6 +1123,16 @@ public class BuilderImpl implements Builder {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}
 			
+			
+			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
+					responseQueue, clientRequests, 
+					netResponsePipes,
+					netResponseCount,
+					releaseCount,
+					responseUnwrapCount,
+					clientWrapperCount,
+					clientWriters);
+
 			if (isAllNull(masterGoOut[IDX_NET])) {
 				//this one has much lower latency and should be used if possible
 				new HTTPClientRequestStage(gm, ccm, netRequestPipes, clientRequests);
@@ -1143,15 +1153,6 @@ public class BuilderImpl implements Builder {
 						clientRequests);
 			}
 
-			
-			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
-												responseQueue, clientRequests, 
-												netResponsePipes,
-												netResponseCount,
-												releaseCount,
-												responseUnwrapCount,
-												clientWrapperCount,
-												clientWriters);
 						
 		}
 	}

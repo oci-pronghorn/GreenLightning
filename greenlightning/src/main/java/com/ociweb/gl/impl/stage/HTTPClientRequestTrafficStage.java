@@ -130,15 +130,20 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 						                long connectionId = PipeReader.readLong(requestPipe, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_CONNECTIONID_20);
 
 						                ClientConnection clientConnection;
-						                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId) ) ) {
+						                if (-1 != connectionId 
+						                	&& null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId) ) ) {
 							               
 						                	assert(clientConnection.singleUsage(stageId)) : "Only a single Stage may update the clientConnection.";
 						                	assert(routeId>=0);
-						                	clientConnection.recordDestinationRouteId(routeId);
-						                	publishGet(requestPipe, hostBack, hostPos, hostLen, connectionId,
-													   clientConnection, 
-													   ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PATH_3, 
-													   ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HEADERS_7);
+						                	if (!clientConnection.isDisconnecting() 
+						                		&& ((!clientConnection.isFinishConnect()) || clientConnection.isValid())
+						                		) {
+								                	clientConnection.recordDestinationRouteId(routeId);
+								                	publishGet(requestPipe, hostBack, hostPos, hostLen, connectionId,
+															   clientConnection, 
+															   ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PATH_3, 
+															   ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HEADERS_7);
+						                	}
 						                } else {
 						                	logger.warn("Unable to http get, connection is not established");
 						                }

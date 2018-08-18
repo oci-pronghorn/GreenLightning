@@ -209,7 +209,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	}
 
 	private class Progress implements PubSubMethodListener, StartupListener {
-		private final PubSubService cmd4;
+		private final PubSubFixedTopicService cmd4;
 
 		private final long[] finished = new long[parallelTracks];
 		//private final long[] sendAttempts = new long[parallelTracks];
@@ -231,7 +231,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private boolean done = false;
 
 		Progress(GreenRuntime runtime) {
-			this.cmd4 = runtime.newCommandChannel().newPubSubService(Math.max(PUB_MSGS, maxInFlight), PUB_MSGS_SIZE);
+			this.cmd4 = runtime.newCommandChannel().newPubSubService(ENDERS_TOPIC,Math.max(PUB_MSGS, maxInFlight), PUB_MSGS_SIZE);
 		}
 
 		@Override
@@ -346,7 +346,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			
 			if (100 == percentDone && (!done)) {
 				logger.trace("received {}% of requests on all tracks",percentDone);
-				boolean result = cmd4.publishTopic(ENDERS_TOPIC);	
+				boolean result = cmd4.publishTopic();	
 				if (result) {
 					done = true;					
 				}
@@ -362,14 +362,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		TrackHTTPResponseListener responder = new TrackHTTPResponseListener(runtime, track);
 		runtime.registerListener(RESPONDER_NAME, responder)
-		.addSubscription(CALL_TOPIC, responder::callMessage)
-		.acceptHostResponses(session[track]);
+					.addSubscription(CALL_TOPIC, responder::callMessage) //TODO: this object has a connection from pub sub that does nothing..
+					.acceptHostResponses(session[track]);
 	}
 
 
 	private class TrackHTTPResponseListener implements HTTPResponseListener, TimeListener, StartupListener, PubSubMethodListener {
 		private final PubSubFixedTopicService callService;
-		private final DelayService delayService;
+		private DelayService delayService;
 		private final PubSubService pubService;
 		
 		private final int track;
@@ -401,12 +401,15 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 																Math.max(2+((durationNanos>0?2:1)*maxInFlight), PUB_MSGS), 
 																PUB_MSGS_SIZE);
 			pubService = newCommandChannel.newPubSubService(Math.max(2+((durationNanos>0?2:1)*maxInFlight),PUB_MSGS), PUB_MSGS_SIZE);
-			delayService = newCommandChannel.newDelayService();
+			
+			if (durationNanos > 0) {//this service requires cops but is only needed when delay is enabled. to save resources only create as needed.
+				delayService = newCommandChannel.newDelayService();
+			}
+			int queueLength = 2*Math.min(2+maxInFlight,1<<10);
 						
 			httpClientService = runtime.newCommandChannel()
 					.newHTTPClientService(
-							Math.min(2+maxInFlight,1<<10) //keeps from having giant pipes
-					
+							queueLength //keeps from having giant pipes, its 2x in-case we must re-send 	
 					, post!=null ? maxPayloadSize + (1<<12) : 0);
 			
 			this.header = contentType != null ?
@@ -467,16 +470,21 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 
 		private boolean makeCall() {
-			long now = System.nanoTime();
-			callCounter++;			
-			boolean wasSent = doHTTPCall();			
-			if (wasSent) {
-				callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
+			if (session[track]!=null) {
+				long now = System.nanoTime();
+				callCounter++;			
+				boolean wasSent = doHTTPCall();			
+				if (wasSent) {
+					callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
+				} else {
+					sendFailures++;
+					callCounter--;
+				}
+				return wasSent;
 			} else {
-				sendFailures++;
-				callCounter--;
+				//old data, return true to mark as done
+				return true;
 			}
-			return wasSent;
 		}
 
 		private final HeaderWritable writeClose = new HeaderWritable() {
@@ -487,15 +495,13 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		};
 		
 		private boolean doHTTPCall() {
-			if (httpClientService.hasRoomFor(2)) {				
-				if (null==writer) {
-					return (header != null) ? httpGetWithHeader() : httpGet();   
-				} else { 
-					return (header != null) ? httpPostWithHeader() : httpPost();
-				}
-			} else {
-				return false;
+		
+			if (null==writer) {
+				return (header != null) ? httpGetWithHeader() : httpGet();   
+			} else { 
+				return (header != null) ? httpPostWithHeader() : httpPost();
 			}
+
 		}
 		
 		String cachedRoute;
@@ -506,16 +512,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				cachedRoute = route.get();
 			}
 			
-			boolean wasSent;
-			if (callCounter<cyclesPerTrack) {
-				wasSent = httpClientService.httpPost(session[track], cachedRoute, writer);
-			} else {
-				wasSent = httpClientService.httpPost(session[track], cachedRoute, writeClose, writer);
-				httpClientService.httpClose(session[track]);
-				if (wasSent) {
-					session[track] = null;//ensure never used after this point.
-				}
-			}
+			boolean wasSent = httpClientService.httpPost(session[track], cachedRoute, writer);
+
 			if (wasSent) {
 				cachedRoute = null;
 			}
@@ -527,26 +525,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if (null==cachedRoute) {
 				cachedRoute = route.get();
 			}
-			//Hack test
-			//if we close every call this should work fine but it does not
-			//this can be either side causing the issue and must be resolved.
+
+			wasSent = httpClientService.httpGet(session[track], cachedRoute);		
 			
-			
-			if (callCounter<cyclesPerTrack) {
-				wasSent = httpClientService.httpGet(session[track], cachedRoute);		
-			} else {
-				wasSent = httpClientService.httpGet(session[track], cachedRoute, writeClose);	
-				//add boolean for easier time of this.. :TODO: API change.
-		
-				if (insecureClient) {
-					//TODO: urgent fix we need to not start the close too early when using TLS
-					//NOTE: when TLS is on this close happens too soon since we have a final handshake in it holds the last request				
-					httpClientService.httpClose(session[track]);//we wrote the close header must follow with close.
-				}
-				if (wasSent) {
-					session[track] = null;//ensure never used after this point.
-				}
-			}
 			if (wasSent) {
 				cachedRoute = null;
 			}
@@ -558,27 +539,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			if (null==cachedRoute) {
 				cachedRoute = route.get();
 			}
-			//Hack test
-			//if we close every call this should work fine but it does not
-			//this can be either side causing the issue and must be resolved.
-			
-			
-			if (callCounter<cyclesPerTrack) {
-				wasSent = httpClientService.httpGet(session[track], cachedRoute, header);		
-			} else {
-				//TODO: sending close may cause the last message to be dropped. needs urgent review
-				wasSent = httpClientService.httpGet(session[track], cachedRoute, header);	
-				//add boolean for easier time of this.. :TODO: API change.
-		
-				if (insecureClient) {
-					//TODO: urgent fix we need to not start the close too early when using TLS
-					//NOTE: when TLS is on this close happens too soon since we have a final handshake in it holds the last request				
-					httpClientService.httpClose(session[track]);//we wrote the close header must follow with close.
-				}
-				if (wasSent) {
-					session[track] = null;//ensure never used after this point.
-				}
-			}
+			wasSent = httpClientService.httpGet(session[track], cachedRoute, header);		
 			if (wasSent) {
 				cachedRoute = null;
 			}
@@ -586,31 +547,25 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 		
 		private boolean httpPostWithHeader() {
-			boolean wasSent = false;
-			
-			if (null==cachedRoute) {
-				cachedRoute = route.get();
-			}
-			
-			if (null != session[track]) {			
-				if (callCounter<cyclesPerTrack) {
-					wasSent = httpClientService.httpPost(session[track], cachedRoute, header, writer);
-				} else {
-					wasSent = httpClientService.httpPost(session[track], cachedRoute, allHeaders, writer);
-					if (insecureClient) {
-						//TODO: urgent fix we need to not start the close too early when using TLS
-						//NOTE: when TLS is on this close happens too soon since we have a final handshake in it holds the last request		
-						httpClientService.httpClose(session[track]);
-					}
-					if (wasSent) {
-						session[track] = null;//ensure never used after this point.
-					}
+			ClientHostPortInstance s = session[track];
+			if (null!=s) {
+				boolean wasSent = false;
+				
+				if (null==cachedRoute) {
+					cachedRoute = route.get();
 				}
+				
+				wasSent = httpClientService.httpPost(s, cachedRoute, header, writer);
+	
+				if (wasSent) {
+					cachedRoute = null;
+				}
+				return wasSent;
+			} else {
+				//NOTE: must investigate this, we are getting TOO many re-sends? after a close??
+				logger.info("\nold reqeusts where requested after completion.");
+				return true;
 			}
-			if (wasSent) {
-				cachedRoute = null;
-			}
-			return wasSent;
 		}
 		
 		@Override
@@ -637,27 +592,30 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			
 			if (reader.isConnectionClosed()) {
 				//server or internal subsystem just axed connection and we got no notice..
-				out.connectionClosed(track);
-				
+							
 				if (inFlightHead[track]>inFlightTail[track]) {
 					
+					//NOTE: we have already countDown these however they never arrived.
 					int totalMissing = inFlightHead[track]-inFlightTail[track];
+					
+					if (!httpClientService.hasRoomFor(totalMissing)) {
+						return false;//try again later
+					}
+					
 					timeouts+=totalMissing;
 					
-					logger.info("Connection closed, Expecting {} responses which will never arrive, resending http call(s)",totalMissing);
+					
+					//logger.info("\nConnection {} closed, expecting {} responses which will never arrive, resending http call(s)",reader.connectionId(),totalMissing);
 										
-					callCounter-=totalMissing;
 					//we must re-request the call
 					//keep the clock rolling since this is a penalty against the server
 					int i = totalMissing;
 					while (--i>=0) {
-						++callCounter;
 						boolean ok = doHTTPCall();
-						if (!ok) {
-							throw new RuntimeException("internal error, channels must be large enough to hold backed up reqeusts.");
-						}
+						assert(ok) : "internal error, channels must be large enough to hold backed up reqeusts.";
 					}
-				}				
+				}	
+				out.connectionClosed(track);
 				
 				return true;
 			}
@@ -752,7 +710,16 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 					writer.writePackedLong(responsesInvalid);
 				});
 				assert(clean) :"unable to end test clean";
-				//System.out.println("publish enders clean:"+clean+"  "+track);
+				
+				//System.out.println("publish enders clean:"+clean+"  "+track+" rec  "+responsesReceived+" "+callCounter);
+				
+				ClientHostPortInstance s = session[track];
+				if (s!=null) {
+					//NOTE: only safe place to close the connection.
+					httpClientService.httpClose(s);
+					session[track]=null;
+				}
+				--countDown;//ensure it goes negative so we do not finish more than once, this can happen when connections have been timed out and new requests sent.
 				
 			} else if (isOk) { //upon failure should not count down
 				--countDown;
