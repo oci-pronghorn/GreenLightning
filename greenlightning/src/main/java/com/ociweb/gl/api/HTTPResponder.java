@@ -1,7 +1,11 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.pronghorn.network.ClientConnection;
+import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
+import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
@@ -24,14 +28,27 @@ public class HTTPResponder {
 	private final Pipe<RawDataSchema> pipe;
 	private final Writable writable;
 
-	//TODO: add support for capturing the closed message!!
+	private final ClientCoordinator clientCoordinator;
+	
+	public HTTPResponder(MsgCommandChannel commandChannel,
+            int maximumPayloadSize,
+            MsgRuntime runtime) {
+		this(commandChannel, maximumPayloadSize, runtime.builder.getClientCoordinator());
+	}
+	
+	public HTTPResponder(MsgCommandChannel commandChannel,
+            int maximumPayloadSize) {
+		this(commandChannel, maximumPayloadSize, (ClientCoordinator)null);
+	}
 	
 	/**
 	 *
 	 * @param commandChannel MsgCommandChannel arg used to make newHTTPResponseService
 	 * @param maximumPayloadSize int arg used in pipe and commandChannel to set max payload
 	 */
-	public HTTPResponder(MsgCommandChannel commandChannel, int maximumPayloadSize) {
+	public HTTPResponder(MsgCommandChannel commandChannel,
+			             int maximumPayloadSize,
+			             ClientCoordinator clientCoordinator) {
 	    this.connectionId = -1;
 	    this.sequenceCode = -1;
 	    
@@ -43,7 +60,7 @@ public class HTTPResponder {
 	    //temp space for only if they appear out of order.
 		this.pipe = RawDataSchema.instance.newPipe(maximumMessages, maximumPayloadSize);
 		this.pipe.initBuffers();
-		
+		this.clientCoordinator = clientCoordinator;
 	    this.writable = new Writable() {
 			@Override
 			public void write(ChannelWriter writer) {
@@ -88,7 +105,6 @@ public class HTTPResponder {
 				if (sequenceCode != reader.readPackedLong()) {
 					return false;
 				}
-				return true;
 			} else {
 				//wait for a following call
 				
@@ -98,8 +114,12 @@ public class HTTPResponder {
 				
 				connectionId = reader.readPackedLong();
 				sequenceCode = reader.readPackedLong();
-				return true;
 			}
+			
+			//TODO:if connection is cancelled return cancelled value and clear this.....
+			
+			
+			return true;
 		}
 		
 	}
@@ -139,18 +159,66 @@ public class HTTPResponder {
 				return true;
 				
 			}
+		}		
+	}
+	
+	
+	private HTTPContentType cancelType = HTTPContentTypeDefaults.PLAIN;
+	private HeaderWritable cancelHeaderWritable = new HeaderWritable() {
+		@Override
+		public void write(HeaderWriter writer) {
 		}
-		
+	};
+	private Writable cancelPayload = new Writable() {
+		@Override
+		public void write(ChannelWriter writer) {
+		}
+	};
+	
+	/**
+	 * set the response for all cancelled requests
+	 * @param type HTTPContentType
+	 * @param header HeaderWritable
+	 * @param writable Writable
+	 */
+	public void setCancelResponse(HTTPContentType type, 
+			                      HeaderWritable header, 
+			                      Writable writable) {
+		cancelType = type;
+		cancelHeaderWritable = header;
+		cancelPayload = writable;
 	}
 
-	private void storeData(Writable writable) {
-		Pipe.addMsgIdx(pipe, RawDataSchema.MSG_CHUNKEDSTREAM_1);
-		DataOutputBlobWriter<RawDataSchema> outputStream = Pipe.openOutputStream(pipe);				
-		writable.write(outputStream);
-		DataOutputBlobWriter.closeLowLevelField(outputStream);
-		Pipe.confirmLowLevelWrite(pipe,Pipe.sizeOf(RawDataSchema.instance, RawDataSchema.MSG_CHUNKEDSTREAM_1));
-		Pipe.publishWrites(pipe);
+	//call this to see if connection is disconecting or invalid just before sending response.
+	//clientCoordinator.connectionForSessionId(id)
+	
+	
+	public void scanForCancelled() {
+		
+		if (connectionId!=-1) {
+			//is the current waiting connection is cancelled
+			//this is triggered by? what
+		
+			//TODO: can this be non HTTP ?
+			
+			final boolean alsoReturnDisconnected = true;
+			ClientConnection con = (ClientConnection)clientCoordinator.connectionForSessionId(connectionId, alsoReturnDisconnected);
+			
+			
+			
+			
+			
+		
+		}
+				
 	}
+	
+	public void cancelRequest(long connectionId) {
+		//cancel those waiting if connetionId matches
+		
+		
+	}
+	
 
 	/**
 	 *
@@ -188,6 +256,14 @@ public class HTTPResponder {
 			}
     	}
 	}
-	
+
+	private void storeData(Writable writable) {
+		Pipe.addMsgIdx(pipe, RawDataSchema.MSG_CHUNKEDSTREAM_1);
+		DataOutputBlobWriter<RawDataSchema> outputStream = Pipe.openOutputStream(pipe);				
+		writable.write(outputStream);
+		DataOutputBlobWriter.closeLowLevelField(outputStream);
+		Pipe.confirmLowLevelWrite(pipe,Pipe.sizeOf(RawDataSchema.instance, RawDataSchema.MSG_CHUNKEDSTREAM_1));
+		Pipe.publishWrites(pipe);
+	}
 	
 }
