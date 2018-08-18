@@ -13,7 +13,7 @@ public class RestBehaviorHandoffResponder implements PubSubListener {
 	
 	public RestBehaviorHandoffResponder(GreenRuntime runtime, AppendableProxy console) {
 		
-		responder = new HTTPResponder(runtime.newCommandChannel(),256*1024, runtime);
+		responder = new HTTPResponder(runtime.newCommandChannel(), 256*1024, runtime);
 				
 	}
 
