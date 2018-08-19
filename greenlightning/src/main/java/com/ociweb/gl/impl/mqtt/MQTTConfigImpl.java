@@ -1,16 +1,23 @@
 package com.ociweb.gl.impl.mqtt;
 
-import com.ociweb.gl.api.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ociweb.gl.api.ListenerFilter;
+import com.ociweb.gl.api.MQTTBridge;
+import com.ociweb.gl.api.MQTTQoS;
+import com.ociweb.gl.api.MQTTWriter;
+import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.impl.BridgeConfigImpl;
 import com.ociweb.gl.impl.BridgeConfigStage;
-import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.schema.IngressMessages;
 import com.ociweb.gl.impl.stage.EgressConverter;
 import com.ociweb.gl.impl.stage.EgressMQTTStage;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.IngressMQTTStage;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.TLSCerts;
 import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
 import com.ociweb.pronghorn.network.mqtt.MQTTEncoder;
 import com.ociweb.pronghorn.network.schema.MQTTClientRequestSchema;
@@ -23,9 +30,6 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 import com.ociweb.pronghorn.stage.test.PipeNoOp;
 import com.ociweb.pronghorn.util.ArrayGrow;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTTConfigSubscription> implements MQTTBridge {
 
@@ -157,7 +161,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	 * @return useTLS(TLSCertificates.defaultCerts)
 	 */
 	public MQTTBridge useTLS() {
-		return useTLS(TLSCertificates.defaultCerts);
+		return useTLS(TLSCerts.define());
 	}
 
 	/**
@@ -180,7 +184,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	 * @return this.authentication(user, pass, null==this.certificates ? TLSCertificates.defaultCerts: this.certificates)
 	 */
 	public MQTTBridge authentication(CharSequence user, CharSequence pass) {
-		return this.authentication(user, pass, null==this.certificates ? TLSCertificates.defaultCerts: this.certificates);
+		return this.authentication(user, pass, null==this.certificates ? TLSCerts.define(): this.certificates);
 	}
 
 	/**

@@ -8,8 +8,7 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
+import com.ociweb.pronghorn.network.ClientSocketReaderStage;
 
 public class NamedMessagePassingTest {
 	
@@ -67,6 +66,10 @@ public class NamedMessagePassingTest {
 //		-XX:+UnlockDiagnosticVMOptions
 //		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9 ??
 				
+		//ClientAbandonConnectionScanner.absoluteNSToKeep =100;
+		//ClientAbandonConnectionScanner.absoluteNSToAbandon = 100_000;
+		ClientSocketReaderStage.abandonSlowConnections = false;
+		
 		
 		//GraphManager.showThreadIdOnTelemetry = true;
 		//GraphManager.showScheduledRateOnTelemetry = true;
@@ -78,20 +81,24 @@ public class NamedMessagePassingTest {
 		//ScriptedNonThreadScheduler.debugStageOrder = System.out;
 		//if we want more volume we should use more threads this can be 5x greater..
 		
-		int serverTracks = 4;
+		int serverTracks = 2;
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate,serverTracks));
 		
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
 
 		//spikes are less frequent when the wifi network is off
-		int cyclesPerTrack = 4_000; //*(1+99_9999);
-		int parallelTracks = 1;
+		int cyclesPerTrack = 1_000; //*(1+99_9999);
+		int parallelTracks = 1;//4;
 
+		//TODO: test multiple in flight while some are killed..
+		//TODO: update the respnoder the same way we do the tester...
+		//TODO: add timeout per session? add simple API for tls...
+		
 		
 		ParallelClientLoadTesterConfig config2 = new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8081, "/test", telemetry);
 		assertTrue(0==config2.durationNanos);
 		
-		config2.simultaneousRequestsPerTrackBits  = 0;//10; // 126k for max volume
+		config2.simultaneousRequestsPerTrackBits  = 0;//16;
 
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 															new ParallelClientLoadTester(config2, payload),

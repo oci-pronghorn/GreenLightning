@@ -12,16 +12,23 @@ import com.ociweb.pronghorn.struct.LongValidator;
 final class ExtractedJSONFieldsForClientImpl implements ExtractedJSONFieldsForClient {
 
 	private final ClientHostPortConfig clientHostPortConfig;
+	private long timeoutNS;
 
 	/**
 	 * @param clientHostPortConfig
 	 */
-	ExtractedJSONFieldsForClientImpl(ClientHostPortConfig clientHostPortConfig) {
+	ExtractedJSONFieldsForClientImpl(ClientHostPortConfig clientHostPortConfig, long timeoutNS) {
 		this.clientHostPortConfig = clientHostPortConfig;
+		this.timeoutNS = timeoutNS;
 	}
 
 	JSONTable<JSONExtractor> ex = new JSONExtractor().begin();
 
+	public ExtractedJSONFieldsForClient setTimeoutNS(long timeoutNS) {
+		this.timeoutNS = timeoutNS;
+		return this;
+	}
+	
 	@Override
 	public <T extends Enum<T>> ExtractedJSONFieldsForClient stringField(JSONAligned isAligned, JSONAccumRule accumRule,
 																String extractionPath, T field) {
@@ -84,7 +91,7 @@ final class ExtractedJSONFieldsForClientImpl implements ExtractedJSONFieldsForCl
 
 	@Override
 	public ClientHostPortInstance finish() {
-		return new ClientHostPortInstance(this.clientHostPortConfig.host, this.clientHostPortConfig.port, ex.finish());
+		return new ClientHostPortInstance(this.clientHostPortConfig.host, this.clientHostPortConfig.port, ex.finish(), timeoutNS);
 	}
 
 	@Override

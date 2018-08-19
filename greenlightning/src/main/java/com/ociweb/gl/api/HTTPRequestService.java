@@ -87,15 +87,22 @@ public class HTTPRequestService {
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
-		if (session.getConnectionId()<0) {
-			final long id = ClientCoordinator.lookup(
-					ClientCoordinator.lookupHostId(session.hostBytes), 
-					session.port, 
-					session.sessionId);
-			if (id>=0) {
-				session.setConnectionId(id);
-			}
-		}
+//		if (session.getConnectionId()<0) {
+//			
+//			final long id = ClientCoordinator.lookup(
+//					session.hostId, 
+//					session.port, 
+//					session.sessionId);
+//			if (id>=0) {
+//				session.setConnectionId(id);
+//			}
+//		}
+		session.setConnectionId(ClientCoordinator.lookup(
+													session.hostId, 
+													session.port, 
+													session.sessionId));
+		
+		
 		//////////////////////
 		//get the cached connection ID so we need not deal with the host again
 		/////////////////////
@@ -182,19 +189,21 @@ public class HTTPRequestService {
 		
 	//	System.err.println("post "+session.getConnectionId());
 		
-		if (session.getConnectionId()<0) {
-			
-			int lookupHostId = ClientCoordinator.lookupHostId(session.hostBytes);
-			
-			final long id = ClientCoordinator.lookup(
-														lookupHostId, 
+//		if (session.getConnectionId()<0) {
+//			
+//			final long id = ClientCoordinator.lookup(
+//														session.hostId, 
+//														session.port, 
+//														session.sessionId);
+//	//		System.err.println("lookup "+id+"  "+lookupHostId);
+//			if (id>=0) {
+//				session.setConnectionId(id); //TODO: if connection ID changes but not negative how do we get the new one?
+//			}
+//		}
+		session.setConnectionId(ClientCoordinator.lookup(
+														session.hostId, 
 														session.port, 
-														session.sessionId);
-	//		System.err.println("lookup "+id+"  "+lookupHostId);
-			if (id>=0) {
-				session.setConnectionId(id);
-			}
-		}
+														session.sessionId));
 		
 		if (msgCommandChannel.goHasRoom() ) { 
 	

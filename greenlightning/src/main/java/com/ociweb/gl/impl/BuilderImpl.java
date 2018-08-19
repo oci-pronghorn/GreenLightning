@@ -62,6 +62,7 @@ import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.HTTPServerConfigImpl;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.TLSCerts;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
@@ -585,7 +586,7 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public final HTTPClientConfig useNetClient() {
-		return useNetClient(TLSCertificates.defaultCerts);
+		return useNetClient(TLSCerts.define());
 	}
 
 	@Override
@@ -595,7 +596,9 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public HTTPClientConfigImpl useNetClient(TLSCertificates certificates) {
-		if (client != null) throw new RuntimeException("Client already enabled");
+		if (client != null) {
+			throw new RuntimeException("Client already enabled");
+		}
 		this.client = new HTTPClientConfigImpl(certificates);
 		this.client.beginDeclarations();
 		return client;
@@ -1090,11 +1093,16 @@ public class BuilderImpl implements Builder {
 		//create the network client stages
 		////////
 		if (useNetClient(netRequestPipes)) {
-			int tracks = Math.max(1, runtime.getBuilder().parallelTracks());			
-			int maxPartialResponses = Math.max(2,ClientHostPortInstance.getSessionCount());
-			int maxClientConnections = 4*(maxPartialResponses*tracks);
-			int connectionsInBits = (int)Math.ceil(Math.log(maxClientConnections)/Math.log(2));
-
+			
+			{
+				int tracks = Math.max(1, runtime.getBuilder().parallelTracks());			
+				int maxPartialResponses = Math.max(2,ClientHostPortInstance.getSessionCount());
+				ccm = new ClientCoordinator((int)Math.ceil(Math.log(4*(maxPartialResponses*tracks))/Math.log(2)), 
+											maxPartialResponses,
+	                    					this.client.getCertificates(), gm.recordTypeData);
+			}
+			
+			
 			int netResponseCount = 8;
 			int responseQueue = 10;
 			
@@ -1114,8 +1122,6 @@ public class BuilderImpl implements Builder {
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					
 			//BUILD GRAPH
-			ccm = new ClientCoordinator(connectionsInBits, maxPartialResponses,
-					                    this.client.getCertificates(), gm.recordTypeData);
 		
 			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
 			int r = outputsCount;

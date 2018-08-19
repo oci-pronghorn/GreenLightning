@@ -12,6 +12,7 @@ import com.ociweb.gl.api.DelayService;
 import com.ociweb.gl.api.GreenAppParallel;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPClientConfig;
 import com.ociweb.gl.api.HTTPRequestService;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
@@ -21,9 +22,7 @@ import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
-import com.ociweb.gl.impl.BuilderImpl;
-import com.ociweb.gl.impl.schema.MessagePrivate;
-import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.TLSCerts;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
@@ -76,6 +75,10 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private static final int PUB_MSGS_SIZE = 48;
 	private long minFinished;
 
+	private String host;
+
+	private int port;
+
 	public ParallelClientLoadTester(
 			int cyclesPerTrack,
 			int port,
@@ -120,6 +123,8 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.parallelTracks = config.parallelTracks;
 		this.durationNanos = config.durationNanos;
 		this.insecureClient = config.insecureClient;
+		this.host = config.host;
+		this.port = config.port;
 
         this.cyclesPerTrack = config.cyclesPerTrack;
         this.rate = config.cycleRate;
@@ -141,12 +146,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.session = new ClientHostPortInstance[parallelTracks];
 		this.elapsedTime = new ElapsedTimeRecorder[parallelTracks];
 
-		int i = parallelTracks;
-		while (--i>=0) {
-			session[i]=new ClientHostPortInstance(config.host,config.port);
-			elapsedTime[i] = new ElapsedTimeRecorder();
-		}
-
         this.contentType = null==payload ? null : payload.contentType.getBytes();
         this.maxPayloadSize = null==payload ? 256 : payload.maxPayloadSize;
 		this.post = null==payload? null : payload.post;
@@ -164,10 +163,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 	@Override
 	public void declareConfiguration(Builder builder) {
+		
+		HTTPClientConfig clientConfig;
 		if (insecureClient) {
-			builder.useInsecureNetClient();
+			clientConfig = builder.useInsecureNetClient();
 		} else {
-			builder.useNetClient(TLSCertificates.defaultCerts);
+			clientConfig = builder.useNetClient(TLSCerts.define());
+		}
+		
+		int i = parallelTracks;
+		while (--i>=0) {
+			session[i] = clientConfig.createHTTP1xClient(host, port).finish();
+			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 		
 		builder.setGlobalSLALatencyNS(20_000_000);
@@ -183,7 +190,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 
 		}
 		builder.parallelTracks(session.length);
-
+		
 		builder.setTimerPulseRate(20_000); //check for progress every 20 seconds
 		
 		if (rate != null) {

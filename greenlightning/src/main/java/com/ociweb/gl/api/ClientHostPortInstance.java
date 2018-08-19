@@ -7,45 +7,36 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.ClientCoordinator;
-import com.ociweb.pronghorn.util.TrieParser;
 
 public class ClientHostPortInstance {
-	private final static AtomicInteger sessionCounter = new AtomicInteger(0);
+	private static final AtomicInteger sessionCounter = new AtomicInteger(0);	
+
+	
 	private final static Logger logger = LoggerFactory.getLogger(ClientHostPortInstance.class);
 	
 	public final String host;
 	public final byte[] hostBytes;
+	public final int sessionId;
 	
 	final int port;
-	public final int sessionId;
 	final int hostId;
-	final JSONExtractorCompleted extractor;
+	final JSONExtractorCompleted extractor;	
 	
-	//cache
+	//cache for the active connection
 	private long connectionId=-1;
 
-
-	/**
-	 *
-	 * @param host String arg specifying host
-	 * @param port int arg specifying port number
-	 */
-	public ClientHostPortInstance(String host, int port) {
-		this(host, port, sessionCounter.incrementAndGet(),null);
-	}
-
-
+	
 	/**
 	 *
 	 * @param host String arg specifying host
 	 * @param port int arg specifying port number
 	 * @param extractor optional JSON extractor
 	 */
-	public ClientHostPortInstance(String host, int port, JSONExtractorCompleted extractor) {
+	public ClientHostPortInstance(String host, int port, JSONExtractorCompleted extractor, long callTimeoutNS) {
 		//NOTE: session counter values are each unique to the instance and found incrementing in a block for use in array lookups...
-		this(host, port, sessionCounter.incrementAndGet(), extractor);
+		this(host, port, sessionCounter.incrementAndGet(), extractor, callTimeoutNS);
 	}
-
+	
 	/**
 	 *
 	 * @param host String arg specifying host
@@ -53,7 +44,8 @@ public class ClientHostPortInstance {
 	 * @param sessionId int arg specifying the sessionId, this is internal an private
 	 * @param extractor optional JSON extractor
 	 */
-	private ClientHostPortInstance(String host, int port, int sessionId, JSONExtractorCompleted extractor) {
+	private ClientHostPortInstance(String host, int port, int sessionId, 
+			                       JSONExtractorCompleted extractor, long callTimeoutNS) {
 		this.host = host;
 		this.port = port;
 		if (port<=0 || port>65535) {
@@ -63,14 +55,19 @@ public class ClientHostPortInstance {
 			throw new UnsupportedOperationException("SessionId must be postive and greater than zero. found: "+sessionId);
 		}
 		this.sessionId = sessionId;
-		this.hostId = ClientCoordinator.registerDomain(host);
 		this.hostBytes = host.getBytes();
 		this.extractor = extractor;
+		
+		this.hostId = ClientCoordinator.registerDomain(host); //TODO: this static is bad plus we need to reg the chpis
+		
+		ClientCoordinator.setSessionTimeoutNS(sessionId, callTimeoutNS);
+		
 	}
 
 	public JSONExtractorCompleted jsonExtractor() {
 		return extractor;
 	}
+
 	
 	/**
 	 * Used to make host and port num a string
@@ -107,4 +104,6 @@ public class ClientHostPortInstance {
 		
 		return (this.host.equals(host)) && (this.port==port);
 	}
+	
+
 }

@@ -3,6 +3,7 @@ package com.ociweb;
 import com.ociweb.pronghorn.HTTPServer;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.TLSCerts;
 import com.ociweb.pronghorn.network.http.ModuleConfig;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import org.slf4j.Logger;
@@ -71,7 +72,7 @@ public class GreenLightning {
 	    int processors = large ? 8 : -1;
 	    
 		GraphManager gm = new GraphManager();
-		TLSCertificates certs  = Boolean.parseBoolean(isTLS)  ? TLSCertificates.defaultCerts : null;
+		TLSCertificates certs  = Boolean.parseBoolean(isTLS)  ? TLSCerts.define() : null;
 		HTTPServer.startupHTTPServer(gm, processors, 
 				GreenLightning.simpleModuleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, certs);
         		

@@ -35,6 +35,10 @@ public class ClientHostPortCollection {
 	}
 	
 	public boolean addMember(String host, int port) {
+		return addMember(host,port,-1);
+	}
+	
+	public boolean addMember(String host, int port, long timeoutNS) {
 		
 		if (members.length == membersCount) {
 			//grow first before addition
@@ -51,7 +55,7 @@ public class ClientHostPortCollection {
 			}
 		}
 		
-		members[membersCount++] = new ClientHostPortInstance(host, port, extractor);
+		members[membersCount++] = new ClientHostPortInstance(host, port, extractor, timeoutNS);
 		return true;
 	}
 	
