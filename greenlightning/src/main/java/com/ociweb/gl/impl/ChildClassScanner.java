@@ -208,7 +208,7 @@ public class ChildClassScanner {
 		long duration = System.nanoTime()-start;
 		
 		//just report the longest duration
-		if (duration > 10_000_000) {
+		if (duration > 10_000_000L) {
 			Appendables.appendNearestTimeUnit(System.out, duration);
 			System.out.println(" duration for scan to find all "+target.getSimpleName()+" instances inside "+listener.getClass().getSimpleName());
 		}

@@ -27,6 +27,7 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.pipe.ChannelReader;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -34,7 +35,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 	private final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
 	
-    private final Supplier<String> route;
 	private final boolean insecureClient;
     private final int parallelTracks;
     private final long cyclesPerTrack;
@@ -49,14 +49,21 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	public static long LOG_LATENCY_LIMIT =  20_000_000_000L; //20sec	
     
 	private final ParallelClientLoadTesterOutput out;
-	private final Supplier<Writable> post;
+
     private final int maxPayloadSize;
     private final byte[] contentType;
-	private final Supplier<HTTPResponseListener> validate;
+	private final ValidatorFactory validator;
 
-    private final ClientHostPortInstance[] session;
+	private final int sessionCount = 1;
+    private final ClientHostPortInstance[][] session;
+    
     private final ElapsedTimeRecorder[] elapsedTime;
-
+	
+	private final HeaderWritableFactory header;		
+	private final WritableFactory writer;
+    private final RouteFactory route;
+    
+    
     private int trackId = 0;
 	private long startupTime;
 	private long durationNanos = 0;
@@ -117,7 +124,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			ParallelClientLoadTesterPayload payload,
 			ParallelClientLoadTesterOutput out) {
 
-        this.route = config.route;
         this.telemetryPort = config.telemetryPort;
         this.telemetryHost = config.telemetryHost;
 		this.parallelTracks = config.parallelTracks;
@@ -143,24 +149,76 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		this.inFlightHead = new int[parallelTracks];
 		this.inFlightTail = new int[parallelTracks];
 
-		this.session = new ClientHostPortInstance[parallelTracks];
+		this.session = new ClientHostPortInstance[parallelTracks][sessionCount];
 		this.elapsedTime = new ElapsedTimeRecorder[parallelTracks];
 
         this.contentType = null==payload ? null : payload.contentType.getBytes();
         this.maxPayloadSize = null==payload ? 256 : payload.maxPayloadSize;
-		this.post = null==payload? null : payload.post;
-		if (this.post != null) {
-			if (null == this.contentType) {
-				throw new UnsupportedOperationException("Content type is required for payload");
-			}
-		}	
 		
 		
-		this.validate = null==payload? null : payload.validate;
+		this.validator = null==payload? null : payload.validator;
 
 		this.out = out;
+		
+		////////////////////////
+		////route factory and payload factory
+        this.route = config.route;
+        this.writer = null==payload? null : payload.post;
+        if (this.writer != null) {
+        	if (null == this.contentType) {
+        		throw new UnsupportedOperationException("Content type is required for payload");
+        	}
+        }
+		
+		///////////////////////////////////
+		///setup header writable
+		///////////////////////////////////
+		
+		if (contentType == null) {
+			header = null;
+		} else {
+		
+			final int cookieSize = 10;//00;
+			final byte[] largeCookie = buildLargeCookie(cookieSize).getBytes();
+			
+			final HeaderWritable tempHeader = 
+					new HeaderWritable() {
+				@Override
+				public void write(HeaderWriter writer) {
+					
+					writer.writeUTF8(HTTPHeaderDefaults.COOKIE, 
+							largeCookie);
+					
+					writer.writeUTF8(HTTPHeaderDefaults.CONTENT_TYPE,
+							contentType);
+				}
+			};
+			
+			
+			header = new HeaderWritableFactory() {			
+				@Override
+				public HeaderWritable headerWritable(long callInstance) {
+					return tempHeader;
+				}
+			};
+		}
+		
+		
 	}
 
+
+	private static String buildLargeCookie(int size) {
+		StringBuilder builder  = new StringBuilder();
+		Random r = new Random();
+		byte[] target = new byte[size];
+		r.nextBytes(target);
+		
+		Appendables.appendBase64Encoded(builder, target, 0, target.length, Integer.MAX_VALUE);
+		
+		return builder.toString();
+		
+	}
+	
 	@Override
 	public void declareConfiguration(Builder builder) {
 		
@@ -173,7 +231,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		
 		int i = parallelTracks;
 		while (--i>=0) {
-			session[i] = clientConfig.createHTTP1xClient(host, port).finish();
+			session[i][0] = clientConfig.createHTTP1xClient(host, port).finish();
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 		
@@ -370,7 +428,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		TrackHTTPResponseListener responder = new TrackHTTPResponseListener(runtime, track);
 		runtime.registerListener(RESPONDER_NAME, responder)
 					.addSubscription(CALL_TOPIC, responder::callMessage) //TODO: this object has a connection from pub sub that does nothing..
-					.acceptHostResponses(session[track]);
+					.acceptHostResponses(session[track][0]);
 	}
 
 
@@ -380,24 +438,18 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		private final PubSubService pubService;
 		
 		private final int track;
-		private final HTTPResponseListener validator;
-		private final HTTPRequestService httpClientService;
-		private final HeaderWritable header;
-		private final HeaderWritable allHeaders;
-		
-		private final Writable writer;
+		private final HTTPRequestService httpClientService;   
 
 		private long countDown;
 		private long totalTime;
-		private long callCounter;
+		private long callInstanceCounter;
 		private long sendFailures;
 		private long timeouts;
 		private long responsesInvalid;
 		private long responsesReceived;
 		private boolean lastResponseOk=true;
-		private final int cookieSize = 10;//00;
-
-		private final byte[] largeCookie = buildLargeCookie(cookieSize).getBytes();
+		
+		private Writable writeWrapper;
 		
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
@@ -417,48 +469,17 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			httpClientService = runtime.newCommandChannel()
 					.newHTTPClientService(
 							queueLength //keeps from having giant pipes, its 2x in-case we must re-send 	
-					, post!=null ? maxPayloadSize + (1<<12) : 0);
-			
-			this.header = contentType != null ?
-					new HeaderWritable() {
-						@Override
-						public void write(HeaderWriter writer) {
-							
-							writer.writeUTF8(HTTPHeaderDefaults.COOKIE, 
-										    largeCookie);
-							
-							writer.writeUTF8(HTTPHeaderDefaults.CONTENT_TYPE,
-									         contentType);
-						}
-					}				
-					
-					: null;
+					, writer!=null ? maxPayloadSize + (1<<12) : 0);
 
-			this.writer = post != null ? post.get() : null;
-			this.validator = validate != null ? validate.get() : null;
-
-
-			this.allHeaders = new HeaderWritable() {
+			writeWrapper = new Writable() {
 				@Override
-				public void write(HeaderWriter writer) {
-					header.write(writer);
-					writer.write(HTTPHeaderDefaults.CONNECTION, "close");
-				}		
+				public void write(ChannelWriter w) {
+					writer.payloadWriter(callInstanceCounter, w);
+				}				
 			};
 			
 		}
 
-		private String buildLargeCookie(int size) {
-			StringBuilder builder  = new StringBuilder();
-			Random r = new Random();
-			byte[] target = new byte[size];
-			r.nextBytes(target);
-			
-			Appendables.appendBase64Encoded(builder, target, 0, target.length, Integer.MAX_VALUE);
-			
-			return builder.toString();
-			
-		}
 
 		private int x = 0;
 		
@@ -477,15 +498,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 
 		private boolean makeCall() {
-			if (session[track]!=null) {
+			if (session[track][0]!=null) {
 				long now = System.nanoTime();
-				callCounter++;			
 				boolean wasSent = doHTTPCall();			
 				if (wasSent) {
+					callInstanceCounter++;//must happen after call			
 					callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
 				} else {
 					sendFailures++;
-					callCounter--;
 				}
 				return wasSent;
 			} else {
@@ -493,81 +513,35 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				return true;
 			}
 		}
-
-		private final HeaderWritable writeClose = new HeaderWritable() {
-			@Override
-			public void write(HeaderWriter writer) {
-				writer.write(HTTPHeaderDefaults.CONNECTION, "close");
-			}		
-		};
 		
-		private boolean doHTTPCall() {
-		
+		private boolean doHTTPCall() {		
 			if (null==writer) {
 				return (header != null) ? httpGetWithHeader() : httpGet();   
 			} else { 
 				return (header != null) ? httpPostWithHeader() : httpPost();
 			}
-
 		}
 		
-		String cachedRoute;
-
+		//TODO: add support for N sessions per track, this will allow us to simulate many clients while using fewer threads.
+		
+		
 		private boolean httpPost() {
-			
-			if (null==cachedRoute) {
-				cachedRoute = route.get();
-			}
-			
-			boolean wasSent = httpClientService.httpPost(session[track], cachedRoute, writer);
-
-			if (wasSent) {
-				cachedRoute = null;
-			}
-			return wasSent;
+			return httpClientService.httpPost(session[track][0], route.route(callInstanceCounter), writeWrapper);
 		}
 
 		private boolean httpGet() {
-			boolean wasSent;
-			if (null==cachedRoute) {
-				cachedRoute = route.get();
-			}
-
-			wasSent = httpClientService.httpGet(session[track], cachedRoute);		
-			
-			if (wasSent) {
-				cachedRoute = null;
-			}
-			return wasSent;
+			return httpClientService.httpGet(session[track][0], route.route(callInstanceCounter));	
 		}
 
 		private boolean httpGetWithHeader() {
-			boolean wasSent;
-			if (null==cachedRoute) {
-				cachedRoute = route.get();
-			}
-			wasSent = httpClientService.httpGet(session[track], cachedRoute, header);		
-			if (wasSent) {
-				cachedRoute = null;
-			}
-			return wasSent;
+			return httpClientService.httpGet(session[track][0], route.route(callInstanceCounter), header.headerWritable(callInstanceCounter));		
 		}
 		
 		private boolean httpPostWithHeader() {
-			ClientHostPortInstance s = session[track];
+			ClientHostPortInstance s = session[track][0];
 			if (null!=s) {
-				boolean wasSent = false;
-				
-				if (null==cachedRoute) {
-					cachedRoute = route.get();
-				}
-				
-				wasSent = httpClientService.httpPost(s, cachedRoute, header, writer);
-	
-				if (wasSent) {
-					cachedRoute = null;
-				}
-				return wasSent;
+				return httpClientService.httpPost(s, route.route(callInstanceCounter), header.headerWritable(callInstanceCounter), writeWrapper);
+
 			} else {
 				//NOTE: must investigate this, we are getting TOO many re-sends? after a close??
 				logger.info("\nold reqeusts where requested after completion.");
@@ -596,6 +570,20 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
+
+//			if (reader.statusCode()==404) {
+//				pubService.publishTopic(PROGRESS_TOPIC, writer-> {
+//					writer.writePackedInt(track);
+//					writer.writePackedLong(countDown);
+//					//writer.writePackedLong(sendAttempts);
+//					//writer.writePackedLong(sendFailures);
+//					writer.writePackedLong(timeouts);
+//					//writer.writePackedLong(responsesReceived);
+//					writer.writePackedLong(responsesInvalid);
+//				});			
+//				
+//				throw new UnsupportedOperationException("404 returned from server, check test request");
+//			}
 			
 			if (reader.isConnectionClosed()) {
 				//server or internal subsystem just axed connection and we got no notice..
@@ -616,10 +604,12 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 										
 					//we must re-request the call
 					//keep the clock rolling since this is a penalty against the server
+					callInstanceCounter-=totalMissing;
 					int i = totalMissing;
 					while (--i>=0) {
 						boolean ok = doHTTPCall();
 						assert(ok) : "internal error, channels must be large enough to hold backed up reqeusts.";
+						callInstanceCounter++;//must happen after call
 					}
 				}	
 				out.connectionClosed(track);
@@ -658,16 +648,15 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);
 				totalTime+=duration;
-
-				responsesReceived++;
 				
 				//only checks if valid when the entire message is present				
 				if (validator != null
 					&& reader.isBeginningOfResponse() 
 					&& reader.isEndOfResponse()	
-					&& !validator.responseHTTP(reader)) {
+					&& !validator.validate(responsesReceived, reader)) {
 					responsesInvalid++;
 				} 				
+				responsesReceived++;
 			}
 			return lastResponseOk = nextCall();
 		}
@@ -710,7 +699,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				clean &= pubService.publishTopic(ENDERS_TOPIC, writer -> {
 					writer.writePackedInt(track);
 					writer.writePackedLong(totalTime);
-					writer.writePackedLong(callCounter);
+					writer.writePackedLong(callInstanceCounter);
 					writer.writePackedLong(sendFailures);
 					writer.writePackedLong(timeouts);
 					writer.writePackedLong(responsesReceived);
@@ -720,11 +709,15 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 				
 				//System.out.println("publish enders clean:"+clean+"  "+track+" rec  "+responsesReceived+" "+callCounter);
 				
-				ClientHostPortInstance s = session[track];
+				ClientHostPortInstance s = session[track][0];
 				if (s!=null) {
 					//NOTE: only safe place to close the connection.
-					httpClientService.httpClose(s);
-					session[track]=null;
+					
+					
+					if (insecureClient) {					
+						httpClientService.httpClose(s); //TODO: stil testing for TLS
+					}
+					session[track][0]=null;
 				}
 				--countDown;//ensure it goes negative so we do not finish more than once, this can happen when connections have been timed out and new requests sent.
 				
@@ -742,14 +735,14 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		@Override
 		public void timeEvent(long time, int iteration) {
 			
-			if (lastProgressCheck != callCounter) {
-				lastProgressCheck = callCounter;
+			if (lastProgressCheck != callInstanceCounter) {
+				lastProgressCheck = callInstanceCounter;
 			} else {			
-				if (callCounter!=cyclesPerTrack) {
+				if (callInstanceCounter!=cyclesPerTrack) {
 					StringBuilder builder = new StringBuilder(); 
 					Appendables.appendValue(Appendables.appendValue(Appendables.appendValue(
 							Appendables.appendEpochTime(builder.append("\n"), time)
-							           .append(" status for track: "),track), " progress:", callCounter), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
+							           .append(" status for track: "),track), " progress:", callInstanceCounter), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
 					System.out.print(builder);
 				}
 			}

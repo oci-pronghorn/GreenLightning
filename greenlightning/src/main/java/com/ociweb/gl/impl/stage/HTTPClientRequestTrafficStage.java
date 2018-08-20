@@ -131,7 +131,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 
 						                ClientConnection clientConnection;
 						                if (-1 != connectionId 
-						                	&& null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId) ) ) {
+						                	&& null!=(clientConnection = (ClientConnection)ccm.lookupConnectionById(connectionId) ) ) {
 							               
 						                	assert(clientConnection.singleUsage(stageId)) : "Only a single Stage may update the clientConnection.";
 						                	assert(routeId>=0);
@@ -166,7 +166,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 					                long connectionId = ccm.lookup(ccm.lookupHostId(hostBack, hostPos, hostLen, hostMask), port, userId);	
 					                
 					                ClientConnection clientConnection;
-					                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId) ) ) {
+					                if (-1 != connectionId && null!=(clientConnection = (ClientConnection)ccm.lookupConnectionById(connectionId) ) ) {
 						               
 					                	assert(clientConnection.singleUsage(stageId)) : "Only a single Stage may update the clientConnection.";
 					                	assert(routeId>=0);
@@ -200,7 +200,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 					                //openConnection(activeHost, port, userId, outIdx);
 					                
 					                ClientConnection clientConnection;
-					                if ((-1 != connectionId) && (null!=(clientConnection = (ClientConnection)ccm.connectionForSessionId(connectionId)))) {
+					                if ((-1 != connectionId) && (null!=(clientConnection = (ClientConnection)ccm.lookupConnectionById(connectionId)))) {
 					                	
 						                
 					                	assert(routeId>=0);
@@ -269,7 +269,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 				                long connectionId = ccm.lookup(ccm.lookupHostId(hostBack, hostPos, hostLen, hostMask), port, userId);	
 				                //only close if we find a live connection
 				                if ((-1 != connectionId)) {
-				                	ClientConnection connectionToKill = (ClientConnection)ccm.connectionForSessionId(connectionId);
+				                	ClientConnection connectionToKill = (ClientConnection)ccm.lookupConnectionById(connectionId);
 				                	if (null!=connectionToKill) {
 				                	
 					                	Pipe<NetPayloadSchema> outputPipe = output[connectionToKill.requestPipeLineIdx()];

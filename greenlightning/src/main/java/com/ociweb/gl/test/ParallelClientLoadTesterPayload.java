@@ -1,18 +1,22 @@
 package com.ociweb.gl.test;
 
 import com.ociweb.gl.api.ArgumentProvider;
-import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-
-import java.util.function.Supplier;
+import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class ParallelClientLoadTesterPayload {
     public int maxPayloadSize = 1024;
     public HTTPContentTypeDefaults contentType = HTTPContentTypeDefaults.JSON;
-    public Supplier<Writable> post = null;
-    public Supplier<HTTPResponseListener> validate = new ParallelClientLoadTesterStatusValidator();
+    public WritableFactory post = null;
+    public ValidatorFactory validator = new ValidatorFactory() {
+		@Override
+		public boolean validate(long callInstance, HTTPResponseReader reader) {
+			 int code = reader.statusCode();
+             return code >= 200 && code < 400;
+		}
+    };
 
     public ParallelClientLoadTesterPayload() {
     }
@@ -27,14 +31,35 @@ public class ParallelClientLoadTesterPayload {
         String scriptFile = args.getArgumentValue("--script", "-s", (String)null);
         if (scriptFile != null) {
             ParallelClientLoadTesterPayloadScript script = new ParallelClientLoadTesterPayloadScript(scriptFile);
-            post = ()->script;
+
+            post = new WritableFactory() {
+    			@Override
+    			public void payloadWriter(long callInstance, ChannelWriter w) {
+    				script.write(w);;
+    			}
+            };
+            
         }
     }
 
     public ParallelClientLoadTesterPayload(String payload) {
         final byte[] bytes = payload.getBytes();
         maxPayloadSize = bytes.length;
-        post = ()->writer->writer.write(bytes);
+        
+        final Writable payloadWritable = new Writable() {
+			@Override
+			public void write(ChannelWriter writer) {
+				writer.write(bytes);
+			}
+		};
+        post = new WritableFactory() {
+			@Override
+			public void payloadWriter(long callInstance, ChannelWriter w) {
+				payloadWritable.write(w);;
+			}
+        };
+        		
+        		
     }
 
     public ParallelClientLoadTesterPayload(String[] payload) {
@@ -42,7 +67,15 @@ public class ParallelClientLoadTesterPayload {
         for (int i = 0; i < payload.length; i++) {
             maxPayloadSize = Math.max(maxPayloadSize, payload[i].length());
         }
-        post = ()-> new ParallelClientLoadTesterPayloadScript(payload);
+
+        final Writable payloadWritable = new ParallelClientLoadTesterPayloadScript(payload);
+        post = new WritableFactory() {
+			@Override
+			public void payloadWriter(long callInstance, ChannelWriter w) {
+				payloadWritable.write(w);
+			}
+        };
+        
     }
 }
 
