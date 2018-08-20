@@ -7,7 +7,6 @@ import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
-import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.RestListener;
 
 public class ShutdownRestListener implements RestListener{

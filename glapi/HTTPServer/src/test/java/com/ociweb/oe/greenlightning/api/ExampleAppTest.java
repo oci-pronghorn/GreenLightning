@@ -11,7 +11,6 @@ import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
-import com.ociweb.pronghorn.network.http.HTTP1xResponseParserStage;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
@@ -67,9 +66,10 @@ public class ExampleAppTest {
 				}						
 			};
 		
-		StringBuilder results = LoadTester.runClient(
-				()->testData, 
-				(r)->{
+		StringBuilder results = new StringBuilder(); 
+		LoadTester.runClient(
+				(i,w)->testData.write(w), 
+				(i,r)->{
 						String readUTFFully = r.structured().readPayload().readUTFFully();
 						boolean isMatch = "{\"name\":\"bob\",\"isLegal\":true}".equals(readUTFFully);
 						if (!isMatch) {
@@ -80,7 +80,7 @@ public class ExampleAppTest {
 				"/testJSON", 
 				useTLS, telemetry, 
 				parallelTracks, cyclesPerTrack, 
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 		
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
 
@@ -91,24 +91,24 @@ public class ExampleAppTest {
 		
 		Person person = new Person("bob",42);
 		JSONRenderer<Person> renderer = new JSONRenderer<Person>()
-				.beginObject()
-				.beginObject("person")
+				.startObject()
+				.startObject("person")
 				    .string("name", (o,t)->t.append(o.name))
 				    .integer("age", o->o.age)
 				.endObject()
 				.endObject();
 
-		StringBuilder results = LoadTester.runClient(
-				renderer,
-				()->person,				
-				(r)->{
+		StringBuilder results = new StringBuilder();
+		LoadTester.runClient(				
+				(i,w)-> renderer.render(w, person),				
+				(i,r)->{
 						return "{\"name\":\"bob\",\"isLegal\":true}".equals(r.structured().readPayload().readUTFFully())
 								&& (HTTPContentTypeDefaults.JSON == r.contentType());
 					  }, 
 				"/testJSON", 
 				useTLS, telemetry, 
 				parallelTracks, cyclesPerTrack, 
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 		
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
 
@@ -119,9 +119,10 @@ public class ExampleAppTest {
 		
 		GraphManager.showPipeIdOnTelemetry=true;
 		
-		StringBuilder results = LoadTester.runClient(
-				()-> null, 
-				(r)->{
+		StringBuilder results = new StringBuilder(); 
+		LoadTester.runClient(
+				null, 
+				(i,r)->{
 						String payload = r.structured().readPayload().readUTFFully();
 						boolean matches = 200==r.statusCode()
 							&& (HTTPContentTypeDefaults.HTML==r.contentType()) 
@@ -139,7 +140,7 @@ public class ExampleAppTest {
 				"/files/index.html", 
 				useTLS, telemetry, 
 				parallelTracks, cyclesPerTrack, 
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 		
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
 
@@ -148,16 +149,17 @@ public class ExampleAppTest {
 	@Test
 	public void resourceCallTest() {
 		
-		StringBuilder results = LoadTester.runClient(
-				()-> null, 
-				(r)->{
+		StringBuilder results = new StringBuilder(); 
+		LoadTester.runClient(
+				null, 
+				(i,r)->{
 						return  (HTTPContentTypeDefaults.HTML==r.contentType()) 
 								&& "hello world".equals(r.structured().readPayload().readUTFFully());
 					  }, 
 				"/resources/index.html", 
 				useTLS, telemetry, 
 				parallelTracks, 1, //TODO: second call not working, need to investigate..
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 		
 	//	assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
 
@@ -166,16 +168,17 @@ public class ExampleAppTest {
 	@Test
 	public void pageBTest() {
 		
-		StringBuilder results = LoadTester.runClient(
-				()-> null, 
-				(r)->{					
+		StringBuilder results = new StringBuilder(); 
+		LoadTester.runClient(
+				null, 
+				(i,r)->{					
 						return  (HTTPContentTypeDefaults.PLAIN==r.contentType()) 
 								&& "beginning of text file\n".equals(r.structured().readPayload().readUTFFully());
 					  }, 
 				"/testPageB", 
 				useTLS, telemetry, 
 				parallelTracks, cyclesPerTrack, 
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 		
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
 
@@ -186,13 +189,14 @@ public class ExampleAppTest {
 		
 		console.setLength(0);
 		
-		StringBuilder results = LoadTester.runClient(
-				()-> null, 
-				(r)-> 0 == r.structured().readPayload().available(), 
+		StringBuilder results = new StringBuilder();
+		LoadTester.runClient(
+				null, 
+				(i,r)-> 0 == r.structured().readPayload().available(), 
 				"/testpageA?arg=42", 
 				useTLS, telemetry, 
 				1, 1, 
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 
 		assertTrue(console.toString(), console.indexOf("Arg Int: 42\nCOOKIE: ")>=0); //test adds a cookie by default..
 
@@ -206,13 +210,14 @@ public class ExampleAppTest {
 		
 		console.setLength(0);
 		
-		StringBuilder results = LoadTester.runClient(
-				()-> null, 
-				(r)-> 0 == r.structured().readPayload().available(), 
+		StringBuilder results = new StringBuilder();
+		LoadTester.runClient(
+				null, 
+				(i,r)-> 0 == r.structured().readPayload().available(), 
 				"/testpageA?f=g", 
 				useTLS, telemetry, 
 				1, 1, 
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 
 		assertTrue(console.toString(), console.indexOf("Arg Int: 111\nCOOKIE: ")>=0); //test adds a cookie by default..
 
@@ -226,13 +231,14 @@ public class ExampleAppTest {
 		
 		console.setLength(0);
 		
-		StringBuilder results = LoadTester.runClient(
-				()-> null, 
-				(r)-> 0 == r.structured().readPayload().available(), 
+		StringBuilder results = new StringBuilder();
+		LoadTester.runClient(
+				null, 
+				(i,r)-> 0 == r.structured().readPayload().available(), 
 				"/testPageC", 
 				useTLS, telemetry, 
 				1, 1, 
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 		
 		assertTrue(console.toString(), console.indexOf("COOKIE: ")>=0); //test adds a cookie by default..
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);		
@@ -244,15 +250,16 @@ public class ExampleAppTest {
 		
 		console.setLength(0);
 		
-		StringBuilder results = LoadTester.runClient(
-				()-> (w)->w.append("payload"), 
-				(r)-> {
+		StringBuilder results = new StringBuilder();
+		LoadTester.runClient(
+				(i,w)-> w.append("payload"), 
+				(i,r)-> {
 						return "sent by responder".equals(r.structured().readPayload().readUTFFully());
 					},
 				"/testpageD", 
 				useTLS, telemetry, 
 				1, 1, 
-				host, port, timeoutMS);		
+				host, port, timeoutMS, results);		
 		
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);		
 	}

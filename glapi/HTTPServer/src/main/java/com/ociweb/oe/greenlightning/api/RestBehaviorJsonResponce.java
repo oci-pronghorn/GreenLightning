@@ -12,7 +12,7 @@ import com.ociweb.pronghorn.util.AppendableProxy;
 public class RestBehaviorJsonResponce implements RestListener {
 
 	private static final JSONRenderer<RestBehaviorJsonResponce> jsonRenderer = new JSONRenderer<RestBehaviorJsonResponce>()
-			  .beginObject()	  
+			  .startObject()	  
 			  .string("name", (o,t)->t.append(o.name))
 			  .bool("isLegal", o->o.isLegal)
 			  .endObject();
