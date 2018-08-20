@@ -6,13 +6,11 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestService;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.api.PubSubListener;
 import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.StructuredReader;
-import com.ociweb.pronghorn.util.Appendables;
 
 public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListener, PubSubListener {
 	
