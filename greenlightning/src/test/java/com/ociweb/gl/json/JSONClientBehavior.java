@@ -33,7 +33,8 @@ public class JSONClientBehavior implements HTTPResponseListener, StartupListener
         JSONRequest.renderer.render(out, request1);
         System.out.println("Client JSON 1:" + out);
 
-        out.reset();
+        out = new StringBuilderWriter();
+
         JSONRequest.renderer.render(out, request2);
         System.out.println("Client JSON 2:" + out);
 
