@@ -231,7 +231,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		
 		int i = parallelTracks;
 		while (--i>=0) {
-			session[i][0] = clientConfig.createHTTP1xClient(host, port).finish();
+			session[i][0] = clientConfig.newHTTPSession(host, port).finish();
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 		

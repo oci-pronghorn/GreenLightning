@@ -22,12 +22,16 @@ public class EchoExampleApp implements GreenApp {
 		builder.useHTTP1xServer(6084)
 	       .useInsecureServer()
 	       .echoHeaders(128, HTTPHeaderDefaults.DNT, HTTPHeaderDefaults.STRICT_TRANSPORT_SECURITY)
+	       .setDecryptionUnitsPerTrack(4)
+	       .setEncryptionUnitsPerTrack(4)
 	       .setHost("127.0.0.1");
 		
 		builder.defineRoute()
 	       .path("/test")
 		   .routeId();
-	}
+		
+		builder.enableTelemetry();
+	}	
 
 	@Override
 	public void declareBehavior(GreenRuntime runtime) {
@@ -49,7 +53,7 @@ public class EchoExampleApp implements GreenApp {
 					//no response
 				}
 			};
-			return resp.publishHTTPResponse(r, headers, writable);
+			return resp.publishHTTPResponse(r, headers, null, writable);
 			
 		}).includeAllRoutes();
 		

@@ -12,21 +12,25 @@ public class ReactiveProxyStage extends PronghornStage {
 	protected ReactiveProxyStage(ReactiveProxy proxy, GraphManager graphManager, Pipe input, Pipe output) {
 		super(graphManager, input, output);
 		this.proxy = proxy;
+		//GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 20_000, this); //slows the apply operation logic
 	}
 	
 	protected ReactiveProxyStage(ReactiveProxy proxy, GraphManager graphManager, Pipe[] input, Pipe output) {
 		super(graphManager, input, output);
 		this.proxy = proxy;
+		//GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 20_000, this); //slows the apply operation logic
 	}
 	
 	protected ReactiveProxyStage(ReactiveProxy proxy, GraphManager graphManager, Pipe input, Pipe[] output) {
 		super(graphManager, input, output);
 		this.proxy = proxy;
+		//.addNota(graphManager, GraphManager.SCHEDULE_RATE, 20_000, this); //slows the apply operation logic
 	}
 	
 	protected ReactiveProxyStage(ReactiveProxy proxy, GraphManager graphManager, Pipe[] input, Pipe[] output) {
 		super(graphManager, input, output);
 		this.proxy = proxy;
+		//GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, 20_000, this); //slows the apply operation logic
 	}
 
 	

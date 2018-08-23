@@ -32,8 +32,8 @@ public class OpenCloseTestServer implements GreenApp {
 		builder.useHTTP1xServer(port)
 			   .setHost("127.0.0.1")
 			   .setMaxConnectionBits(3)//only 8 connections
-			   .setDecryptionUnitsPerTrack(12)
-			   .setEncryptionUnitsPerTrack(12)
+			   .setDecryptionUnitsPerTrack(6)
+			   .setEncryptionUnitsPerTrack(6)
 		       .useInsecureServer();
 		
 		neverCloseRoute = builder.defineRoute().path("neverclose").routeId();
@@ -52,7 +52,7 @@ public class OpenCloseTestServer implements GreenApp {
 				w.write(HTTPHeaderDefaults.CONNECTION, "close");
 			};
 			
-			return respClose.publishHTTPResponse(r, headers, Writable.NO_OP);
+			return respClose.publishHTTPResponse(r, headers, null, Writable.NO_OP);
 
 		}).includeRoutes(alwaysCloseRoute);
 

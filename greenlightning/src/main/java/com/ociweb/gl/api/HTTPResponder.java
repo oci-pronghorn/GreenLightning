@@ -1,17 +1,11 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.pronghorn.network.ClientConnection;
-import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
-import com.ociweb.pronghorn.pipe.DataInputBlobReader;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.pipe.RawDataSchema;
 
 public class HTTPResponder {
 
@@ -21,57 +15,29 @@ public class HTTPResponder {
 	private long sequenceCode;
 	
 	private boolean hasContinuation;
-	private int statusCode;
+	private int statusCode = 200;	
 	private HTTPContentType contentType;
 	private HeaderWritable headers;
-	
-	private final Pipe<RawDataSchema> pipe;
-	private final Writable writable;
+	private Writable writable;
+	private long lastCancelledConnectionId = -1;
+	private boolean closedResponse;//can only set when we have no writable
 
-	private final ClientCoordinator clientCoordinator;
-	
-	public HTTPResponder(MsgCommandChannel commandChannel,
-            int maximumPayloadSize,
-            MsgRuntime runtime) {
-		this(commandChannel, maximumPayloadSize, runtime.builder.getClientCoordinator());
-	}
-	
-	public HTTPResponder(MsgCommandChannel commandChannel,
-            int maximumPayloadSize) {
-		this(commandChannel, maximumPayloadSize, (ClientCoordinator)null);
-	}
-	
-	/**
-	 *
-	 * @param commandChannel MsgCommandChannel arg used to make newHTTPResponseService
-	 * @param maximumPayloadSize int arg used in pipe and commandChannel to set max payload
-	 */
-	public HTTPResponder(MsgCommandChannel commandChannel,
-			             int maximumPayloadSize,
-			             ClientCoordinator clientCoordinator) {
-	    this.connectionId = -1;
-	    this.sequenceCode = -1;
+	public HTTPResponder(MsgCommandChannel<?> commandChannel, int maximumPayloadSize) {
+		clearAll();
 	    
 	    int maximumMessages = 4;
-	    
-       // responseRelayChannel.ensureHTTPServerResponse(500, 1024);
 	    this.responseService = commandChannel.newHTTPResponseService(maximumMessages, maximumPayloadSize);
 	    	    
-	    //temp space for only if they appear out of order.
-		this.pipe = RawDataSchema.instance.newPipe(maximumMessages, maximumPayloadSize);
-		this.pipe.initBuffers();
-		this.clientCoordinator = clientCoordinator;
-	    this.writable = new Writable() {
-			@Override
-			public void write(ChannelWriter writer) {
-				int msg = Pipe.takeMsgIdx(pipe);												
-				DataInputBlobReader<RawDataSchema> dataStream = Pipe.inputStream(pipe);
-				dataStream.openLowLevelAPIField();
-				dataStream.readInto(writer,dataStream.available());
-				Pipe.confirmLowLevelRead(pipe, Pipe.sizeOf(RawDataSchema.instance, msg));
-				Pipe.releaseReadLock(pipe);
-			}
-		};
+	}
+
+	private void clearAll() {
+		this.connectionId = -1;
+		this.sequenceCode = -1;	
+		this.writable = null;
+		this.headers = null;
+		this.contentType = null;
+		this.statusCode = 200;
+		this.closedResponse = false;
 	}
 
 	/**
@@ -79,24 +45,41 @@ public class HTTPResponder {
 	 * @param reader ChannelReader arg used to set connectionId and sequenceCode
 	 * @return <code>true</code> if Pipe.hasContentToRead(pipe) <p> <code>false</code> if connectionId >= 0 && sequenceCode >= 0
 	 */
-	public boolean readReqesterData(ChannelReader reader) {
+	public boolean readHandoffData(ChannelReader reader) {
 		
-		if (Pipe.hasContentToRead(pipe)) {
+	
+		if (this.writable != null) {
+		
+			connectionId = reader.readPackedLong();
+			sequenceCode = reader.readPackedLong();
 			
-			if (null==headers) {
-				//custom call
-				responseService.publishHTTPResponse(connectionId, sequenceCode, 
-                                                   statusCode, hasContinuation, 
-                                                   contentType, writable);
-			} else {
-				//full headers call
-				responseService.publishHTTPResponse(connectionId, sequenceCode, 
-                        						   hasContinuation, headers, 200, writable);
+			if (lastCancelledConnectionId == connectionId) {
+				//already closed so clear, we can not send a response
+				clearAll();
+				return true;
 			}
-			connectionId = -1;
-			sequenceCode = -1;	
-			return true;
+			
+			if (responseService.publishHTTPResponse(connectionId, sequenceCode, 
+			        								hasContinuation, headers, statusCode, contentType, writable)) {
+				clearAll();				
+				return true;
+			} else {
+				return false;
+			}
+			
 		} else {
+			
+			//NB: if the connection was closed before we consumed the id values
+			if (closedResponse) {
+				
+				if (publishCanceledResponse()) {
+					clearAll();
+					return true;
+				} else {
+					return false;
+				}
+			}
+						
 			if (connectionId>=0 && sequenceCode>=0) {
 			    //will not pick up new data, waiting for these to be consumed.
 				if (connectionId != reader.readPackedLong()) {
@@ -114,59 +97,64 @@ public class HTTPResponder {
 				
 				connectionId = reader.readPackedLong();
 				sequenceCode = reader.readPackedLong();
+				
+				if (lastCancelledConnectionId == connectionId) {
+					connectionId = -1;//already closed so clear, we will not be getting a response.
+					sequenceCode = -1;
+				}
+				
+				
 			}
-			
-			//TODO:if connection is cancelled return cancelled value and clear this.....
-			
+	
 			
 			return true;
 		}
 		
 	}
-	/**
-	 *
-	 * @param hasContinuation boolean arg determining if continuation exists
-	 * @param headers HeaderWritable arg used in commandChannel.publishHTTPResponse
-	 * @param writable Writable arg used in commandChannel.publishHTTPResponse
-	 * @return <code>true</code> if connectionId >= 0 && sequenceCode >= 0 else <code>false</code> <p> <code>false</code> if Pipe.contentRemaning(pipe) != 0 else <code>true</code>
-	 */
-	public boolean respondWith(boolean hasContinuation, HeaderWritable headers, Writable writable) {
 
-		if (connectionId>=0 && sequenceCode>=0) {
-			
-			if (responseService.publishHTTPResponse(connectionId, sequenceCode, 
-				                           hasContinuation, headers, 200, writable)) {
-			    connectionId = -1;
-			    sequenceCode = -1;
-			    return true;
-			} else {
-				return false;
-			}
-		    
-		} else {
-		 
-			if (Pipe.contentRemaining(pipe)!=0) {
-				//can't store since we are waiting for the con and seq
-				return false;
-			} else {
-			
-				//store data to write later.
-				this.hasContinuation = hasContinuation;
-				this.headers = headers;
-				
-				storeData(writable);
-			
-				return true;
-				
-			}
-		}		
+	public boolean respondWith(boolean hasContinuation, HeaderWritable headers, HTTPContentType contentType, Writable writable) {
+
+   		if (null == this.writable & !closedResponse) {
+   			if (connectionId>=0 && sequenceCode>=0) {
+   				
+   				if (responseService.publishHTTPResponse(connectionId, sequenceCode, 
+   						hasContinuation, headers, statusCode, contentType, writable)) {
+   					clearAll();
+   					
+   					return true;
+   				} else {
+   					return false;
+   				}
+   				
+   			} else {
+   				
+   				if (this.writable != null) {
+   					//can't store since we are waiting for the con and seq
+   					return false;
+   				} else {
+   					
+   					//store data to write later.
+   					this.hasContinuation = hasContinuation;
+   					this.headers = headers;
+   					this.writable = writable;
+   					this.contentType = contentType;
+   					
+   					return true;
+   					
+   				}
+   			}		
+   		} else {   	
+   			return false;
+   		}
+		
 	}
 	
-	
-	private HTTPContentType cancelType = HTTPContentTypeDefaults.PLAIN;
+	private final int cancelStatusCode = 504;// Gateway Timeout
+	private HTTPContentType cancelType = null;
 	private HeaderWritable cancelHeaderWritable = new HeaderWritable() {
 		@Override
 		public void write(HeaderWriter writer) {
+			writer.write(HTTPHeaderDefaults.CONNECTION, "closed");
 		}
 	};
 	private Writable cancelPayload = new Writable() {
@@ -175,51 +163,81 @@ public class HTTPResponder {
 		}
 	};
 	
-	/**
-	 * set the response for all cancelled requests
-	 * @param type HTTPContentType
-	 * @param header HeaderWritable
-	 * @param writable Writable
-	 */
-	public void setCancelResponse(HTTPContentType type, 
-			                      HeaderWritable header, 
-			                      Writable writable) {
-		cancelType = type;
-		cancelHeaderWritable = header;
-		cancelPayload = writable;
-	}
-
-	//call this to see if connection is disconecting or invalid just before sending response.
-	//clientCoordinator.connectionForSessionId(id)
 	
-	
-	public void scanForCancelled() {
-		
-		if (connectionId!=-1) {
-			//is the current waiting connection is cancelled
-			//this is triggered by? what
-		
-			//TODO: can this be non HTTP ?
-			
-			final boolean alsoReturnDisconnected = true;
-			ClientConnection con = (ClientConnection)clientCoordinator.connectionForSessionId(connectionId, alsoReturnDisconnected);
-			
-			
-			
-			
-			
-		
+	public boolean closed() {		
+		if (writable==null) {
+			closedResponse = true;
+			return true;			
+		} else {
+			return false;
 		}
-				
-	}
-	
-	public void cancelRequest(long connectionId) {
-		//cancel those waiting if connetionId matches
-		
 		
 	}
+
+	private boolean publishCanceledResponse() {
+		//send the cancel response....
+		if (responseService.publishHTTPResponse(
+		        connectionId, sequenceCode, 
+		        false, cancelHeaderWritable, cancelStatusCode,                      
+		        cancelType, cancelPayload)) {
+			
+			//keep in case we see it again.
+			lastCancelledConnectionId = connectionId;
+			
+			clearAll();
+			return true;
+		} else {
+			return false;
+		}
+	}
+
 	
 
+	/**
+	 *
+	 * @param statusCode int arg used in commandChannel.publishHTTPResponse
+	 * @param hasContinuation boolean arg
+	 * @Param headers HeaderWritable
+	 * @param contentType HTTPContentType arg used in commandChannel.publishHTTPResponse
+	 * @param writable Writable arg used in commandChannel.publishHTTPResponse
+	 * @return publishResult if connectionId >= 0 && sequenceCode >= 0 <p> <code>false</code> if Pipe.hasContentToRead(pipe) else <code>true</code>
+	 */
+    public boolean respondWith(int statusCode, boolean hasContinuation, 
+    		                   HeaderWritable headers, HTTPContentType contentType, Writable writable) {
+		
+   		if (null == this.writable & !closedResponse) {    	
+	    	if (connectionId>=0 && sequenceCode>=0) {
+	    		if (responseService.publishHTTPResponse(
+	    				                       connectionId, sequenceCode,
+	    				                       hasContinuation, headers, statusCode,                      
+	    				                       contentType, writable)) {
+	    			clearAll();
+	    			return true;
+	    		} else {
+	    			return false;
+	    		}
+	    	} else {
+	    		
+	    		if (this.writable != null) {
+					return false;
+					
+				} else {
+	    		
+		    		this.hasContinuation = hasContinuation;
+		    		this.contentType = contentType;
+		    		this.statusCode = statusCode;
+		    		this.headers = headers;
+		    		this.writable = writable;
+			
+					return true;
+					
+				}
+	    	}
+   		} else {
+   			return false;
+   		}
+	}
+    
 	/**
 	 *
 	 * @param statusCode int arg used in commandChannel.publishHTTPResponse
@@ -228,42 +246,37 @@ public class HTTPResponder {
 	 * @param writable Writable arg used in commandChannel.publishHTTPResponse
 	 * @return publishResult if connectionId >= 0 && sequenceCode >= 0 <p> <code>false</code> if Pipe.hasContentToRead(pipe) else <code>true</code>
 	 */
-    public boolean respondWith(int statusCode, boolean hasContinuation, HTTPContentType contentType, Writable writable) {
+   public boolean respondWith(int statusCode, boolean hasContinuation, 
+		                      HTTPContentType contentType, Writable writable) {
 		
-    	if (connectionId>=0 && sequenceCode>=0) {
-    		boolean publishResult = responseService.publishHTTPResponse(connectionId, sequenceCode,
-				                           statusCode, hasContinuation, contentType, writable);
-    		if (publishResult) {
-    			connectionId = -1;
-    			sequenceCode = -1; 
-    		}
-		    return publishResult;
-    	} else {
-    		
-    		if (Pipe.hasContentToRead(pipe)) {
-				return false;
-				
-			} else {
-    		
-	    		this.hasContinuation = hasContinuation;
-	    		this.contentType = contentType;
-	    		this.statusCode = statusCode;
-	
-				storeData(writable);
-				
-				return true;
-				
-			}
-    	}
+  		if (null == this.writable & !closedResponse) { 	
+   	
+		   	if (connectionId>=0 && sequenceCode>=0) {
+		   		if (responseService.publishHTTPResponse(connectionId, sequenceCode,
+						                           statusCode, hasContinuation, contentType, writable)) {
+		   		
+		   			clearAll();
+		   			return true;
+		   		} else {
+		   			return false;
+		   		}
+		   	} else {
+		   		
+		   		if (this.writable != null) {
+						return false;				
+					} else {
+			    		this.hasContinuation = hasContinuation;
+			    		this.contentType = contentType;
+			    		this.statusCode = statusCode;
+			    		this.headers = null;
+			    		this.writable = writable;
+									
+						return true;				
+					}
+		   	}
+  		} else {
+  			return false;
+  		}
 	}
 
-	private void storeData(Writable writable) {
-		Pipe.addMsgIdx(pipe, RawDataSchema.MSG_CHUNKEDSTREAM_1);
-		DataOutputBlobWriter<RawDataSchema> outputStream = Pipe.openOutputStream(pipe);				
-		writable.write(outputStream);
-		DataOutputBlobWriter.closeLowLevelField(outputStream);
-		Pipe.confirmLowLevelWrite(pipe,Pipe.sizeOf(RawDataSchema.instance, RawDataSchema.MSG_CHUNKEDSTREAM_1));
-		Pipe.publishWrites(pipe);
-	}
-	
 }

@@ -166,7 +166,7 @@ public class BuilderImpl implements Builder {
 	private final boolean enableAutoPrivateTopicDiscovery = true;
 	
     
-    private long defaultSleepRateNS = 5_000;// should normally be between 900 and 20_000; 
+    private long defaultSleepRateNS = 6_000;// should normally be between 900 and 20_000; 
     
 	private final int shutdownTimeoutInSeconds = 1;
 
@@ -1119,6 +1119,10 @@ public class BuilderImpl implements Builder {
 			//as we have SSLEngineUnwrapStages so each can complete its handshake
 			int clientWriters = responseUnwrapCount; //count of channel writer stages, can be larger than Unwrap count if needed
 			
+			
+			if (this.client.isTLS()) {
+				pcm.ensureSize(NetPayloadSchema.class, 4, 1<<15); ///must be large enough for encrypt/decrypt 
+			}
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					
 			//BUILD GRAPH

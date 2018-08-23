@@ -25,7 +25,7 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     }
 
     @Override
-    public ClientHostPortConfig createHTTP1xClient(String host, int port) {   
+    public ClientHostPortConfig newHTTPSession(String host, int port) {   
         return new ClientHostPortConfig(host, port);
     }
 

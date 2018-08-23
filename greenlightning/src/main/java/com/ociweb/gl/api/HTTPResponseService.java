@@ -232,10 +232,9 @@ public class HTTPResponseService {
 	 * 				false, headers, 200, writable)
 	 */
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
-	           HeaderWritable headers, Writable writable) {
+	           HeaderWritable headers, HTTPContentType contentType, Writable writable) {
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
-				false, headers, 200, writable
-				);
+				false, headers, 200, contentType, writable);
 	}
 
 	/**
@@ -250,7 +249,7 @@ public class HTTPResponseService {
 	 */
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
 	           boolean hasContinuation, HeaderWritable headers, int statusCode,
-	           Writable writable) {
+	           HTTPContentType contentType, Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
@@ -267,7 +266,7 @@ public class HTTPResponseService {
 		///////////////////////////////////////
 		//message 1 which contains the headers
 		//////////////////////////////////////		
-		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data,connectionId, sequenceNo, pipe);
+		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data, pipe);
 		
 		//////////////////////////////////////////
 		//begin message 2 which contains the body
@@ -288,7 +287,9 @@ public class HTTPResponseService {
 			msgCommandChannel.lastResponseWriterFinished = 1;	
 		}	
 		
-		DataOutputBlobWriter.openField(outputStream);
+		//NB: context passed in here is looked at to know if this is END_RESPONSE and if so
+		//then the length is added if not then the header will designate chunked.
+		outputStream.openField(statusCode, context, contentType);
 		writable.write(outputStream); 
 		
 		if (hasContinuation) {

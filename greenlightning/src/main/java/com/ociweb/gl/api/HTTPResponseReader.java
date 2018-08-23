@@ -15,6 +15,7 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	private short status;
 	private int flags;
 	private long connectionId;
+	private int clientSessionId;
 	private HeaderTypeCapture htc;
 
 	public HTTPResponseReader(Pipe<NetResponseSchema> pipe, HTTPSpecification<?,?,?,?> httpSpec) {
@@ -82,6 +83,23 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	public long connectionId() {
 		return connectionId;
 	}
+
+	/**
+	 * 
+	 * @param sessionId client session id which will not change at runtime
+	 */
+	public void setClientSessionId(int sessionId) {
+		clientSessionId = sessionId;
+	}
+	
+	/**
+	 * 
+	 * @return client session id for this call.
+	 */
+	public int sessionId() {
+		return clientSessionId;
+	}
+
 
 	
 	

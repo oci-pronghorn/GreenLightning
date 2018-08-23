@@ -914,7 +914,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	    	  //all these values are required in order to ensure the right sequence order once processed.
     	    	  long sequenceCode = (((long)(parallelIdx|(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context))  )<<32) | ((long)sequenceNo);
     	    	  
-    	    	  //System.err.println("Reader is given seuqence code of "+sequenceNo);
     	    	  reader.setConnectionId(connectionId, sequenceCode);
     	    	  
     	    	  //assign verbs as strings...
@@ -958,25 +957,33 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	 while (Pipe.hasContentToRead(pipeIn)) {                
              
        		 Pipe.markTail(pipeIn);
-    		 
+    	
              final int msgIdx = Pipe.takeMsgIdx(pipeIn);
              
-             //logger.info("response from HTTP request. Type is {} ",msgIdx);
+             //logger.info("\nresponse from HTTP request. Type is {} ",msgIdx);
              
              switch (msgIdx) {
 	             case NetResponseSchema.MSG_RESPONSE_101:
 
 	            	 long ccId1 = Pipe.takeLong(pipeIn);
+	            	 int clientSessionId = Pipe.takeInt(pipeIn);
 	            	 int flags = Pipe.takeInt(pipeIn);
+	            	 
+	          
+	            	 assert(0!= (Pipe.STRUCTURED_POS_MASK & Pipe.peekInt(pipeIn,0))) : "must be structured response";
+	            	 assert((Pipe.blobMask(pipeIn) & Pipe.peekInt(pipeIn,0))==0) :"bad meta for first field, found idx: "+(Pipe.blobMask(pipeIn) & Pipe.peekInt(pipeIn,0));
+	            	 
 	            	 
 	            	 //NOTE: this HTTPResponseReader object will show up n times in a row until
 	            	 //      the full file is complete.  No files will be interleaved.
             		 HTTPResponseReader reader = (HTTPResponseReader)Pipe.openInputStream(pipeIn);
-	            		            	 
+	                
+            		 
 	            	 //logger.trace("running position {} ",reader.absolutePosition());
 	            	 if (reader.available()>=2) {
 					     reader.setStatusCode(reader.readShort());
 					     reader.setConnectionId(ccId1);
+					     reader.setClientSessionId(clientSessionId);
 		            	 reader.setFlags(flags);
 		 
 		            	 if (!((HTTPResponseListener)listener).responseHTTP(reader)) {
@@ -991,12 +998,14 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	            	 break;
 	             case NetResponseSchema.MSG_CONTINUATION_102:
 	            	 long fieldConnectionId = Pipe.takeLong(pipeIn);
+	            	 int fieldClientSessionId = Pipe.takeInt(pipeIn);
 	            	 int flags2 = Pipe.takeInt(pipeIn);
 	            	 
             		 HTTPResponseReader continuation = (HTTPResponseReader)Pipe.openInputStream(pipeIn);
             		 
             		 continuation.setFlags(flags2);
             		 continuation.setConnectionId(fieldConnectionId);
+            		 continuation.setClientSessionId(fieldClientSessionId);
             		 //logger.trace("continuation with "+Integer.toHexString(flags2)+" avail "+continuation.available());
             		 
 	            	 if (!((HTTPResponseListener)listener).responseHTTP(continuation)) {
@@ -1017,6 +1026,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	            	 hostReader.setFlags(ServerCoordinator.END_RESPONSE_MASK | 
 	            			             ServerCoordinator.CLOSE_CONNECTION_MASK);
 	            	 hostReader.setConnectionId(connectionId);
+	            	 hostReader.setClientSessionId(sessionId);
 					
 	            	 if (!((HTTPResponseListener)listener).responseHTTP(hostReader)) {
 	            		 Pipe.resetTail(pipeIn);
