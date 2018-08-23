@@ -48,8 +48,8 @@ public class HTTPClient implements GreenApp
     	
     	HTTPGetBehaviorSingle temp = new HTTPGetBehaviorSingle(runtime, session1);
 			   	
-    	//runtime.addResponseListener(new HTTPResponse(console)).acceptHostResponses(session2);    	
-    	//runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, session2));
+    	runtime.addResponseListener(new HTTPResponse(console)).acceptHostResponses(session2);    	
+    	runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, session2));
 
     	runtime.addStartupListener("startupBehavior",temp)
 							    	.acceptHostResponses(session1)  //this line is required to use JSON extraction even to self behavior as consumer 
