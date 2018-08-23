@@ -38,13 +38,14 @@ public class HTTPGetBehaviorSingle implements StartupListener, HTTPResponseListe
 	@Override
 	public boolean responseHTTP(HTTPResponseReader reader) {
 
-		reader.openPayloadData( (r)-> {
-			StructuredReader s = r.structured();
-			int value1 = s.readInt(Fields.AGE);
-			String value2 = s.readText(Fields.NAME);
-			
-			//System.out.println(value1+"  "+value2);
-		});
+	//	System.out.println("xxxxxxxxxxxxxxxxxxx");
+//		reader.openPayloadData( (r)-> {
+//			StructuredReader s = r.structured();
+//			int value1 = s.readInt(Fields.AGE);
+//			String value2 = s.readText(Fields.NAME);
+//			
+//			//System.out.println(value1+"  "+value2);
+//		});
 		
 		pubSubService.publishTopic("next");
 		

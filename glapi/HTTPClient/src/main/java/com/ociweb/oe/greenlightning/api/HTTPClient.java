@@ -25,14 +25,14 @@ public class HTTPClient implements GreenApp
 
 		HTTPClientConfig netClientConfig = c.useInsecureNetClient();//NetClient();
 		session1 = netClientConfig
-        		   .createHTTP1xClient("127.0.0.1", 8088)
+        		   .newHTTPSession("127.0.0.1", 8088)
 	       		   .parseJSON()
 	       		    .integerField("age", Fields.AGE) 
 			    	.stringField("name", Fields.NAME)
         		   .finish();
 		
 		session2 = netClientConfig
-     		   		.createHTTP1xClient("127.0.0.1", 8088)     		   		
+     		   		.newHTTPSession("127.0.0.1", 8088)     		   		
 	       		    .parseJSON()	       		   
 	       		     .integerField("age", Fields.AGE)
 			      	 .stringField("name", Fields.NAME)     		   
@@ -48,8 +48,8 @@ public class HTTPClient implements GreenApp
     	
     	HTTPGetBehaviorSingle temp = new HTTPGetBehaviorSingle(runtime, session1);
 			   	
-    	runtime.addResponseListener(new HTTPResponse(console)).acceptHostResponses(session2);    	
-    	runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, session2));
+    	//runtime.addResponseListener(new HTTPResponse(console)).acceptHostResponses(session2);    	
+    	//runtime.addStartupListener(new HTTPGetBehaviorChained(runtime, session2));
 
     	runtime.addStartupListener("startupBehavior",temp)
 							    	.acceptHostResponses(session1)  //this line is required to use JSON extraction even to self behavior as consumer 

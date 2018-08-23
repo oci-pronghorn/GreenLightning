@@ -23,7 +23,8 @@ public class HTTPResponse implements HTTPResponseListener {
 		Appendables.appendValue(console, " status:",  reader.statusCode(),"\n");
 		
 		console.append("   type:").append(reader.contentType().toString()).append("\n");
-
+	
+		
 		Payloadable payload = new Payloadable() {
 			@Override
 			public void read(ChannelReader reader) {
