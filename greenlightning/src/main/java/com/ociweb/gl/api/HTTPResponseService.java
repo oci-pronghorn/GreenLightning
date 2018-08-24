@@ -123,10 +123,10 @@ public class HTTPResponseService {
 	 * @return <code>false</code> if !Pipe.hasRoomForWrite else <code>true</code>
 	 */
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
-            int statusCode, 
-            boolean hasContinuation,
-            HTTPContentType contentType,
-            Writable writable) {
+							            int statusCode, 
+							            boolean hasContinuation,
+							            HTTPContentType contentType,
+							            Writable writable) {
 		assert(null!=writable);
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
@@ -151,7 +151,8 @@ public class HTTPResponseService {
 		///////////////////////////////////////
 		//message 1 which contains the headers
 		//////////////////////////////////////		
-		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data,connectionId, sequenceNo, pipe);
+		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data, connectionId, sequenceNo, pipe);
+		//HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data,pipe);
 		
 		
 		//check again because we have taken 2 spots now
@@ -195,7 +196,9 @@ public class HTTPResponseService {
 		assert(isValidContent(contentType,outputStream)) : "content type is not matching payload";
 				
 		
-		outputStream.publishWithHeader(msgCommandChannel.data.block1HeaderBlobPosition, msgCommandChannel.data.block1PositionOfLen); //closeLowLevelField and publish 
+		outputStream.publishWithHeader(
+				msgCommandChannel.data.block1HeaderBlobPosition, 
+				msgCommandChannel.data.block1PositionOfLen); //closeLowLevelField and publish 
 		
 		return true;
 				
@@ -234,22 +237,22 @@ public class HTTPResponseService {
 	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
 	           HeaderWritable headers, HTTPContentType contentType, Writable writable) {
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
-				false, headers, 200, contentType, writable);
+				200, false, headers, contentType, writable);
 	}
 
 	/**
 	 *
 	 * @param connectionId long arg used in msgCommandChannel.holdEmptyBlock and Pipe.addLongValue
 	 * @param sequenceCode long arg set as final int sequenceNo and parallelIndex
+	 * @param statusCode int arg used to display status code to user
 	 * @param hasContinuation boolean used to determine of msgCommandChannel.lastResponseWriterFinished or outputStream.write
 	 * @param headers HeaderWritable arg. If !null write(msgCommandChannel.headerWriter.target(outputStream))
-	 * @param statusCode int arg used to display status code to user
 	 * @param writable Writable arg used to write outputStream
 	 * @return if !Pipe.hasRoomForWrite(pipe) return false else return true
 	 */
 	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
-	           boolean hasContinuation, HeaderWritable headers, int statusCode,
-	           HTTPContentType contentType, Writable writable) {
+							           int statusCode, boolean hasContinuation, HeaderWritable headers,
+							           HTTPContentType contentType, Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
 		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
@@ -265,8 +268,8 @@ public class HTTPResponseService {
 						
 		///////////////////////////////////////
 		//message 1 which contains the headers
-		//////////////////////////////////////		
-		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data, pipe);
+		//////////////////////////////////////
+		HTTPUtilResponse.holdEmptyBlock(msgCommandChannel.data, connectionId, sequenceNo, pipe);
 		
 		//////////////////////////////////////////
 		//begin message 2 which contains the body

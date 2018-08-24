@@ -60,7 +60,7 @@ public class HTTPResponder {
 			}
 			
 			if (responseService.publishHTTPResponse(connectionId, sequenceCode, 
-			        								hasContinuation, headers, statusCode, contentType, writable)) {
+			        								statusCode, hasContinuation, headers, contentType, writable)) {
 				clearAll();				
 				return true;
 			} else {
@@ -113,40 +113,7 @@ public class HTTPResponder {
 	}
 
 	public boolean respondWith(boolean hasContinuation, HeaderWritable headers, HTTPContentType contentType, Writable writable) {
-
-   		if (null == this.writable & !closedResponse) {
-   			if (connectionId>=0 && sequenceCode>=0) {
-   				
-   				if (responseService.publishHTTPResponse(connectionId, sequenceCode, 
-   						hasContinuation, headers, statusCode, contentType, writable)) {
-   					clearAll();
-   					
-   					return true;
-   				} else {
-   					return false;
-   				}
-   				
-   			} else {
-   				
-   				if (this.writable != null) {
-   					//can't store since we are waiting for the con and seq
-   					return false;
-   				} else {
-   					
-   					//store data to write later.
-   					this.hasContinuation = hasContinuation;
-   					this.headers = headers;
-   					this.writable = writable;
-   					this.contentType = contentType;
-   					
-   					return true;
-   					
-   				}
-   			}		
-   		} else {   	
-   			return false;
-   		}
-		
+		return respondWith(200,hasContinuation,headers,contentType,writable);
 	}
 	
 	private final int cancelStatusCode = 504;// Gateway Timeout
@@ -178,7 +145,7 @@ public class HTTPResponder {
 		//send the cancel response....
 		if (responseService.publishHTTPResponse(
 		        connectionId, sequenceCode, 
-		        false, cancelHeaderWritable, cancelStatusCode,                      
+		        cancelStatusCode, false, cancelHeaderWritable,                      
 		        cancelType, cancelPayload)) {
 			
 			//keep in case we see it again.
@@ -207,14 +174,24 @@ public class HTTPResponder {
 		
    		if (null == this.writable & !closedResponse) {    	
 	    	if (connectionId>=0 && sequenceCode>=0) {
-	    		if (responseService.publishHTTPResponse(
-	    				                       connectionId, sequenceCode,
-	    				                       hasContinuation, headers, statusCode,                      
-	    				                       contentType, writable)) {
-	    			clearAll();
-	    			return true;
+	    		if (null!=headers) {
+		    		if (responseService.publishHTTPResponse(connectionId, sequenceCode,
+				    				                       statusCode, hasContinuation, headers,                      
+				    				                       contentType, writable)) {
+		    			clearAll();
+		    			return true;
+		    		} else {
+		    			return false;
+		    		}
 	    		} else {
-	    			return false;
+			   		if (responseService.publishHTTPResponse(connectionId, sequenceCode,
+			   										statusCode, hasContinuation, 
+			   										contentType, writable)) {
+			   			clearAll();
+			   			return true;
+					} else {
+						return false;
+					}
 	    		}
 	    	} else {
 	    		
@@ -248,35 +225,7 @@ public class HTTPResponder {
 	 */
    public boolean respondWith(int statusCode, boolean hasContinuation, 
 		                      HTTPContentType contentType, Writable writable) {
-		
-  		if (null == this.writable & !closedResponse) { 	
-   	
-		   	if (connectionId>=0 && sequenceCode>=0) {
-		   		if (responseService.publishHTTPResponse(connectionId, sequenceCode,
-						                           statusCode, hasContinuation, contentType, writable)) {
-		   		
-		   			clearAll();
-		   			return true;
-		   		} else {
-		   			return false;
-		   		}
-		   	} else {
-		   		
-		   		if (this.writable != null) {
-						return false;				
-					} else {
-			    		this.hasContinuation = hasContinuation;
-			    		this.contentType = contentType;
-			    		this.statusCode = statusCode;
-			    		this.headers = null;
-			    		this.writable = writable;
-									
-						return true;				
-					}
-		   	}
-  		} else {
-  			return false;
-  		}
+		return respondWith(statusCode, hasContinuation, null, contentType, writable);
 	}
 
 }

@@ -2,6 +2,8 @@ package com.ociweb.gl.network;
 
 import static org.junit.Assert.assertTrue;
 
+import java.io.StringBufferInputStream;
+
 import org.junit.Ignore;
 import org.junit.Test;
 
