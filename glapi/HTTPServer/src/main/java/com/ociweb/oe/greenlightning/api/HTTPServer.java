@@ -39,7 +39,8 @@ public class HTTPServer implements GreenApp
         
 		HTTPServerConfig server = c.useHTTP1xServer(port)
 		 .setHost(host)
-		 .setTracks(2)
+		 .setConcurrentChannelsPerDecryptUnit(12)
+		 .setConcurrentChannelsPerEncryptUnit(12)
 		 .setMaxResponseSize(1<<18);
 		
 		if (!isTLS) {
