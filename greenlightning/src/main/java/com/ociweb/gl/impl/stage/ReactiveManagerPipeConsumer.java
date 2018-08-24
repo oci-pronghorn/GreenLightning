@@ -44,7 +44,7 @@ public class ReactiveManagerPipeConsumer {
 			ReactiveOperator[] localOperators, int i, int passes) {
 
 		while (--i >= 0) {
-			if (Pipe.isEmpty(localInputs[i]) || !Pipe.hasContentToRead(localInputs[i])) {
+			if (!Pipe.hasContentToRead(localInputs[i])) {
 				//most calls are stopping on this if		
 			} else {
 				passes = applyToPipeWithData(r, localObj, localOperators, passes, i, localInputs[i]);				
