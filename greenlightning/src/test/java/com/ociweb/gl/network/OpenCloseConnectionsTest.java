@@ -21,6 +21,8 @@ public class OpenCloseConnectionsTest {
 		//ServerSocketWriterStage.showWrites = true;
 		//ClientSocketReaderStage.showResponse = true; 
 
+		boolean old = 	ClientSocketReaderStage.abandonSlowConnections;
+		ClientSocketReaderStage.abandonSlowConnections = false;
 		boolean telemetry = false;
 		StringBuilder target = new StringBuilder();
 		
@@ -42,7 +44,7 @@ public class OpenCloseConnectionsTest {
 		assertTrue(captured, captured.contains("Timeouts: 0"));
 				
 		//System.out.println(captured);
-		
+		ClientSocketReaderStage.abandonSlowConnections = old;
 	}
 
 	//TODO: needs more work
@@ -85,7 +87,7 @@ public class OpenCloseConnectionsTest {
 	//add test for a server where the clients keep connecting and the old one must be dropped.
 	//we only have 5 connections in the server now..
 	
-	@Test
+	@Ignore
 	public void testConnectionOverload() {
 			
 		//HTTP1xResponseParserStage.showData = true;
