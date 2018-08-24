@@ -72,9 +72,9 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	private final int[] inFlightHead;
 	private final int[] inFlightTail;
 
-	private static final String RESPONDER_NAME = "responder";
+	private static final String RESPONDER_NAME = "TestResponder";
 	private static final String CALL_TOPIC     = "makeCall";	
-	private static final String PROGRESS_NAME  = "progessor";
+	private static final String PROGRESS_NAME  = "TestProgessor";
 	private static final String ENDERS_TOPIC   = "end";
 	private static final String PROGRESS_TOPIC = "progress";
 	
@@ -570,21 +570,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 	
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
-
-//			if (reader.statusCode()==404) {
-//				pubService.publishTopic(PROGRESS_TOPIC, writer-> {
-//					writer.writePackedInt(track);
-//					writer.writePackedLong(countDown);
-//					//writer.writePackedLong(sendAttempts);
-//					//writer.writePackedLong(sendFailures);
-//					writer.writePackedLong(timeouts);
-//					//writer.writePackedLong(responsesReceived);
-//					writer.writePackedLong(responsesInvalid);
-//				});			
-//				
-//				throw new UnsupportedOperationException("404 returned from server, check test request");
-//			}
-			
+		
 			if (reader.isConnectionClosed()) {
 				//server or internal subsystem just axed connection and we got no notice..
 							

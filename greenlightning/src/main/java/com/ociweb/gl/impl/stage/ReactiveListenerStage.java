@@ -960,7 +960,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	
              final int msgIdx = Pipe.takeMsgIdx(pipeIn);
              
-             //logger.info("\nresponse from HTTP request. Type is {} ",msgIdx);
+            // logger.info("\nresponse from HTTP request. Type is {} ",msgIdx);
              
              switch (msgIdx) {
 	             case NetResponseSchema.MSG_RESPONSE_101:

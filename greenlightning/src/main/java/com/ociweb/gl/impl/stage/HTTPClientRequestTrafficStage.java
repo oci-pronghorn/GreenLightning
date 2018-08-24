@@ -139,7 +139,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 						                		&& ((!clientConnection.isFinishConnect()) || clientConnection.isValid())
 						                		) {
 								                	clientConnection.recordDestinationRouteId(routeId);
-								                	publishGet(requestPipe, hostBack, hostPos, hostLen, connectionId,
+								                	publishGet(requestPipe, hostBack, hostPos, hostLen, port, connectionId,
 															   clientConnection, 
 															   ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_PATH_3, 
 															   ClientHTTPRequestSchema.MSG_FASTHTTPGET_200_FIELD_HEADERS_7);
@@ -171,7 +171,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 					                	assert(clientConnection.singleUsage(stageId)) : "Only a single Stage may update the clientConnection.";
 					                	assert(routeId>=0);
 					                	clientConnection.recordDestinationRouteId(routeId);
-					                	publishGet(requestPipe, hostBack, hostPos, hostLen, connectionId,
+					                	publishGet(requestPipe, hostBack, hostPos, hostLen, port, connectionId,
 												   clientConnection, 
 												   ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_PATH_3, 
 												   ClientHTTPRequestSchema.MSG_HTTPGET_100_FIELD_HEADERS_7);
@@ -234,7 +234,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 											//Reading from UTF8 field and writing to UTF8 encoded field so we are doing a direct copy here.
 											PipeReader.readBytes(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_PATH_3, activeWriter);
 											
-											HeaderUtil.writeHeaderBeginning(hostBack, hostPos, hostLen, Pipe.blobMask(requestPipe), activeWriter);
+											HeaderUtil.writeHeaderBeginning(hostBack, hostPos, hostLen, Pipe.blobMask(requestPipe), port, activeWriter);
 											
 											HeaderUtil.writeHeaderMiddle(activeWriter, implementationVersion);
 											PipeReader.readBytes(requestPipe, ClientHTTPRequestSchema.MSG_HTTPPOST_101_FIELD_HEADERS_7, activeWriter);
@@ -304,7 +304,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 
 
 	private void publishGet(Pipe<ClientHTTPRequestSchema> requestPipe, final byte[] hostBack, final int hostPos,
-			final int hostLen, long connectionId, ClientConnection clientConnection, 
+			final int hostLen, int port, long connectionId, ClientConnection clientConnection, 
 			int fieldNamePath,
 			int fieldNameHeaders) {
 		int outIdx = clientConnection.requestPipeLineIdx();
@@ -338,7 +338,7 @@ public class HTTPClientRequestTrafficStage extends AbstractTrafficOrderedStage {
 			//Reading from UTF8 field and writing to UTF8 encoded field so we are doing a direct copy here.
 			PipeReader.readBytes(requestPipe, fieldNamePath, activeWriter);
 			
-			HeaderUtil.writeHeaderBeginning(hostBack, hostPos, hostLen, Pipe.blobMask(requestPipe), activeWriter);
+			HeaderUtil.writeHeaderBeginning(hostBack, hostPos, hostLen, Pipe.blobMask(requestPipe), port, activeWriter);
 			
 			HeaderUtil.writeHeaderMiddle(activeWriter, implementationVersion);
 			
