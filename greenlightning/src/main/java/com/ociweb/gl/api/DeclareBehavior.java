@@ -1,7 +1,7 @@
 package com.ociweb.gl.api;
 
-public interface DeclareBehavior {
+public interface DeclareBehavior<R extends MsgRuntime> {
 
-	void declareBehavior(int interation);
+	void declareBehavior(R runtime);
 	
 }

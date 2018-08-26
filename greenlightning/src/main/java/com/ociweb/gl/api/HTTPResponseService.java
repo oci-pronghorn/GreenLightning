@@ -5,9 +5,12 @@ import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
+import com.ociweb.pronghorn.network.http.HTTPResponseStatusCodes;
 import com.ociweb.pronghorn.network.http.HTTPUtil;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
+import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -308,28 +311,18 @@ public class HTTPResponseService {
 		////////////////////Write the header
 		
 		HTTPUtilResponse data = msgCommandChannel.data;
-		
-		
+				
 		HTTPUtilResponse.openToEmptyBlock(data, outputStream);
 		
-		//HACK TODO: must formalize response building..
-		outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());
-		
-		Appendables.appendValue(outputStream.append(" "),statusCode);
-		
-		if (200==statusCode) {
-			outputStream.append(" OK\r\n");
-		} else {
-			//TODO: should lookup the right name for this status code
-			//      add the right text here..
-			outputStream.append(" \r\n");
-		}		
+		outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());				
+		outputStream.write(HTTPResponseStatusCodes.codes[statusCode]); //this is " 200 OK\r\n" for most calls
+
+		HeaderWriter headerWriter = msgCommandChannel.headerWriter.target(outputStream);
 		if (null!=headers) {
-			headers.write(msgCommandChannel.headerWriter.target(outputStream));	
+			headers.write(headerWriter); //NOTE: using content_length, connection or status are all discouraged here..
 		}
-	
-		outputStream.append("Content-Length: "+len+"\r\n");
-		outputStream.append("\r\n");
+		headerWriter.write(HTTPHeaderDefaults.CONTENT_LENGTH, len);
+		outputStream.write("\r\n".getBytes());
 		
 		//outputStream.debugAsUTF8();
 		

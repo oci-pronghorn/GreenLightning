@@ -1,9 +1,9 @@
 package com.ociweb.gl.json;
 import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenAppParallel;
+import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 
-public class JSONServerApp implements GreenAppParallel {
+public class JSONServerApp implements GreenApp {
     private int InventoryLocationOrgcodRouteId;
     private long flagsFieldId;
     
@@ -43,8 +43,4 @@ public class JSONServerApp implements GreenAppParallel {
 
     }
 
-    @Override
-    public void declareParallelBehavior(GreenRuntime runtime) {
-        //locationAtpAPI.declareBehavior(runtime);
-    }
 }

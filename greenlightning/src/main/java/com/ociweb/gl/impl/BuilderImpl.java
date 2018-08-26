@@ -20,7 +20,9 @@ import com.ociweb.gl.api.ArgumentParser;
 import com.ociweb.gl.api.Behavior;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.ClientHostPortInstance;
+import com.ociweb.gl.api.DeclareBehavior;
 import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPClientConfig;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseReader;
@@ -142,6 +144,7 @@ public class BuilderImpl implements Builder {
 
 	public Enum<?> beginningState;
     private int parallelismTracks = 1;//default is one
+    private DeclareBehavior<GreenRuntime> behaviorDefinition;
 	private static final int BehaviorMask = 1<<31;//high bit on
 	
 	///////////////////////////////////////////////////////////////////
@@ -893,10 +896,17 @@ public class BuilderImpl implements Builder {
 		return parallelismTracks;
 	}
 	
+	public final DeclareBehavior<GreenRuntime> behaviorDefinition() {
+		return behaviorDefinition;
+	}
+	
 	@Override
-	public final void parallelTracks(int trackCount) {
+	public void parallelTracks(int trackCount, DeclareBehavior<GreenRuntime> behaviorDefinition) {
 		assert(trackCount>0);
-		parallelismTracks = trackCount;
+		
+		this.parallelismTracks = trackCount;
+		this.behaviorDefinition = behaviorDefinition;
+		
 	}
 	
 	@Override

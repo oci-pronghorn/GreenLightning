@@ -1,7 +1,6 @@
 package com.ociweb.gl.test;
 
 import java.util.Random;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,7 +8,7 @@ import org.slf4j.LoggerFactory;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.DelayService;
-import com.ociweb.gl.api.GreenAppParallel;
+import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPClientConfig;
@@ -31,7 +30,7 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 import com.ociweb.pronghorn.util.Appendables;
 
-public class ParallelClientLoadTester implements GreenAppParallel {
+public class ParallelClientLoadTester implements GreenApp {
 	
 	private final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
 	
@@ -247,7 +246,7 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 			}
 
 		}
-		builder.parallelTracks(session.length);
+		builder.parallelTracks(session.length, this::declareParallelBehavior);
 		
 		builder.setTimerPulseRate(20_000); //check for progress every 20 seconds
 		
@@ -421,7 +420,6 @@ public class ParallelClientLoadTester implements GreenAppParallel {
 		}
 	}
 
-	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {
 		final int track = trackId++;
 

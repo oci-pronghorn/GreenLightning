@@ -1,18 +1,13 @@
 package com.ociweb.gl.example.blocking;
 
 import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenAppParallel;
+import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.PubSubFixedTopicService;
-import com.ociweb.gl.api.PubSubService;
-import com.ociweb.json.JSONExtractorImpl;
-import com.ociweb.json.JSONExtractorCompleted;
-import com.ociweb.json.JSONType;
-import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.struct.StructType;
 
-public class BlockingExampleApp implements GreenAppParallel {
+public class BlockingExampleApp implements GreenApp {
 
 	
 	private boolean telemetry;
@@ -31,7 +26,7 @@ public class BlockingExampleApp implements GreenAppParallel {
 	       .setEncryptionUnitsPerTrack(3)
 	       .setHost("127.0.0.1");		
 		
-		builder.parallelTracks(2);
+		builder.parallelTracks(2, this::declareParallelBehavior);
 	
 		if (telemetry) {
 			builder.enableTelemetry("127.0.0.1",8093);	
@@ -59,7 +54,6 @@ public class BlockingExampleApp implements GreenAppParallel {
 	public void declareBehavior(GreenRuntime runtime) {
 	}
 
-	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {
 		
 		PubSubFixedTopicService pub = runtime.newCommandChannel().newPubSubService("testTopicA");		

@@ -7,7 +7,7 @@ public class LoadTester {
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,
 			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int parallelTracks,
 			int cyclesPerTrack, String host, int port, int timeoutMS, A target) {
-		return runClient(testData,validator,route,useTLS,telemetry,parallelTracks,cyclesPerTrack,host,port,timeoutMS,0,target);
+		return runClient(testData,validator,route,useTLS,telemetry,parallelTracks,cyclesPerTrack,host,port,timeoutMS,0/*inFlightBits*/,target);
 	};
 	
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,

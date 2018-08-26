@@ -56,12 +56,14 @@ public class HTTPResponder {
 			if (lastCancelledConnectionId == connectionId) {
 				//already closed so clear, we can not send a response
 				clearAll();
+	
 				return true;
 			}
 			
 			if (responseService.publishHTTPResponse(connectionId, sequenceCode, 
 			        								statusCode, hasContinuation, headers, contentType, writable)) {
 				clearAll();				
+				
 				return true;
 			} else {
 				return false;
@@ -98,6 +100,7 @@ public class HTTPResponder {
 				connectionId = reader.readPackedLong();
 				sequenceCode = reader.readPackedLong();
 				
+	
 				if (lastCancelledConnectionId == connectionId) {
 					connectionId = -1;//already closed so clear, we will not be getting a response.
 					sequenceCode = -1;

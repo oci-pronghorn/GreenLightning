@@ -60,7 +60,7 @@ public interface Builder extends ArgumentProvider {
      * @return number of parallel tracks declared for this builder
      */
     int parallelTracks();
-	void parallelTracks(int parallel);
+	void parallelTracks(int tracks, DeclareBehavior<GreenRuntime> behaviorDefinition);
 
     /**
      * Registers an allowed URL path that server can receive requests on

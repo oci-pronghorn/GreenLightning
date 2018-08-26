@@ -31,6 +31,7 @@ import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
 import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
+import com.ociweb.pronghorn.network.HTTPServerConfigImpl;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
@@ -446,13 +447,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		} else {            	
 			app.declareBehavior(this);
 			
-			if (app instanceof MsgAppParallel) {
+			if (null != builder.behaviorDefinition()) {
 				int parallelism = builder.parallelTracks();
 				//since server was not started and did not create each parallel instance this will need to be done here
 	   
 				for(int i = 0;i<parallelism;i++) { //do not use this loop, we will loop inside server setup..
 			    	constructingParallelInstance(i);
-			    	((MsgAppParallel)app).declareParallelBehavior(this);                
+			    	builder.behaviorDefinition().declareBehavior((GreenRuntime)this);                
 			    }
 			}
 			//////////////
@@ -486,7 +487,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//////////////////////////
 		//////////////////////////
 		
-		config.setTracks(parallelTrackCount);//TODO: this will write over value if user called set Tracks!!!
+		((HTTPServerConfigImpl) config).setTracks(parallelTrackCount);//TODO: this will write over value if user called set Tracks!!!
 		ServerPipesConfig serverConfig = config.buildServerConfig();
 
 		ServerCoordinator serverCoord = new ServerCoordinator(
@@ -552,12 +553,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//create the working modules
 		//////////////////////////
 
-		if (app instanceof MsgAppParallel) {
+		if (null != builder.behaviorDefinition()) {
 			int p = builder.parallelTracks();
 			
 			for (int i = 0; i < p; i++) {
 				constructingParallelInstance(i);
-				((MsgAppParallel)app).declareParallelBehavior(this);  //this creates all the modules for this parallel instance								
+				builder.behaviorDefinition().declareBehavior((GreenRuntime)this);  //this creates all the modules for this parallel instance								
 			}	
 		} else {
 			if (builder.parallelTracks()>1) {
@@ -709,7 +710,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		populateHTTPInOut(inputs, outputs, 0, parallelIndex);
 				
 		ResourceModuleStage.newInstance(gm, inputs, outputs, builder.httpSpec, resourceRoot, resourceDefault);
-					
+		//The associated routes need the Accept-Encoding header			
 		return new StageRouteFilter(inputs[0], builder, parallelIndex);
 				
 	}

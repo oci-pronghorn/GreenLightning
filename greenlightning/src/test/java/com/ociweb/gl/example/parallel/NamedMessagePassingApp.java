@@ -1,15 +1,11 @@
 package com.ociweb.gl.example.parallel;
 
 import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenAppParallel;
+import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.json.JSONExtractorImpl;
-import com.ociweb.json.JSONExtractorCompleted;
-import com.ociweb.json.JSONType;
-import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
-public class NamedMessagePassingApp implements GreenAppParallel {
+public class NamedMessagePassingApp implements GreenApp {
 
 	private boolean telemetry;
 	private long rate;
@@ -65,7 +61,7 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		//since they require a router to manage the interTrack communication.	
 		///////////////////////////
 				
-		builder.parallelTracks(tracks);		
+		builder.parallelTracks(tracks, this::declareParallelBehavior);		
 		builder.setDefaultRate(rate);
 
 		
@@ -112,7 +108,6 @@ public class NamedMessagePassingApp implements GreenAppParallel {
 		
 	}
 
-	@Override
 	public void declareParallelBehavior(GreenRuntime runtime) {
 
 		
