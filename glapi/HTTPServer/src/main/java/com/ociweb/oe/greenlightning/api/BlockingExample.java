@@ -7,8 +7,9 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 public class BlockingExample extends BlockingBehavior{
 
 	@Override
-	public void begin(ChannelReader reader) {
+	public boolean begin(ChannelReader reader) {
 		// TODO Auto-generated method stub
+		return true;
 		
 	}
 
