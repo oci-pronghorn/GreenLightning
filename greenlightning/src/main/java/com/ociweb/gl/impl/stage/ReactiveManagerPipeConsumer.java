@@ -30,7 +30,7 @@ public class ReactiveManagerPipeConsumer {
 	public static final void process(ReactiveManagerPipeConsumer that, ReactiveListenerStage r) {
 		//only run if one of the inputs has received new data or have data.
 		int passes = 0;
-		int countDown = -2;
+	    int countDown = -2;
 		do {
 			passes = findPipesWithContent(r, that.inputs, that.behavior, that.operators, that.inputs.length, passes);
 			if (-2==countDown) {

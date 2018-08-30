@@ -57,7 +57,6 @@ import com.ociweb.gl.impl.stage.ReactiveOperators;
 import com.ociweb.gl.impl.stage.ReactiveProxyStage;
 import com.ociweb.gl.impl.stage.TrafficCopStage;
 import com.ociweb.gl.impl.telemetry.TelemetryConfigImpl;
-import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
@@ -71,7 +70,6 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
-import com.ociweb.pronghorn.network.http.CompositePath;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.http.HTTPClientRequestStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
@@ -120,6 +118,9 @@ public class BuilderImpl implements Builder {
 
 	private Runnable cleanShutdownRunnable;
 	private Runnable dirtyShutdownRunnable;
+	   
+    private int startupLimitMS = 40;
+
     
     int subscriptionPipeIdx = 0; //this implementation is dependent upon graphManager returning the pipes in the order created!
     final IntHashTable subscriptionPipeLookup = new IntHashTable(10);//NOTE: this is a maximum of 1024 listeners
@@ -143,8 +144,11 @@ public class BuilderImpl implements Builder {
 	public final PipeConfigManager pcm = new PipeConfigManager();
 
 	public Enum<?> beginningState;
-    private int parallelismTracks = 1;//default is one
-    private DeclareBehavior<GreenRuntime> behaviorDefinition;
+    
+	private int behaviorTracks = 1;//default is one
+    private DeclareBehavior<GreenRuntime> behaviorTracksDefinition;
+    
+    
 	private static final int BehaviorMask = 1<<31;//high bit on
 	
 	///////////////////////////////////////////////////////////////////
@@ -228,8 +232,16 @@ public class BuilderImpl implements Builder {
 	public boolean isAllPrivateTopics() {
 		hasPrivateTopicsChecked = true;
 		return isAllPrivateTopics;
-	}
-	    
+	}	    
+	
+    public int getStartupLimitMS() {
+    	return startupLimitMS;
+    }
+    
+    public void setStartupLimitMS(int startupLimitMS) {
+    	this.startupLimitMS = startupLimitMS;
+    }
+	
     public final ReactiveOperators operators;
 
     //NOTE: needs re-work to be cleaned up
@@ -349,9 +361,37 @@ public class BuilderImpl implements Builder {
 		if (server != null) {
 			throw new RuntimeException("Server already enabled");
 		}
+	
+		if (this.behaviorTracksDefinition == null) {
+			this.behaviorTracksDefinition = new DeclareBehavior<GreenRuntime>() {
+				@Override
+				public void declareBehavior(GreenRuntime runtime) {
+				}				
+			};
+		}
 		
 		return server = new HTTPServerConfigImpl(bindPort, this.pcm, gm.recordTypeData);
 	}
+	
+	@Override
+	public HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<GreenRuntime> behaviorDefinition) {
+		if (server != null) {
+			throw new UnsupportedOperationException("Server already enabled, microservice runtime only supports one server.");
+		}
+		assert(tracks>0);
+		
+		this.behaviorTracks = tracks;
+		
+		if (this.behaviorTracksDefinition!=null) {
+			throw new UnsupportedOperationException("tracks may not be set more than once");
+		}
+		
+		this.behaviorTracksDefinition = behaviorDefinition;
+		
+		return server = new HTTPServerConfigImpl(bindPort, this.pcm, gm.recordTypeData);
+		
+	}
+	
 
 	public final HTTPServerConfig getHTTPServerConfig() {
 		return this.server;
@@ -893,28 +933,24 @@ public class BuilderImpl implements Builder {
 
 	@Override
 	public final int parallelTracks() {
-		return parallelismTracks;
+		return behaviorTracks;
 	}
 	
 	public final DeclareBehavior<GreenRuntime> behaviorDefinition() {
-		return behaviorDefinition;
+		return behaviorTracksDefinition;
 	}
 	
 	@Override
 	public void parallelTracks(int trackCount, DeclareBehavior<GreenRuntime> behaviorDefinition) {
 		assert(trackCount>0);
 		
-		this.parallelismTracks = trackCount;
-		this.behaviorDefinition = behaviorDefinition;
+		this.behaviorTracks = trackCount;
+		if (this.behaviorTracksDefinition!=null) {
+			throw new UnsupportedOperationException("tracks may not be set more than once");
+		}
+		this.behaviorTracksDefinition = behaviorDefinition;
 		
 	}
-	
-	@Override
-	@Deprecated
-	public final CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers) {
-		return routerConfig().registerCompositeRoute(extractor, headers);
-	}
-
 	
 	@Override
 	public final RouteDefinition defineRoute(HTTPHeader ... headers) {			
@@ -1470,7 +1506,7 @@ public class BuilderImpl implements Builder {
 		}
 		localSourceTopics.add(sourcePT);
 		
-		int pt = parallelismTracks<1?1:parallelismTracks;
+		int pt = behaviorTracks<1?1:behaviorTracks;
 		while (--pt>=0) {
 		
 			Pipe<MessagePrivate> src = sourcePT.getPipe(pt);
@@ -1695,10 +1731,10 @@ public class BuilderImpl implements Builder {
 		return null==BuilderImpl.unScopedTopics;
 	}
 
-	@Override
-	public void setGlobalSLALatencyNS(long ns) {
-		GraphManager.addDefaultNota(gm, GraphManager.SLA_LATENCY, ns);
-	}
+//	@Override
+//	public void setGlobalSLALatencyNS(long ns) {
+//		GraphManager.addDefaultNota(gm, GraphManager.SLA_LATENCY, ns);
+//	}
 
 	@Override
 	public long lookupFieldByName(int id, String name) {
@@ -2144,6 +2180,13 @@ public class BuilderImpl implements Builder {
 	//common method for building topic suffix
 	public static byte[] trackNameBuilder(int parallelInstanceId) {
 		return parallelInstanceId<0 ? null : ( "/"+Integer.toString(parallelInstanceId)).getBytes();
+	}
+
+	@Override
+	public void useMinimumCPU() {
+        //run graph at a slower rate to ensure the CPU drops to 1% on modern hardware when there is no work.
+        setDefaultRate(Math.max(defaultSleepRateNS, 100_000));
+		
 	}
 
 

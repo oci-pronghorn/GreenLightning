@@ -554,6 +554,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		//////////////////////////
 
 		if (null != builder.behaviorDefinition()) {
+			
 			int p = builder.parallelTracks();
 			
 			for (int i = 0; i < p; i++) {
@@ -776,64 +777,35 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     ///////////////////////////
 	//end of file server
 	///////////////////////////
-	
-	
-	public <T extends BlockingBehavior> void registerBlockingListener(
-			Class<T> clazz,
-			Object chosserFieldAssoc,
-			int threadsCount,
-			long timeoutNS, String topicIn, String topicOut) {
-		registerBlockingListener(null, clazz, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
-	}
-	
-	
-	public <T extends BlockingBehavior> void registerBlockingListener(
-			String behaviorName,
-			Class<T> clazz,
-			Object chosserFieldAssoc,
-			int threadsCount,
-			long timeoutNS, String topicIn, String topicOut) {
-		registerBlockingListener(null==behaviorName?builder.generateBehaviorNameFromClass(clazz):behaviorName, new BlockingBehaviorProducer() {
-			@Override
-			public BlockingBehavior produce() {
-				try {
-					return clazz.newInstance();
-				} catch (InstantiationException | IllegalAccessException e) {
-					throw new RuntimeException(e);
-				}
-			}
-		}, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
-	}
-
-	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> void registerBlockingListener(
+		
+	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> L registerBlockingListener(
 			P producer,
-			Object chosserFieldAssoc,
+			Object chooserFieldAssoc,
 			int threadsCount,
-			long timeoutNS, String topicIn, String topicOut) {
-		registerBlockingListener(null, producer, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
+			long timeoutNS, String topicToBlockingTask, String topicFromBlockingTask) {
+		return registerBlockingListener(null, producer, chooserFieldAssoc, threadsCount, timeoutNS, topicToBlockingTask, topicFromBlockingTask);
 	}
 	
-	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> void registerBlockingListener(
-			P producer,	Object chosserFieldAssoc, String topicIn, String topicOut) {
+	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> L registerBlockingListener(
+			P producer,	Object chooserFieldAssoc, String topicToBlockingTask, String topicFromBlockingTask) {
 		int threadsCount = 64;//default
 		long timeoutNS = 60L*1_000_000_000L;//default 1m
-		registerBlockingListener(null, producer, chosserFieldAssoc, threadsCount, timeoutNS, topicIn, topicOut);
+		return registerBlockingListener(null, producer, chooserFieldAssoc, threadsCount, timeoutNS, topicToBlockingTask, topicFromBlockingTask);
 	}
 	
-	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> void registerBlockingListener(
+	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> L registerBlockingListener(
 			String behaviorName,
 			P producer,
 			Object chooserFieldAssoc,
 			int threadsCount,
 			long timeoutNS, 
-			String topicIn,
-			String topicOut) {
+			String topicToBlockingTask, String topicFromBlockingTask) {
 	
 		if (null == behaviorName) {
 			//by default unless a name is given use the behavior
-			behaviorName = topicIn+"->"+topicOut;
+			behaviorName = topicToBlockingTask+"->"+topicFromBlockingTask;
 		}
-	
+		
 		final String name = behaviorName;
 		final int capturedTrack = parallelInstanceUnderActiveConstruction;
 		
@@ -841,29 +813,32 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		
 		byte[] track = parallelInstanceUnderActiveConstruction<0 ? null : BuilderImpl.trackNameBuilder(parallelInstanceUnderActiveConstruction);
 		
+
+		
 		PendingStageBuildable pendingBuilder = new PendingStageBuildable() {
 
 			@Override
 			public void initRealStage() {
-			
+		
+				
+				List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(name);		
+				if (1 != targetTopics.size()) {
+					throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
+				}
+				Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(capturedTrack);
+				
+				
 				List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(name);
 				if (1 != sourceTopics.size()) {
 					throw new UnsupportedOperationException("Blocking behavior only supports 1 private source topic at this time. found:"+sourceTopics.size());
 				}
-				List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(name);
-				if (1 != targetTopics.size()) {
-					throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
-				}
-				
-				Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(capturedTrack);				
-				assert(null!=input);		
 				Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(capturedTrack);
-				assert(null!=output);
 				Pipe<MessagePrivate> timeout = output;
-				assert(input!=output);
+
 				
-				Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(
-						chooserFieldAssoc, threadsCount, BlockableStageFactory.streamOffset(input));
+				//TODO: add register listener behavior,
+				
+				Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(chooserFieldAssoc, threadsCount);
 				
 				BlockableStageFactory.buildBlockingSupportStage(gm, timeoutNS, threadsCount, input, output, timeout, producer, chooser);
 
@@ -874,17 +849,21 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 				return name;
 			}
 		};
+		
+		
+		builder.possiblePrivateTopicProducer(pendingBuilder, topicFromBlockingTask, parallelInstanceUnderActiveConstruction);
+		builder.possiblePrivateTopicConsumer(pendingBuilder, topicToBlockingTask,  parallelInstanceUnderActiveConstruction);
+		
+		/////////////////////////////////////remove?
+		builder.pendingInit(pendingBuilder);//not needed if we use normal register listner
+		
 
-		BuilderImpl.buildTrackTopic(topicIn, track);
+		//if this producer is also a behavior register it.
+		if (producer instanceof Behavior) {
+			return registerListener((Behavior)producer);
+		}		
 		
-		builder.possiblePrivateTopicProducer(pendingBuilder, topicOut, parallelInstanceUnderActiveConstruction);		
-		builder.possiblePrivateTopicConsumer(pendingBuilder, topicIn,  parallelInstanceUnderActiveConstruction);
-		builder.pendingInit(pendingBuilder);
-		
-		
-		
-		
-		
+		return null;
 	}
 	
 

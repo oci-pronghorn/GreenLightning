@@ -62,15 +62,8 @@ public interface Builder extends ArgumentProvider {
     int parallelTracks();
 	void parallelTracks(int tracks, DeclareBehavior<GreenRuntime> behaviorDefinition);
 
-    /**
-     * Registers an allowed URL path that server can receive requests on
-     * @return Reference used when registering request listeners
-     */
-	@Deprecated
-	CompositePath defineRoute(JSONExtractorCompleted extractor, HTTPHeader ... headers);
-	//CompositePath defineRoute(HTTPHeader ... headers);
-	RouteDefinition defineRoute(HTTPHeader ... headers);
 
+	RouteDefinition defineRoute(HTTPHeader ... headers);
 
     /**
      * Creates a new struct builder that allows you to define named values on a channel
@@ -94,6 +87,9 @@ public interface Builder extends ArgumentProvider {
      * @return Created web server
      */
 	HTTPServerConfig useHTTP1xServer(int bindPort);
+	
+	HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<GreenRuntime> behaviorDefinition);
+	
 
     /**
      * Enables the dev ops view of the running app
@@ -197,12 +193,14 @@ public interface Builder extends ArgumentProvider {
 	HTTPClientConfig useNetClient(TLSCertificates certificates);
 
 	HTTPClientConfig useInsecureNetClient();
+	
+	void setStartupLimitMS(int startupLimitMS);
 
     /**
      * Used to set maximum expected latency
      * @param ns long value in nanoseconds for latency
      */
-	void setGlobalSLALatencyNS(long ns);
+	//void setGlobalSLALatencyNS(long ns);
 
     /**
      * Get the field identifier from a route
@@ -211,5 +209,7 @@ public interface Builder extends ArgumentProvider {
      */
 	long lookupFieldByName(int aRouteId, String name);
 	long lookupFieldByIdentity(int aRouteId, Object obj);
+
+	void useMinimumCPU();
 
 }

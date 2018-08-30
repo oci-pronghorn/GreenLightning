@@ -25,6 +25,8 @@ public class HTTPResponseService {
 	public HTTPResponseService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;
+		
+		
 	}
 
 	/**

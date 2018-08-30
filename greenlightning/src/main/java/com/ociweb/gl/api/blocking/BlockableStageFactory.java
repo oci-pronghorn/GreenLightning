@@ -7,6 +7,7 @@ import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.stage.blocking.Blockable;
 import com.ociweb.pronghorn.stage.blocking.BlockingSupportStage;
 import com.ociweb.pronghorn.stage.blocking.Choosable;
+import com.ociweb.pronghorn.stage.blocking.UnchosenMessage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class BlockableStageFactory {
@@ -20,22 +21,53 @@ public class BlockableStageFactory {
 		while (--c >= 0) {
 			blockables[c] = (Blockable<T, P, Q>)new BlockingBehaviorBridgePPP(producer.produce());
 		}
- 	    return new BlockingSupportStage<T,P,Q>(graphManager, input, output, timeout, timeoutNS, chooser, blockables);
+ 	    return new BlockingSupportStage<T,P,Q>(graphManager, input, output, timeout, timeoutNS, chooser, 
+ 	    		new UnchosenMessage<T>() {
+					@Override
+					public boolean message(Pipe<T> pipe) {
+						if (Pipe.isForSchema(pipe, MessagePrivate.class)) {
+							Pipe.markTail(pipe);
+							int msgIdx = Pipe.takeMsgIdx(pipe);
+							boolean result = producer.unChosenMessages(Pipe.openInputStream(pipe));
+							if (result) {
+								Pipe.confirmLowLevelRead(pipe, Pipe.sizeOf(pipe, msgIdx));
+								Pipe.releaseReadLock(pipe);
+							} else {
+								Pipe.resetTail(pipe);
+							}
+							return result;
+						} else if (Pipe.isForSchema(pipe, MessageSubscription.class)) {
+							Pipe.markTail(pipe);
+							int msgIdx = Pipe.takeMsgIdx(pipe);
+							Pipe.openInputStream(pipe);//skip over the topic we just want the payload.
+							boolean result = producer.unChosenMessages(Pipe.openInputStream(pipe));
+							if (result) {
+								Pipe.confirmLowLevelRead(pipe, Pipe.sizeOf(pipe, msgIdx));
+								Pipe.releaseReadLock(pipe);
+							} else {
+								Pipe.resetTail(pipe);
+							}
+							return result;
+						} else {
+							throw new UnsupportedOperationException("unknown schema "+Pipe.schemaName(pipe));
+						}
+					}
+				
+ 	    		},   		
+ 	    		blockables);
 	}
 
 	public static <T extends MessageSchema<T>> int streamOffset(Pipe<T> input) {
-		////////////////////
+
 		   //lookup the position of the stream 
-		   int offsetToStream = -1;
 		   if (Pipe.isForSchema(input, MessagePrivate.class)) {
-			   offsetToStream = 0xFF & MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3;
+			   return 0xFF & MessagePrivate.MSG_PUBLISH_1_FIELD_PAYLOAD_3;
 		   } else if (Pipe.isForSchema(input, MessageSubscription.class)) {
-			   offsetToStream = 0xFF & MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3;
+			   return 0xFF & MessageSubscription.MSG_PUBLISH_103_FIELD_PAYLOAD_3;
 		   } else {
 			   throw new UnsupportedOperationException("Schema not supported: "+Pipe.schemaName(input));
 		   }
 		   ////////////////////
-		return offsetToStream;
 	}
 	
 }

@@ -3,12 +3,12 @@ package com.ociweb.gl.json;
 import static org.junit.Assert.assertEquals;
 
 import com.ociweb.gl.api.Builder;
-import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.Writable;
+import com.ociweb.gl.json.JSONRequest.Fields;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 
@@ -20,7 +20,11 @@ public class JSONServerBehavior implements RestListener {
 	private final HTTPResponseService channel;
     
     static int defineRoute(Builder builder) {
-        return builder.defineRoute(JSONRequest.jsonExtractor)
+        return builder.defineRoute().parseJSON()
+	        		.stringField("ID1", Fields.ID1)
+	        		.stringField("ID2", Fields.ID2)
+	        		.stringField("TimeStamp", Fields.TimeStamp)
+	        		.integerField("Value", Fields.Value)
         		.path("/test/path")
         		.path("/test/path?flag=#{flag}")
                 .defaultInteger("flag", -6)

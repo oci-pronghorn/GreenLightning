@@ -3,8 +3,6 @@ package com.ociweb.gl.example.personApp;
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.json.JSONType;
-import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructType;
 
@@ -12,16 +10,14 @@ public class PersonApp implements GreenApp {
 
 	@Override
 	public void declareConfiguration(Builder builder) {
-		JSONExtractor jsonDecoder = builder.defineJSONSDecoder()
-			.begin()
-			.stringField("firstName",GreenField.firstName)
-			.stringField("lastName",GreenField.lastName)
-			.booleanField("enabled",GreenField.enabled)
-			.integerField("age",GreenField.age)
-			.integerField("id",GreenField.id)
-			.finish();
-		
-		builder.defineRoute(jsonDecoder).path("/people").routeId(GreenStruct.person);
+
+		builder.defineRoute().parseJSON()
+								.stringField("firstName",GreenField.firstName)
+								.stringField("lastName",GreenField.lastName)
+								.booleanField("enabled",GreenField.enabled)
+								.integerField("age",GreenField.age)
+								.integerField("id",GreenField.id)		
+				.path("/people").routeId(GreenStruct.person);
 		
 		builder.defineRoute().path("/people/#{id}").routeId(GreenStruct.getPerson);
 		
@@ -59,7 +55,11 @@ public class PersonApp implements GreenApp {
 				.register(GreenStructInternal.queryPersonsList);
 		
 		builder.extendStruct(netBase)
-				.add(jsonDecoder)
+				.addField("firstName",StructType.Text,GreenField.firstName)
+				.addField("lastName",StructType.Text,GreenField.lastName)
+				.addField("enabled",StructType.Boolean,GreenField.enabled)
+				.addField("age",StructType.Long,GreenField.age)
+				.addField("id",StructType.Long,GreenField.id)
 				.register(GreenStructInternal.adminPersons);       
 		
 		////

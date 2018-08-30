@@ -21,31 +21,30 @@ public class BlockingBehaviorBridgePPP extends Blockable {
 	}
 	
 	@Override
-	public void begin(Pipe input) {	
+	public boolean begin(Pipe input) {	
 		//logger.info("\n------------------begin");
 		
-		int id = Pipe.takeMsgIdx(input);	
+		Pipe.markTail(input);
+		final int id = Pipe.takeMsgIdx(input);	
 		if (Pipe.isForSchema(input, MessagePrivate.instance)) {
 			assert(MessagePrivate.MSG_PUBLISH_1 == id);
-			bb.begin(Pipe.openInputStream(input));
-			
-			
+			if (!bb.begin(Pipe.openInputStream(input))) {
+				Pipe.resetTail(input);
+				return false;
+			};
 			
 		} else {
 			assert(Pipe.isForSchema(input, MessageSubscription.instance));
 			assert(MessageSubscription.MSG_PUBLISH_103 == id);
-			//MessageSubscription.MSG_PUBLISH_103
-		
-		//	public static final int MSG_PUBLISH_103_FIELD_TOPIC_1 = 0x01400001;
-		//	public static final int MSG_PUBLISH_103_FIELD_PAYLOAD_3 = 0x01c00003;
-			
-			
-			//TODO: fix MQTT engress code...
-			
-			
+			Pipe.openInputStream(input);//ignore topic .readUTF(target); //topic
+			if (!bb.begin(Pipe.openInputStream(input))) {
+				Pipe.resetTail(input);
+				return false;
+			};
 		}
 		Pipe.confirmLowLevelRead(input, Pipe.sizeOf(input, id));
 		Pipe.releaseReadLock(input);
+		return true;
 	}
 
 	@Override

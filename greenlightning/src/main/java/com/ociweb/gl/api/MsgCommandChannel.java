@@ -100,7 +100,7 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
     	this(gm,hardware,ALL, parallelInstanceId, pcm);
     }
 
-    public MsgCommandChannel(GraphManager gm, B builder,
+    protected MsgCommandChannel(GraphManager gm, B builder,
     					  int features,
     					  int parallelInstanceId,
     					  PipeConfigManager pcm

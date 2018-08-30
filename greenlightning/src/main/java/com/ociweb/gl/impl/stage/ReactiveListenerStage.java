@@ -94,7 +94,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     protected boolean startupCompleted;
     protected boolean shutdownCompleted;
     private boolean shutdownInProgress;
-    
+ 
 	
 	private int totalSupscriptions = 0;
 	
@@ -731,7 +731,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		long start = System.currentTimeMillis();
 		startupListener.startup();
 		long duration = System.currentTimeMillis()-start;
-		if (duration>40) { //human perception
+
+		if (duration > builder.getStartupLimitMS()) { //human perception
 			String name = listener.getClass().getSimpleName().trim();
 			if (name.length() == 0) {
 				name = "a startup listener lambda";
@@ -1475,16 +1476,30 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	}
 	
 	public ListenerFilter includeRoutesByAssoc(Object assocRouteObject, final CallableRestRequestReader callable) {
-		return includeRoute(builder.routerConfig().lookupRouteIdByIdentity(assocRouteObject), callable);
-		
+		return includeRouteById(builder.routerConfig().lookupRouteIdByIdentity(assocRouteObject), callable);		
 	}
 	
 	public <T extends Behavior> ListenerFilter includeRoutesByAssoc(Object assocRouteObject, final CallableStaticRestRequestReader<T> callable) {
-		return includeRoute(builder.routerConfig().lookupRouteIdByIdentity(assocRouteObject), callable);
-		
+		return includeRouteById(builder.routerConfig().lookupRouteIdByIdentity(assocRouteObject), callable);
 	}
 	
-	public final ListenerFilter includeRoute(int routeId, final CallableRestRequestReader callable) {
+	public <E extends Enum<E>>ListenerFilter includeRoutes(E ... assocRouteObjects) {
+		int r = assocRouteObjects.length;
+		int[] routeIds = new int[r];
+		while (--r >= 0) {
+			routeIds[r] = builder.routerConfig().lookupRouteIdByIdentity(assocRouteObjects[r]);
+		}		
+		includeRoutes(routeIds);
+		return this;
+	}
+	public <E extends Enum<E>>ListenerFilter includeRoutes(E assocRouteObject, final CallableRestRequestReader callable) {
+		return includeRouteById(builder.routerConfig().lookupRouteIdByIdentity(assocRouteObject), callable);
+	}
+	public <T extends Behavior, E extends Enum<E> > ListenerFilter includeRoutes(E assocRouteObject, final CallableStaticRestRequestReader<T> callable) {
+		return includeRouteById(builder.routerConfig().lookupRouteIdByIdentity(assocRouteObject), callable);
+	}
+	
+	public final ListenerFilter includeRouteById(int routeId, final CallableRestRequestReader callable) {
 		
 		if (null==restRequestReader) {
 			restRequestReader = new CallableStaticRestRequestReader[routeId+1];		
@@ -1515,7 +1530,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	 * @param <T>
 	 * @return listener filter
 	 */
-	public final <T extends Behavior> ListenerFilter includeRoute(int routeId, final CallableStaticRestRequestReader<T> callable) {
+	public final <T extends Behavior> ListenerFilter includeRouteById(int routeId, final CallableStaticRestRequestReader<T> callable) {
 		
 		if (null==restRequestReader) {
 			restRequestReader = new CallableStaticRestRequestReader[routeId+1];		

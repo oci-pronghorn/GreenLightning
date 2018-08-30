@@ -10,10 +10,9 @@ public class AllRoutesExample1 implements GreenApp {
 	
 	@Override
 	public void declareConfiguration(Builder builder) {
-		builder.useHTTP1xServer(8082)
+		builder.useHTTP1xServer(8082, 2, this::declareParallelBehavior)
 		       .setHost("localhost")
 		       .useInsecureServer(); //127.0.0.1
-		builder.parallelTracks(2, this::declareParallelBehavior);
 		builder.enableTelemetry();
 	}
 

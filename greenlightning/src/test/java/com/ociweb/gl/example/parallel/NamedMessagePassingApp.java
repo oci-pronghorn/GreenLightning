@@ -31,7 +31,7 @@ public class NamedMessagePassingApp implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 		
-		builder.useHTTP1xServer(8081)
+		builder.useHTTP1xServer(8081, tracks, this::declareParallelBehavior)
 		       .useInsecureServer()
 		       //.logTraffic(false)
 		       //TODO: confirm that 404 comes back when we get requests too large..
@@ -60,14 +60,8 @@ public class NamedMessagePassingApp implements GreenApp {
 		//NOTE: UnScoped topics are never supported as private topics 
 		//since they require a router to manage the interTrack communication.	
 		///////////////////////////
-				
-		builder.parallelTracks(tracks, this::declareParallelBehavior);		
+						
 		builder.setDefaultRate(rate);
-
-		
-		// "{\"key1\":\"789\",\"key2\":123}";
-		
-		builder.setGlobalSLALatencyNS(500_000_000);
 	
 		int aRouteId = builder.defineRoute()
 				.parseJSON()
@@ -83,10 +77,7 @@ public class NamedMessagePassingApp implements GreenApp {
 		long fieldB2 = builder.lookupFieldByIdentity(aRouteId, Fields.nameB);
 		assert(fieldB==fieldB2);
 		long fieldL  = builder.lookupFieldByIdentity(aRouteId, HTTPHeaderDefaults.CONTENT_LENGTH);
-		
-
-		//not quite 2x slower for routed topics
-		//	builder.defineUnScopedTopic("/send/200"); //TODO: urgent, this was required because for tracks this mangled topic name does not get matched...
+	
 	}
 
 	@Override

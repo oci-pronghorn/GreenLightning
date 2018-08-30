@@ -44,8 +44,8 @@ public class ParallelClientLoadTester implements GreenApp {
     private final int maxInFlight;
     private final int maxInFlightMask;
     private int warmupCount = 20_000;
-
-	public static long LOG_LATENCY_LIMIT =  20_000_000_000L; //20sec	
+    private final int[] logCount;
+	public static long LOG_LATENCY_LIMIT =  40_000_000_000L; //40sec	
     
 	private final ParallelClientLoadTesterOutput out;
 
@@ -131,6 +131,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		this.host = config.host;
 		this.port = config.port;
 
+		this.logCount = new int[parallelTracks];
         this.cyclesPerTrack = config.cyclesPerTrack;
         this.rate = config.cycleRate;
         this.warmupCount = config.warmup;
@@ -233,9 +234,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			session[i][0] = clientConfig.newHTTPSession(host, port).finish();
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
-		
-		builder.setGlobalSLALatencyNS(20_000_000);
-		
+
 		if (telemetryPort != null) {
 
 			if (null == this.telemetryHost) {
@@ -626,8 +625,9 @@ public class ParallelClientLoadTester implements GreenApp {
 				if ((duration > LOG_LATENCY_LIMIT) && (sentTime > 0)) {
 					long now = System.currentTimeMillis();
 					long start = now - (duration/1_000_000);
-
-					out.longCallDetected(track, duration, now, start);
+					if (Integer.numberOfLeadingZeros(logCount[track]) != Integer.numberOfLeadingZeros(++logCount[track])) {
+						out.longCallDetected(track, duration, now, start);
+					}
 				}
 				
 				ElapsedTimeRecorder.record(elapsedTime[track], duration);

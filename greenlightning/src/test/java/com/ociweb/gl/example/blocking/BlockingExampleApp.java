@@ -5,6 +5,9 @@ import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.PubSubFixedTopicService;
+import com.ociweb.gl.api.blocking.BlockingBehavior;
+import com.ociweb.gl.api.blocking.BlockingBehaviorProducer;
+import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.struct.StructType;
 
 public class BlockingExampleApp implements GreenApp {
@@ -19,14 +22,12 @@ public class BlockingExampleApp implements GreenApp {
 	@Override
 	public void declareConfiguration(Builder builder) {
 		
-		builder.useHTTP1xServer(8083)
+		builder.useHTTP1xServer(8083, 2, this::declareParallelBehavior)
 	       .useInsecureServer()
 	       .logTraffic()
 	       .setDecryptionUnitsPerTrack(3)
 	       .setEncryptionUnitsPerTrack(3)
 	       .setHost("127.0.0.1");		
-		
-		builder.parallelTracks(2, this::declareParallelBehavior);
 	
 		if (telemetry) {
 			builder.enableTelemetry("127.0.0.1",8093);	
@@ -71,10 +72,20 @@ public class BlockingExampleApp implements GreenApp {
 		
 		//blocker will relay data\
 		runtime.registerBlockingListener(
-				()->{
-					//Must be created new every time this lambda is called
-					//This lambda is called once per thread on startup
-					return new BlockingBehaviorExample();
+				new BlockingBehaviorProducer() {
+
+					@Override
+					public boolean unChosenMessages(ChannelReader reader) {				
+						return true;
+					}
+
+					@Override
+					public BlockingBehavior produce() {
+						//Must be created new every time this lambda is called
+						//This lambda is called once per thread on startup
+						return new BlockingBehaviorExample();
+					}
+					
 				},
 				Field.CONNECTION_ID, "testTopicA", "testTopicB");
 		

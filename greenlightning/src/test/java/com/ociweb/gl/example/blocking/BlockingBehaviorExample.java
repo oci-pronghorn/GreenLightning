@@ -15,7 +15,7 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 	}
 		
 	@Override
-	public void begin(ChannelReader reader) {
+	public boolean begin(ChannelReader reader) {
 		
 		assert(-1 == connectionId);
 		assert(-1 == sequenceId);
@@ -26,7 +26,7 @@ public class BlockingBehaviorExample extends BlockingBehavior {
 				
 	    //TODO: resolve this.. reader.structured().readText(Fields.key1, key1Value);
 		key2 = reader.structured().readInt(Field.KEY2);		
-		
+		return true;
 	}
 
 	@Override

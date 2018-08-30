@@ -5,7 +5,7 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public abstract class BlockingBehavior {
 
-	public abstract void begin(ChannelReader reader);
+	public abstract boolean begin(ChannelReader reader);
 	
 	public abstract void run() throws InterruptedException;
 	

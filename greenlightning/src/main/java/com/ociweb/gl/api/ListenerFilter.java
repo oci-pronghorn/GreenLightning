@@ -14,9 +14,12 @@ public interface ListenerFilter extends RouteFilter<ListenerFilter> {
 		
 	ListenerFilter isolate();
 	
-	<T extends Behavior> ListenerFilter includeRoute(int routeId, CallableStaticRestRequestReader<T> callable);
-		
-	ListenerFilter includeRoute(int routeId, CallableRestRequestReader callable);
+	<T extends Behavior> ListenerFilter includeRouteById(int routeId, CallableStaticRestRequestReader<T> callable);
+	ListenerFilter includeRouteById(int routeId, CallableRestRequestReader callable);
+	
+	public <E extends Enum<E>>ListenerFilter includeRoutes(E ... assocRouteObjects);
+	public <E extends Enum<E>>ListenerFilter includeRoutes(E assocRouteObject, final CallableRestRequestReader callable);
+	public <T extends Behavior, E extends Enum<E> > ListenerFilter includeRoutes(E assocRouteObject, final CallableStaticRestRequestReader<T> callable);
 	
 	public ListenerFilter includeRoutesByAssoc(Object ... assocRouteObjects);
 	public ListenerFilter includeRoutesByAssoc(Object assocRouteObject, final CallableRestRequestReader callable);
