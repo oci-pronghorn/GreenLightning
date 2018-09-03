@@ -122,6 +122,7 @@ public class MessagePubSubImpl {
 			int pipeIdx, long[] targetMarks, byte[] topicBacking, int topicPos, int topicLength, int topicMask, byte[] payloadBacking, int payloadPos, int payloadLength, int payloadMask
 	
 			) {
+	
 	    Pipe<MessageSubscription> outPipe = outgoingMessagePipes[pipeIdx];
 	    if (Pipe.hasRoomForWrite(outPipe)) {
 	    	int size = Pipe.addMsgIdx(outPipe, MessageSubscription.MSG_PUBLISH_103);

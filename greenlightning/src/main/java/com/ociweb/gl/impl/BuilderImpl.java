@@ -746,7 +746,9 @@ public class BuilderImpl implements Builder {
 			Pipe<TrafficAckSchema>[] masterMsgackIn, 
 			Pipe<MessageSubscription>[] subscriptionPipes) {
 
-
+		//NOTE: there is an issue with late subscriptions this count may be too small.
+		//assert(subscriptionPipes.length>0) : "should be 1 or more subscription pipes. MessagePubSub pipes: "+messagePubSub.length;
+	
 		new MessagePubSubTrafficStage(this.gm, runtime, subscriptionPipeLookup, this, 
 				                ingressMessagePipes, messagePubSub, 
 				                masterMsggoOut, masterMsgackIn, subscriptionPipes);
@@ -1955,7 +1957,7 @@ public class BuilderImpl implements Builder {
 			} else {
 				reasonSkipped = "Reason: Must have single producer";
 			}
-			logger.info("MadePrivate: {} Topic: {} Producers: {} Consumers: {}   {} ", madePrivate, topic, possiblePrivateTopicsProducerCount[i], consumers, reasonSkipped);
+			logger.debug("MadePrivate: {} Topic: {} Producers: {} Consumers: {}   {} ", madePrivate, topic, possiblePrivateTopicsProducerCount[i], consumers, reasonSkipped);
 			
 		}
 		

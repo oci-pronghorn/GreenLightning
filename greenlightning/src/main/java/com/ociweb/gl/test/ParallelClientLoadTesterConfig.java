@@ -1,6 +1,6 @@
 package com.ociweb.gl.test;
 
-import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import com.ociweb.gl.api.ArgumentProvider;
 import com.ociweb.gl.api.TelemetryConfig;
@@ -66,10 +66,13 @@ public class ParallelClientLoadTesterConfig {
 				return routeIn;
 			}
         };
-        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
+        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort +1+ (maskPort&nextPort.getAndIncrement()) : null;
 
     }
 
+    private static AtomicInteger nextPort = new AtomicInteger();
+    private static int maskPort = 0xFF;//only rotate over 256;
+    
     public ParallelClientLoadTesterConfig(
             int parallelTracks,
             int cyclesPerTrack,
@@ -85,7 +88,7 @@ public class ParallelClientLoadTesterConfig {
 				return routeIn;
 			}
         };
-        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
+        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort +1+ (maskPort&nextPort.getAndIncrement()) : null;
 
     }
     
@@ -99,7 +102,7 @@ public class ParallelClientLoadTesterConfig {
         this.cyclesPerTrack = cyclesPerTrack;
         this.port = port;
         this.route = routeFactory;
-        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
+        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort +1+ (maskPort&nextPort.getAndIncrement()) : null;
 
     }
     
@@ -118,7 +121,7 @@ public class ParallelClientLoadTesterConfig {
 				return routeIn;
 			}
         };
-        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort + 13 : null;
+        this.telemetryPort = enableTelemetry ? TelemetryConfig.defaultTelemetryPort +1+ (maskPort&nextPort.getAndIncrement()) : null;
 
         this.target = target;
     }

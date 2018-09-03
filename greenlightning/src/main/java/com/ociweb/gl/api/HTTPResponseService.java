@@ -117,6 +117,12 @@ public class HTTPResponseService {
 		return publishHTTPResponse(connectionId, sequenceCode, statusCode, false, null, Writable.NO_OP);
 	}
 
+	public boolean publishHTTPResponse(long connectionId, long sequenceCode, 
+            int statusCode, 
+            HTTPContentType contentType,
+            Writable writable) {
+		return publishHTTPResponse(connectionId, sequenceCode, statusCode, false, contentType, writable);
+	}
 	/**
 	 *
 	 * @param connectionId long val used as arg in @link <Pipe.addLongValue> //better to write like this?

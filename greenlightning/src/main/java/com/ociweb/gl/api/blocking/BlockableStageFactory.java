@@ -28,26 +28,36 @@ public class BlockableStageFactory {
 						if (Pipe.isForSchema(pipe, MessagePrivate.class)) {
 							Pipe.markTail(pipe);
 							int msgIdx = Pipe.takeMsgIdx(pipe);
-							boolean result = producer.unChosenMessages(Pipe.openInputStream(pipe));
-							if (result) {
-								Pipe.confirmLowLevelRead(pipe, Pipe.sizeOf(pipe, msgIdx));
-								Pipe.releaseReadLock(pipe);
+							if (msgIdx>=0) {
+								boolean result = producer.unChosenMessages(Pipe.openInputStream(pipe));
+								if (result) {
+									Pipe.confirmLowLevelRead(pipe, Pipe.sizeOf(pipe, msgIdx));
+									Pipe.releaseReadLock(pipe);
+								} else {
+									Pipe.resetTail(pipe);
+								}
+								return result;
 							} else {
-								Pipe.resetTail(pipe);
-							}
-							return result;
+								Pipe.skipNextFragment(pipe, msgIdx);
+								return true;
+							}							
 						} else if (Pipe.isForSchema(pipe, MessageSubscription.class)) {
 							Pipe.markTail(pipe);
 							int msgIdx = Pipe.takeMsgIdx(pipe);
-							Pipe.openInputStream(pipe);//skip over the topic we just want the payload.
-							boolean result = producer.unChosenMessages(Pipe.openInputStream(pipe));
-							if (result) {
-								Pipe.confirmLowLevelRead(pipe, Pipe.sizeOf(pipe, msgIdx));
-								Pipe.releaseReadLock(pipe);
+							if (msgIdx>=0) {
+								Pipe.openInputStream(pipe);//skip over the topic we just want the payload.
+								boolean result = producer.unChosenMessages(Pipe.openInputStream(pipe));
+								if (result) {
+									Pipe.confirmLowLevelRead(pipe, Pipe.sizeOf(pipe, msgIdx));
+									Pipe.releaseReadLock(pipe);
+								} else {
+									Pipe.resetTail(pipe);
+								}
+								return result;
 							} else {
-								Pipe.resetTail(pipe);
+								Pipe.skipNextFragment(pipe, msgIdx);
+								return true;
 							}
-							return result;
 						} else {
 							throw new UnsupportedOperationException("unknown schema "+Pipe.schemaName(pipe));
 						}

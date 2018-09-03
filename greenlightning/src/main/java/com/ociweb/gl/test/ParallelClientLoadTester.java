@@ -228,6 +228,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		} else {
 			clientConfig = builder.useNetClient(TLSCerts.define());
 		}
+		//clientConfig.setUnwrapCount(4);
 		
 		int i = parallelTracks;
 		while (--i>=0) {
@@ -697,9 +698,8 @@ public class ParallelClientLoadTester implements GreenApp {
 				if (s!=null) {
 					//NOTE: only safe place to close the connection.
 					
-					
-					if (insecureClient) {					
-						httpClientService.httpClose(s); //TODO: stil testing for TLS
+					if (insecureClient) {	//TODO: this close is too early for TLS? shared engine instance?				
+						httpClientService.httpClose(s); 
 					}
 					session[track][0]=null;
 				}

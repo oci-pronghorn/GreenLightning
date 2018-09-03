@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
 
@@ -29,7 +28,6 @@ import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.PendingStageBuildable;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
 import com.ociweb.gl.impl.stage.ReactiveManagerPipeConsumer;
-import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.HTTPServerConfigImpl;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
@@ -54,12 +52,14 @@ import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
-import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 
 public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
  
     public static final Logger logger = LoggerFactory.getLogger(MsgRuntime.class);
 
+
+	private ServerCoordinator serverCoord;
+	
     
     protected static final int nsPerMS = 1_000_000;
     public B builder;
@@ -83,6 +83,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
     	return that.builder;
     }
     
+
+	public boolean validateNoPipeLocksHeld() {
+		if (serverCoord.totalResponsePipeLineIdxLocks()==0) {
+			return true;
+		} else {
+			logger.info("\nUnexpected locks held, should be none held");
+			serverCoord.showPipeLinePool();
+			return false;			
+		}
+	}
+	
 	private void populatePrivateTopicPipeNames() {
 		try {
 			Field f = builder.gm.getClass().getDeclaredField("pipeDOTSchemaNames");
@@ -490,7 +501,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 		((HTTPServerConfigImpl) config).setTracks(parallelTrackCount);//TODO: this will write over value if user called set Tracks!!!
 		ServerPipesConfig serverConfig = config.buildServerConfig();
 
-		ServerCoordinator serverCoord = new ServerCoordinator(
+		serverCoord = new ServerCoordinator(
 				config.getCertificates(),
 				config.bindHost(), 
 				config.bindPort(),

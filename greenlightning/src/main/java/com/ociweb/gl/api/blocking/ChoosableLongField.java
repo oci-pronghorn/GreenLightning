@@ -19,17 +19,14 @@ public class ChoosableLongField<T extends MessageSchema<T>> implements Choosable
 	
 	@Override
 	public int choose(Pipe<T> pipe) {
-		if (!Pipe.hasContentToRead(pipe)) {
+		
+		if (!Pipe.hasContentToRead(pipe) || Pipe.peekMsg(pipe, -1)) {
 			return -1;
 		} else {
 			DataInputBlobReader<T> peekInputStream = Pipe.peekInputStream(pipe, BlockableStageFactory.streamOffset(pipe));
 			if (peekInputStream.isStructured()) {			
 				StructuredReader reader = peekInputStream.structured();
-				if (reader.hasAttachedObject(fieldIdAssoc)) {
-					return ((int)reader.readLong(fieldIdAssoc))%choiceCount;
-				} else {
-					return -1;
-				}
+				return reader.hasAttachedObject(fieldIdAssoc) ? (int)(reader.readLong(fieldIdAssoc)%choiceCount) : -1;
 			} else {
 				return -1;
 			}
