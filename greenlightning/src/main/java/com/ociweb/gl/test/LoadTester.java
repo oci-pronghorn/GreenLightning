@@ -1,6 +1,7 @@
 package com.ociweb.gl.test;
 
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class LoadTester {
 	
@@ -13,13 +14,20 @@ public class LoadTester {
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,
 			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int parallelTracks,
 			int cyclesPerTrack, String host, int port, int timeoutMS, int inFlightBits,A target) {
+		return runClient(testData,validator,route,useTLS,telemetry,parallelTracks,cyclesPerTrack,host,port,timeoutMS,0/*inFlightBits*/,null,target);
+	}
+	
+	public static <T, A extends Appendable> A runClient(WritableFactory testData,
+			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int parallelTracks,
+			int cyclesPerTrack, String host, int port, int timeoutMS, int inFlightBits, GraphManager graphUnderTest, A target) {
 
 		ParallelClientLoadTesterConfig testerConfig = new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack,
-				port, route, telemetry);
+																							port, route, telemetry);
 		testerConfig.insecureClient = !useTLS;
 		testerConfig.host = host;
 		testerConfig.simultaneousRequestsPerTrackBits = inFlightBits;		
 		testerConfig.target = target;
+		testerConfig.graphUnderTest = graphUnderTest;
 		
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload(); // calling get
 		

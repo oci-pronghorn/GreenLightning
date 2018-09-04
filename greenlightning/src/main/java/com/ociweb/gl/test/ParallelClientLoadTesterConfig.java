@@ -4,6 +4,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import com.ociweb.gl.api.ArgumentProvider;
 import com.ociweb.gl.api.TelemetryConfig;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class ParallelClientLoadTesterConfig {
     public String host = "127.0.0.1";
@@ -22,6 +23,7 @@ public class ParallelClientLoadTesterConfig {
     public Long cycleRate = 4000L; //very fast rate
 	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests on a track
 	public Appendable target = System.out;
+	public GraphManager graphUnderTest;
 	
     public ParallelClientLoadTesterConfig() {
     }

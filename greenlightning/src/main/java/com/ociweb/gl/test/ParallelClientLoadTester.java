@@ -27,7 +27,10 @@ import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
+import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class ParallelClientLoadTester implements GreenApp {
@@ -48,7 +51,7 @@ public class ParallelClientLoadTester implements GreenApp {
 	public static long LOG_LATENCY_LIMIT =  40_000_000_000L; //40sec	
     
 	private final ParallelClientLoadTesterOutput out;
-
+	private final GraphManager graphUnderTest;
     private final int maxPayloadSize;
     private final byte[] contentType;
 	private final ValidatorFactory validator;
@@ -131,6 +134,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		this.host = config.host;
 		this.port = config.port;
 
+		this.graphUnderTest = config.graphUnderTest;
 		this.logCount = new int[parallelTracks];
         this.cyclesPerTrack = config.cyclesPerTrack;
         this.rate = config.cycleRate;
@@ -448,11 +452,14 @@ public class ParallelClientLoadTester implements GreenApp {
 		private boolean lastResponseOk=true;
 		
 		private Writable writeWrapper;
+		private final GraphManager gm;//needed for error checking 
 		
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
 			countDown = cyclesPerTrack;
 			
+			gm = GreenRuntime.getGraphManager(runtime);
+						
 			GreenCommandChannel newCommandChannel = runtime.newCommandChannel();
 			callService = newCommandChannel.newPubSubService(CALL_TOPIC,
 																Math.max(2+((durationNanos>0?2:1)*maxInFlight), PUB_MSGS), 
@@ -727,8 +734,43 @@ public class ParallelClientLoadTester implements GreenApp {
 					Appendables.appendValue(Appendables.appendValue(Appendables.appendValue(
 							Appendables.appendEpochTime(builder.append("\n"), time)
 							           .append(" status for track: "),track), " progress:", callInstanceCounter), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
+					
 					System.out.print(builder);
+					
+					///////////////////////////////
+					//we have detected a possible problem so this is the best point to do a deep analysis.
+					///////////////////////////////
+					
+					//First double check that the load testing code has no pipes of data to be processed.
+					scanForPipesWithData(gm, "Load testing pipe found with data: ");
+					
+					//Second double check the target server if it was provided.
+					if (null!=graphUnderTest) {
+						scanForPipesWithData(graphUnderTest, "Server pipe found with data: ");
+					}
+					
+					//What else can we check for?? Can we know what left and arrived?
+					
+					
+					
 				}
+			}
+		}
+
+		private void scanForPipesWithData(GraphManager g, String label) {
+			Pipe<?>[] allPipes = GraphManager.allPipes(g);
+			int a = allPipes.length;
+			while (--a >= 0) {
+				 Pipe p = allPipes[a];
+				 if (null != p) {	 
+					 PronghornStage stagePro = GraphManager.getRingProducer(g, p.id);
+					 PronghornStage stageCon = GraphManager.getRingConsumer(g, p.id);							 
+					 if (!GraphManager.hasNota(g, stagePro.stageId, GraphManager.MONITOR)) {
+						 if (!Pipe.isEmpty(p)) {
+							System.out.println(label+p+" "+stagePro+"->"+stageCon);
+						 }
+				     };
+				 }						 
 			}
 		}
 
