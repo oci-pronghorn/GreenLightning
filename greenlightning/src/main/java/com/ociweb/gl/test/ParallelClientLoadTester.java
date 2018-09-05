@@ -35,6 +35,8 @@ import com.ociweb.pronghorn.util.Appendables;
 
 public class ParallelClientLoadTester implements GreenApp {
 	
+	private static final int PROGRESS_CHECK_RATE = 20_000;//check for progress every 20 seconds
+
 	private final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
 	
 	private final boolean insecureClient;
@@ -252,7 +254,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		}
 		builder.parallelTracks(session.length, this::declareParallelBehavior);
 		
-		builder.setTimerPulseRate(20_000); //check for progress every 20 seconds
+		builder.setTimerPulseRate(PROGRESS_CHECK_RATE); 
 		
 		if (rate != null) {
 			builder.setDefaultRate(rate);
@@ -403,8 +405,8 @@ public class ParallelClientLoadTester implements GreenApp {
 
 			long now = 0;
 
-			//updates every 2 seconds
-			if ((percentDone != lastPercent && ((now = System.nanoTime()) - lastTime) > 2_000_000_000L)
+			//updates no faster than once every second
+			if ((percentDone != lastPercent && ((now = System.nanoTime()) - lastTime) > 1_000_000_000L)
 					|| 100L == percentDone) {
 			    out.progress(percentDone, sumTimeouts, sumResponsesInvalid);
 
@@ -442,9 +444,9 @@ public class ParallelClientLoadTester implements GreenApp {
 		private final int track;
 		private final HTTPRequestService httpClientService;   
 
-		private long countDown;
+		private long waitingCountDown;
 		private long totalTime;
-		private long callInstanceCounter;
+		private long callRequestInstanceCounter;
 		private long sendFailures;
 		private long timeouts;
 		private long responsesInvalid;
@@ -456,7 +458,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
-			countDown = cyclesPerTrack;
+			waitingCountDown = cyclesPerTrack;
 			
 			gm = GreenRuntime.getGraphManager(runtime);
 						
@@ -479,7 +481,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			writeWrapper = new Writable() {
 				@Override
 				public void write(ChannelWriter w) {
-					writer.payloadWriter(callInstanceCounter, w);
+					writer.payloadWriter(callRequestInstanceCounter, w);
 				}				
 			};
 			
@@ -491,7 +493,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		boolean callMessage(CharSequence topic, ChannelReader payload) {
 
 			//slow down the tracks far ahead of the others
-			long gap = (cyclesPerTrack-countDown) - minFinished;
+			long gap = (cyclesPerTrack-waitingCountDown) - minFinished;
 			if (gap > 2000) {
 				if (0!=(15&x++)) {
 					//if non zero we delay making this call
@@ -507,7 +509,7 @@ public class ParallelClientLoadTester implements GreenApp {
 				long now = System.nanoTime();
 				boolean wasSent = doHTTPCall();			
 				if (wasSent) {
-					callInstanceCounter++;//must happen after call			
+					callRequestInstanceCounter++;//must happen after call			
 					callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
 				} else {
 					sendFailures++;
@@ -531,21 +533,21 @@ public class ParallelClientLoadTester implements GreenApp {
 		
 		
 		private boolean httpPost() {
-			return httpClientService.httpPost(session[track][0], route.route(callInstanceCounter), writeWrapper);
+			return httpClientService.httpPost(session[track][0], route.route(callRequestInstanceCounter), writeWrapper);
 		}
 
 		private boolean httpGet() {
-			return httpClientService.httpGet(session[track][0], route.route(callInstanceCounter));	
+			return httpClientService.httpGet(session[track][0], route.route(callRequestInstanceCounter));	
 		}
 
 		private boolean httpGetWithHeader() {
-			return httpClientService.httpGet(session[track][0], route.route(callInstanceCounter), header.headerWritable(callInstanceCounter));		
+			return httpClientService.httpGet(session[track][0], route.route(callRequestInstanceCounter), header.headerWritable(callRequestInstanceCounter));		
 		}
 		
 		private boolean httpPostWithHeader() {
 			ClientHostPortInstance s = session[track][0];
 			if (null!=s) {
-				return httpClientService.httpPost(s, route.route(callInstanceCounter), header.headerWritable(callInstanceCounter), writeWrapper);
+				return httpClientService.httpPost(s, route.route(callRequestInstanceCounter), header.headerWritable(callRequestInstanceCounter), writeWrapper);
 
 			} else {
 				//NOTE: must investigate this, we are getting TOO many re-sends? after a close??
@@ -570,7 +572,7 @@ public class ParallelClientLoadTester implements GreenApp {
 				}
 				//must use message to startup the system
 			}
-			countDown--; //we launched 1 cycle for this track on startup.
+			waitingCountDown--; //we launched 1 cycle for this track on startup.
 		}
 	
 		@Override
@@ -591,16 +593,15 @@ public class ParallelClientLoadTester implements GreenApp {
 					timeouts+=totalMissing;
 					
 					
-					//logger.info("\nConnection {} closed, expecting {} responses which will never arrive, resending http call(s)",reader.connectionId(),totalMissing);
+					logger.info("\nConnection {} closed, expecting {} responses which will never arrive, resending http call(s)",reader.connectionId(),totalMissing);
 										
 					//we must re-request the call
 					//keep the clock rolling since this is a penalty against the server
-					callInstanceCounter-=totalMissing;
+					callRequestInstanceCounter-=totalMissing;
 					int i = totalMissing;
 					while (--i>=0) {
-						boolean ok = doHTTPCall();
-						assert(ok) : "internal error, channels must be large enough to hold backed up reqeusts.";
-						callInstanceCounter++;//must happen after call
+						while (!doHTTPCall()) {Thread.yield();};
+						callRequestInstanceCounter++;//must happen after call
 					}
 				}	
 				out.connectionClosed(track);
@@ -654,10 +655,10 @@ public class ParallelClientLoadTester implements GreenApp {
 		}
 
 		private boolean nextCall() {
-			if ((0x1FFFF & countDown) == 0) {
+			if ((0xFFFF & waitingCountDown) == 0) {
 				pubService.publishTopic(PROGRESS_TOPIC, writer-> {
 					writer.writePackedInt(track);
-					writer.writePackedLong(countDown);
+					writer.writePackedLong(waitingCountDown);
 					//writer.writePackedLong(sendAttempts);
 					//writer.writePackedLong(sendFailures);
 					writer.writePackedLong(timeouts);
@@ -668,7 +669,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			}
 
 			boolean isOk = true;
-			if (countDown >= inFlightHTTPs) { //others are still in flight
+			if (waitingCountDown >= inFlightHTTPs) { //others are still in flight
 				if (durationNanos > 0) {
 					isOk = delayService.delay(durationNanos);
 				}
@@ -677,10 +678,10 @@ public class ParallelClientLoadTester implements GreenApp {
 				}
 			}
 		
-			if (0==countDown) {
+			if (0==waitingCountDown) {
 				boolean clean = pubService.publishTopic(PROGRESS_TOPIC, writer-> {
 					writer.writePackedInt(track);
-					writer.writePackedLong(countDown);
+					writer.writePackedLong(waitingCountDown);
 					//writer.writePackedLong(sendAttempts);
 					//writer.writePackedLong(sendFailures);
 					writer.writePackedLong(timeouts);
@@ -691,7 +692,7 @@ public class ParallelClientLoadTester implements GreenApp {
 				clean &= pubService.publishTopic(ENDERS_TOPIC, writer -> {
 					writer.writePackedInt(track);
 					writer.writePackedLong(totalTime);
-					writer.writePackedLong(callInstanceCounter);
+					writer.writePackedLong(callRequestInstanceCounter);
 					writer.writePackedLong(sendFailures);
 					writer.writePackedLong(timeouts);
 					writer.writePackedLong(responsesReceived);
@@ -699,21 +700,21 @@ public class ParallelClientLoadTester implements GreenApp {
 				});
 				assert(clean) :"unable to end test clean";
 				
+				--waitingCountDown;//ensure it goes negative so we do not finish more than once, this can happen when connections have been timed out and new requests sent.
 				//System.out.println("publish enders clean:"+clean+"  "+track+" rec  "+responsesReceived+" "+callCounter);
 				
 				ClientHostPortInstance s = session[track][0];
 				if (s!=null) {
 					//NOTE: only safe place to close the connection.
-					
-					if (insecureClient) {	//TODO: this close is too early for TLS? shared engine instance?				
-						httpClientService.httpClose(s); 
+						
+					if (insecureClient) {
+						httpClientService.httpClose(s); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. TODO: need to resolve ...
 					}
 					session[track][0]=null;
 				}
-				--countDown;//ensure it goes negative so we do not finish more than once, this can happen when connections have been timed out and new requests sent.
 				
 			} else if (isOk) { //upon failure should not count down
-				--countDown;
+				--waitingCountDown;
 			} else {
 			    logger.warn("Unable to send request, will try again.");
 			}
@@ -725,15 +726,17 @@ public class ParallelClientLoadTester implements GreenApp {
 		
 		@Override
 		public void timeEvent(long time, int iteration) {
+
+
 			
-			if (lastProgressCheck != callInstanceCounter) {
-				lastProgressCheck = callInstanceCounter;
+			if (lastProgressCheck != callRequestInstanceCounter) {
+				lastProgressCheck = callRequestInstanceCounter;
 			} else {			
-				if (callInstanceCounter!=cyclesPerTrack) {
+				if (callRequestInstanceCounter!=cyclesPerTrack) {
 					StringBuilder builder = new StringBuilder(); 
 					Appendables.appendValue(Appendables.appendValue(Appendables.appendValue(
 							Appendables.appendEpochTime(builder.append("\n"), time)
-							           .append(" status for track: "),track), " progress:", callInstanceCounter), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
+							           .append(" status for track: "),track), " progress:", callRequestInstanceCounter), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
 					
 					System.out.print(builder);
 					
@@ -749,10 +752,16 @@ public class ParallelClientLoadTester implements GreenApp {
 						scanForPipesWithData(graphUnderTest, "Server pipe found with data: ");
 					}
 					
-					//What else can we check for?? Can we know what left and arrived?
+				} else if (waitingCountDown>=0) {
+					System.out.println("No progress on track: "+track+" All requests sent but waiting for "+(waitingCountDown+1)+". Was closed connection not detected?");
+								
+					//First double check that the load testing code has no pipes of data to be processed.
+					scanForPipesWithData(gm, "Load testing pipe found with data: ");
 					
-					
-					
+					//Second double check the target server if it was provided.
+					if (null!=graphUnderTest) {
+						scanForPipesWithData(graphUnderTest, "Server pipe found with data: ");
+					}
 				}
 			}
 		}
