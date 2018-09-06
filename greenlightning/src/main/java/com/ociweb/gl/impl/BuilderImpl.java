@@ -1169,7 +1169,7 @@ public class BuilderImpl implements Builder {
 			
 			
 			if (this.client.isTLS()) {
-				pcm.ensureSize(NetPayloadSchema.class, 4, 1<<15); ///must be large enough for encrypt/decrypt 
+				pcm.ensureSize(NetPayloadSchema.class, 8, 1<<15); ///must be large enough for encrypt/decrypt 
 			}
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					

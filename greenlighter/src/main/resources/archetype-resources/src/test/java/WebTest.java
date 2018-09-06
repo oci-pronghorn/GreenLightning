@@ -1,5 +1,10 @@
 package ${package};
-
+/**
+ * ************************************************************************
+ * For greenlightning support, training or feature reqeusts please contact:
+ *   info@objectcomputing.com   (314) 579-0066
+ * ************************************************************************
+ */
 import static org.junit.Assert.assertTrue;
 
 import org.junit.AfterClass;
