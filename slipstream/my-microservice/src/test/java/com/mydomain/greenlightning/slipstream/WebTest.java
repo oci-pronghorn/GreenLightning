@@ -38,37 +38,19 @@ public class WebTest {
 
 	
 	public static void main(String[] args) {
-		
-		GraphManager.showThreadIdOnTelemetry = true;
-		GraphManager.showPipeIdOnTelemetry = true;
-		
-		ClientAbandonConnectionScanner.absoluteNSToAbandon = 3_000_000_000L;//3sec //force client to close? but its not open yet?
-		//ClientAbandonConnectionScanner.absoluteNSToKeep =     20_000_000L;
-		
-		
-		//may not have >100 calls so it does not trigger.
-		//must keep this on to ensure we capture the dropped connections?? this should preven the lack of closed notifications...
-		//ClientSocketReaderStage.abandonSlowConnections = false; //DANGEROUS SINCE tls NEEDS THIS FOR MISSING RESPONSES.
-		
-		
+	
+		//for cloud testing we bump this up since it may be running on very slow hardware
+		ClientAbandonConnectionScanner.absoluteNSToKeep =      2_000_000_000L; //2sec calls are always OK.
+
 		GreenRuntime.run(new MyMicroservice(useTLS, port, telemetry));
 	}
 	
 	@BeforeClass
 	public static void startServer() {
 
-		GraphManager.showThreadIdOnTelemetry = true;
-		GraphManager.showPipeIdOnTelemetry = true;
-		
-		ClientAbandonConnectionScanner.absoluteNSToAbandon = 3_000_000_000L;//3sec //force client to close? but its not open yet?
-		//ClientAbandonConnectionScanner.absoluteNSToKeep =     20_000_000L;
-		
-		
-		//may not have >100 calls so it does not trigger.
-		//must keep this on to ensure we capture the dropped connections?? this should preven the lack of closed notifications...
-		//ClientSocketReaderStage.abandonSlowConnections = false; //DANGEROUS SINCE tls NEEDS THIS FOR MISSING RESPONSES.
-		
-		
+		//for cloud testing we bump this up since it may be running on very slow hardware
+		ClientAbandonConnectionScanner.absoluteNSToKeep =      2_000_000_000L; //2sec calls are always OK.
+
 		runtime = GreenRuntime.run(new MyMicroservice(useTLS, port, telemetry));
 		
 	}

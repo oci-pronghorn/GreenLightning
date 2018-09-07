@@ -10,6 +10,7 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
+import com.ociweb.pronghorn.network.ClientAbandonConnectionScanner;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -28,6 +29,9 @@ public class WebTest {
 	
 	@BeforeClass
 	public static void startServer() {
+		
+		//for cloud testing we bump this up since it may be running on very slow hardware
+		ClientAbandonConnectionScanner.absoluteNSToKeep =      2_000_000_000L; //2sec calls are always OK.
 
 		runtime = GreenRuntime.run(new MyMicroservice(useTLS, port, telemetry));
 		
