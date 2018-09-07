@@ -2,15 +2,14 @@
 <project>
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb</groupId>
-  <artifactId>open-edge-greenlightning</artifactId>
+  <artifactId>slipstream</artifactId>
   <version>1.0.0-SNAPSHOT</version>
   <packaging>pom</packaging>
  
   <modules>  
-    <module>greenlightning</module>
-    <module>greenlighter</module>
-    <module>glapi</module>    
-    <module>slipstream</module>        
+    <module>my-microservice</module>
+    <module>my-proxy</module>
+    <module>my-database</module>        
   </modules>
   
   <reporting>
@@ -39,10 +38,23 @@
 </project>
 
 
+
  <!-- 
+  need to pull the latest? 
+ 
+  setup workspace:
+  put this file in the root of your git folder
+  clone the following into your git folder
+  
+  git clone https://github.com/oci-pronghorn/greenlightning.git
+  git clone https://github.com/oci-pronghorn/greenlighter.git
+  git clone https://github.com/oci-pronghorn/greenlightning-api.git
+   
+ 
   tobuild:  
             mvn -offline -T 1C -f open-edge-pom.xml install
             mvn -f open-edge-pom.xml install
             
  -->
+
 

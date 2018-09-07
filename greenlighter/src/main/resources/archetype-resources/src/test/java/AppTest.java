@@ -19,8 +19,7 @@ public class AppTest {
 	 public void testApp() {
 		    int timeoutMS = 2000;
 		    GreenRuntime.testUntilShutdownRequested(new ${mainClass}(), timeoutMS);
-		    	    
-			
+	
 	 }
 	 
 	 
