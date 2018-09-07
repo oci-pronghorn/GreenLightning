@@ -33,8 +33,8 @@ public class MyProxy implements GreenApp {
     	}
     	
     	
-    	builder.defineRoute().path("/proxy").routeId(Struct.PROXY);
-    	builder.defineRoute().path("/service").routeId(Struct.INTERNAL_SERVICE);
+    	builder.defineRoute().path("/proxy").routeId(Struct.PROXY_ROUTE);
+    	builder.defineRoute().path("/service").routeId(Struct.SERIVCE_ROUTE);
         
     	HTTPClientConfig client = 
     			useTLS 
@@ -55,14 +55,14 @@ public class MyProxy implements GreenApp {
     public void declareBehavior(GreenRuntime runtime) {
  
     	runtime.addRestListener(new ExternalRequest(runtime, session, "/service", HANDOFF_TOPIC))
-    	                               .includeRoutesByAssoc(Struct.PROXY);
+    	                               .includeRoutesByAssoc(Struct.PROXY_ROUTE);
 
     	runtime.addPubSubListener(new ExternalResponse(runtime))
     	                               .acceptHostResponses(session)
     	                               .addSubscription(HANDOFF_TOPIC);
     	
     	runtime.addRestListener(new InternalService(runtime))
-    	 							   .includeRoutesByAssoc(Struct.INTERNAL_SERVICE);
+    	 							   .includeRoutesByAssoc(Struct.SERIVCE_ROUTE);
     	    	
     	
     }
