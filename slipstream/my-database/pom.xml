@@ -226,7 +226,8 @@
 					</dependency>
 				</dependencies>
 			</plugin>
-			<plugin>
+			<!-- Jar signing has problems in the cloud build server,  uncomment if this feature is needed -->
+			<!--  plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jarsigner-plugin</artifactId>
 				<version>1.4</version>
@@ -250,7 +251,7 @@
 					<storepass>${keystore.store.password}</storepass>
 					<keypass>${keystore.key.password}</keypass>
 				</configuration>
-			</plugin>
+			</plugin -->
 		</plugins>
 	</build>
 
