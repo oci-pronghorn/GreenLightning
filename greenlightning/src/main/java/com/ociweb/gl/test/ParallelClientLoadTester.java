@@ -780,12 +780,19 @@ public class ParallelClientLoadTester implements GreenApp {
 					long prevConnectionId = s.getPrevConnectionId();
 					System.out.println("total requests in flight "+totalMissing+", last used connection "+connectionId+" prev con "+prevConnectionId);
 					
+					boolean newConnection = false;
+					if (-1 == connectionId) {
+						//this is the beginning of a connection and the id was not yet stored back so we must look it up.
+						connectionId = ClientCoordinator.lookup(s.hostId(), s.port(), s.sessionId);
+						newConnection = true;
+					}	
+					
 					if (connectionId>=0) {
 						ClientCoordinator ccm = this.builder.getClientCoordinator();
 						
 						ClientConnection conObj = (ClientConnection)ccm.connectionObjForConnectionId(connectionId, true);
 						System.out.println("Con: "+conObj.id+" registered:"+conObj.isRegistered()+" valid:"+conObj.isValid()+" Outstanding:"
-								+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObj.outstandingCallTime(System.nanoTime()))    							
+								+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObj.outstandingCallTime(System.nanoTime()))+" new:"+newConnection    							
 								);
 						
 						if (prevConnectionId>=0) {
