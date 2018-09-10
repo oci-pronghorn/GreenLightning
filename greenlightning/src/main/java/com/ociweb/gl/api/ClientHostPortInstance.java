@@ -69,6 +69,13 @@ public class ClientHostPortInstance {
 		return extractor;
 	}
 
+	public int port() {
+		return port;
+	}
+	
+	public int hostId() {
+		return hostId;
+	}
 	
 	/**
 	 * Used to make host and port num a string
