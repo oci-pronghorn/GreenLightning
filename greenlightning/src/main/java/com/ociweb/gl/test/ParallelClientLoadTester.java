@@ -40,7 +40,8 @@ import com.ociweb.pronghorn.util.Appendables;
 
 public class ParallelClientLoadTester implements GreenApp {
 	
-	private static final int PROGRESS_CHECK_RATE = 20_000;//check for progress every 20 seconds
+	//if abandonSlowConnections is on we check for progress every 20 seconds else every 2 minutes
+	private static final int PROGRESS_CHECK_RATE = ClientSocketReaderStage.abandonSlowConnections? 20_000 : 120_000 ;
 
 	private final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
 	
@@ -55,7 +56,7 @@ public class ParallelClientLoadTester implements GreenApp {
     private final int maxInFlightMask;
     private int warmupCount = 20_000;
     private final int[] logCount;
-	public static long LOG_LATENCY_LIMIT =  40_000_000_000L; //40sec	
+	public static long LOG_LATENCY_LIMIT =  ClientSocketReaderStage.abandonSlowConnections ? 40_000_000_000L : 120_000_000_000L; //40sec or 2 min	
     
 	private final ParallelClientLoadTesterOutput out;
 	private final GraphManager graphUnderTest;
@@ -822,46 +823,9 @@ public class ParallelClientLoadTester implements GreenApp {
          	        	int i = timedOut.length;
          	        	while (--i >= 0) {
          	        		System.out.println("FOUND: "+timedOut[i]);
-         	        	}
-						
-//						PronghornStage[] csrs = GraphManager.allStagesByType(this.builder.gm, ClientSocketReaderStage.class);
-//						for (int i = 0; i<csrs.length; i++) {
-//							ClientSocketReaderStage stage = (ClientSocketReaderStage)csrs[i];
-//							//TODO: what to do?
-//							
-//						}
-							
-         	        	
-//         	        	426830:32:06.045 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
-//         	        			total requests in flight 1, last used connection -1 prev con -1
-//         	        			Con: 8 registered:true valid:true Outstanding:001 min new:true atIdx: 8 closedNoticeSent:false
-//         	        			FOUND CANDIDATE: ConId:6 127.0.0.1:7244
-//         	        			FOUND: null
-//         	        			FOUND: null
-//         	        			FOUND: null
-//         	        			FOUND: null
-//
-//         	        			426830:32:26.045 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
-//         	        			total requests in flight 1, last used connection -1 prev con -1
-//         	        			Con: 8 registered:true valid:true Outstanding:001 min new:true atIdx: 8 closedNoticeSent:false
-//         	        			FOUND CANDIDATE: ConId:6 127.0.0.1:7244
-//         	        			FOUND: null
-//         	        			FOUND: null
-//         	        			FOUND: null
-//         	        			FOUND: null
-						
+         	        	}					
 					}
-					
-					
-					//TODO: is the dropped connections still looked for?
-					
-					
-					
-					
-					
 				}
-				
-				
 			}
 		}
 

@@ -24,7 +24,7 @@ public class BlockingExampleApp implements GreenApp {
 		
 		builder.useHTTP1xServer(8083, 2, this::declareParallelBehavior)
 	       .useInsecureServer()
-	       .logTraffic()
+	      // .logTraffic() will collect many files in local folder if on when developing.
 	       .setDecryptionUnitsPerTrack(3)
 	       .setEncryptionUnitsPerTrack(3)
 	       .setHost("127.0.0.1");		
