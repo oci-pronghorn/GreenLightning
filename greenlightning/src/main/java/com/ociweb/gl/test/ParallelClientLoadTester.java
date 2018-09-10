@@ -794,37 +794,20 @@ public class ParallelClientLoadTester implements GreenApp {
 						
 						ClientConnection conObj = (ClientConnection)ccm.connectionObjForConnectionId(connectionId, true);
 						System.out.println("Con: "+conObj.id+" registered:"+conObj.isRegistered()+" valid:"+conObj.isValid()+" Outstanding:"
-								+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObj.outstandingCallTime(System.nanoTime()))+" new:"+newConnection    							
+								+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObj.outstandingCallTime(System.nanoTime()))+" new:"+newConnection+" atIdx: "+connectionId   							
+								+ " closedNoticeSent:"+conObj.isClientClosedNotificationSent()
 								);
 						
 						if (prevConnectionId>=0) {
 							ClientConnection conObjPrev = (ClientConnection)ccm.connectionObjForConnectionId(prevConnectionId, true);
 							System.out.println("Con: "+conObjPrev.id+" registered:"+conObjPrev.isRegistered()+" valid:"+conObjPrev.isValid()+" Outstanding:"
-									+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObjPrev.outstandingCallTime(System.nanoTime()))    							
+									+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObjPrev.outstandingCallTime(System.nanoTime()))+" atIdx: "+prevConnectionId    							
+									+ " closedNoticeSent:"+conObjPrev.isClientClosedNotificationSent()
 									);						
 						}	
 					}
 					
-					/*
-426819:38:38.031 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
-total requests in flight 1, last used connection -1 prev con -1
-Con: 8 registered:true valid:true Outstanding:034 sec new:true
 
-426819:38:58.031 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
-total requests in flight 1, last used connection -1 prev con -1
-Con: 8 registered:true valid:true Outstanding:054 sec new:true
-
-426819:39:18.031 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
-total requests in flight 1, last used connection -1 prev con -1
-Con: 8 registered:true valid:true Outstanding:074 sec new:true
-
-426819:39:38.031 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
-total requests in flight 1, last used connection -1 prev con -1
-Con: 8 registered:true valid:true Outstanding:001 min new:true
-
- 
-					 * 
-					 */
 					if (!ClientSocketReaderStage.abandonSlowConnections) {
 						System.out.println("must leave the abandonSlowConnections feature on in ClientSocketReaderStage or hangs like these will happen");
 						
