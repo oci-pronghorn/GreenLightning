@@ -14,7 +14,7 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
+public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, ListenerFilter, GreenRuntime>{
 	
      public GreenRuntime() {
         this(new String[0],null);
@@ -40,7 +40,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
       	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
       	pcm.addConfig(defaultCommandChannelLength, 0,TrafficOrderSchema.class);
       	
-      	return this.builder.newCommandChannel(  				
+      	return (GreenCommandChannel) this.builder.newCommandChannel(  				
   				parallelInstanceUnderActiveConstruction,
   				pcm
   		  );    
@@ -196,7 +196,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl, ListenerFilter>{
 	private static ScriptedNonThreadScheduler test(GreenApp app, GreenRuntime runtime) {
 		//force hardware to TestHardware regardless of where or what platform its run on.
         //this is done because this is the test() method and must behave the same everywhere.
-        runtime.builder = new BuilderImpl(runtime.gm,runtime.args);
+        runtime.builder = new BuilderImpl<GreenRuntime>(runtime.gm,runtime.args);
 
         //lowered for tests, we want tests to run faster, tests probably run on bigger systems.
         runtime.builder.setDefaultRate(10_000);

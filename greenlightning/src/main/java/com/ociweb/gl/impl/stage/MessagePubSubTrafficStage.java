@@ -48,7 +48,7 @@ public class MessagePubSubTrafficStage extends AbstractTrafficOrderedStage {
      */
     
     public MessagePubSubTrafficStage(GraphManager gm,
-    						  MsgRuntime<?,?> runtime,
+    						  MsgRuntime<?,?,?> runtime,
     						  IntHashTable subscriptionPipeLookup, BuilderImpl hardware, 
     						  Pipe<IngressMessages>[] ingressMessagePipes,
     						  

@@ -21,6 +21,9 @@ import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
+import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.pronghorn.network.ClientConnection;
+import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.TLSCerts;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
@@ -454,14 +457,16 @@ public class ParallelClientLoadTester implements GreenApp {
 		private boolean lastResponseOk=true;
 		
 		private Writable writeWrapper;
-		private final GraphManager gm;//needed for error checking 
+		
+		private BuilderImpl builder; //needed for debug of halted jobs.
+
 		
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
 			waitingCountDown = cyclesPerTrack;
 			
-			gm = GreenRuntime.getGraphManager(runtime);
-						
+			builder = runtime.builder;
+			
 			GreenCommandChannel newCommandChannel = runtime.newCommandChannel();
 			callService = newCommandChannel.newPubSubService(CALL_TOPIC,
 																Math.max(2+((durationNanos>0?2:1)*maxInFlight), PUB_MSGS), 
@@ -745,7 +750,7 @@ public class ParallelClientLoadTester implements GreenApp {
 					///////////////////////////////
 					
 					//First double check that the load testing code has no pipes of data to be processed.
-					scanForPipesWithData(gm, "Load testing pipe found with data: ");
+					scanForPipesWithData(this.builder.gm, "Load testing pipe found with data: ");
 					
 					//Second double check the target server if it was provided.
 					if (null!=graphUnderTest) {
@@ -756,13 +761,45 @@ public class ParallelClientLoadTester implements GreenApp {
 					System.out.println("No progress on track: "+track+" All requests sent but waiting for "+(waitingCountDown+1)+". Was closed connection not detected?");
 								
 					//First double check that the load testing code has no pipes of data to be processed.
-					scanForPipesWithData(gm, "Load testing pipe found with data: ");
+					scanForPipesWithData(this.builder.gm, "Load testing pipe found with data: ");
 					
 					//Second double check the target server if it was provided.
 					if (null!=graphUnderTest) {
 						scanForPipesWithData(graphUnderTest, "Server pipe found with data: ");
 					}
+					
+					
 				}
+				
+				//no progress has been made... how many requests are in flight and what connection was used?
+				ClientHostPortInstance s = session[track][0];
+				if (null!=s) {
+				
+					int totalMissing = inFlightHead[track]-inFlightTail[track];
+					long connectionId = s.getConnectionId();
+					long prevConnectionId = s.getPrevConnectionId();
+					System.out.println("total requests in flight "+totalMissing+", last used connection "+connectionId+" prev con "+prevConnectionId);
+					
+					if (connectionId>=0) {
+						ClientCoordinator ccm = this.builder.getClientCoordinator();
+						
+						ClientConnection conObj = (ClientConnection)ccm.connectionObjForConnectionId(connectionId, true);
+						System.out.println("Con: "+conObj.id+" registered:"+conObj.isRegistered()+" valid:"+conObj.isValid()+" Outstanding:"
+								+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObj.outstandingCallTime(System.nanoTime()))    							
+								);
+						
+						if (prevConnectionId>=0) {
+							ClientConnection conObjPrev = (ClientConnection)ccm.connectionObjForConnectionId(prevConnectionId, true);
+							System.out.println("Con: "+conObjPrev.id+" registered:"+conObjPrev.isRegistered()+" valid:"+conObjPrev.isValid()+" Outstanding:"
+									+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObjPrev.outstandingCallTime(System.nanoTime()))    							
+									);						
+						}	
+					}
+					
+					
+				}
+				
+				
 			}
 		}
 

@@ -23,7 +23,7 @@ public class ClientHostPortCollection {
 
 		ClientConnection result = ClientCoordinator.openConnection(
 				ccm, 
-				members[idx].host, 
+				members[idx].hostId, 
 				members[idx].port, 
 				members[idx].sessionId, 
 				outputs,

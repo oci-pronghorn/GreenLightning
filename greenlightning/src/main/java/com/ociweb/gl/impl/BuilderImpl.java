@@ -48,7 +48,6 @@ import com.ociweb.gl.impl.schema.TrafficAckSchema;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.schema.TrafficReleaseSchema;
 import com.ociweb.gl.impl.stage.BehaviorNameable;
-import com.ociweb.gl.impl.stage.HTTPClientRequestTrafficStage;
 import com.ociweb.gl.impl.stage.MessagePubSubTrafficStage;
 import com.ociweb.gl.impl.stage.PendingStageBuildable;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
@@ -107,7 +106,7 @@ import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 
-public class BuilderImpl implements Builder {
+public class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builder {
 
 	private static final int MIN_CYCLE_RATE = 1; //cycle rate can not be zero
 
@@ -738,7 +737,7 @@ public class BuilderImpl implements Builder {
 	}
 
 	protected final void createMessagePubSubStage(
-			MsgRuntime<?,?> runtime,
+			MsgRuntime<?,?,?> runtime,
 			IntHashTable subscriptionPipeLookup,
 			Pipe<IngressMessages>[] ingressMessagePipes,
 			Pipe<MessagePubSub>[] messagePubSub,
@@ -1067,12 +1066,6 @@ public class BuilderImpl implements Builder {
 			masterGoOut[IDX_MSG] = new Pipe[messagePubSub.length];
 			masterAckIn[IDX_MSG] = new Pipe[messagePubSub.length];
 		}		
-		if (IDX_NET >= 0) {
-
-			assert(httpClientRequestPipes.length>0);
-			masterGoOut[IDX_NET] = new Pipe[httpClientRequestPipes.length];
-			masterAckIn[IDX_NET] = new Pipe[httpClientRequestPipes.length];
-		}		
 				
 		int copGoAck = commandChannelCount;
 		//logger.info("\ncommand channel count to be checked {}",copGoAck);
@@ -1090,9 +1083,7 @@ public class BuilderImpl implements Builder {
 				if ((features&Behavior.DYNAMIC_MESSAGING) != 0) {
 			 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_MSG);
 				}
-				if ((features&Behavior.NET_REQUESTER) != 0) {
-			 		maxGoPipeId = populateGoAckPipes(maxGoPipeId, masterGoOut, masterAckIn, goOut, ackIn, IDX_NET);
-				}
+
 				//logger.info("\nnew traffic cop for graph {}",gm.name);
 				TrafficCopStage.newInstance(gm, 
 											timeout, orderPipes[copGoAck], 
@@ -1132,7 +1123,7 @@ public class BuilderImpl implements Builder {
 
 	
 	public void buildHTTPClientGraph(
-			MsgRuntime<?,?> runtime,
+			MsgRuntime<?,?,?> runtime,
 			Pipe<NetResponseSchema>[] netResponsePipes,
 			Pipe<ClientHTTPRequestSchema>[] netRequestPipes, 
 			Pipe<TrafficReleaseSchema>[][] masterGoOut,
@@ -1179,8 +1170,7 @@ public class BuilderImpl implements Builder {
 			int r = outputsCount;
 			while (--r>=0) {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
-			}
-			
+			}			
 			
 			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
 					responseQueue, clientRequests, 
@@ -1191,27 +1181,10 @@ public class BuilderImpl implements Builder {
 					clientWrapperCount,
 					clientWriters);
 
-			if (isAllNull(masterGoOut[IDX_NET])) {
-				//this one has much lower latency and should be used if possible
-				new HTTPClientRequestStage(gm, ccm, netRequestPipes, clientRequests);
-			} else {	
-				
-				assert(netRequestPipes.length == masterGoOut[IDX_NET].length);
-				assert(masterAckIn[IDX_NET].length == masterGoOut[IDX_NET].length);
-				
-				
-				logger.info("Warning, the slower HTTP Client Request code was called. 2ms latency may be introduced.");
-				
-				//this may stay for as long as 2ms before returning due to timeout of
-				//traffic logic, this is undesirable in some low latency cases.
-				new HTTPClientRequestTrafficStage(
-						gm, runtime, this, 
-						ccm, netRequestPipes, 
-						masterGoOut[IDX_NET], masterAckIn[IDX_NET], 
-						clientRequests);
-			}
-
-						
+			assert(isAllNull(masterGoOut[IDX_NET])) : "ordered traffic calling not supported with HTTP Client.";
+			
+			HTTPClientRequestStage.newInstance(gm, ccm, netRequestPipes, clientRequests);
+							
 		}
 	}
 

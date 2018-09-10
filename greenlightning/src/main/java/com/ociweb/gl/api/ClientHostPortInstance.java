@@ -23,7 +23,8 @@ public class ClientHostPortInstance {
 	final JSONExtractorCompleted extractor;	
 	
 	//cache for the active connection
-	private long connectionId=-1;
+	private long connectionId = -1;
+	private long prevConnectionId = -1;
 
 	
 	/**
@@ -82,17 +83,27 @@ public class ClientHostPortInstance {
 	 * @param id number to use for connection id
 	 */
 	void setConnectionId(long id) {
-		connectionId = id;		
+		if (id!=connectionId) {
+			assert(-1!=id) : "Can not clear connectionId, only set a new one.";
+			prevConnectionId = connectionId;
+			connectionId = id;		
+		}
 	}
-
+	
+	
 	/**
 	 * To get the connection id for the session
 	 * @return long connectionId
 	 */
-	long getConnectionId() {
+	public long getConnectionId() {
 		return connectionId;
 	}
 
+	public long getPrevConnectionId() {
+		return prevConnectionId;
+	}
+	
+	
 	/**
 	 * @return int sessionCount
 	 */

@@ -38,7 +38,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
     private Number rate;
     private long releaseWindow = 2; //stay here if work will be available in this many ms.
     
-    private final MsgRuntime<?,?> runtime;
+    private final MsgRuntime<?,?,?> runtime;
 	private static final Logger logger = LoggerFactory.getLogger(AbstractTrafficOrderedStage.class);
 
 	//////////////////////////////////////////
@@ -57,7 +57,7 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	 * 
 	 */
 	public AbstractTrafficOrderedStage(GraphManager graphManager, 
-			MsgRuntime<?,?> runtime,
+			MsgRuntime<?,?,?> runtime,
 			BuilderImpl hardware,
 			Pipe<?>[] inputData,
 			Pipe<TrafficReleaseSchema>[] goPipe,

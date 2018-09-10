@@ -3,7 +3,6 @@ package com.ociweb.gl.api;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
@@ -56,12 +55,13 @@ public class HTTPRequestService {
 		
 		if (msgCommandChannel.goHasRoom() && Pipe.hasRoomForWrite(msgCommandChannel.httpRequest) ) {
 								        	    
-			int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_CLOSE_104);
-			
+			int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_CLOSECONNECTION_104);
+
 			Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);	
 			Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
-			Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
-			
+			Pipe.addIntValue(session.hostId, msgCommandChannel.httpRequest);
+			Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
+					
 			Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
 			Pipe.publishWrites(msgCommandChannel.httpRequest);
 		        		
@@ -87,68 +87,28 @@ public class HTTPRequestService {
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
-//		if (session.getConnectionId()<0) {
-//			
-//			final long id = ClientCoordinator.lookup(
-//					session.hostId, 
-//					session.port, 
-//					session.sessionId);
-//			if (id>=0) {
-//				session.setConnectionId(id);
-//			}
-//		}
 		session.setConnectionId(ClientCoordinator.lookup(
-													session.hostId, 
-													session.port, 
-													session.sessionId));
-		
+				session.hostId, 
+				session.port, 
+				session.sessionId));
 		
 		//////////////////////
 		//get the cached connection ID so we need not deal with the host again
 		/////////////////////
 
 		if (msgCommandChannel.goHasRoom() ) {
-		
-			if (session.getConnectionId()<0) {
-						
+					
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPGET_100);
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_GET_200);
 					
 					int lookupHTTPClientPipe = msgCommandChannel.builder.lookupTargetPipe(session, msgCommandChannel.listener);
 					
-					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
-					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
-					Pipe.addUTF8(route, msgCommandChannel.httpRequest);		    	
-					
-					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
-				    DataOutputBlobWriter.openField(hw);
-				    if (null!=headers) {
-				    	headers.write(msgCommandChannel.headerWriter.target(hw));
-				    }
-				    hw.closeLowLevelField();
-					
-				    Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
-				    Pipe.publishWrites(msgCommandChannel.httpRequest);
-					
-					MsgCommandChannel.publishGo(1, msgCommandChannel.builder.netIndex(), msgCommandChannel);
-					
-					return true;
-				}
-			} else {
-				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
-					
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPGET_200);
-					
-					int lookupHTTPClientPipe = msgCommandChannel.builder.lookupTargetPipe(session, msgCommandChannel.listener);
-					
-					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
-					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
-					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
-					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.hostId, msgCommandChannel.httpRequest);
 					Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
+					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
 					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
 			
 					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
@@ -165,7 +125,7 @@ public class HTTPRequestService {
 					
 					return true;
 				}
-			}
+			
 			
 		}
 		return false;
@@ -187,72 +147,24 @@ public class HTTPRequestService {
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		assert(null!=session);
 		
-	//	System.err.println("post "+session.getConnectionId());
-		
-//		if (session.getConnectionId()<0) {
-//			
-//			final long id = ClientCoordinator.lookup(
-//														session.hostId, 
-//														session.port, 
-//														session.sessionId);
-//	//		System.err.println("lookup "+id+"  "+lookupHostId);
-//			if (id>=0) {
-//				session.setConnectionId(id); //TODO: if connection ID changes but not negative how do we get the new one?
-//			}
-//		}
 		session.setConnectionId(ClientCoordinator.lookup(
-														session.hostId, 
-														session.port, 
-														session.sessionId));
-		
+				session.hostId, 
+				session.port, 
+				session.sessionId));
+
 		if (msgCommandChannel.goHasRoom() ) { 
 	
 			int lookupHTTPClientPipe = msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId);
-			
-//	System.out.println("YYY "+lookupHTTPClientPipe+"  "+session.sessionId);
-			
-			if (session.getConnectionId()<0) {
-			
-				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
-					
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_HTTPPOST_101);
-					
-					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
-					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
-					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);					
-					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
-					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
-						
-					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.openOutputStream(msgCommandChannel.httpRequest);
-					if (null!=headers) {
-						headers.write(msgCommandChannel.headerWriter.target(hw));
-					}
-					hw.closeLowLevelField();
-					
-					DataOutputBlobWriter<ClientHTTPRequestSchema> pw = Pipe.openOutputStream(msgCommandChannel.httpRequest);
-					payload.write(pw);
-					pw.closeLowLevelField();
-					
-				    Pipe.confirmLowLevelWrite(msgCommandChannel.httpRequest, size);
-				    Pipe.publishWrites(msgCommandChannel.httpRequest);
-					
-					MsgCommandChannel.publishGo(1, msgCommandChannel.builder.netIndex(), msgCommandChannel);
-						
-					return true;
-				}
-				
-			} else {
-				
+							
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {					
 
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_FASTHTTPPOST_201);			
-					long conId = session.getConnectionId();
-
-					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_POST_201);			
+			
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
-					Pipe.addByteArray(session.hostBytes, msgCommandChannel.httpRequest);
-					Pipe.addLongValue(conId, msgCommandChannel.httpRequest);
+					Pipe.addIntValue(session.hostId, msgCommandChannel.httpRequest);
+					Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
+					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);					 
 						
 					//path
 					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
@@ -276,7 +188,7 @@ public class HTTPRequestService {
 					
 					return true;
 				}
-			}
+			
 		} 
 		return false;
 	}

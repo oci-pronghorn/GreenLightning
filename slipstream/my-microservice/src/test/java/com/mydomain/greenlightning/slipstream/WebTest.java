@@ -203,13 +203,7 @@ public class WebTest {
 					 }
 					 				
 				}
-				 try {
-					 System.gc();
-					 Thread.sleep(500);
-					 System.gc();
-				} catch (InterruptedException e) {
-					//delay between server tests
-				}
+
 				 
 			}
 		}

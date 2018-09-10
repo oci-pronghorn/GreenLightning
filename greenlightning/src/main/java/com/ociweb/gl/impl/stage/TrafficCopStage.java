@@ -33,7 +33,7 @@ public class TrafficCopStage extends PronghornStage {
     
     private int goPendingOnPipe = -1;
     private int goPendingOnPipeCount = 0;
-    private MsgRuntime<?,?> runtime;
+    private MsgRuntime<?,?,?> runtime;
     private BuilderImpl builder;
     private boolean shutdownInProgress;
     
@@ -41,7 +41,7 @@ public class TrafficCopStage extends PronghornStage {
 								            Pipe<TrafficOrderSchema> primaryIn, 
 								            Pipe<TrafficAckSchema>[] ackIn,  
 								            Pipe<TrafficReleaseSchema>[] goOut, 
-								            MsgRuntime<?,?> runtime,
+								            MsgRuntime<?,?,?> runtime,
 								            BuilderImpl builder) {
     
     	return new TrafficCopStage(graphManager, msAckTimeout, primaryIn, ackIn, goOut, runtime, builder);	
@@ -51,7 +51,7 @@ public class TrafficCopStage extends PronghornStage {
     		               Pipe<TrafficOrderSchema> primaryIn, 
     		               Pipe<TrafficAckSchema>[] ackIn,  
     		               Pipe<TrafficReleaseSchema>[] goOut, 
-    		               MsgRuntime<?,?> runtime,
+    		               MsgRuntime<?,?,?> runtime,
     		               BuilderImpl builder) {
     	super(graphManager, join(ackIn, primaryIn), goOut);
     	

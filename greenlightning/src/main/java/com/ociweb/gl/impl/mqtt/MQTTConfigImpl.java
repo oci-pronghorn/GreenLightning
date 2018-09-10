@@ -398,7 +398,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	 *
 	 * @param msgRuntime MsgRuntime<?, ?> arg used in EgressMQTTStage
 	 */
-	public void finalizeDeclareConnections(MsgRuntime<?,?> msgRuntime) {
+	public void finalizeDeclareConnections(MsgRuntime<?,?,?> msgRuntime) {
 		configStage = BridgeConfigStage.Finalized;
 		assert(internalTopicsXmit.length == externalTopicsXmit.length);
 		assert(internalTopicsXmit.length == convertersXmit.length);

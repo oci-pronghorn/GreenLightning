@@ -28,7 +28,7 @@ public class IngressMQTTBehavior implements TickListener {
 	
 	//TODO: can the IngressConverter be used to parse JSON and do other tasks??
 	
-	public IngressMQTTBehavior(MsgRuntime<?, ?> msgRuntime, 
+	public IngressMQTTBehavior(MsgRuntime<?,?,?> msgRuntime, 
 								CharSequence[] externalTopicsSub,
 								CharSequence[] internalTopicsSub, 
 								IngressConverter[] convertersSub, 

@@ -53,7 +53,7 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.stage.test.PipeCleanerStage;
 
-public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
+public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G extends MsgRuntime<B,L,G> > {
  
     public static final Logger logger = LoggerFactory.getLogger(MsgRuntime.class);
 
@@ -570,7 +570,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter> {
 			
 			for (int i = 0; i < p; i++) {
 				constructingParallelInstance(i);
-				builder.behaviorDefinition().declareBehavior((GreenRuntime)this);  //this creates all the modules for this parallel instance								
+				builder.behaviorDefinition().declareBehavior((G)this);  //this creates all the modules for this parallel instance								
 			}	
 		} else {
 			if (builder.parallelTracks()>1) {
