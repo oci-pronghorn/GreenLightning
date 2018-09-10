@@ -812,7 +812,7 @@ public class ParallelClientLoadTester implements GreenApp {
 						System.out.println("must leave the abandonSlowConnections feature on in ClientSocketReaderStage or hangs like these will happen");
 						
 					} else {
-					
+						ClientAbandonConnectionScanner.showScan = true;
 						ClientAbandonConnectionScanner slow = this.builder.getClientCoordinator().scanForSlowConnections();
 						ClientConnection candidate = slow.leadingCandidate();
 						if (null!=candidate) {
@@ -831,6 +831,24 @@ public class ParallelClientLoadTester implements GreenApp {
 //							
 //						}
 							
+         	        	
+//         	        	426830:32:06.045 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
+//         	        			total requests in flight 1, last used connection -1 prev con -1
+//         	        			Con: 8 registered:true valid:true Outstanding:001 min new:true atIdx: 8 closedNoticeSent:false
+//         	        			FOUND CANDIDATE: ConId:6 127.0.0.1:7244
+//         	        			FOUND: null
+//         	        			FOUND: null
+//         	        			FOUND: null
+//         	        			FOUND: null
+//
+//         	        			426830:32:26.045 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
+//         	        			total requests in flight 1, last used connection -1 prev con -1
+//         	        			Con: 8 registered:true valid:true Outstanding:001 min new:true atIdx: 8 closedNoticeSent:false
+//         	        			FOUND CANDIDATE: ConId:6 127.0.0.1:7244
+//         	        			FOUND: null
+//         	        			FOUND: null
+//         	        			FOUND: null
+//         	        			FOUND: null
 						
 					}
 					
