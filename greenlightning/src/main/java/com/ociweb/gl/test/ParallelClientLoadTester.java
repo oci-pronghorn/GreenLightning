@@ -22,8 +22,10 @@ import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
 import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.pronghorn.network.ClientAbandonConnectionScanner;
 import com.ociweb.pronghorn.network.ClientConnection;
 import com.ociweb.pronghorn.network.ClientCoordinator;
+import com.ociweb.pronghorn.network.ClientSocketReaderStage;
 import com.ociweb.pronghorn.network.TLSCerts;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
@@ -802,6 +804,58 @@ public class ParallelClientLoadTester implements GreenApp {
 									);						
 						}	
 					}
+					
+					/*
+426819:38:38.031 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
+total requests in flight 1, last used connection -1 prev con -1
+Con: 8 registered:true valid:true Outstanding:034 sec new:true
+
+426819:38:58.031 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
+total requests in flight 1, last used connection -1 prev con -1
+Con: 8 registered:true valid:true Outstanding:054 sec new:true
+
+426819:39:18.031 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
+total requests in flight 1, last used connection -1 prev con -1
+Con: 8 registered:true valid:true Outstanding:074 sec new:true
+
+426819:39:38.031 status for track: 0 progress:1/1250  No progress has been made! Has the server stopped responding?
+total requests in flight 1, last used connection -1 prev con -1
+Con: 8 registered:true valid:true Outstanding:001 min new:true
+
+ 
+					 * 
+					 */
+					if (!ClientSocketReaderStage.abandonSlowConnections) {
+						System.out.println("must leave the abandonSlowConnections feature on in ClientSocketReaderStage or hangs like these will happen");
+						
+					} else {
+					
+						ClientAbandonConnectionScanner slow = this.builder.getClientCoordinator().scanForSlowConnections();
+						ClientConnection candidate = slow.leadingCandidate();
+						if (null!=candidate) {
+							System.out.println("FOUND CANDIDATE: "+candidate);
+						}
+						ClientConnection[] timedOut = slow.timedOutConnections();
+         	        	int i = timedOut.length;
+         	        	while (--i >= 0) {
+         	        		System.out.println("FOUND: "+timedOut[i]);
+         	        	}
+						
+//						PronghornStage[] csrs = GraphManager.allStagesByType(this.builder.gm, ClientSocketReaderStage.class);
+//						for (int i = 0; i<csrs.length; i++) {
+//							ClientSocketReaderStage stage = (ClientSocketReaderStage)csrs[i];
+//							//TODO: what to do?
+//							
+//						}
+							
+						
+					}
+					
+					
+					//TODO: is the dropped connections still looked for?
+					
+					
+					
 					
 					
 				}
