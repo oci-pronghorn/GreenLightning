@@ -1,6 +1,8 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.*;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
+import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -15,7 +17,7 @@ public class Timer implements GreenApp
 	}
 	
     @Override
-    public void declareConfiguration(Builder config) {
+    public void declareConfiguration(GreenFramework config) {
     	config.setTimerPulseRate(rate); //the rate at which time is checked in milliseconds 
     }
 

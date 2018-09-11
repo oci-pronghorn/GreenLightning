@@ -1,7 +1,7 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.util.AppendableProxy;
 import com.ociweb.pronghorn.util.Appendables;
@@ -35,7 +35,7 @@ public class StateMachine implements GreenApp
 	}
 	
     @Override
-    public void declareConfiguration(Builder c) {
+    public void declareConfiguration(GreenFramework c) {
     	
     	c.startStateMachineWith(StopLight.Stop);
     	c.setTimerPulseRate(rate);

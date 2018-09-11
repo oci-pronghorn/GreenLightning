@@ -39,82 +39,86 @@ public class WebTest {
 		runtime.shutdownRuntime();	
 		runtime = null;
 	}
+		
+	//Fix these examples now...
+	//build this once then see how we need to adjust it
+	////////
 	
-//	@Test
-//	public void getExampleTest() {
-//		
-//		StringBuilder results = LoadTester.runClient(
-//				()-> null, 
-//				(r)->{					
-//						return  (HTTPContentTypeDefaults.PLAIN==r.contentType()) 
-//								&& "beginning of text file\n".equals(r.structured().readPayload().readUTFFully());
-//					  }, 
-//				"/testPageB", 
-//				useTLS, telemetry, 
-//				parallelTracks, cyclesPerTrack, 
-//				host, port, timeoutMS);		
-//		
-//		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
-//
-//	}
+	@Test
+	public void getExampleTest() {
+		
+		StringBuilder results = LoadTester.runClient(
+				()-> null, 
+				(r)->{					
+						return  (HTTPContentTypeDefaults.PLAIN==r.contentType()) 
+								&& "beginning of text file\n".equals(r.structured().readPayload().readUTFFully());
+					  }, 
+				"/testPageB", 
+				useTLS, telemetry, 
+				parallelTracks, cyclesPerTrack, 
+				host, port, timeoutMS);		
+		
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
+
+	}
 	
-//	@Test
-//	public void postExampleTest() {
-//		
-//		 Writable testData = new Writable() {			 
-//				@Override
-//				public void write(ChannelWriter writer) {
-//					writer.append("{\"person\":{\"name\":\"bob\",\"age\":42}}");
-//				}						
-//			};
-//		
-//		StringBuilder results = LoadTester.runClient(
-//				()->testData, 
-//				(r)->{
-//						String readUTFFully = r.structured().readPayload().readUTFFully();
-//						boolean isMatch = "{\"name\":\"bob\",\"isLegal\":true}".equals(readUTFFully);
-//						if (!isMatch) {
-//							System.out.println("bad response: "+readUTFFully);
-//						}
-//						return isMatch && (HTTPContentTypeDefaults.JSON == r.contentType());
-//					  }, 
-//				"/testJSON", 
-//				useTLS, telemetry, 
-//				parallelTracks, cyclesPerTrack, 
-//				host, port, timeoutMS);		
-//		
-//		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
-//
-//	}
+	@Test
+	public void postExampleTest() {
+		
+		 Writable testData = new Writable() {			 
+				@Override
+				public void write(ChannelWriter writer) {
+					writer.append("{\"person\":{\"name\":\"bob\",\"age\":42}}");
+				}						
+			};
+		
+		StringBuilder results = LoadTester.runClient(
+				()->testData, 
+				(r)->{
+						String readUTFFully = r.structured().readPayload().readUTFFully();
+						boolean isMatch = "{\"name\":\"bob\",\"isLegal\":true}".equals(readUTFFully);
+						if (!isMatch) {
+							System.out.println("bad response: "+readUTFFully);
+						}
+						return isMatch && (HTTPContentTypeDefaults.JSON == r.contentType());
+					  }, 
+				"/testJSON", 
+				useTLS, telemetry, 
+				parallelTracks, cyclesPerTrack, 
+				host, port, timeoutMS);		
+		
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
+
+	}
 	
 	
-//	@Test
-//	public void jsonExampleTest() {
-//		
-//		Person person = new Person("bob",42);
-//		JSONRenderer<Person> renderer = new JSONRenderer<Person>()
-//				.beginObject()
-//				.beginObject("person")
-//				    .string("name", (o,t)->t.append(o.name))
-//				    .integer("age", o->o.age)
-//				.endObject()
-//				.endObject();
-//
-//		StringBuilder results = LoadTester.runClient(
-//				renderer,
-//				()->person,				
-//				(r)->{
-//						return "{\"name\":\"bob\",\"isLegal\":true}".equals(r.structured().readPayload().readUTFFully())
-//								&& (HTTPContentTypeDefaults.JSON == r.contentType());
-//					  }, 
-//				"/testJSON", 
-//				useTLS, telemetry, 
-//				parallelTracks, cyclesPerTrack, 
-//				host, port, timeoutMS);		
-//		
-//		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
-//
-//	}
+	@Test
+	public void jsonExampleTest() {
+		
+		Person person = new Person("bob",42);
+		JSONRenderer<Person> renderer = new JSONRenderer<Person>()
+				.beginObject()
+				.beginObject("person")
+				    .string("name", (o,t)->t.append(o.name))
+				    .integer("age", o->o.age)
+				.endObject()
+				.endObject();
+
+		StringBuilder results = LoadTester.runClient(
+				renderer,
+				()->person,				
+				(r)->{
+						return "{\"name\":\"bob\",\"isLegal\":true}".equals(r.structured().readPayload().readUTFFully())
+								&& (HTTPContentTypeDefaults.JSON == r.contentType());
+					  }, 
+				"/testJSON", 
+				useTLS, telemetry, 
+				parallelTracks, cyclesPerTrack, 
+				host, port, timeoutMS);		
+		
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
+
+	}
 	
 	
 }

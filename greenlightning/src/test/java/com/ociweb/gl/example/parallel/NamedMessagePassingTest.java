@@ -92,7 +92,7 @@ public class NamedMessagePassingTest {
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
 
 		//spikes are less frequent when the wifi network is off
-		int cyclesPerTrack = 100_000; //*(1+99_9999);
+		int cyclesPerTrack = 200_000; //*(1+99_9999);
 		int parallelTracks = 1; 
 
 		//TODO: test multiple in flight while some are killed..

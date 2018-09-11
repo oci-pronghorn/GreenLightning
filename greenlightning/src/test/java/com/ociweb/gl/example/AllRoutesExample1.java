@@ -9,7 +9,7 @@ public class AllRoutesExample1 implements GreenApp {
 	}
 	
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		builder.useHTTP1xServer(8082, 2, this::declareParallelBehavior)
 		       .setHost("localhost")
 		       .useInsecureServer(); //127.0.0.1

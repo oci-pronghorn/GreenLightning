@@ -1,7 +1,7 @@
 package com.ociweb.gl.example.parallel;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 
@@ -29,7 +29,7 @@ public class NamedMessagePassingApp implements GreenApp {
 	}
 	
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		
 		builder.useHTTP1xServer(8081, tracks, this::declareParallelBehavior)
 		       .useInsecureServer()

@@ -1,7 +1,7 @@
 package com.ociweb.gl.example.personApp;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.struct.StructBuilder;
 import com.ociweb.pronghorn.struct.StructType;
@@ -9,7 +9,7 @@ import com.ociweb.pronghorn.struct.StructType;
 public class PersonApp implements GreenApp {
 
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 
 		builder.defineRoute().parseJSON()
 								.stringField("firstName",GreenField.firstName)

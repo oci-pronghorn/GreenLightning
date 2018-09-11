@@ -1,7 +1,7 @@
 package com.mydomain.greenlightning.slipstream;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.json.JSONRequired;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
@@ -20,7 +20,7 @@ public class MyMicroservice implements GreenApp {
 	}
 	
     @Override
-    public void declareConfiguration(Builder builder) {
+    public void declareConfiguration(GreenFramework builder) {
 
     	HTTPServerConfig c = builder
     	  .useHTTP1xServer(port)

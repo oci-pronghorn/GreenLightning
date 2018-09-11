@@ -1,8 +1,8 @@
 package com.ociweb.gl.example;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
@@ -15,7 +15,7 @@ public class AllRoutesExample2 implements GreenApp {
 	}
 
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		builder.useHTTP1xServer(8082);
 		int a = builder.defineRoute().path("/routeOne").routeId();
 		int b = builder.defineRoute().path("/second?a=#{value}").routeId();

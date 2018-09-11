@@ -1,6 +1,6 @@
 package com.ociweb.gl.json;
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 
 public class JSONServerApp implements GreenApp {
@@ -9,7 +9,7 @@ public class JSONServerApp implements GreenApp {
     
     // Declare connections
     @Override
-    public void declareConfiguration(Builder builder) {
+    public void declareConfiguration(GreenFramework builder) {
         // Setup the server
         builder.useHTTP1xServer(8068).setHost("127.0.0.1")
                 .useInsecureServer()

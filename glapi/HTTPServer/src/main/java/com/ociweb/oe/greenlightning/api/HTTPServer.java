@@ -1,8 +1,8 @@
 package com.ociweb.oe.greenlightning.api;
 
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
@@ -35,7 +35,7 @@ public class HTTPServer implements GreenApp
 	}
 	
     @Override
-    public void declareConfiguration(Builder c) {
+    public void declareConfiguration(GreenFramework c) {
         
 		HTTPServerConfig server = c.useHTTP1xServer(port)
 		 .setHost(host)

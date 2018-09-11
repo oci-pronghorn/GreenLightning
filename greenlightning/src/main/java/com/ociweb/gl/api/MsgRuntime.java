@@ -19,6 +19,7 @@ import com.ociweb.gl.impl.BridgeConfigImpl;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.ChildClassScanner;
 import com.ociweb.gl.impl.ChildClassScannerVisitor;
+import com.ociweb.gl.impl.GreenFrameworkImpl;
 import com.ociweb.gl.impl.PrivateTopic;
 import com.ociweb.gl.impl.schema.MessagePrivate;
 import com.ociweb.gl.impl.schema.MessageSubscription;
@@ -883,7 +884,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 	
     public Builder getBuilder(){
     	if(this.builder==null){    	    
-    	    this.builder = (B) new BuilderImpl(gm,args);
+    	    this.builder = (B) new GreenFrameworkImpl(gm,args);
     	}
     	return this.builder;
     }

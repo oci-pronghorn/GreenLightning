@@ -5,11 +5,11 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.DelayService;
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPClientConfig;
 import com.ociweb.gl.api.HTTPRequestService;
@@ -232,7 +232,7 @@ public class ParallelClientLoadTester implements GreenApp {
 	}
 	
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		
 		HTTPClientConfig clientConfig;
 		if (insecureClient) {
@@ -807,7 +807,6 @@ public class ParallelClientLoadTester implements GreenApp {
 									);						
 						}	
 					}
-					
 
 					if (!ClientSocketReaderStage.abandonSlowConnections) {
 						System.out.println("must leave the abandonSlowConnections feature on in ClientSocketReaderStage or hangs like these will happen");
@@ -822,7 +821,9 @@ public class ParallelClientLoadTester implements GreenApp {
 						ClientConnection[] timedOut = slow.timedOutConnections();
          	        	int i = timedOut.length;
          	        	while (--i >= 0) {
-         	        		System.out.println("FOUND: "+timedOut[i]);
+         	        		if (null!=timedOut[i]) {
+         	        			System.out.println("FOUND: "+timedOut[i]);
+         	        		}
          	        	}					
 					}
 				}

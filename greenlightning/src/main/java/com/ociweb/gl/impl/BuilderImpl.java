@@ -22,7 +22,6 @@ import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.DeclareBehavior;
 import com.ociweb.gl.api.GreenCommandChannel;
-import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPClientConfig;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseReader;
@@ -106,7 +105,7 @@ import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 
-public class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builder {
+public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builder<R> {
 
 	private static final int MIN_CYCLE_RATE = 1; //cycle rate can not be zero
 
@@ -145,7 +144,7 @@ public class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builder {
 	public Enum<?> beginningState;
     
 	private int behaviorTracks = 1;//default is one
-    private DeclareBehavior<GreenRuntime> behaviorTracksDefinition;
+    private DeclareBehavior<R> behaviorTracksDefinition;
     
     
 	private static final int BehaviorMask = 1<<31;//high bit on
@@ -362,9 +361,9 @@ public class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builder {
 		}
 	
 		if (this.behaviorTracksDefinition == null) {
-			this.behaviorTracksDefinition = new DeclareBehavior<GreenRuntime>() {
+			this.behaviorTracksDefinition = new DeclareBehavior<R>() {
 				@Override
-				public void declareBehavior(GreenRuntime runtime) {
+				public void declareBehavior(R runtime) {
 				}				
 			};
 		}
@@ -373,7 +372,7 @@ public class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builder {
 	}
 	
 	@Override
-	public HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<GreenRuntime> behaviorDefinition) {
+	public HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<R> behaviorDefinition) {
 		if (server != null) {
 			throw new UnsupportedOperationException("Server already enabled, microservice runtime only supports one server.");
 		}
@@ -937,12 +936,12 @@ public class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builder {
 		return behaviorTracks;
 	}
 	
-	public final DeclareBehavior<GreenRuntime> behaviorDefinition() {
+	public final DeclareBehavior<R> behaviorDefinition() {
 		return behaviorTracksDefinition;
 	}
 	
 	@Override
-	public void parallelTracks(int trackCount, DeclareBehavior<GreenRuntime> behaviorDefinition) {
+	public void parallelTracks(int trackCount, DeclareBehavior<R> behaviorDefinition) {
 		assert(trackCount>0);
 		
 		this.behaviorTracks = trackCount;

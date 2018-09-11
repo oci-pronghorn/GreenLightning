@@ -1,11 +1,10 @@
 package com.mydomain.greenlightning.slipstream;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPClientConfig;
-import com.ociweb.json.JSONRequired;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
@@ -21,7 +20,7 @@ public class MyProxy implements GreenApp {
 	
 	
 	@Override
-    public void declareConfiguration(Builder builder) {
+    public void declareConfiguration(GreenFramework builder) {
    	
     	HTTPServerConfig server = builder.useHTTP1xServer(8080)
     	.setConcurrentChannelsPerDecryptUnit(4)

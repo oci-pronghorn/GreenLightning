@@ -2,6 +2,7 @@ package com.ociweb.gl.example.blocking;
 
 import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.PubSubFixedTopicService;
@@ -20,7 +21,7 @@ public class BlockingExampleApp implements GreenApp {
 	}
 
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		
 		builder.useHTTP1xServer(8083, 2, this::declareParallelBehavior)
 	       .useInsecureServer()

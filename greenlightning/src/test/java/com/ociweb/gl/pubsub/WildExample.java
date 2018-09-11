@@ -1,7 +1,7 @@
 package com.ociweb.gl.pubsub;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 
 public class WildExample implements GreenApp {
@@ -14,7 +14,7 @@ public class WildExample implements GreenApp {
 	}
 	
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		
 	}
 

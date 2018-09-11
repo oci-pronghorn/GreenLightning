@@ -1,7 +1,7 @@
 package com.ociweb.gl.network;
 
-import com.ociweb.gl.api.Builder;
 import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.Writable;
@@ -23,7 +23,7 @@ public class OpenCloseTestServer implements GreenApp {
 	}
 
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		
 		if (telemetry) {
 			builder.enableTelemetry(8076);

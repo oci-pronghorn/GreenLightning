@@ -1,6 +1,10 @@
 package com.ociweb.oe.greenlightning.api;
 
-import com.ociweb.gl.api.*;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.MQTTBridge;
+import com.ociweb.gl.api.MQTTQoS;
 import com.ociweb.oe.greenlightning.api.behaviors.EgressBehavior;
 import com.ociweb.oe.greenlightning.api.behaviors.IngressBehavior;
 import com.ociweb.oe.greenlightning.api.behaviors.TimeBehavior;
@@ -29,7 +33,7 @@ public class MQTTClient implements GreenApp {
 	}
 	
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		
 		//TODO: the base is wrong for a script since they do not match total...
 		

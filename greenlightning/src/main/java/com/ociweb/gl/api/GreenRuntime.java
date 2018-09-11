@@ -1,6 +1,7 @@
 package com.ociweb.gl.api;
 
 import com.ociweb.gl.impl.BuilderImpl;
+import com.ociweb.gl.impl.GreenFrameworkImpl;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
@@ -74,7 +75,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, Listener
 			                       Runnable dirtyShutdown
 								) {
 		GreenRuntime runtime = new GreenRuntime(args, app.getClass().getSimpleName());
-		app.declareConfiguration(runtime.getBuilder());
+		app.declareConfiguration((GreenFramework)runtime.getBuilder());
 
 	    GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
 
@@ -196,12 +197,12 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, Listener
 	private static ScriptedNonThreadScheduler test(GreenApp app, GreenRuntime runtime) {
 		//force hardware to TestHardware regardless of where or what platform its run on.
         //this is done because this is the test() method and must behave the same everywhere.
-        runtime.builder = new BuilderImpl<GreenRuntime>(runtime.gm,runtime.args);
+        runtime.builder = new GreenFrameworkImpl(runtime.gm,runtime.args);
 
         //lowered for tests, we want tests to run faster, tests probably run on bigger systems.
         runtime.builder.setDefaultRate(10_000);
         
-    	app.declareConfiguration(runtime.builder);
+    	app.declareConfiguration((GreenFramework)runtime.builder);
         GraphManager.addDefaultNota(runtime.gm, GraphManager.SCHEDULE_RATE, runtime.builder.getDefaultSleepRateNS());
 
         runtime.declareBehavior(app);

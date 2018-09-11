@@ -1,8 +1,15 @@
 package com.ociweb.gl.example;
 
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenCommandChannel;
+import com.ociweb.gl.api.GreenFramework;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.PubSubListener;
+import com.ociweb.gl.api.PubSubService;
+import com.ociweb.gl.api.TimeListener;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
-import com.ociweb.gl.api.*;
 
 public class MassiveBehavior implements GreenApp {
 
@@ -11,7 +18,7 @@ public class MassiveBehavior implements GreenApp {
 	}
 	
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 		builder.setTimerPulseRate(500);//1);//TimeTrigger.OnTheSecond);
 		builder.enableTelemetry();
 

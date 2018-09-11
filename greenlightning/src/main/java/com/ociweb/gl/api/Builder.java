@@ -1,11 +1,9 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.json.JSONExtractorCompleted;
 import com.ociweb.json.decode.JSONExtractor;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
-import com.ociweb.pronghorn.network.http.CompositePath;
 import com.ociweb.pronghorn.struct.StructBuilder;
 
 /**
@@ -18,7 +16,7 @@ import com.ociweb.pronghorn.struct.StructBuilder;
  *
  * @author Nathan Tippy
  */
-public interface Builder extends ArgumentProvider {
+public interface Builder<R extends MsgRuntime<?,?,R>> extends ArgumentProvider {
 
 
     /**
@@ -60,7 +58,7 @@ public interface Builder extends ArgumentProvider {
      * @return number of parallel tracks declared for this builder
      */
     int parallelTracks();
-	void parallelTracks(int tracks, DeclareBehavior<GreenRuntime> behaviorDefinition);
+	void parallelTracks(int tracks, DeclareBehavior<R> behaviorDefinition);
 
 
 	RouteDefinition defineRoute(HTTPHeader ... headers);
@@ -88,7 +86,7 @@ public interface Builder extends ArgumentProvider {
      */
 	HTTPServerConfig useHTTP1xServer(int bindPort);
 	
-	HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<GreenRuntime> behaviorDefinition);
+	HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<R> behaviorDefinition);
 	
 
     /**

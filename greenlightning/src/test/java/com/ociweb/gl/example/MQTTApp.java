@@ -1,10 +1,19 @@
 package com.ociweb.gl.example;
 
-import com.ociweb.gl.api.*;
+import java.util.Date;
+
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.MQTTBridge;
+import com.ociweb.gl.api.MQTTQoS;
+import com.ociweb.gl.api.MsgCommandChannel;
+import com.ociweb.gl.api.PubSubListener;
+import com.ociweb.gl.api.PubSubService;
+import com.ociweb.gl.api.TimeListener;
+import com.ociweb.gl.api.Writable;
 import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
-
-import java.util.Date;
 
 public class MQTTApp implements GreenApp {
 
@@ -18,7 +27,7 @@ public class MQTTApp implements GreenApp {
     }
 		
 	@Override
-	public void declareConfiguration(Builder builder) {
+	public void declareConfiguration(GreenFramework builder) {
 
 		mqttConfig = builder.useMQTT("127.0.0.1", MQTTBridge.defaultPort, "my name")
 							.cleanSession(true)
