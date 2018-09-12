@@ -2,8 +2,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
-  <artifactId>Startup</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <artifactId>startup</artifactId>
+  <version>1.0.0</version>
   
   <properties>
     <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
@@ -12,7 +12,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   
-  <repositories>
+  <!--  repositories>
     
     <repository>
       <releases>
@@ -42,14 +42,14 @@
       <layout>default</layout>
     </repository>
         
-  </repositories>
+  </repositories -->
   
   
   <dependencies>
   		<dependency>
 	  		<groupId>com.ociweb</groupId>
             <artifactId>greenlightning</artifactId>
-            <version>[1.0.0-SNAPSHOT,1.1.0)</version>
+            <version>1.0.0</version>
     	</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

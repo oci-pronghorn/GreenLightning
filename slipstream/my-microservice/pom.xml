@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mydomain.greenlightning.slipstream</groupId>
 	<artifactId>my-microservice</artifactId>
-	<version>1.0-SNAPSHOT</version>
+	<version>1.0.0</version>
 
 	<properties>
 		<keystore.path>./certificates/ocikeystore.jks</keystore.path>
@@ -23,7 +23,7 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
-	<repositories>
+	<!-- repositories>
 
 		<repository>
 			<releases>
@@ -55,14 +55,14 @@
 			<layout>default</layout>
 		</repository>
 
-	</repositories>
+	</repositories -->
 
 
 	<dependencies>
 		<dependency>
 			<groupId>com.ociweb</groupId>
 			<artifactId>greenlightning</artifactId>
-			<version>[1.0.0-SNAPSHOT,1.1.0)</version>
+			<version>1.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

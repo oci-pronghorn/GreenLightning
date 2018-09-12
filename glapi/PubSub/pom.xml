@@ -3,8 +3,8 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
-  <artifactId>PubSub</artifactId>
-  <version>1.0-SNAPSHOT</version>
+  <artifactId>pub-sub</artifactId>
+  <version>1.0.0</version>
   
   <properties>
     <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
@@ -13,7 +13,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   
-  <repositories>
+  <!-- repositories>
     
     <repository>
       <releases>
@@ -43,14 +43,14 @@
       <layout>default</layout>
     </repository>
         
-  </repositories>
+  </repositories -->
   
   
   <dependencies>
   		<dependency>
 	  		<groupId>com.ociweb</groupId>
             <artifactId>greenlightning</artifactId>
-            <version>[1.0.0-SNAPSHOT,1.1.0)</version>
+            <version>1.0.0</version>
     	</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

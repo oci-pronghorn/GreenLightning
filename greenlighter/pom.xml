@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ociweb</groupId>
     <artifactId>greenlighter</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <description>A Maven archetype for GreenLightning projects</description>
     <url>https://github.com/oci-pronghorn/GreenLighter</url>
@@ -43,7 +43,7 @@
                 <additionalparam>-Xdoclint:none</additionalparam>
             </properties>
         </profile>
-        <profile>
+        <!-- profile>
             <id>cloudbees</id>
             <distributionManagement>
                 <repository>
@@ -51,7 +51,7 @@
                     <url>dav:https://repository-pronghorn.forge.cloudbees.com/release</url>
                 </repository>
             </distributionManagement>
-        </profile>
+        </profile -->
         <profile>
             <id>mvn-central</id>
             <distributionManagement>

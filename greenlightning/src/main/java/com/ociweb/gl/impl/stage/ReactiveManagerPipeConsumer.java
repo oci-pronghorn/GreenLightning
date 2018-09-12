@@ -41,15 +41,16 @@ public class ReactiveManagerPipeConsumer {
 	}
 
 	private static int findPipesWithContent(ReactiveListenerStage r, Pipe[] localInputs, Object localObj,
-			ReactiveOperator[] localOperators, int i, int passes) {
+											ReactiveOperator[] localOperators, int pipeIdx, int passes) {
 
-		while (--i >= 0) {
-			if (!Pipe.hasContentToRead(localInputs[i])) {
-				//most calls are stopping on this if		
+		while (--pipeIdx >= 0) {
+			if (!Pipe.hasContentToRead(localInputs[pipeIdx])) {
+				//most calls are stopping on this if
+				continue;
 			} else {
-				passes = applyToPipeWithData(r, localObj, localOperators, passes, i, localInputs[i]);				
+				passes = applyToPipeWithData(r, localObj, localOperators, passes, pipeIdx, localInputs[pipeIdx]);				
 			}			
-		}
+		}		
 		return passes;
 	}
 

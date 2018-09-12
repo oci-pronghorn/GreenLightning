@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ociweb</groupId>
     <artifactId>greenlightning</artifactId>
-    <version>1.0.0-SNAPSHOT</version>
+    <version>1.0.0</version>
 
     <name>${project.artifactId}</name>
     <description>Open Edge - Green Lightning Micro-Service Runtime</description>
@@ -45,7 +45,7 @@
    </properties>
 
     <profiles>
-        <profile>
+        <!-- profile>
             <id>cloudbees</id>
             <distributionManagement>
                 <repository>
@@ -53,7 +53,7 @@
                     <url>dav:https://repository-pronghorn.forge.cloudbees.com/release</url>
                 </repository>
             </distributionManagement>
-        </profile>
+        </profile -->
         <profile>
             <id>disable-java8-doclint</id>
             <activation>
@@ -118,7 +118,7 @@
         <dependency>
             <groupId>com.ociweb</groupId>
             <artifactId>pronghorn</artifactId>
-            <version>[1.0.2-SNAPSHOT]</version>
+            <version>1.0.2</version>
         </dependency>
 
         <dependency>
@@ -138,7 +138,7 @@
         </dependency>
     </dependencies>
 
-  <repositories>
+  <!-- repositories>
     
     <repository>
       <releases>
@@ -170,7 +170,7 @@
       <layout>default</layout>
     </repository>
         
-  </repositories>
+  </repositories -->
   
     <build>
     

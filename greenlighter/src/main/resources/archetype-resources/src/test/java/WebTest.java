@@ -7,11 +7,19 @@ package ${package};
  */
 import static org.junit.Assert.assertTrue;
 
+import java.util.Random;
+
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.MsgRuntime;
+import com.ociweb.gl.test.LoadTester;
+import com.ociweb.json.encode.JSONRenderer;
+import com.ociweb.pronghorn.util.AppendableBuilder;
+import com.ociweb.pronghorn.util.Appendables;
+import com.test.WebTest.Product;
 
 public class WebTest {
 	
@@ -40,85 +48,83 @@ public class WebTest {
 		runtime = null;
 	}
 		
-	//Fix these examples now...
-	//build this once then see how we need to adjust it
-	////////
-	
-	@Test
-	public void getExampleTest() {
-		
-		StringBuilder results = LoadTester.runClient(
-				()-> null, 
-				(r)->{					
-						return  (HTTPContentTypeDefaults.PLAIN==r.contentType()) 
-								&& "beginning of text file\n".equals(r.structured().readPayload().readUTFFully());
-					  }, 
-				"/testPageB", 
-				useTLS, telemetry, 
-				parallelTracks, cyclesPerTrack, 
-				host, port, timeoutMS);		
-		
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
-
-	}
-	
-	@Test
-	public void postExampleTest() {
-		
-		 Writable testData = new Writable() {			 
-				@Override
-				public void write(ChannelWriter writer) {
-					writer.append("{\"person\":{\"name\":\"bob\",\"age\":42}}");
-				}						
-			};
-		
-		StringBuilder results = LoadTester.runClient(
-				()->testData, 
-				(r)->{
-						String readUTFFully = r.structured().readPayload().readUTFFully();
-						boolean isMatch = "{\"name\":\"bob\",\"isLegal\":true}".equals(readUTFFully);
-						if (!isMatch) {
-							System.out.println("bad response: "+readUTFFully);
-						}
-						return isMatch && (HTTPContentTypeDefaults.JSON == r.contentType());
-					  }, 
-				"/testJSON", 
-				useTLS, telemetry, 
-				parallelTracks, cyclesPerTrack, 
-				host, port, timeoutMS);		
-		
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
-
-	}
-	
-	
-	@Test
-	public void jsonExampleTest() {
-		
-		Person person = new Person("bob",42);
-		JSONRenderer<Person> renderer = new JSONRenderer<Person>()
-				.beginObject()
-				.beginObject("person")
-				    .string("name", (o,t)->t.append(o.name))
-				    .integer("age", o->o.age)
-				.endObject()
-				.endObject();
-
-		StringBuilder results = LoadTester.runClient(
-				renderer,
-				()->person,				
-				(r)->{
-						return "{\"name\":\"bob\",\"isLegal\":true}".equals(r.structured().readPayload().readUTFFully())
-								&& (HTTPContentTypeDefaults.JSON == r.contentType());
-					  }, 
-				"/testJSON", 
-				useTLS, telemetry, 
-				parallelTracks, cyclesPerTrack, 
-				host, port, timeoutMS);		
-		
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
-
-	}
+//	public class Product {
+//		public int id;
+//		public int quantity;
+//		public boolean disabled;
+//		public String name;
+//		
+//		public Product(int i) {
+//			
+//			Random r = new Random(i);
+//			id = i;
+//			quantity = Math.abs(r.nextInt(1000));
+//			disabled = r.nextBoolean();
+//			byte[] temp = new byte[10];
+//			r.nextBytes(temp);
+//			name = Appendables.appendBase64Encoded(new StringBuilder(), temp, 0, temp.length, Integer.MAX_VALUE).toString();
+//
+//		}
+//	}
+//
+//	
+//	private JSONRenderer<Product> renderer = new JSONRenderer<Product>()
+//			.startObject()
+//			.integer(   "id", o->o.id)
+//			.integer(   "quantity", o->o.quantity)
+//			.string(    "name", (o,t)->t.append(o.name))
+//			.bool(      "disabled", o->o.disabled)
+//			.endObject();
+//	
+//	@Test
+//	public void uploadProductsTest() {
+//				
+//				int inFlightBits = 0;
+//				int tracks = 8;
+//				int callsPerTrack = 10000/tracks; 
+//		
+//				StringBuilder uploadConsoleCapture = new StringBuilder();
+//		    	LoadTester.runClient(
+//						(i,w) -> renderer.render(w, new Product((int)i)) ,
+//						(i,r) -> r.statusCode()==200 , 
+//						"/update", 
+//						useTLS, false, 
+//						tracks, callsPerTrack, 
+//						host, port, timeoutMS, inFlightBits,
+//						MsgRuntime.getGraphManager(runtime),						
+//						Appendables.join(uploadConsoleCapture,System.out));	
+//				
+//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(tracks*callsPerTrack))>=0);
+//				
+//				//////////////////////////////////////
+//				//now test that we get the values back
+//				//////////////////////////////////////
+//				
+//				tracks = 1; //this test depends on having sequential tests
+//				callsPerTrack = 10;
+//				
+//				
+//				StringBuilder captured = new StringBuilder();
+//				
+//				LoadTester.runClient(
+//					 null, 
+//					(i,r) -> {
+//							AppendableBuilder target = new AppendableBuilder(1000);								
+//							renderer.render(target, new Product((int)i));
+//							
+//							return  (200 == r.statusCode()) &&
+//									(target.toString().equals(r.structured().readPayload().readUTFFully()))	;
+//							
+//						  }, 
+//					(i) -> "/query?id="+i,
+//					useTLS, false, 
+//					tracks, callsPerTrack, 
+//					host, port, timeoutMS,
+//					captured);		
+//		
+//				 assertTrue(captured.toString(), captured.indexOf("Responses invalid: 0 out of "+(tracks*callsPerTrack))>=0);
+//
+//	}
 	
 	
 }
