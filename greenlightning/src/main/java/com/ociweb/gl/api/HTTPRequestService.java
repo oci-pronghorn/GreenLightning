@@ -76,6 +76,14 @@ public class HTTPRequestService {
 		return httpGet(session,route,null);
 	}
 
+	public boolean httpDelete(ClientHostPortInstance session, CharSequence route) {
+		return httpGet(session,route,null);
+	}
+	
+	public boolean httpHead(ClientHostPortInstance session, CharSequence route) {
+		return httpGet(session,route,null);
+	}
+	
 	/**
 	 *
 	 * @param session ClientHostPortInstance arg used in PipeWriter
@@ -84,6 +92,19 @@ public class HTTPRequestService {
 	 * @return true or false
 	 */
 	public boolean httpGet(ClientHostPortInstance session, CharSequence route, HeaderWritable headers) {
+		return httpWithoutPayload(session, route, headers, ClientHTTPRequestSchema.MSG_GET_200);
+	}
+
+	public boolean httpDelete(ClientHostPortInstance session, CharSequence route, HeaderWritable headers) {
+		return httpWithoutPayload(session, route, headers, ClientHTTPRequestSchema.MSG_DELETE_203);
+	}
+	
+	public boolean httpHead(ClientHostPortInstance session, CharSequence route, HeaderWritable headers) {
+		return httpWithoutPayload(session, route, headers, ClientHTTPRequestSchema.MSG_HEAD_202);
+	}
+	
+	private boolean httpWithoutPayload(ClientHostPortInstance session, CharSequence route, HeaderWritable headers,
+			int verb) {
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		
@@ -100,7 +121,7 @@ public class HTTPRequestService {
 					
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {
 					
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_GET_200);
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, verb);
 					
 					int lookupHTTPClientPipe = msgCommandChannel.builder.lookupTargetPipe(session, msgCommandChannel.listener);
 					
@@ -135,6 +156,14 @@ public class HTTPRequestService {
 		return httpPost(session, route, null, payload);
 	}
 
+	public boolean httpPut(ClientHostPortInstance session, CharSequence route, Writable payload) {
+		return httpPut(session, route, null, payload);
+	}
+	
+	public boolean httpPatch(ClientHostPortInstance session, CharSequence route, Writable payload) {
+		return httpPatch(session, route, null, payload);
+	}
+	
 	/**
 	 *
 	 * @param session ClientHostPortInstance arg used in PipeWriter
@@ -144,6 +173,19 @@ public class HTTPRequestService {
 	 * @return true if session.getConnnectionId() < 0 <p> false otherwise
 	 */
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
+		return httpWithPayload(session, route, headers, payload, ClientHTTPRequestSchema.MSG_POST_201);
+	}
+
+	public boolean httpPut(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
+		return httpWithPayload(session, route, headers, payload, ClientHTTPRequestSchema.MSG_PUT_204);
+	}
+	
+	public boolean httpPatch(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
+		return httpWithPayload(session, route, headers, payload, ClientHTTPRequestSchema.MSG_PATCH_205);
+	}
+	
+	private boolean httpWithPayload(ClientHostPortInstance session, CharSequence route, HeaderWritable headers,
+			Writable payload, int verb) {
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		assert(null!=session);
 		
@@ -158,7 +200,7 @@ public class HTTPRequestService {
 							
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {					
 
-					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, ClientHTTPRequestSchema.MSG_POST_201);			
+					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, verb);			
 			
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
