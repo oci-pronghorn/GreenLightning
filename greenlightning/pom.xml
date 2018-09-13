@@ -2,9 +2,9 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.ociweb</groupId>
     <artifactId>greenlightning</artifactId>
+    <name>greenlightning</name>
     <version>1.0.0</version>
 
-    <name>${project.artifactId}</name>
     <description>Open Edge - Green Lightning Micro-Service Runtime</description>
     <url>https://github.com/oci-pronghorn/GreenLightning</url>
     <licenses>

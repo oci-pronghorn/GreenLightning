@@ -3,6 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mydomain.greenlightning.slipstream</groupId>
 	<artifactId>my-proxy</artifactId>
+	<name>my-proxy</name>
 	<version>1.0.0</version>
 
 	<properties>

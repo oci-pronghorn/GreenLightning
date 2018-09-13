@@ -3,6 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.mydomain.greenlightning.slipstream</groupId>
 	<artifactId>my-microservice</artifactId>
+	<name>my-microservice</name>
 	<version>1.0.0</version>
 
 	<properties>
