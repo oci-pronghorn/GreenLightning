@@ -812,8 +812,9 @@ public class ParallelClientLoadTester implements GreenApp {
 						System.out.println("must leave the abandonSlowConnections feature on in ClientSocketReaderStage or hangs like these will happen");
 						
 					} else {
-						ClientAbandonConnectionScanner.showScan = true;
+						//ClientAbandonConnectionScanner.showScan = true;
 						ClientAbandonConnectionScanner slow = this.builder.getClientCoordinator().scanForSlowConnections();
+						//ClientAbandonConnectionScanner.showScan = false;
 						ClientConnection candidate = slow.leadingCandidate();
 						if (null!=candidate) {
 							System.out.println("FOUND CANDIDATE: "+candidate);
