@@ -496,7 +496,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				               		 new ReactiveOperator() {
 									@Override
 									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
-										r.consumePrivateMessage(index, target, input);										
+ 										r.consumePrivateMessage(index, target, input);
 									}        		                	 
 				                 })
         		                 .addOperator(PubSubMethodListenerBase.class, 
@@ -512,7 +512,9 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
         		                		 new ReactiveOperator() {
  									@Override
  									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
- 										r.consumeNetResponse(target, input);										
+ 										
+ 											r.consumeNetResponse(target, input);	
+ 									 										
  									}        		                	 
          		                 })
         		                 .addOperator(RestMethodListenerBase.class, 
@@ -771,15 +773,19 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		        	tickListener.tickEvent();
 		        	realStage.didWork();
 		        }
+
+		       	//all local behaviors
+		       	ReactiveManagerPipeConsumer.process(consumer, this);
+		      
 		        
-			    //all local behaviors
-			    ReactiveManagerPipeConsumer.process(consumer, this);
-		
+			   // int x = 1000;
+			   // while (--x>=0) {
 			    //each transducer
 			    int j = consumers.size();
 			    while(--j>=0) {
 			    	ReactiveManagerPipeConsumer.process(consumers.get(j),this);
 			    }
+			  //  }
 	
 	    	} else {    		
 	    		//shutdown in progress logic
@@ -954,7 +960,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 
 
 	final void consumeNetResponse(Object listener, Pipe<NetResponseSchema> pipeIn) {
-
+		
     	 while (Pipe.hasContentToRead(pipeIn)) {                
              
        		 Pipe.markTail(pipeIn);

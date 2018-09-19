@@ -184,24 +184,7 @@ public class WebTest {
 						host, port, timeoutMS,
 						uploadConsoleCapture);
 			
-					 assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(tracks*callsPerTrack))>=0);		
-					
-					 if (null!=this.runtime) {
-						 assertTrue("At the end of each iteration no pipes should remain locked.", this.runtime.validateNoPipeLocksHeld());
-						 //NOTE: confirm that all the known pipes from the server are empty
-						 Pipe<?>[] allPipes = GraphManager.allPipes(serverGM);
-						 int a = allPipes.length;
-						 while (--a >= 0) {
-							 Pipe p = allPipes[a];
-							 if (null != p) {	 
-								 PronghornStage stage = GraphManager.getRingProducer(serverGM, p.id);
-								 if (!GraphManager.hasNota(serverGM, stage.stageId, GraphManager.MONITOR)) {
-									 assertTrue(p.toString(),Pipe.isEmpty(p));
-								 };
-							 }						 
-						 }
-					 }
-					 				
+										 				
 				}
 
 				 

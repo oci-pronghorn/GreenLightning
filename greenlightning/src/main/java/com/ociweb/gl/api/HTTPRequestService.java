@@ -17,16 +17,31 @@ public class HTTPRequestService {
 	private final static Logger logger = LoggerFactory.getLogger(HTTPRequestService.class);
 	
 	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel) {
-		this.msgCommandChannel = msgCommandChannel;		
+		this.msgCommandChannel = msgCommandChannel;	
+		
+		if (msgCommandChannel.builder.getHTTPClientConfig().isTLS()) {
+			//TLS must have a payload of at lest 1<<15
+			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, 4, 1<<15);
+		}
+		
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
 	}
 	
 	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel, int queueLength, int maxMessageSize) {
 		this.msgCommandChannel = msgCommandChannel;
+		
+		if (msgCommandChannel.builder.getHTTPClientConfig().isTLS()) {
+			//TLS must have at lest 1<<15
+			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, Math.max(1<<15, maxMessageSize));
+		} else {
+			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
+		}
+		
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
 		
 		msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
+	
 	}
 
 

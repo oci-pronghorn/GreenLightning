@@ -558,17 +558,12 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		this.gm = gm;
 		this.getTempPipeOfStartupSubscriptions().initBuffers();
 		this.args = new ArgumentParser(args);
-		
-		int requestQueue = 4;
-		this.pcm.addConfig(new PipeConfig<NetPayloadSchema>(NetPayloadSchema.instance,
-				                                    requestQueue,
-				                                    MINIMUM_TLS_BLOB_SIZE)); 		
 			
 		int maxMessagesQueue = 8;
 		int maxMessageSize = 256;
 		this.pcm.addConfig(new PipeConfig<MessageSubscription>(MessageSubscription.instance,
-				maxMessagesQueue,
-				maxMessageSize)); 		
+															maxMessagesQueue,
+															maxMessageSize)); 		
 
 
 		this.pcm.addConfig(new PipeConfig<TrafficReleaseSchema>(TrafficReleaseSchema.instance, DEFAULT_LENGTH));
@@ -640,8 +635,9 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		if (client != null) {
 			throw new RuntimeException("Client already enabled");
 		}
-		this.client = new HTTPClientConfigImpl(certificates);
+		this.client = new HTTPClientConfigImpl(certificates, this.pcm);
 		this.client.beginDeclarations();
+		
 		return client;
 	}
 
@@ -1140,17 +1136,22 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	                    					this.client.getCertificates(), gm.recordTypeData);
 			}
 			
+			if (!this.client.isTLS()) {
+				pcm.ensureSize(NetPayloadSchema.class, this.client.getMaxSimultaniousRequests(), client.getMaxRequestSize()); //TLS does its own thing elsewhere.
+			}
 			
-			int netResponseCount = 8;
-			int responseQueue = 10;
+			int netResponseCount = 64; //needed for heavy load tests to consume all the responses when they arrive.
+			int responseQueue = 16;
 			
 			//must be adjusted together
 
 			int releaseCount = 1024;
+			int clientResponsePipes = 2;
+			
 			
 			int responseUnwrapCount = this.client.isTLS()? this.client.getUnwrapCount() : 1;
 			
-			int clientWrapperCount = this.client.isTLS()? 2 : 1;
+			int clientWrapperCount = this.client.isTLS()? 2 : clientResponsePipes;
 			int outputsCount = clientWrapperCount*(this.client.isTLS()? 2 : 1); //Multipler per session for total connections ,count of pipes to channel writer
 	
 			//due to deadlocks which may happen in TLS handshake we must have as many or more clientWriters

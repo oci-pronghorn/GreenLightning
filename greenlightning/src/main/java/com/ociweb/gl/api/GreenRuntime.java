@@ -1,19 +1,18 @@
 package com.ociweb.gl.api;
 
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.GreenFrameworkImpl;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
-import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 import com.ociweb.pronghorn.stage.scheduling.StageVisitor;
-
-import java.util.concurrent.BrokenBarrierException;
-import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 
 public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, ListenerFilter, GreenRuntime>{
 	
@@ -35,16 +34,11 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, Listener
      
      public GreenCommandChannel newCommandChannel() { 
 
-      	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, 
-      			                                         defaultCommandChannelMaxPayload);
+      	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
 
-      	pcm.addConfig(defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload, ClientHTTPRequestSchema.class);
       	pcm.addConfig(defaultCommandChannelLength, 0,TrafficOrderSchema.class);
       	
-      	return (GreenCommandChannel) this.builder.newCommandChannel(  				
-  				parallelInstanceUnderActiveConstruction,
-  				pcm
-  		  );    
+      	return (GreenCommandChannel) this.builder.newCommandChannel( parallelInstanceUnderActiveConstruction, pcm );    
      }
      
 

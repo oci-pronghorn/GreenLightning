@@ -134,7 +134,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
     
     public static final int defaultCommandChannelLength = 32;
     public static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
-    protected static final int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support
 
     protected boolean transducerAutowiring = true;
 
@@ -511,8 +510,38 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		//////////////////////////
 		//////////////////////////
 		
-		((HTTPServerConfigImpl) config).setTracks(parallelTrackCount);//TODO: this will write over value if user called set Tracks!!!
-		ServerPipesConfig serverConfig = config.buildServerConfig();
+		((HTTPServerConfigImpl) config).setTracks(parallelTrackCount);
+		HTTPServerConfigImpl r = ((HTTPServerConfigImpl) config);
+		int incomingMsgFragCount = r.defaultComputedChunksCount();
+		
+		int queueIn = config.getMaxQueueIn();   //router to modules
+		int queueOut = config.getMaxQueueOut();  //orderSuper to socketWriter
+		
+		///////////////////////
+		///////////////////////
+		
+		r.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
+						Math.max(incomingMsgFragCount-2, 2), 
+						r.getMaxRequestSize()));
+			
+		r.pcm.ensureSize(ServerResponseSchema.class, 4, 512);		
+		
+		ServerPipesConfig serverConfig = new ServerPipesConfig(
+					r.logFileConfig(),
+					r.isTLS(),
+					r.getMaxConnectionBits(),
+					r.tracks(),
+					r.getEncryptionUnitsPerTrack(),
+					r.getConcurrentChannelsPerEncryptUnit(),
+					r.getDecryptionUnitsPerTrack(),
+					r.getConcurrentChannelsPerDecryptUnit(),				
+					//one message might be broken into this many parts
+					incomingMsgFragCount,
+					r.getMaxRequestSize(),
+					r.getMaxResponseSize(),
+					queueIn,
+					queueOut,
+					r.pcm);
 
 		serverCoord = new ServerCoordinator(
 				config.getCertificates(),

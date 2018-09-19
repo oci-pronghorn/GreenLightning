@@ -7,7 +7,9 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class ParallelClientLoadTesterPayload {
-    public int maxPayloadSize = 1024;
+    
+	public int maxPayloadSize = 500; //default
+    
     public HTTPContentTypeDefaults contentType = HTTPContentTypeDefaults.JSON;
     public WritableFactory post = null;
     public ValidatorFactory validator = new ValidatorFactory() {

@@ -161,9 +161,7 @@ public class WebTest {
 						uploadConsoleCapture);
 			
 					 assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(tracks*callsPerTrack))>=0);		
-					 assertTrue("At the end of each iteration no pipes should remain locked.", this.runtime.validateNoPipeLocksHeld());
-	 
-					 				
+		 				
 				}
 				 
 			}

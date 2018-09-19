@@ -63,7 +63,7 @@
 		<dependency>
 			<groupId>com.ociweb</groupId>
 			<artifactId>greenlightning</artifactId>
-			<version>1.0.0</version>
+			<version>1.0.1-SNAPSHOT</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

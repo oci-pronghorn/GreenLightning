@@ -92,13 +92,9 @@ public class NamedMessagePassingTest {
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
 
 		//spikes are less frequent when the wifi network is off
-		int cyclesPerTrack = 200_000; //*(1+99_9999);
+		int cyclesPerTrack = 100_000; //*(1+99_9999);
 		int parallelTracks = 1; 
 
-		//TODO: test multiple in flight while some are killed..
-		//TODO: update the respnoder the same way we do the tester...
-		//TODO: add timeout per session? add simple API for tls...
-		
 		
 		ParallelClientLoadTesterConfig config2 = new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8081, "/test", telemetry);
 		assertTrue(0==config2.durationNanos);

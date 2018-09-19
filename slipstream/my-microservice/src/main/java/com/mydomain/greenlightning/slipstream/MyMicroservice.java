@@ -6,35 +6,68 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.json.JSONRequired;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 
+//applications must extend GreenApp
 public class MyMicroservice implements GreenApp {
 
 	private final static int maxProductId = 99999;
-	private final int port;	
-	private final boolean tls;
-	private final boolean telemetry;
 	
-	public MyMicroservice(boolean tls, int port, boolean telemetry) {
-		this.port = port;
-		this.tls = tls;
-		this.telemetry = telemetry;
+	private int port;	
+	private boolean tls;
+	private boolean telemetry;
+	
+	public MyMicroservice() {
+		this (true, 1443, false);
+	}
+	
+	//the app can take optional arguments to make testing easier
+	public MyMicroservice(boolean defaultTLS, int defaultPort, boolean defaultTelemetry) {
+		this.port = defaultPort;
+		this.tls = defaultTLS;
+		this.telemetry = defaultTelemetry;
 	}
 	
     @Override
     public void declareConfiguration(GreenFramework builder) {
 
+    	//override arguments if provided by the command line
+    	//note that GreenFramework holds arg[] 
+    	tls = builder.getArgumentValue("encrypt", "-e", tls);
+    	telemetry = builder.getArgumentValue("telemetry", "-t", telemetry);
+    	port = builder.getArgumentValue("port", "-p", port);
+    	
+    	//declare web server and its port
     	HTTPServerConfig c = builder
     	  .useHTTP1xServer(port)
+    	  
+    	  //sets (1<<6) or 64 max connections
+    	  //Note that the default is 32K connections when not set
     	  .setMaxConnectionBits(6) 
+
+    	  //bump up the number of concurrent connections all using the same
+    	  //decryption stage.  This increases how many concurrent writes are 
+    	  //supported.  The count supported is reported in the console at startup.
     	  .setConcurrentChannelsPerDecryptUnit(4)
+    	  
+    	  //IP home where this site is hosted.  This is the internal IP.
+    	  //This value supports stars so "10.*.*.*" is a common value used.
+    	  //If this is unset the system will pick the most public IP  it can find.
     	  .setHost("127.0.0.1");
     	
+    	//by default all servers have TLS turned on, By calling this method
+    	//TLS is disabled and a warning will be logged.
     	if (!tls) {
     		c.useInsecureServer();
     	}
     	
+    	//by default telemetry is not enabled but it is recommended that all
+    	//projects enable it.  Telemetry does not impact performance yet it provides
+    	//details about the system work flow which can help diagnose many issues.
         if (telemetry) {
         	builder.enableTelemetry();
         }
+        
+        //define a route. This is a simple get which accepts 1 argument id 
+        //which 
         
     	builder
     	  .defineRoute()
