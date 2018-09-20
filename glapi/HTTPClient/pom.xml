@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
   <artifactId>http-client</artifactId>
-  <version>1.0.0</version>
+  <version>1.0.1</version>
   
   <properties>
     <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
@@ -12,44 +12,12 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
   
-  <!--  repositories>
     
-    <repository>
-      <releases>
-        <enabled>false</enabled>
-      </releases>
-      <snapshots>
-        <updatePolicy>always</updatePolicy>
-        <checksumPolicy>warn</checksumPolicy>
-      </snapshots>
-      <id>repository-pronghorn.forge.cloudbees.com-snapshot</id>
-      <name>Snapshot Repo for Pronghorn</name>
-      <url>https://repository-pronghorn.forge.cloudbees.com/snapshot</url>
-      <layout>default</layout>
-    </repository>
-    
-    <repository>
-      <releases>
-        <updatePolicy>always</updatePolicy>
-        <checksumPolicy>warn</checksumPolicy>
-      </releases>
-      <snapshots>
-        <enabled>false</enabled>
-      </snapshots>
-      <id>repository-pronghorn.forge.cloudbees.com-release</id>
-      <name>Release Repo for Pronghorn</name>
-      <url>https://repository-pronghorn.forge.cloudbees.com/release</url>
-      <layout>default</layout>
-    </repository>
-        
-  </repositories -->
-  
-  
   <dependencies>
   		<dependency>
 	  		<groupId>com.ociweb</groupId>
             <artifactId>greenlightning</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.1</version>
     	</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
