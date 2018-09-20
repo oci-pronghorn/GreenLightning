@@ -43,6 +43,8 @@ public class HTTPServer implements GreenApp
 		 .setConcurrentChannelsPerEncryptUnit(3)
 		 .setMaxResponseSize(1<<18);
 		
+		server.setMaxQueueOut(4);
+		
 		if (!isTLS) {
 			server.useInsecureServer();
 		}
