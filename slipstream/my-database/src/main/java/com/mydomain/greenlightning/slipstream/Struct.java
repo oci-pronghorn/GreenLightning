@@ -10,36 +10,42 @@ package com.mydomain.greenlightning.slipstream;
  */
 public enum Struct {
 	/**
-	 * 
+	 * Route /query?id=#{ID}
 	 */
 	PRODUCT_QUERY, 
+	
 	/**
-	 * 
+	 * Route /update
 	 */
-	PRODUCT_UPDATE, 
+	PRODUCT_UPDATE,
+	
 	/**
-	 * 
+	 * Route /${path}
 	 */
 	STATIC_PAGES, 
+	
 	/**
-	 * 
+	 * Route /all
 	 */
 	ALL_PRODUCTS,
 	
 	/**
-	 * 
+	 * Request to blocking logic
 	 */
 	DB_PRODUCT_UPDATE,
+	
 	/**
-	 * 
+	 *  Request to blocking logic
 	 */
 	DB_PRODUCT_QUERY,
+	
 	/**
-	 * 
+	 *  Request to blocking logic
 	 */
-	DB_ALL_QUERY, 
+	DB_ALL_QUERY,
+ 
 	/**
-	 * 
+	 * Response fields from blocking logic
 	 */
 	RESPONSE
 }

@@ -10,19 +10,22 @@ package com.mydomain.greenlightning.slipstream;
  */
 public enum Struct {
 	/**
-	 * 
+	 * Route /query?id=#{ID}
 	 */
 	PRODUCT_QUERY, 
+	
 	/**
-	 * 
+	 * Route /update
 	 */
-	PRODUCT_UPDATE, 
+	PRODUCT_UPDATE,
+	
 	/**
-	 * 
+	 * Route /site
 	 */
 	STATIC_PAGES, 
+	
 	/**
-	 * 
+	 * Route /all
 	 */
 	ALL_PRODUCTS
 }

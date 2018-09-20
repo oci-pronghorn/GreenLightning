@@ -7,13 +7,9 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.ClientAbandonConnectionScanner;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.stage.PronghornStage;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.AppendableBuilder;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -98,7 +94,6 @@ public class WebTest {
 
 		 assertTrue(captured.toString(), captured.indexOf("Responses invalid: 0 out of "+(tracks*callsPerTrack))>=0);
 
-		 assertTrue("At the end of each iteration no pipes should remain locked.",this.runtime.validateNoPipeLocksHeld());
 	}
 	
 	@Test

@@ -67,19 +67,22 @@ public class MyMicroservice implements GreenApp {
         }
         
         //define a route. This is a simple get which accepts 1 argument id 
-        //which 
-        
+        //which is an integer and must valid, eg positive and <= max product Id        
     	builder
     	  .defineRoute()
     	  .path("/query?id=#{ID}")
     	  .refineInteger("ID", Field.ID, v-> v>=0 & v<=maxProductId)
     	  .routeId(Struct.PRODUCT_QUERY);
     	
+    	//define route for doing updates
+    	//NOTE: inside the framework Strings are not passed around instead we use 4 fields as seen in the name field validator
+    	//      b - backing array made of utf8 encoded bytes, p - position in array where text starts, l - count of bytes making up text
+    	//      m - mask which is used when walking the distance l from p.  The mask allows the index to wrap back to the beginning of the array
     	builder
 	  	  .defineRoute()
 	  	  .parseJSON()
 	  	    .integerField("id", Field.ID, JSONRequired.REQUIRED, v -> v>=0 & v<=maxProductId)
-	  	    .stringField("name", Field.NAME, JSONRequired.REQUIRED, (b,p,l,m) -> l>0 & l<=4000)
+	  	    .stringField("name", Field.NAME, JSONRequired.REQUIRED, (b,p,l,m) -> l>0 & l<=4000) //bplm is the backing array of utf8 encoded bytes, pos, len, and mask
 	  	    .booleanField("disabled", Field.DISABLED, JSONRequired.REQUIRED)
 	  	    .integerField("quantity", Field.QUANTITY, JSONRequired.REQUIRED, v -> v>=0 && v<=1_000_000) //if missing not returning 404? get exception?
 	  	  .path("/update")
@@ -98,6 +101,8 @@ public class MyMicroservice implements GreenApp {
 
     @Override
     public void declareBehavior(GreenRuntime runtime) { 
+    	//in most cases the behavior need not be a local variable but we are using methods off the object
+    	//to respond to specific published topics.  To do this the object is required.
         ProductsBehavior listener = new ProductsBehavior(runtime, maxProductId);
 		runtime.registerListener(listener)
 				.includeRoutes(Struct.PRODUCT_UPDATE, listener::productUpdate)

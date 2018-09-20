@@ -150,7 +150,7 @@ public class BlockingProducer implements BlockingBehaviorProducer {
 
 		@Override
 		public void finish(ChannelWriter writer) {
-			// TODO Auto-generated method stub
+			
 			StructuredWriter struct = writer.structured();
 			//write data
 			struct.writeLong(Field.CONNECTION, connectionId);

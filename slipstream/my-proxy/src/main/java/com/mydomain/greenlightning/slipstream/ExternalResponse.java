@@ -31,9 +31,7 @@ public class ExternalResponse implements PubSubListener, HTTPResponseListener {
 		} else {
 
 			return responder.respondWith(200, !reader.isEndOfResponse(),
-
-					//TODO: add method to tracks
-							
+	
 					(headWriter) -> {
 						reader.structured().visit(HTTPHeader.class, (header,r,id)->{
 							//we are a proxy, our response has its own length, connection and status

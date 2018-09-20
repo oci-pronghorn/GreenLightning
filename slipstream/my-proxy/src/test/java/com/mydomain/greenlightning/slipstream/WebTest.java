@@ -6,10 +6,6 @@ import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.LoadTester;
-import com.ociweb.pronghorn.network.ClientSocketReaderStage;
-import com.ociweb.pronghorn.network.ServerSocketWriterStage;
-import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class WebTest {

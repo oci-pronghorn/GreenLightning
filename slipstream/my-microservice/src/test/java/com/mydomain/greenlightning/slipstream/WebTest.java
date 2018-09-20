@@ -2,27 +2,15 @@ package com.mydomain.greenlightning.slipstream;
 
 import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
-
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.MsgRuntime;
-import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.test.LoadTester;
-import com.ociweb.json.JSONRequired;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.ClientAbandonConnectionScanner;
-import com.ociweb.pronghorn.network.ClientSocketReaderStage;
-import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
-import com.ociweb.pronghorn.pipe.ChannelWriter;
-import com.ociweb.pronghorn.pipe.Pipe;
-import com.ociweb.pronghorn.stage.PronghornStage;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.AppendableBuilder;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -128,7 +116,7 @@ public class WebTest {
 		Product[] prodCache = new Product[300];
 		
 		StringBuilder uploadConsoleCapture = new StringBuilder();
-		GraphManager serverGM = null==runtime? null :MsgRuntime.getGraphManager(runtime);
+
 		final AppendableBuilder target = new AppendableBuilder(1000);
 		 
 		
