@@ -317,7 +317,6 @@ public class ParallelClientLoadTester implements GreenApp {
 		@Override
 		public void startup() {
 			startupTime = System.nanoTime();
-			out.progress(0, 0, 0);
 		}
 
 		boolean enderMessage(CharSequence topic, ChannelReader payload) {
@@ -415,8 +414,8 @@ public class ParallelClientLoadTester implements GreenApp {
 
 			long now = 0;
 
-			//updates no faster than once every second
-			if ((percentDone != lastPercent && ((now = System.nanoTime()) - lastTime) > 1_000_000_000L)
+			//updates no faster than once every second and only after 1% is complete.
+			if (((percentDone>1) &&  (percentDone != lastPercent) && ((now = System.nanoTime()) - lastTime) > 1_000_000_000L)
 					|| 100L == percentDone) {
 			    out.progress(percentDone, sumTimeouts, sumResponsesInvalid);
 
