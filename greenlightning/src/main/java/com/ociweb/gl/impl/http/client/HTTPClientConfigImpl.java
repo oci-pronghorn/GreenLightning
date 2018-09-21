@@ -11,14 +11,13 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     private TLSCertificates certificates;
     
     private int unwrapCount = 2;//default
+    private int responseQueueLength = 2048;  // needed for HIGHVOLUME 
     private int maxRequestSize = 512;//default
+    private int maxResponseSize = 512;//default
+    private int maxSimultaniousRequests = 1024;//default max HTTP calls to clientSocketWriter 
     
-    //TODO: too large must expose for load tester, inital call will be inflight * tracks..
-    //TODO: we have 1 pipe per each so we only need 1024
-    private int maxSimultaniousRequests = 1024;//default max HTTP verbs to clientSocketWriter
-    //TODO: for the max size why is this 128M
+
     
-	
     private BridgeConfigStage configStage = BridgeConfigStage.Construction;
     private  PipeConfigManager pcm;
 
@@ -26,10 +25,7 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
         this.certificates = certificates;
         this.pcm = pcm;
 		
-        //TODO: should expose, this allows large numbers of responses from HTTP1xResponse parser to be dumped to consumers 
-        int queueLength = 1024;  // HIGHVOLUME switch need for load testing product
-		int maxMessageSize = 128;
-		this.pcm.ensureSize(NetResponseSchema.class, queueLength, maxMessageSize);
+		this.pcm.ensureSize(NetResponseSchema.class, responseQueueLength, maxResponseSize);
     }
 
     @Override
@@ -54,11 +50,6 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     public void finalizeDeclareConnections() {
         this.configStage = BridgeConfigStage.DeclareBehavior;
     }
-
-    public void setUnwrapCount(int unwrapCount) {
-    	assert(unwrapCount>0);
-    	this.unwrapCount = unwrapCount;
-    }
     
 	public int getUnwrapCount() {
 		return unwrapCount;
@@ -71,4 +62,35 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
 	public int getMaxSimultaniousRequests() {
 		return maxSimultaniousRequests;
 	}
+	
+	@Override
+	public HTTPClientConfig setUnwrapCount(int unwrapCount) {
+		assert(unwrapCount>0);
+		this.unwrapCount = unwrapCount;
+		return this;
+	}
+	
+    @Override
+    public HTTPClientConfig setMaxSimultaniousRequests(int value) {
+    	maxSimultaniousRequests = value;
+    	return this;
+    }
+    
+    @Override
+    public HTTPClientConfig setMaxResponseSize(int value) {
+    	maxResponseSize = value;
+    	return this;
+    }
+    
+    @Override
+    public HTTPClientConfig setMaxRequestSize(int value) {
+    	maxRequestSize = value;
+    	return this;
+    }       
+    
+    @Override
+    public HTTPClientConfig setResponseQueueLength(int value) {
+    	responseQueueLength = value;
+    	return this;
+    }   
 }
