@@ -44,15 +44,7 @@
                 <additionalparam>-Xdoclint:none</additionalparam>
             </properties>
         </profile>
-        <!-- profile>
-            <id>cloudbees</id>
-            <distributionManagement>
-                <repository>
-                    <id>cloudbees.release</id>
-                    <url>dav:https://repository-pronghorn.forge.cloudbees.com/release</url>
-                </repository>
-            </distributionManagement>
-        </profile -->
+     
         <profile>
             <id>mvn-central</id>
             <distributionManagement>
