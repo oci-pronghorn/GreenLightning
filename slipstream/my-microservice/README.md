@@ -1,4 +1,9 @@
-﻿### Signing your project with your own key:
+### Most simple microservice
+This project shows how you can set up a URL to accept JSON and respond with JSON using GreenLightning.
+The API uses a declaritive actor based approch which works well with both lambdas and readability.
+
+
+### Signing your project with your own key:
 ```
 We have provided a key to sign your project; however, if you would like to use a key of your own choosing, you can do so by replacing the ocikeystore.jks file located in **projectname/src/main/resources/certificate/ocikeystore.jks** with your own .jks key or one provided from an official Certificate Authority (CA). 
 
