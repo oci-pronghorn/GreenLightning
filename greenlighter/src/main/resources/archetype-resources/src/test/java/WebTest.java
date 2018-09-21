@@ -19,7 +19,7 @@ import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.util.AppendableBuilder;
 import com.ociweb.pronghorn.util.Appendables;
-import com.test.WebTest.Product;
+//import com.test.WebTest.Product;
 
 public class WebTest {
 	
