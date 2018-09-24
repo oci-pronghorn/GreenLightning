@@ -215,6 +215,18 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 	}
 	
 	/**
+	 * Used to create a new pubsub service for a fixed topic
+	 * @param queueLength int to be passed to PubSubService
+	 * @return new PubSubFixedTopicService
+	 */
+	public PubSubFixedTopicService newPubSubService(String baseTopic, int queueLength) {
+		
+		String trackTopic = BuilderImpl.buildTrackTopic(baseTopic, track);
+		
+		return new PubSubFixedTopicService(this, baseTopic, trackTopic, queueLength, 0);
+	}
+	
+	/**
 	 * Used to create a new HTTP client service
 	 * @return new HTTPRequestService
 	 */

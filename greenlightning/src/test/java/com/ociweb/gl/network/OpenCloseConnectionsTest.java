@@ -33,7 +33,7 @@ public class OpenCloseConnectionsTest {
 		StringBuilder results = new StringBuilder();
 		int cyclesPerTrack = 1000;
 		ParallelClientLoadTesterConfig config = new ParallelClientLoadTesterConfig(
-				1, cyclesPerTrack, 8078, "neverclose", telemetry, results);
+				6, cyclesPerTrack, 8078, "neverclose", telemetry, results);
 		
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 				new ParallelClientLoadTester(config, null),
@@ -41,8 +41,8 @@ public class OpenCloseConnectionsTest {
 		
 		String captured = results.toString();
 		
-		assertTrue(captured, captured.contains("Total messages: 1000"));
-		assertTrue(captured, captured.contains("Send failures: 0 out of 1000"));
+		assertTrue(captured, captured.contains("Total messages: 6000"));
+		assertTrue(captured, captured.contains("Send failures: 0 out of 6000"));
 		assertTrue(captured, captured.contains("Timeouts: 0"));
 				
 		//System.out.println(captured);

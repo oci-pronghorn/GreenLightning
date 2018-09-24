@@ -1,0 +1,29 @@
+
+1.0.2
+  * GreenLighter example test broken import, fixed
+  * Load tester with multiple connections per thread support
+  ** Needed to simulate large numbers of client connections without using too many threads
+  
+  * Public release of load testing API
+  
+  
+  
+  
+  
+Unscheduled:
+  * More content type encoding types
+  * Chunked post logic
+  * Declaritive form parsing
+  * RAFT common log feature support
+  * Wild cards in PubSub
+  * CORES support
+  * WebSockets
+  * HTTP2
+  * Redirect support
+  * Atomic republish of new site pages, needs RAFT & redirect
+  * Unified telemetry screen
+  * Data monitoring in telemetry
+  * Large telemetry response, chunked
+  * TrieParser optimizations
+  
+  

@@ -17,17 +17,23 @@ public class LoadTester {
 		return runClient(testData,validator,route,useTLS,telemetry,parallelTracks,cyclesPerTrack,host,port,timeoutMS,inFlightBits,null,target);
 	}
 	
+	//one response actor should only try to manage this many connections unless we are out of cores then we just distribute the load.
+	private static final int LIMITED_CONNECTIONS_PER_ACTOR = 256;
+	
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,
-			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int parallelTracks,
+			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int concurrentConnections,
 			int cyclesPerTrack, String host, int port, int timeoutMS, int inFlightBits, GraphManager graphUnderTest, A target) {
-
-		ParallelClientLoadTesterConfig testerConfig = new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack,
+		
+		int tracks = Math.min(1+(concurrentConnections/(LIMITED_CONNECTIONS_PER_ACTOR+1)),Runtime.getRuntime().availableProcessors()*2);		
+		
+		ParallelClientLoadTesterConfig testerConfig = new ParallelClientLoadTesterConfig(tracks, cyclesPerTrack,
 																							port, route, telemetry);
 		testerConfig.insecureClient = !useTLS;
 		testerConfig.host = host;
 		testerConfig.simultaneousRequestsPerTrackBits = inFlightBits;		
 		testerConfig.target = target;
 		testerConfig.graphUnderTest = graphUnderTest;
+		testerConfig.sessionsPerTrack = (int)Math.ceil(concurrentConnections/(float)tracks);
 		
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload(); // calling get
 		

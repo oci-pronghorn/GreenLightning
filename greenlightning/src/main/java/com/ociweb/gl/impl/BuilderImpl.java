@@ -139,7 +139,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 
 	private static final Logger logger = LoggerFactory.getLogger(BuilderImpl.class);
 
-	public final PipeConfigManager pcm = new PipeConfigManager();
+	public final PipeConfigManager pcm = new PipeConfigManager(4,2,128);
 
 	public Enum<?> beginningState;
     
@@ -276,44 +276,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
     	return fullName;
     }
     
-    
-    //TODO: replace with add only general int to Object hash table?
-    ////////////////////
-    ///////////////////
-    private IntHashTable netPipeLookup = new IntHashTable(7);//Initial default size
 
-	/**
-	 * a method that doubles IntHashTable if necessary and logs warning if !IntHashTable.setItem(netPipeLookup, uniqueId, pipeIdx)
-	 * @param uniqueId int arg to specify id
-	 * @param pipeIdx int arg to specify index
-	 */
-	public void registerHTTPClientId(final int uniqueId, int pipeIdx) {
-		if (0==uniqueId) {
-			throw new UnsupportedOperationException("Zero can not be used as the uniqueId");
-		}
-		if ( (IntHashTable.count(netPipeLookup)<<1) >= IntHashTable.size(netPipeLookup) ) {
-			//must grow first since we are adding many entries
-			netPipeLookup = IntHashTable.doubleSize(netPipeLookup);			
-		}
-		boolean addedItem = IntHashTable.setItem(netPipeLookup, uniqueId, pipeIdx);
-        if (!addedItem) {
-        	logger.warn("The route {} has already been assigned to a listener and can not be assigned to another.\n"
-        			+ "Check that each HTTP Client consumer does not share an Id with any other.",uniqueId);
-        }
-    }
-
-	/**
-	 * A method to look up the client pipes http
-	 * @param routeId route to be looked for in pipe
-	 * @return IntHashTable.getItem(netPipeLookup, routeId)
-	 */
-	public int lookupHTTPClientPipe(int routeId) {
-    	return IntHashTable.getItem(netPipeLookup, routeId);
-    }
-
-	public boolean hasHTTPClientPipe(int routeId) {
-    	return IntHashTable.hasItem(netPipeLookup, routeId);
-    }
 ///////////////////////////
 	////////////////
 	
@@ -372,11 +335,19 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	}
 	
 	@Override
+	public HTTPServerConfig useHTTP1xServer(int bindPort, DeclareBehavior<R> behaviorDefinition) {
+		return useHTTP1xServer(bindPort, -1, behaviorDefinition);
+	}
+	
+	@Override
 	public HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<R> behaviorDefinition) {
 		if (server != null) {
 			throw new UnsupportedOperationException("Server already enabled, microservice runtime only supports one server.");
 		}
-		assert(tracks>0);
+		if (tracks<=0) {
+			//auto select tracks based on cores
+			tracks = Math.max(2, Runtime.getRuntime().availableProcessors()/4);			
+		}
 		
 		this.behaviorTracks = tracks;
 		
@@ -568,10 +539,6 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 
 		this.pcm.addConfig(new PipeConfig<TrafficReleaseSchema>(TrafficReleaseSchema.instance, DEFAULT_LENGTH));
 		this.pcm.addConfig(new PipeConfig<TrafficAckSchema>(TrafficAckSchema.instance, DEFAULT_LENGTH));
-
-	    int defaultCommandChannelLength = 16;
-	    int defaultCommandChannelHTTPMaxPayload = 1<<14; //must be at least 32K for TLS support	    
-		this.pcm.addConfig(new PipeConfig<NetResponseSchema>(NetResponseSchema.instance, defaultCommandChannelLength, defaultCommandChannelHTTPMaxPayload));   
 
 		//for MQTT ingress
 		int maxMQTTMessagesQueue = 8;
@@ -1130,14 +1097,16 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			
 			{
 				int tracks = Math.max(1, runtime.getBuilder().parallelTracks());			
-				int maxPartialResponses = Math.max(2,ClientHostPortInstance.getSessionCount());
-				ccm = new ClientCoordinator((int)Math.ceil(Math.log(4*(maxPartialResponses*tracks))/Math.log(2)), 
-											maxPartialResponses,
+				int totalSessions = ClientHostPortInstance.getSessionCount();
+				ccm = new ClientCoordinator((int)Math.ceil(Math.log(4*(totalSessions*tracks))/Math.log(2)), 
+											totalSessions,
 	                    					this.client.getCertificates(), gm.recordTypeData);
 			}
 			
 			if (!this.client.isTLS()) {
-				pcm.ensureSize(NetPayloadSchema.class, this.client.getMaxSimultaniousRequests(), client.getMaxRequestSize()); //TLS does its own thing elsewhere.
+				pcm.ensureSize(NetPayloadSchema.class, 
+						client.getMaxSimultaniousRequests(), 
+						client.getMaxRequestSize()); //TLS does its own thing elsewhere.
 			}
 			
 			int netResponseCount = 64; //needed for heavy load tests to consume all the responses when they arrive.
@@ -1146,12 +1115,11 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			//must be adjusted together
 
 			int releaseCount = 1024;
-			int clientResponsePipes = 2;
+			int responseUnwrapCount = this.client.isTLS()? 
+					             Math.min(this.client.getUnwrapCount(), netResponsePipes.length) //how many decrypters					             
+					             : 1;
 			
-			
-			int responseUnwrapCount = this.client.isTLS()? this.client.getUnwrapCount() : 1;
-			
-			int clientWrapperCount = this.client.isTLS()? 2 : clientResponsePipes;
+			int clientWrapperCount = this.client.isTLS()? 1 : 2;
 			int outputsCount = clientWrapperCount*(this.client.isTLS()? 2 : 1); //Multipler per session for total connections ,count of pipes to channel writer
 	
 			//due to deadlocks which may happen in TLS handshake we must have as many or more clientWriters
@@ -2082,16 +2050,6 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	
 	public void messageRoutingRequired() {
 		messageRoutingRequired = true;
-	}
-
-	public int lookupTargetPipe(ClientHostPortInstance session, Behavior listener) {
-		int lookupHTTPClientPipe;
-		if (hasHTTPClientPipe(session.sessionId)) {
-			lookupHTTPClientPipe = lookupHTTPClientPipe(session.sessionId);
-		} else {
-			lookupHTTPClientPipe = lookupHTTPClientPipe(behaviorId(listener));
-		}
-		return lookupHTTPClientPipe;
 	}
 
 	public void populatePrivateTopicPipeNames(byte[][] names) {

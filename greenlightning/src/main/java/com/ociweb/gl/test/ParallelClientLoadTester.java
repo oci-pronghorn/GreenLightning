@@ -20,7 +20,6 @@ import com.ociweb.gl.api.PubSubMethodListener;
 import com.ociweb.gl.api.PubSubService;
 import com.ociweb.gl.api.StartupListener;
 import com.ociweb.gl.api.TimeListener;
-import com.ociweb.gl.api.Writable;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.pronghorn.network.ClientAbandonConnectionScanner;
 import com.ociweb.pronghorn.network.ClientConnection;
@@ -31,7 +30,6 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
 import com.ociweb.pronghorn.pipe.ChannelReader;
-import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.stage.PronghornStage;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
@@ -43,32 +41,32 @@ public class ParallelClientLoadTester implements GreenApp {
 	//if abandonSlowConnections is on we check for progress every 20 seconds else every 2 minutes
 	private static final int PROGRESS_CHECK_RATE = ClientSocketReaderStage.abandonSlowConnections? 20_000 : 120_000 ;
 
-	private final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
+	final static Logger logger = LoggerFactory.getLogger(ParallelClientLoadTester.class);
 	
 	private final boolean insecureClient;
-    private final int parallelTracks;
-    private final long cyclesPerTrack;
+    final int parallelTracks;
+    final long cyclesPerTrack;
     private final Integer telemetryPort;
     private final String telemetryHost;
     private final Long rate;
     private final int inFlightHTTPs;
-    private final int maxInFlight;
+    final int maxInFlight;
     private final int maxInFlightMask;
     private int warmupCount = 20_000;
     private final int[] logCount;
 	public static long LOG_LATENCY_LIMIT =  ClientSocketReaderStage.abandonSlowConnections ? 40_000_000_000L : 120_000_000_000L; //40sec or 2 min	
     
-	private final ParallelClientLoadTesterOutput out;
+	final ParallelClientLoadTesterOutput out;
 	private final GraphManager graphUnderTest;
     private final int maxPayloadSize;
     private final byte[] contentType;
 	private final ValidatorFactory validator;
 
-	private final int sessionCount = 1;
+	public final int sessionCount;
 	
     private final ClientHostPortInstance[][] session;
     
-    private final ElapsedTimeRecorder[] elapsedTime;
+    final ElapsedTimeRecorder[] elapsedTime;
 	
 	private final HeaderWritableFactory header;		
 	private final WritableFactory writer;
@@ -76,7 +74,7 @@ public class ParallelClientLoadTester implements GreenApp {
     
     
     private int trackId = 0;
-	private long startupTime;
+	long startupTime;
 	private long durationNanos = 0;
 
 	private final long[][] callTime;
@@ -86,13 +84,15 @@ public class ParallelClientLoadTester implements GreenApp {
 	private static final String RESPONDER_NAME = "TestResponder";
 	private static final String CALL_TOPIC     = "makeCall";	
 	private static final String PROGRESS_NAME  = "TestProgessor";
-	private static final String ENDERS_TOPIC   = "end";
+	static final String ENDERS_TOPIC   = "end";
 	private static final String PROGRESS_TOPIC = "progress";
 	
-	private static final int PUB_MSGS      = 8000;
-	private static final int PUB_MSGS_SIZE = 48;
-	private long minFinished;
+	static final int PUB_MSGS      = 8000;
+	static final int PUB_MSGS_SIZE = 48;
+	long minFinished;
 
+	private int[] sessionLookup;
+	
 	private String host;
 
 	private int port;
@@ -141,7 +141,8 @@ public class ParallelClientLoadTester implements GreenApp {
 		this.durationNanos = config.durationNanos;
 		this.insecureClient = config.insecureClient;
 		this.host = config.host;
-		this.port = config.port;
+		this.port = config.port;		
+		this.sessionCount = config.sessionsPerTrack;
 
 		this.graphUnderTest = config.graphUnderTest;
 		this.logCount = new int[parallelTracks];
@@ -161,12 +162,13 @@ public class ParallelClientLoadTester implements GreenApp {
 		this.callTime = new long[parallelTracks][maxInFlight];
 		this.inFlightHead = new int[parallelTracks];
 		this.inFlightTail = new int[parallelTracks];
+		this.sessionLookup = new int[ClientHostPortInstance.getSessionCount() + (parallelTracks*(sessionCount+1))];
 
 		this.session = new ClientHostPortInstance[parallelTracks][sessionCount];
 		this.elapsedTime = new ElapsedTimeRecorder[parallelTracks];
 
         this.contentType = null==payload ? null : payload.contentType.getBytes();
-        this.maxPayloadSize = null==payload ? 256 : payload.maxPayloadSize;
+        this.maxPayloadSize = null==payload ? 180 : payload.maxPayloadSize;
 		
 		
 		this.validator = null==payload? null : payload.validator;
@@ -241,23 +243,39 @@ public class ParallelClientLoadTester implements GreenApp {
 		} else {
 			clientConfig = builder.useNetClient(TLSCerts.define());
 		}
-		//clientConfig.setUnwrapCount(4);
-		
+
+		int base = ClientHostPortInstance.getSessionCount();
 		int i = parallelTracks;
 		while (--i>=0) {
 			int s = session[i].length;
-			while (--s>=0) {
-				session[i][s] = clientConfig.newHTTPSession(host, port).finish();
+			while (--s >= 0) {
+				ClientHostPortInstance conSess = clientConfig.newHTTPSession(host, port).finish();
+				session[i][s] = conSess;
+				sessionLookup[conSess.sessionId] = s;				
 			}
 			elapsedTime[i] = new ElapsedTimeRecorder();
 		}
 
+		//when we have massive connections this is a very small number
+		//HIGHVOLUME test
+		int maxQueuedResponsesFromServer = Math.max(8,maxInFlight/sessionCount);
+		
+		clientConfig.setResponseQueueLength(maxQueuedResponsesFromServer);
+		
+		clientConfig.setMaxSimultaniousRequests(parallelTracks*sessionCount);//each has sequential maxInFlight
+			
+		//clientConfig.setUnwrapCount(1);
+		
+		int maxExpectedMessageSizeFromServer = 128; //TODO: add support to configure this
+		clientConfig.setMaxResponseSize(maxExpectedMessageSizeFromServer);
+		
+		System.out.println("Test is running with "+(ClientHostPortInstance.getSessionCount()-base)+" total connections");
+		
 		if (telemetryPort != null) {
 
 			if (null == this.telemetryHost) {
 				builder.enableTelemetry(telemetryPort);
-			}
-			else {
+			} else {
 				builder.enableTelemetry(telemetryHost, telemetryPort);
 			}
 
@@ -281,158 +299,11 @@ public class ParallelClientLoadTester implements GreenApp {
 
 	@Override
 	public void declareBehavior(final GreenRuntime runtime) {
-		Progress progress = new Progress(runtime);
+		LoadTestProgress progress = new LoadTestProgress(this, runtime);
 		runtime.registerListener(PROGRESS_NAME, progress)
 				.SLALatencyNS(200_000_000)//due to use of System out and shutdown this is allowed more time
 				.addSubscription(ENDERS_TOPIC, progress::enderMessage)
 		        .addSubscription(PROGRESS_TOPIC, progress::progressMessage);
-	}
-
-	private class Progress implements PubSubMethodListener, StartupListener {
-		private final PubSubFixedTopicService cmd4;
-
-		private final long[] finished = new long[parallelTracks];
-		//private final long[] sendAttempts = new long[parallelTracks];
-		//private final long[] sendFailures = new long[parallelTracks];
-		private final long[] timeouts = new long[parallelTracks];
-		//private final long[] responsesReceived = new long[parallelTracks];
-		private final long[] responsesInvalid = new long[parallelTracks];
-
-		private long totalTimeSum;
-		private long sendAttemptsSum;
-		private long sendFailuresSum;
-		private long timeoutsSum;
-		private long responsesReceivedSum;
-		private long responsesInvalidSum;
-
-		private int lastPercent = 0;
-		private long lastTime = 0;
-		private int enderCounter;
-		private boolean done = false;
-
-		Progress(GreenRuntime runtime) {
-			this.cmd4 = runtime.newCommandChannel().newPubSubService(ENDERS_TOPIC,Math.max(PUB_MSGS, maxInFlight), PUB_MSGS_SIZE);
-		}
-
-		@Override
-		public void startup() {
-			startupTime = System.nanoTime();
-		}
-
-		boolean enderMessage(CharSequence topic, ChannelReader payload) {
-			if (topic.equals(ENDERS_TOPIC)) {
-				
-				if (payload.hasRemainingBytes()) {
-					int track = payload.readPackedInt();
-					long totalTime = payload.readPackedLong();
-					long sendAttempts = payload.readPackedLong();
-					long sendFailures = payload.readPackedLong();
-					long timeouts = payload.readPackedLong();
-					long responsesReceived = payload.readPackedLong();
-					long responsesInvalid = payload.readPackedLong();
-
-					totalTimeSum += totalTime;
-					sendAttemptsSum += sendAttempts;
-					sendFailuresSum += sendFailures;
-					timeoutsSum += timeouts;
-					responsesReceivedSum += responsesReceived;
-					responsesInvalidSum += responsesInvalid;
-					
-					//logger.info("Finished track {} remaining {}",track,(parallelTracks-enderCounter));
-				}
-				
-				
-				if (++enderCounter == (parallelTracks + 1)) { //we add 1 for the progress of 100%
-					ElapsedTimeRecorder etr = new ElapsedTimeRecorder();
-					int t = elapsedTime.length;
-					while (--t >= 0) {
-						etr.add(elapsedTime[t]);
-					}
-					
-					//NOTE: these counts do include warmup
-                    long totalMessages = parallelTracks * cyclesPerTrack;
-                    long testDuration = System.nanoTime() - startupTime;
-                    long serverCallsPerSecond = (1_000_000_000L * totalMessages) / testDuration;
-
-					out.end(
-							etr, testDuration, totalMessages, totalTimeSum, serverCallsPerSecond,
-							sendAttemptsSum, sendFailuresSum, timeoutsSum, responsesReceivedSum, responsesInvalidSum
-					);
-					logger.info("\nshutting down load test, all tracks have finished");
-					cmd4.requestShutdown();
-					return true;
-				}
-			}
-			return true;
-		}
-		
-		
-		
-		boolean progressMessage(CharSequence topic, ChannelReader payload) {
-			int track = payload.readPackedInt();
-			long countDown = payload.readPackedLong();
-			//long sendAttempts = payload.readPackedInt();
-			//long sendFailures = payload.readPackedInt();
-			long timeouts = payload.readPackedInt();
-			//long responsesReceived = payload.readPackedInt();
-			long responsesInvalid = payload.readPackedInt();
-
-			this.finished[track] = cyclesPerTrack - countDown;
-			//this.sendAttempts[track] = sendAttempts;
-			//this.sendFailures[track] = sendFailures;
-			this.timeouts[track] = timeouts;
-			//this.responsesReceived[track] = responsesReceived;
-			this.responsesInvalid[track] = responsesInvalid;
-
-			long sumFinished = 0;
-			//long sumSendAttempts = 0;
-			//long sumSendFailures = 0;
-			long sumTimeouts = 0;
-			//long sumResponsesReceived = 0;
-			long sumResponsesInvalid = 0;
-			int trackId = parallelTracks;
-			long minFin = Long.MAX_VALUE;
-			while (--trackId >= 0) {
-				
-				long f = this.finished[trackId];
-				if (f < minFin) {
-					minFin = f;
-				}
-				
-				sumFinished += f;
-				//sumSendAttempts += this.sendAttempts[track];
-				//sumSendFailures += this.sendFailures[track];
-				sumTimeouts += this.timeouts[track];
-				//sumResponsesReceived += this.responsesReceived[i];
-				sumResponsesInvalid += this.responsesInvalid[trackId];
-			}
-			minFinished = minFin;
-
-			long totalRequests = cyclesPerTrack * parallelTracks;
-			int percentDone = (int)((100L * sumFinished) / totalRequests);
-			assert(percentDone>=0);
-
-			long now = 0;
-
-			//updates no faster than once every second and only after 1% is complete.
-			if (((percentDone>1) &&  (percentDone != lastPercent) && ((now = System.nanoTime()) - lastTime) > 1_000_000_000L)
-					|| 100L == percentDone) {
-			    out.progress(percentDone, sumTimeouts, sumResponsesInvalid);
-
-				lastTime = now;
-				lastPercent = percentDone;
-			}
-			
-			if (100 == percentDone && (!done)) {
-				logger.trace("received {}% of requests on all tracks",percentDone);
-				boolean result = cmd4.publishTopic();	
-				if (result) {
-					done = true;					
-				}
-				return result;
-			}
-			return true;
-		}
 	}
 
 	public void declareParallelBehavior(GreenRuntime runtime) {
@@ -440,81 +311,71 @@ public class ParallelClientLoadTester implements GreenApp {
 
 		TrackHTTPResponseListener responder = new TrackHTTPResponseListener(runtime, track);
 		runtime.registerListener(RESPONDER_NAME, responder)
-					.addSubscription(CALL_TOPIC, responder::callMessage) //TODO: this object has a connection from pub sub that does nothing..
+					.addSubscription(CALL_TOPIC, responder::callMessage)
 					.acceptHostResponses(session[track]);
 	}
 
 
 	private class TrackHTTPResponseListener implements HTTPResponseListener, TimeListener, StartupListener, PubSubMethodListener {
+		
 		private final PubSubFixedTopicService callService;
 		private DelayService delayService;
 		private final PubSubService pubService;
 		
 		private final int track;
-		private final HTTPRequestService httpClientService;   
-
+		
+		private final HTTPRequestService[] httpClientService;   
+		private final int clientServiceMask;
+		
 		private long totalTime;
 		private long sendFailures;
 		private long timeouts;
 		private long responsesInvalid;
 	
-		private long waitingCountDown;
-		private long callRequestInstanceCounter;
-		private long responsesReceived;
-		
-		private boolean lastResponseOk=true;
-		
-		private Writable writeWrapper;
-		
-		private BuilderImpl builder; //needed for debug of halted jobs.
+		private TrackHTTPResponseListenerData[] connectionSessionData = new TrackHTTPResponseListenerData[sessionCount];
 
+		private BuilderImpl<?> builder; //needed for debug of halted jobs.
 		
 		TrackHTTPResponseListener(GreenRuntime runtime, int track) {
 			this.track = track;
-			waitingCountDown = cyclesPerTrack;
+			
+			final int totalSessionsPerTrack = connectionSessionData.length;;
+			int s = totalSessionsPerTrack;
+			while (--s>=0) {
+				connectionSessionData[s] = new TrackHTTPResponseListenerData();
+				connectionSessionData[s].waitingCountDown = cyclesPerTrack;
+			}
 			
 			builder = runtime.builder;
 			
 			GreenCommandChannel newCommandChannel = runtime.newCommandChannel();
-			callService = newCommandChannel.newPubSubService(CALL_TOPIC, maxInFlight, PUB_MSGS_SIZE);
+			callService = newCommandChannel.newPubSubService(CALL_TOPIC, maxInFlight*sessionCount, PUB_MSGS_SIZE);
 			pubService = newCommandChannel.newPubSubService(parallelTracks*4, PUB_MSGS_SIZE);
 			
 			if (durationNanos > 0) {//this service requires cops but is only needed when delay is enabled. to save resources only create as needed.
 				delayService = newCommandChannel.newDelayService();
 			}
-			int queueLength = Math.max(maxInFlight,1<<10);
-											
-			httpClientService = runtime.newCommandChannel()
-					.newHTTPClientService(
-							queueLength	
-					, writer!=null ? maxPayloadSize : 0);	
 			
-			writeWrapper = new Writable() {
-				@Override
-				public void write(ChannelWriter w) {
-					writer.payloadWriter(callRequestInstanceCounter, w);
-				}				
-			};
+			int consumedBits = 0==maxPayloadSize ? 0 : (int)Math.ceil(Math.log(maxPayloadSize)/Math.log(2));
+			
+			//do not make too large, when doing giant load testing. This can cause memory issues.
+			//we do need this long enough to all all the requests unless it will consume more than 1Gb
+			//note 28 is a magic number based on the ratio between slab and blob for this schema
+			int queueLength = Math.min(2 *maxInFlight * totalSessionsPerTrack, 1<<Math.max(28-consumedBits,3));
+
+			int httpClientConnections = 1+(sessionCount/256);
+			httpClientService = new HTTPRequestService[httpClientConnections];
+			clientServiceMask = httpClientService.length-1;
+			
+			int i = httpClientConnections;
+			while(--i>=0) {
+				httpClientService[i] = runtime.newCommandChannel().newHTTPClientService(queueLength, writer!=null ? maxPayloadSize : 0);	
+			}
 			
 		}
 
-
-		private int x = 0;
 		
 		boolean callMessage(CharSequence topic, ChannelReader payload) {
-
-			//slow down the tracks far ahead of the others
-			if (parallelTracks>2) {
-				long gap = (cyclesPerTrack-waitingCountDown) - minFinished;
-				if (gap > 2000) {
-					if (0!=(15&x++)) {
-						//TODO: This may be the cause of the smaller chunking when under test..
-						//if non zero we delay making this call
-						return false;
-					}
-				}
-			}
-			
 			return makeCall(payload.readInt()); //session Idx
 		}
 
@@ -524,7 +385,7 @@ public class ParallelClientLoadTester implements GreenApp {
 				long now = System.nanoTime();
 				boolean wasSent = doHTTPCall(sessionIdx);			
 				if (wasSent) {
-					callRequestInstanceCounter++;//must happen after call			
+					connectionSessionData[sessionIdx].callRequestInstanceCounter++;//must happen after call			
 					callTime[track][maxInFlightMask & inFlightHead[track]++] = now;
 				} else {
 					sendFailures++;
@@ -544,25 +405,26 @@ public class ParallelClientLoadTester implements GreenApp {
 			}
 		}
 		
-		//TODO: add support for N sessions per track, this will allow us to simulate many clients while using fewer threads.
-		
-		
 		private boolean httpPost(int sessionIdx) {
-			return httpClientService.httpPost(session[track][sessionIdx], route.route(callRequestInstanceCounter), writeWrapper);
+			return httpClientService[clientServiceMask&sessionIdx].httpPost(session[track][sessionIdx], 
+					                          route.route(connectionSessionData[sessionIdx].callRequestInstanceCounter),
+					                          (w)->writer.payloadWriter(connectionSessionData[sessionIdx].callRequestInstanceCounter, w));
 		}
 
 		private boolean httpGet(int sessionIdx) {
-			return httpClientService.httpGet(session[track][sessionIdx], route.route(callRequestInstanceCounter));	
+			return httpClientService[clientServiceMask&sessionIdx].httpGet(session[track][sessionIdx], route.route(connectionSessionData[sessionIdx].callRequestInstanceCounter));	
 		}
 
 		private boolean httpGetWithHeader(int sessionIdx) {
-			return httpClientService.httpGet(session[track][sessionIdx], route.route(callRequestInstanceCounter), header.headerWritable(callRequestInstanceCounter));		
+			return httpClientService[clientServiceMask&sessionIdx].httpGet(session[track][sessionIdx], route.route(connectionSessionData[sessionIdx].callRequestInstanceCounter), header.headerWritable(connectionSessionData[sessionIdx].callRequestInstanceCounter));		
 		}
 		
 		private boolean httpPostWithHeader(int sessionIdx) {
 			ClientHostPortInstance s = session[track][sessionIdx];
 			if (null!=s) {
-				return httpClientService.httpPost(s, route.route(callRequestInstanceCounter), header.headerWritable(callRequestInstanceCounter), writeWrapper);
+				return httpClientService[clientServiceMask&sessionIdx].httpPost(s, route.route(connectionSessionData[sessionIdx].callRequestInstanceCounter), 
+						                           header.headerWritable(connectionSessionData[sessionIdx].callRequestInstanceCounter), 
+						                           (w)->writer.payloadWriter(connectionSessionData[sessionIdx].callRequestInstanceCounter, w));
 
 			} else {
 				//NOTE: must investigate this, we are getting TOO many re-sends? after a close??
@@ -573,7 +435,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		
 		@Override
 		public void startup() {
-			
+					
 			int s = session[track].length;
 			while (--s >= 0) {
 			
@@ -592,17 +454,20 @@ public class ParallelClientLoadTester implements GreenApp {
 					}
 					//must use message to startup the system
 				}
-			}
-			//TODO: must fix for multiple sessions?  refactor to remove...
-			waitingCountDown--; //we launched 1 cycle for this track on startup.
+				connectionSessionData[s].waitingCountDown--; //we launched 1 cycle for this track on startup.
+			}			
+			
 		}
 	
 		@Override
 		public boolean responseHTTP(HTTPResponseReader reader) {
 		
-			int sessionIdx = 0;
+			int sessionIdx = sessionLookup[reader.sessionId()]; //convert to our own internal (eg per track) session idx
+			
 			
 			if (reader.isConnectionClosed()) {
+				System.out.println("connection closed: got response on track "+track+" session "+sessionIdx+" remaining "+connectionSessionData[sessionIdx].callRequestInstanceCounter);
+				
 				//server or internal subsystem just axed connection and we got no notice..
 							
 				if (inFlightHead[track]>inFlightTail[track]) {
@@ -610,7 +475,7 @@ public class ParallelClientLoadTester implements GreenApp {
 					//NOTE: we have already countDown these however they never arrived.
 					int totalMissing = inFlightHead[track]-inFlightTail[track];
 					
-					if (!httpClientService.hasRoomFor(totalMissing)) {
+					if (!httpClientService[clientServiceMask&sessionIdx].hasRoomFor(totalMissing)) {
 						return false;//try again later
 					}
 					
@@ -621,11 +486,11 @@ public class ParallelClientLoadTester implements GreenApp {
 										
 					//we must re-request the call
 					//keep the clock rolling since this is a penalty against the server
-					callRequestInstanceCounter-=totalMissing;
+					connectionSessionData[sessionIdx].callRequestInstanceCounter-=totalMissing;
 					int i = totalMissing;
 					while (--i>=0) {
 						while (!doHTTPCall(sessionIdx)) {Thread.yield();};
-						callRequestInstanceCounter++;//must happen after call
+						connectionSessionData[sessionIdx].callRequestInstanceCounter++;//must happen after call
 					}
 				}	
 				out.connectionClosed(track);
@@ -634,7 +499,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			}
 
 			//if false we already closed this one and need to skip this part
-			if (lastResponseOk) {
+			if (connectionSessionData[sessionIdx].lastResponseOk) {
 				if (!reader.isEndOfResponse()) {
 					return true;//just toss all the early chunks we only want the very end.
 				}
@@ -645,7 +510,7 @@ public class ParallelClientLoadTester implements GreenApp {
 				long duration = arrivalTime - sentTime;
 								
 				//only done once to ensure the code remains the same
-				if (responsesReceived == (warmupCount-1)) {
+				if (connectionSessionData[sessionIdx].responsesReceived == (warmupCount-1)) {
 					//clear all values we are not doing the real deal
 					System.gc();//still in warmup so GC now quick
 					totalTime = 0;//reset
@@ -670,19 +535,26 @@ public class ParallelClientLoadTester implements GreenApp {
 				if (validator != null
 					&& reader.isBeginningOfResponse() 
 					&& reader.isEndOfResponse()	
-					&& !validator.validate(responsesReceived, reader)) {
+					&& !validator.validate(connectionSessionData[sessionIdx].responsesReceived, reader)) {
 					responsesInvalid++;
 				} 				
-				responsesReceived++;
+				connectionSessionData[sessionIdx].responsesReceived++;
 			}
-			return lastResponseOk = nextCall();
+			return connectionSessionData[sessionIdx].lastResponseOk = nextCall(sessionIdx);
 		}
 
-		private boolean nextCall() {
-			if ((0xFFFF & waitingCountDown) == 0) {
+		private boolean nextCall(int sessionIdx) {
+			if ((0xFFFF & connectionSessionData[sessionIdx].waitingCountDown) == 0) {
 				pubService.publishTopic(PROGRESS_TOPIC, writer-> {
 					writer.writePackedInt(track);
-					writer.writePackedLong(waitingCountDown);
+					
+					int sumCountDown = 0;
+					int s = connectionSessionData.length;
+					while (--s >= 0) {
+						sumCountDown+=connectionSessionData[s].waitingCountDown;
+					}					
+					writer.writePackedLong(sumCountDown);					
+					
 					//writer.writePackedLong(sendAttempts);
 					//writer.writePackedLong(sendFailures);
 					writer.writePackedLong(timeouts);
@@ -692,10 +564,9 @@ public class ParallelClientLoadTester implements GreenApp {
 				
 			}
 			
-			int sessionInstance = 0;
 
 			boolean isOk = true;
-			if (waitingCountDown >= inFlightHTTPs) { //others are still in flight
+			if (connectionSessionData[sessionIdx].waitingCountDown >= inFlightHTTPs) { //others are still in flight
 				if (durationNanos > 0) {
 					isOk = delayService.delay(durationNanos);
 				}
@@ -703,14 +574,24 @@ public class ParallelClientLoadTester implements GreenApp {
 					//since this same behavior is the one which will make the call directly 
 					//call the method instead of using the private topic,  this eliminates the 
 					//need to loop over the features twice for send and receive to ourself.
-					isOk = makeCall(sessionInstance);
+					isOk = makeCall(sessionIdx);
 				}
 			}
+			
+			//System.out.println("session "+sessionIdx+" count down "+connectionSessionData[sessionIdx].waitingCountDown);
 		
-			if (0==waitingCountDown) {
+			if (0==connectionSessionData[sessionIdx].waitingCountDown) {
 				boolean clean = pubService.publishTopic(PROGRESS_TOPIC, writer-> {
 					writer.writePackedInt(track);
-					writer.writePackedLong(waitingCountDown);
+					
+					int sumCountDown = 0;
+					int s = connectionSessionData.length;
+					while (--s >= 0) {
+						sumCountDown += connectionSessionData[s].waitingCountDown;						
+					}					
+					writer.writePackedLong(sumCountDown);
+					
+					
 					//writer.writePackedLong(sendAttempts);
 					//writer.writePackedLong(sendFailures);
 					writer.writePackedLong(timeouts);
@@ -721,35 +602,36 @@ public class ParallelClientLoadTester implements GreenApp {
 				clean &= pubService.publishTopic(ENDERS_TOPIC, writer -> {
 					writer.writePackedInt(track);
 					writer.writePackedLong(totalTime);
-					writer.writePackedLong(callRequestInstanceCounter);
+					writer.writePackedLong(connectionSessionData[sessionIdx].callRequestInstanceCounter);
 					writer.writePackedLong(sendFailures);
 					writer.writePackedLong(timeouts);
-					writer.writePackedLong(responsesReceived);
+					writer.writePackedLong(connectionSessionData[sessionIdx].responsesReceived);
 					writer.writePackedLong(responsesInvalid);
 				});
 				assert(clean) :"unable to end test clean";
 				
-				--waitingCountDown;//ensure it goes negative so we do not finish more than once, this can happen when connections have been timed out and new requests sent.
-				//System.out.println("publish enders clean:"+clean+"  "+track+" rec  "+responsesReceived+" "+callCounter);
+				--connectionSessionData[sessionIdx].waitingCountDown;//ensure it goes negative so we do not finish more than once, this can happen when connections have been timed out and new requests sent.
 				
-				ClientHostPortInstance[] s = session[track];
-				int j = s.length;
-				while (--j >= 0) {
-					if (s!=null) {
-						//NOTE: only safe place to close the connection.
-							
-						if (insecureClient) {
-							httpClientService.httpClose(s[j]); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. TODO: need to resolve ...
-						}
-						session[track][j]=null;
+				//logger.info("publish enders clean:{} for track: {} session: {},",clean,track,sessionIdx);				
+				
+				ClientHostPortInstance s = session[track][sessionIdx];
+		
+				if (s!=null) {
+					//NOTE: only safe place to close the connection.
+						
+					if (insecureClient) {
+						
+						httpClientService[clientServiceMask&sessionIdx].httpClose(s); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. 
 					}
-				}
+					session[track][sessionIdx]=null;
+				}			
 				
 				
 			} else if (isOk) { //upon failure should not count down
-				--waitingCountDown;
+				--connectionSessionData[sessionIdx].waitingCountDown;
 			} else {
-			    logger.warn("Unable to send request, will try again.");
+				//not an error since we can load test millions of users
+			   // logger.warn("Unable to send request, will try again.");
 			}
 
 			return isOk;
@@ -760,16 +642,23 @@ public class ParallelClientLoadTester implements GreenApp {
 		@Override
 		public void timeEvent(long time, int iteration) {
 
-
+			int callSum = 0;
+			int waitingSum = 0;
+			int j = connectionSessionData.length;
+			while (--j>=0) {
+				callSum += connectionSessionData[j].callRequestInstanceCounter;
+				waitingSum += connectionSessionData[j].waitingCountDown;
+			}
+						
 			
-			if (lastProgressCheck != callRequestInstanceCounter) {
-				lastProgressCheck = callRequestInstanceCounter;
+			if (lastProgressCheck != callSum) {
+				lastProgressCheck = callSum;
 			} else {			
-				if (callRequestInstanceCounter!=cyclesPerTrack) {
+				if (callSum != (cyclesPerTrack*connectionSessionData.length)) {
 					StringBuilder builder = new StringBuilder(); 
 					Appendables.appendValue(Appendables.appendValue(Appendables.appendValue(
 							Appendables.appendEpochTime(builder.append("\n"), time)
-							           .append(" status for track: "),track), " progress:", callRequestInstanceCounter), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
+							           .append(" status for track: "),track), " progress:", callSum), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
 					
 					System.out.print(builder);
 					
@@ -785,8 +674,8 @@ public class ParallelClientLoadTester implements GreenApp {
 						scanForPipesWithData(graphUnderTest, "Server pipe found with data: ");
 					}
 					
-				} else if (waitingCountDown>=0) {
-					System.out.println("No progress on track: "+track+" All requests sent but waiting for "+(waitingCountDown+1)+". Was closed connection not detected?");
+				} else if (waitingSum>=0) {
+					System.out.println("No progress on track: "+track+" All requests sent but waiting for ~"+waitingSum+". Was closed connection not detected?");
 								
 					//First double check that the load testing code has no pipes of data to be processed.
 					scanForPipesWithData(this.builder.gm, "Load testing pipe found with data: ");

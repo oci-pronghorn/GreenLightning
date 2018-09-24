@@ -22,13 +22,14 @@ public class ClientHostPortCollection {
 		
 
 		ClientConnection result = ClientCoordinator.openConnection(
-				ccm, 
-				members[idx].hostId, 
-				members[idx].port, 
-				members[idx].sessionId, 
-				outputs,
-				members[idx].getConnectionId(),
-				BasicClientConnectionFactory.instance);
+									ccm, 
+									members[idx].hostId, 
+									members[idx].port, 
+									members[idx].sessionId, 
+									ClientHostPortInstance.getTargetResponsePipeIdx(members[idx]),
+									outputs,
+									members[idx].getConnectionId(),
+									BasicClientConnectionFactory.instance);
 		
 		members[idx].setConnectionId(result.getId());
 		return result;

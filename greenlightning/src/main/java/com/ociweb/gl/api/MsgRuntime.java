@@ -137,7 +137,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 
     protected boolean transducerAutowiring = true;
 
-	private PipeConfig<HTTPRequestSchema> fileRequestConfig;// = builder.restPipeConfig.grow2x();
+	private PipeConfig<HTTPRequestSchema> fileRequestConfig;
 
     protected int netResponsePipeIdx = -1;
 
@@ -523,8 +523,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		r.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
 						Math.max(incomingMsgFragCount-2, 2), 
 						r.getMaxRequestSize()));
-			
-		r.pcm.ensureSize(ServerResponseSchema.class, 4, 512);		
+		
+		r.pcm.ensureSize(ServerResponseSchema.class, 4, r.getMaxResponseSize());		
 		
 		ServerPipesConfig serverConfig = new ServerPipesConfig(
 					r.logFileConfig(),
@@ -581,7 +581,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		constructingBridges();
 		builder.initAllPendingReactors();
 		
-		
 		buildLastHalfOfGraphForServerImpl(serverConfig, serverCoord, parallelTrackCount, acks, handshakeIncomingGroup,
 				planIncomingGroup);
 	}
@@ -626,9 +625,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 			final int trackCounts, Pipe[] acks, Pipe[] handshakeIncomingGroup, Pipe[] planIncomingGroup) {
 		//////////////////
 		//////////////////
-		
+
 		final HTTP1xRouterStageConfig routerConfig = builder.routerConfig();
 				
+		
 		/////////////////
 		/////////////////
 		
@@ -1010,7 +1010,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 	}
 
 	protected PipeConfigManager buildPipeManager() {
-		PipeConfigManager pcm = new PipeConfigManager();
+		PipeConfigManager pcm = new PipeConfigManager(4,2,128);
 		pcm.addConfig(defaultCommandChannelLength,0,TrafficOrderSchema.class );
 		return pcm;
 	}

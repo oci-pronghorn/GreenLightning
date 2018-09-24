@@ -24,6 +24,7 @@ public class ParallelClientLoadTesterConfig {
 	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests on a track
 	public Appendable target = System.out;
 	public GraphManager graphUnderTest;
+	public int sessionsPerTrack = 1;//default of 1 connection per track
 	
     public ParallelClientLoadTesterConfig() {
     }
@@ -46,6 +47,7 @@ public class ParallelClientLoadTesterConfig {
         insecureClient = args.getArgumentValue("--insecure", "-is", insecureClient);
         parallelTracks = args.getArgumentValue("--tracks", "-t", parallelTracks);
         cyclesPerTrack = args.getArgumentValue("--cycles", "-c", cyclesPerTrack);
+        sessionsPerTrack = args.getArgumentValue("--sessions", "-s", sessionsPerTrack);
         durationNanos = args.getArgumentValue("--duration", "-d", durationNanos);
     
         telemetryPort = args.getArgumentValue("--telemPort", "-tp", telemetryPort);

@@ -88,6 +88,7 @@ public interface Builder<R extends MsgRuntime<?,?,R>> extends ArgumentProvider {
 	
 	HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<R> behaviorDefinition);
 	
+	HTTPServerConfig useHTTP1xServer(int bindPort, DeclareBehavior<R> behaviorDefinition);
 
     /**
      * Enables the dev ops view of the running app

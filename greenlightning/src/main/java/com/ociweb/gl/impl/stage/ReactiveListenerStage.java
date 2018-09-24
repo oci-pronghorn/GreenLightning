@@ -231,19 +231,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			//if auto private topics has found them all to be topic then pub sub is disabled since it is not needed.
 			ChildClassScanner.visitUsedByClass(nameId, listener, gatherPipesVisitor, MsgCommandChannel.class);//populates outputPipes	
 			
-			if (this.builder.isListeningToHTTPResponse(listener)) {
-				int behaviorId = builder.behaviorId(listener);		
-				
-				//this is needed to capture the undefined (session-less) responses so they come back to 
-				//the calling behavior. 
-				if (!builder.hasHTTPClientPipe(behaviorId) ) {
-					
-					inputPipes = PronghornStage.join(inputPipes,builder.buildNetResponsePipe());     
-					builder.registerHTTPClientId(behaviorId,builder.netResponsePipeIdxCounter++);            
-				}
-	        }
-			
-			
 			
 	        if ( (!this.builder.isAllPrivateTopics()) 
 	        	&& this.builder.isListeningToSubscription(listener)) {
@@ -1749,7 +1736,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		int behaviorId = builder.behaviorId(listener);		
 		int j = httpSessions.length;
 		while(--j >= 0) {
-
+			
 			//NOTE: this is not a good implementation and should be revisited at some point.
 			//     we could store the pipeId instead then use the graph to look them up directly.
 			int pipeIdx = builder.netResponsePipeIdxCounter++; //depends on graph returning the same order.
@@ -1757,14 +1744,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			
 			//register listener will set these values before we use include
 		    //we added one more uniqueId to the same pipeIdx given this listeners id
-		    builder.registerHTTPClientId(httpSessions[j].sessionId, pipeIdx); 
-
-			//this is needed to capture the undefined (session-less) responses so they come back to 
-			//the calling behavior. 
-			if (!builder.hasHTTPClientPipe(behaviorId) ) {    
-				builder.registerHTTPClientId(behaviorId, pipeIdx);            
-			}
-
+			ClientHostPortInstance.setTargetResponsePipeIdx(httpSessions[j], pipeIdx);
+			
 		   // logger.info("\nregister session {} with pipe {}",httpSessions[j].sessionId,pipeIdx);
 		    
 			Pipe<NetResponseSchema> buildNetResponsePipe = builder.buildNetResponsePipe();

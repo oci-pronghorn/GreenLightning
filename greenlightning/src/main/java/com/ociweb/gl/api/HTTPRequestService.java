@@ -32,16 +32,16 @@ public class HTTPRequestService {
 		
 		if (msgCommandChannel.builder.getHTTPClientConfig().isTLS()) {
 			//TLS must have at lest 1<<15
-			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, Math.max(1<<15, maxMessageSize));
+			int tlsBody = Math.max(1<<15, maxMessageSize);
+			int tlsLen =  Math.max(Math.min(queueLength, (1<<27)/tlsBody),4);
+			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, tlsLen, tlsBody);
 		} else {
 			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
 		}
 		
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
-		
-		msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, queueLength, maxMessageSize);
-	
+			
 	}
 
 
@@ -138,13 +138,11 @@ public class HTTPRequestService {
 					
 					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, verb);
 					
-					int lookupHTTPClientPipe = msgCommandChannel.builder.lookupTargetPipe(session, msgCommandChannel.listener);
-					
 					Pipe.addIntValue(session.sessionId, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.hostId, msgCommandChannel.httpRequest);
 					Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
-					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);
+					Pipe.addIntValue(ClientHostPortInstance.getTargetResponsePipeIdx(session), msgCommandChannel.httpRequest);
 					Pipe.addUTF8(route, msgCommandChannel.httpRequest);
 			
 					DataOutputBlobWriter<ClientHTTPRequestSchema> hw = Pipe.outputStream(msgCommandChannel.httpRequest);
@@ -211,8 +209,6 @@ public class HTTPRequestService {
 
 		if (msgCommandChannel.goHasRoom() ) { 
 	
-			int lookupHTTPClientPipe = msgCommandChannel.builder.lookupHTTPClientPipe(session.sessionId);
-							
 				if (Pipe.hasRoomForWrite(msgCommandChannel.httpRequest)) {					
 
 					int size = Pipe.addMsgIdx(msgCommandChannel.httpRequest, verb);			
@@ -221,7 +217,7 @@ public class HTTPRequestService {
 					Pipe.addIntValue(session.port, msgCommandChannel.httpRequest);
 					Pipe.addIntValue(session.hostId, msgCommandChannel.httpRequest);
 					Pipe.addLongValue(session.getConnectionId(), msgCommandChannel.httpRequest);
-					Pipe.addIntValue(lookupHTTPClientPipe, msgCommandChannel.httpRequest);					 
+					Pipe.addIntValue(ClientHostPortInstance.getTargetResponsePipeIdx(session), msgCommandChannel.httpRequest); 			 
 						
 					//path
 					Pipe.addUTF8(route, msgCommandChannel.httpRequest);

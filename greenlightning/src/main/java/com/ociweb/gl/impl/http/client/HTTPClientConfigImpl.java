@@ -11,9 +11,8 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     private TLSCertificates certificates;
     
     private int unwrapCount = 2;//default
-    private int responseQueueLength = 2048;  // needed for HIGHVOLUME 
-    private int maxRequestSize = 512;//default
-    private int maxResponseSize = 512;//default
+        
+    private int maxRequestSize = 512;//default 
     private int maxSimultaniousRequests = 1024;//default max HTTP calls to clientSocketWriter 
     
 
@@ -25,7 +24,6 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
         this.certificates = certificates;
         this.pcm = pcm;
 		
-		this.pcm.ensureSize(NetResponseSchema.class, responseQueueLength, maxResponseSize);
     }
 
     @Override
@@ -78,7 +76,7 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     
     @Override
     public HTTPClientConfig setMaxResponseSize(int value) {
-    	maxResponseSize = value;
+    	this.pcm.ensureSize(NetResponseSchema.class, 4, value);
     	return this;
     }
     
@@ -89,8 +87,8 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     }       
     
     @Override
-    public HTTPClientConfig setResponseQueueLength(int value) {
-    	responseQueueLength = value;
+    public HTTPClientConfig setResponseQueueLength(int value) {    
+    	this.pcm.ensureSize(NetResponseSchema.class, value, 32);  
     	return this;
     }   
 }

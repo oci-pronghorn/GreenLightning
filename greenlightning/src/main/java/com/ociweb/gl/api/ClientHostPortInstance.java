@@ -17,6 +17,7 @@ public class ClientHostPortInstance {
 	public final String host;
 	public final byte[] hostBytes;
 	public final int sessionId;
+	private int targetPipeIdx = -1;
 	
 	final int port;
 	final int hostId;
@@ -121,6 +122,15 @@ public class ClientHostPortInstance {
 	public boolean isFor(String host, int port) {
 		
 		return (this.host.equals(host)) && (this.port==port);
+	}
+
+	public static void setTargetResponsePipeIdx(ClientHostPortInstance chpi, int pipeIdx) {
+		assert(-1 == chpi.targetPipeIdx) : "Can not modify target pipe after setting";
+		chpi.targetPipeIdx = pipeIdx;		
+	}
+	
+	public static int getTargetResponsePipeIdx(ClientHostPortInstance chpi) {
+		return chpi.targetPipeIdx;
 	}
 	
 
