@@ -10,16 +10,6 @@
 - which allows you to interact and control your device
 
 ## Starting Your Own Project
-
- In the command line or terminal of your local machine, enter:
-```
- git clone https://github.com/oci-pronghorn/GreenLighter.git
- cd GreenLighter
- mvn install
- ```
- 
-#### Create a new directory outside of the GreenLighter project directory for your new IoT project.
-Now, ```cd``` into the directory for your to be created IoT project, and enter:
 ```
 mvn archetype:generate -DarchetypeGroupId=com.ociweb -DarchetypeArtifactId=greenlighter -DarchetypeVersion=1.0.2
 ```
