@@ -18,12 +18,12 @@ public class ProductsBehavior implements RestMethodListener, StartupListener {
 	
 	private int selectedId;
 	private final JSONRenderer<ProductsBehavior> renderSelected = new JSONRenderer<ProductsBehavior>()
-														.startObject()
-															.integer("id", o-> o.selectedId )
-															.integer("quantity", o-> o.quantity[o.selectedId] )
-															.string("name", (o,t)-> t.append(o.names[o.selectedId]) )
-															.bool("disabled", o->o.disabled[o.selectedId])
-														.endObject();	
+				.startObject()
+					.integer("id", o-> o.selectedId )
+					.integer("quantity", o-> o.quantity[o.selectedId] )
+					.string("name", (o,t)-> t.append(o.names[o.selectedId]) )
+					.bool("disabled", o->o.disabled[o.selectedId])
+				.endObject();	
 	
 	public ProductsBehavior(GreenRuntime runtime, int maxProductId) {	
 		responseService = runtime.newCommandChannel().newHTTPResponseService();
