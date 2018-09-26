@@ -85,9 +85,9 @@ public class MyMicroservice implements GreenApp {
 	  	  .defineRoute()
 	  	  .parseJSON()
 	  	    .integerField("id", Field.ID, JSONRequired.REQUIRED, v -> v>=0 & v<=maxProductId)
-	  	    .stringField("name", Field.NAME, JSONRequired.REQUIRED, (b,p,l,m) -> l>0 & l<=4000) //bplm is the backing array of utf8 encoded bytes, pos, len, and mask
+	  	    .stringField("name", Field.NAME, JSONRequired.REQUIRED, (b,p,l,m) -> l>0 & l<=4000) 
 	  	    .booleanField("disabled", Field.DISABLED, JSONRequired.REQUIRED)
-	  	    .integerField("quantity", Field.QUANTITY, JSONRequired.REQUIRED, v -> v>=0 && v<=1_000_000) //if missing not returning 404? get exception?
+	  	    .integerField("quantity", Field.QUANTITY, JSONRequired.REQUIRED, v -> v>=0 && v<=1_000_000) 
 	  	  .path("/update")
 	  	  .routeId(Struct.PRODUCT_UPDATE);
 	  	
