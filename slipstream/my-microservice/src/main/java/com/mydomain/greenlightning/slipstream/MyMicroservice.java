@@ -48,6 +48,9 @@ public class MyMicroservice implements GreenApp {
     	  //supported.  The count supported is reported in the console at startup.
     	  .setConcurrentChannelsPerDecryptUnit(4)
     	  
+    	  .setDecryptionUnitsPerTrack(1)
+    	  .setEncryptionUnitsPerTrack(1)
+    	  
     	  //IP home where this site is hosted.  This is the internal IP.
     	  //This value supports stars so "10.*.*.*" is a common value used.
     	  //If this is unset the system will pick the most public IP  it can find.

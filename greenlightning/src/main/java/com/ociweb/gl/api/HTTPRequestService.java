@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.ociweb.pronghorn.network.ClientCoordinator;
+import com.ociweb.pronghorn.network.SSLUtil;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
@@ -19,9 +20,8 @@ public class HTTPRequestService {
 	public HTTPRequestService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;	
 		
-		if (msgCommandChannel.builder.getHTTPClientConfig().isTLS()) {
-			//TLS must have a payload of at lest 1<<15
-			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, 4, 1<<15);
+		if (msgCommandChannel.builder.getHTTPClientConfig().isTLS()) {			
+			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, 4, SSLUtil.MinTLSBlock);
 		}
 		
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_REQUESTER;
@@ -31,8 +31,9 @@ public class HTTPRequestService {
 		this.msgCommandChannel = msgCommandChannel;
 		
 		if (msgCommandChannel.builder.getHTTPClientConfig().isTLS()) {
-			//TLS must have at lest 1<<15
-			int tlsBody = Math.max(1<<15, maxMessageSize);
+			//TLS must have at lest 33305
+			
+			int tlsBody = Math.max(SSLUtil.MinTLSBlock, maxMessageSize);
 			int tlsLen =  Math.max(Math.min(queueLength, (1<<27)/tlsBody),4);
 			msgCommandChannel.pcm.ensureSize(ClientHTTPRequestSchema.class, tlsLen, tlsBody);
 		} else {

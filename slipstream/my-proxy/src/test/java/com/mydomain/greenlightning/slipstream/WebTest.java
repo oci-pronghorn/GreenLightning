@@ -51,9 +51,7 @@ public class WebTest {
 				             host, port, 
 				             timeoutMS, 3,
 				             Appendables.join(results,System.out));
-		
-		System.out.println(results);
-		
+				
 	}
 	
 	

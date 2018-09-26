@@ -264,7 +264,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		
 		clientConfig.setMaxSimultaniousRequests(parallelTracks*sessionCount);//each has sequential maxInFlight
 			
-		//clientConfig.setUnwrapCount(1);
+		//clientConfig.setUnwrapCount(2); //hack test
 		
 		int maxExpectedMessageSizeFromServer = 128; //TODO: add support to configure this
 		clientConfig.setMaxResponseSize(maxExpectedMessageSizeFromServer);
@@ -428,7 +428,7 @@ public class ParallelClientLoadTester implements GreenApp {
 
 			} else {
 				//NOTE: must investigate this, we are getting TOO many re-sends? after a close??
-				logger.info("\nold reqeusts where requested after completion.");
+				logger.trace("\nold reqeusts where requested after completion.");
 				return true;
 			}
 		}
@@ -466,7 +466,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			
 			
 			if (reader.isConnectionClosed()) {
-				System.out.println("connection closed: got response on track "+track+" session "+sessionIdx+" remaining "+connectionSessionData[sessionIdx].callRequestInstanceCounter);
+				//System.out.println("connection closed: got response on track "+track+" session "+sessionIdx+" remaining "+connectionSessionData[sessionIdx].callRequestInstanceCounter);
 				
 				//server or internal subsystem just axed connection and we got no notice..
 							

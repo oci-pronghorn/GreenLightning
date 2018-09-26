@@ -60,6 +60,7 @@ import com.ociweb.pronghorn.network.ClientCoordinator;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.HTTPServerConfigImpl;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
+import com.ociweb.pronghorn.network.SSLUtil;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.TLSCerts;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
@@ -109,7 +110,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 
 	private static final int MIN_CYCLE_RATE = 1; //cycle rate can not be zero
 
-	protected static final int MINIMUM_TLS_BLOB_SIZE = 1<<15;
+	protected static final int MINIMUM_TLS_BLOB_SIZE = SSLUtil.MinTLSBlock;
 
 	protected long timeTriggerRate;
 	protected long timeTriggerStart;
@@ -1120,15 +1121,16 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 					             : 1;
 			
 			int clientWrapperCount = this.client.isTLS()? 1 : 2;
+			
 			int outputsCount = clientWrapperCount*(this.client.isTLS()? 2 : 1); //Multipler per session for total connections ,count of pipes to channel writer
 	
 			//due to deadlocks which may happen in TLS handshake we must have as many or more clientWriters
 			//as we have SSLEngineUnwrapStages so each can complete its handshake
-			int clientWriters = responseUnwrapCount; //count of channel writer stages, can be larger than Unwrap count if needed
-			
+			int clientWriters = responseUnwrapCount*2;//MUST NOT SHARE WRITERS? //count of channel writer stages, can be larger than Unwrap count if needed
+			//TODO: must be sure the above is > than the encyption units .
 			
 			if (this.client.isTLS()) {
-				pcm.ensureSize(NetPayloadSchema.class, 8, 1<<15); ///must be large enough for encrypt/decrypt 
+				pcm.ensureSize(NetPayloadSchema.class, 8, SSLUtil.MinTLSBlock); ///must be large enough for encrypt/decrypt 
 			}
 			PipeConfig<NetPayloadSchema> clientNetRequestConfig = pcm.getConfig(NetPayloadSchema.class);
 					

@@ -17,7 +17,8 @@ public class WebTest {
 	
 	static GreenRuntime runtime;
 	
-	static int port = 7251;
+	static int port = (int) (5000 + (System.nanoTime()%3000));
+	
 	static String host = "127.0.0.1";
 	static int timeoutMS = 600_000; //10 minutes	
 	static boolean telemetry = false;
@@ -53,13 +54,14 @@ public class WebTest {
 		int tracks = 4;
 		int callsPerTrack = 10000; 
 		int inFlightBits = 4;
+		boolean telemetry2 = false;
 
 		StringBuilder uploadConsoleCapture = new StringBuilder();
-    	LoadTester.runClient(
+		LoadTester.runClient(
 				(i,w) -> renderer.render(w, new Product((int)i)) ,
 				(i,r) -> r.statusCode()==200 , 
 				"/update", 
-				useTLS, true, 
+				useTLS, telemetry2, 
 				tracks, callsPerTrack, 
 				host, port, timeoutMS, inFlightBits, Appendables.join(uploadConsoleCapture,System.out));	
 		
@@ -96,70 +98,4 @@ public class WebTest {
 
 	}
 	
-	@Test
-	public void uploadProductsLoadTest() {
-
-		Product[] prodCache = new Product[300];
-		
-		StringBuilder uploadConsoleCapture = new StringBuilder();
-		final AppendableBuilder target = new AppendableBuilder(1000);
-		
-		int maxBits = 2; //biggest block
-		int inFlightBits = maxBits+1;
-		while (--inFlightBits>=0) {
-		
-			int totalIterations = 4;  //largest connections.
-			int iter = totalIterations*2;
-			while ((iter/=2)>=1) {
-				{
-		
-					System.out.println("////////////////////////");
-					System.out.println("Iteration "+iter+" Bits: "+inFlightBits);
-					System.out.println("////////////////////////");
-					
-					int tracks = iter;
-					int callsPerTrack = prodCache.length/tracks; 
-			
-					uploadConsoleCapture.setLength(0);
-			    	LoadTester.runClient(
-							(i,w) -> renderer.render(w, prodCache[(int)i]==null ?  prodCache[(int)i]=new Product((int)i) : prodCache[(int)i] ) ,
-							(i,r) -> r.statusCode()==200 , 
-							"/update", 
-							useTLS, false, 
-							tracks, callsPerTrack, 
-							host, port, timeoutMS, inFlightBits, Appendables.join(uploadConsoleCapture,System.out));	
-					
-					assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(tracks*callsPerTrack))>=0);
-		
-					//////////////////////////////////////
-					//now test that we get the values back
-					//////////////////////////////////////
-					
-					tracks = 1; //this test depends on having sequential tests
-					callsPerTrack = 1;
-					
-					uploadConsoleCapture.setLength(0);
-					
-					LoadTester.runClient(
-						 null, 
-						(i,r) -> {
-								target.clear();
-								renderer.render(target, prodCache[(int)i]==null ?  prodCache[(int)i]=new Product((int)i) : prodCache[(int)i]);						
-								return  (200 == r.statusCode()) &&
-										target.isEqual(r.structured().readPayload()); //equals is done without creating any String object
-								
-							  }, 
-						(i) -> "/query?id="+i,
-						useTLS, false, 
-						tracks, callsPerTrack, 
-						host, port, timeoutMS,
-						uploadConsoleCapture);
-			
-					 assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(tracks*callsPerTrack))>=0);		
-		 				
-				}
-				 
-			}
-		}
-	}
 }

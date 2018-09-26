@@ -16,6 +16,7 @@ import com.ociweb.gl.impl.stage.EgressMQTTStage;
 import com.ociweb.gl.impl.stage.IngressConverter;
 import com.ociweb.gl.impl.stage.IngressMQTTStage;
 import com.ociweb.gl.impl.stage.ReactiveListenerStage;
+import com.ociweb.pronghorn.network.SSLUtil;
 import com.ociweb.pronghorn.network.TLSCertificates;
 import com.ociweb.pronghorn.network.TLSCerts;
 import com.ociweb.pronghorn.network.mqtt.MQTTClientGraphBuilder;
@@ -173,7 +174,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
 		assert(null != certificates);
 		this.certificates = certificates;
-		this.maximumLenghOfVariableLengthFields = Math.max(this.maximumLenghOfVariableLengthFields, 1<<15);
+		this.maximumLenghOfVariableLengthFields = Math.max(this.maximumLenghOfVariableLengthFields, SSLUtil.MinTLSBlock);
 		return this;
 	}
 
