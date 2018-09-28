@@ -92,8 +92,8 @@ public class WebTest {
 	
 	@Test
 	public void plaintext16KTest() {
-				int inFlightBits = 8; //64 * 256 tracks is 16K
-				int tracks = 64;
+				int inFlightBits = 9; //64 * 256 tracks is 16K
+				int tracks = 32;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
