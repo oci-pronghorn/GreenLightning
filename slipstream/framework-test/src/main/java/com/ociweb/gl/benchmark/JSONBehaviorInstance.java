@@ -10,8 +10,7 @@ import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 public class JSONBehaviorInstance implements RestListener {
 
 	byte[] messagePayload;
-	
-	//TODO: deep scan needs to skip JSONRenderer and it should be static??
+
 	private static final JSONRenderer<JSONBehaviorInstance> renderJSON = new JSONRenderer<JSONBehaviorInstance>()
 			.startObject()
 				.string("message", (o,t) -> t.write(o.messagePayload) )
