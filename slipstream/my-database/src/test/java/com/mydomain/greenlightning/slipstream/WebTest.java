@@ -10,6 +10,7 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.ClientAbandonConnectionScanner;
+import com.ociweb.pronghorn.network.ClientSocketReaderStage;
 import com.ociweb.pronghorn.util.AppendableBuilder;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -27,8 +28,8 @@ public class WebTest {
 	@BeforeClass
 	public static void startServer() {
 		
-		//for cloud testing we bump this up since it may be running on very slow hardware
-		ClientAbandonConnectionScanner.absoluteNSToKeep =      2_000_000_000L; //2sec calls are always OK.
+		//disable slow connection detection since we test in the cloud and hardware may be slow.
+		ClientSocketReaderStage.abandonSlowConnections = false;
 
 		runtime = GreenRuntime.run(new MyMicroservice(useTLS, port, telemetry));
 		
@@ -53,7 +54,7 @@ public class WebTest {
 
 		int tracks = 4;
 		int callsPerTrack = 10000; 
-		int inFlightBits = 4;
+		int inFlightBits = 2;
 		boolean telemetry2 = false;
 
 		StringBuilder uploadConsoleCapture = new StringBuilder();
