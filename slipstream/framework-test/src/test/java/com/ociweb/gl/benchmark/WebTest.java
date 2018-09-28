@@ -3,6 +3,7 @@ import static org.junit.Assert.assertTrue;
 
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
@@ -66,7 +67,7 @@ public class WebTest {
 				
 	}
 
-	@Test
+	@Ignore //reduce memory on build server
 	public void plaintext4096Test() {
 		
 				int inFlightBits = 10; //1024 * 4 tracks is 4096
@@ -90,7 +91,7 @@ public class WebTest {
 	}
 
 	
-	@Test
+	@Ignore //reduce memory on build server
 	public void plaintext16KTest() {
 				int inFlightBits = 9; //64 * 256 tracks is 16K
 				int tracks = 32;
@@ -135,7 +136,7 @@ public class WebTest {
 				
 	}
 	
-	@Test
+	@Ignore //reduce memory on build server
 	public void json4096Test() {
 				
 				int inFlightBits = 10; //1024 * 4 tracks is 4096
@@ -159,7 +160,7 @@ public class WebTest {
 	}
 	
 	
-	@Test
+	@Ignore //reduce memory on build server
 	public void json16kTest() {
 				
 				int inFlightBits = 9;// 16K
