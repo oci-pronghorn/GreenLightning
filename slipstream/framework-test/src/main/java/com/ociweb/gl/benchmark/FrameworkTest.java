@@ -42,7 +42,7 @@ public class FrameworkTest implements GreenApp {
 		 
 		//plain text is so simple we can use a lambda
 		final HTTPResponseService plainResponseService = runtime.newCommandChannel().newHTTPResponseService();    	
-		runtime.addRestListener((r)->{
+		runtime.addRestListener("PainResponder",(r)->{
 			
 			return plainResponseService.publishHTTPResponse(r, 	
 						HTTPContentTypeDefaults.PLAIN,
@@ -52,7 +52,7 @@ public class FrameworkTest implements GreenApp {
 		}).includeRoutes(Struct.PLAINTEXT_ROUTE);
 		
 		//JSON test is a little more complex and needs a behavior object unlike the lambda above
-		runtime.addRestListener(new JSONBehaviorInstance(runtime)).includeRoutes(Struct.JSON_ROUTE);
+		runtime.addRestListener("JSONResponder",new JSONBehaviorInstance(runtime)).includeRoutes(Struct.JSON_ROUTE);
 
 	}
 	 
