@@ -67,7 +67,7 @@ public class WebTest {
 				
 	}
 
-	@Ignore //reduce memory on build server
+	@Test
 	public void plaintext4096Test() {
 		
 				int inFlightBits = 10; //1024 * 4 tracks is 4096
@@ -136,7 +136,7 @@ public class WebTest {
 				
 	}
 	
-	@Ignore //reduce memory on build server
+	@Test
 	public void json4096Test() {
 				
 				int inFlightBits = 10; //1024 * 4 tracks is 4096
