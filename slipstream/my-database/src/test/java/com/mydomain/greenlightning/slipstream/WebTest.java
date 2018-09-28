@@ -28,8 +28,9 @@ public class WebTest {
 	@BeforeClass
 	public static void startServer() {
 		
-		//disable slow connection detection since we test in the cloud and hardware may be slow.
-		ClientSocketReaderStage.abandonSlowConnections = false;
+		//2Min since we are on slow hardware
+		ClientAbandonConnectionScanner.absoluteNSToKeep = 120_000_000_000L; 
+		ClientAbandonConnectionScanner.absoluteNSToAbandon = 300_000_000_000L; //kill after 5 Min
 
 		runtime = GreenRuntime.run(new MyMicroservice(useTLS, port, telemetry));
 		
