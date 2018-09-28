@@ -348,7 +348,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		}
 		if (tracks<=0) {
 			//auto select tracks based on cores
-			tracks = Math.max(1, Runtime.getRuntime().availableProcessors()/4);			
+			tracks = Math.max(1, Runtime.getRuntime().availableProcessors()/2);			
 		}
 		
 		this.behaviorTracks = tracks;
