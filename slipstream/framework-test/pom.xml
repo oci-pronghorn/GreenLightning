@@ -1,9 +1,14 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<groupId>${groupId}</groupId>
-	<artifactId>${artifactId}</artifactId>
-	<version>${version}</version>
+	<parent>
+    <artifactId>slipstream</artifactId>
+    <groupId>com.ociweb</groupId>
+    <version>1.0.3</version>
+  </parent>
+	<groupId>com.ociweb.gl.benchmark</groupId>
+	<artifactId>framework-test</artifactId>
+	<version>1.0-SNAPSHOT</version>
 
 	<properties>
 		<keystore.path>./certificates/ocikeystore.jks</keystore.path>
@@ -11,15 +16,9 @@
 		<keystore.password>ocipassword</keystore.password>
 		<keystore.store.password>${keystore.password}</keystore.store.password>
 		<keystore.key.password>${keystore.password}</keystore.key.password>
-		<java.bootstrap.classes>
-			${java.home}/lib/rt.jar
-		</java.bootstrap.classes>
-		<java.cryptographic.extension.classes>
-			${java.home}/lib/jce.jar
-		</java.cryptographic.extension.classes>
-		<java.secure.socket.extension.classes>
-			${java.home}/lib/jsse.jar
-		</java.secure.socket.extension.classes>
+		<java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
+		<java.cryptographic.extension.classes>${java.home}/lib/jce.jar</java.cryptographic.extension.classes>
+		<java.secure.socket.extension.classes>${java.home}/lib/jsse.jar</java.secure.socket.extension.classes>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
@@ -46,7 +45,6 @@
 			<version>4.12</version>
 			<type>jar</type>
 			<scope>test</scope>
-			<optional>false</optional>
 		</dependency>
 	</dependencies>
 
@@ -125,14 +123,14 @@
 				<configuration>
 					<archive>
 						<manifest>
-							<mainClass>${package}.GreenLightning</mainClass>
+							<mainClass>com.ociweb.gl.benchmark.GreenLightning</mainClass>
 						</manifest>
 					</archive>
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 
-					<finalName>uber${artifactId}</finalName>
+					<finalName>uberframework-test</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 
 				</configuration>
@@ -169,8 +167,8 @@
 						<lib>${java.cryptographic.extension.classes}</lib>
 						<lib>${java.secure.socket.extension.classes}</lib>
 					</libs>
-					<injar>uber${artifactId}.jar</injar>
-					<outjar>${artifactId}.jar</outjar>
+					<injar>uberframework-test.jar</injar>
+					<outjar>framework-test.jar</outjar>
 
 					<outputDirectory>${project.build.directory}</outputDirectory>
 					<proguardInclude>${basedir}/proguard.conf</proguardInclude>

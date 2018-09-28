@@ -171,6 +171,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
     public int netResponsePipeIdxCounter = 0;//this implementation is dependent upon graphManager returning the pipes in the order created!
 	private final boolean enableAutoPrivateTopicDiscovery = true;
 	
+	public int sessionCountBase = 0;
     
     private long defaultSleepRateNS = 6_000;// should normally be between 900 and 20_000; 
     
@@ -347,7 +348,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		}
 		if (tracks<=0) {
 			//auto select tracks based on cores
-			tracks = Math.max(2, Runtime.getRuntime().availableProcessors()/4);			
+			tracks = Math.max(2, Runtime.getRuntime().availableProcessors()/2);			
 		}
 		
 		this.behaviorTracks = tracks;
@@ -1098,7 +1099,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			
 			{
 				int tracks = Math.max(1, runtime.getBuilder().parallelTracks());			
-				int totalSessions = ClientHostPortInstance.getSessionCount();
+				int totalSessions = ClientHostPortInstance.getSessionCount()-sessionCountBase;
 				ccm = new ClientCoordinator((int)Math.ceil(Math.log(4*(totalSessions*tracks))/Math.log(2)), 
 											totalSessions,
 	                    					this.client.getCertificates(), gm.recordTypeData);

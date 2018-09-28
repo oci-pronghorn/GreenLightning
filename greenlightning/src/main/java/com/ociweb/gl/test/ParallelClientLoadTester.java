@@ -237,6 +237,9 @@ public class ParallelClientLoadTester implements GreenApp {
 	@Override
 	public void declareConfiguration(GreenFramework builder) {
 		
+		//Keep in case this is not zero.
+		((BuilderImpl)builder).sessionCountBase = ClientHostPortInstance.getSessionCount();
+		
 		HTTPClientConfig clientConfig;
 		if (insecureClient) {
 			clientConfig = builder.useInsecureNetClient();

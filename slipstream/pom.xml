@@ -3,13 +3,14 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb</groupId>
   <artifactId>slipstream</artifactId>
-  <version>1.0.2</version>
+  <version>1.0.3</version>
   <packaging>pom</packaging>
  
   <modules>  
     <module>my-microservice</module>
     <module>my-proxy</module>
-    <module>my-database</module>        
+    <module>my-database</module>
+    <module>framework-test</module>
   </modules>
   
   <reporting>
@@ -35,11 +36,7 @@
     </plugins>
   </reporting>
 
-</project>
-
-
-
- <!-- 
+</project><!-- 
   need to pull the latest? 
  
   setup workspace:
@@ -56,5 +53,3 @@
             mvn -f open-edge-pom.xml install
             
  -->
-
-

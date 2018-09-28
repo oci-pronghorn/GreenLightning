@@ -11,16 +11,16 @@ import com.ociweb.pronghorn.network.http.HTTPResponseStatusCodes;
 import com.ociweb.pronghorn.network.http.HTTPUtil;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
-import com.ociweb.pronghorn.network.module.AbstractAppendablePayloadResponseStage;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
-import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.util.Appendables;
+import com.ociweb.pronghorn.util.HTTPHeaderDateTimeFormatterLowGC;
 
 public class HTTPResponseService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
+	public static final byte[] SERVER_HEADER_NAME = "GreenLightning".getBytes();
 
 	public HTTPResponseService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
@@ -251,6 +251,14 @@ public class HTTPResponseService {
 				200, false, headers, contentType, writable);
 	}
 
+	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
+	           HTTPContentType contentType, Writable writable) {
+		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
+				200, false, null, contentType, writable);
+	}
+	
+	public HTTPHeaderDateTimeFormatterLowGC dateFormatter = new HTTPHeaderDateTimeFormatterLowGC();
+	
 	/**
 	 *
 	 * @param connectionId long arg used in msgCommandChannel.holdEmptyBlock and Pipe.addLongValue
@@ -325,10 +333,21 @@ public class HTTPResponseService {
 		outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());				
 		outputStream.write(HTTPResponseStatusCodes.codes[statusCode]); //this is " 200 OK\r\n" for most calls
 
+		///////////////////////
+		//write date GC free direct copy
+		///////////////////////
+		outputStream.write(HTTPHeaderDefaults.DATE.rootBytes());
+		dateFormatter.write(System.currentTimeMillis(), outputStream);
+		outputStream.writeByte('\r');
+		outputStream.writeByte('\n');
+
 		HeaderWriter headerWriter = msgCommandChannel.headerWriter.target(outputStream);
 		if (null!=headers) {
 			headers.write(headerWriter); //NOTE: using content_length, connection or status are all discouraged here..
 		}
+		
+		headerWriter.writeUTF8(HTTPHeaderDefaults.SERVER, SERVER_HEADER_NAME);
+	
 		headerWriter.write(HTTPHeaderDefaults.CONTENT_LENGTH, len);
 		outputStream.write("\r\n".getBytes());
 		

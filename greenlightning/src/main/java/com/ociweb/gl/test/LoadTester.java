@@ -26,6 +26,7 @@ public class LoadTester {
 		
 		int tracks = Math.min(1+(concurrentConnections/(LIMITED_CONNECTIONS_PER_ACTOR+1)),Runtime.getRuntime().availableProcessors()*2);		
 		
+				
 		ParallelClientLoadTesterConfig testerConfig = new ParallelClientLoadTesterConfig(tracks, cyclesPerTrack,
 																							port, route, telemetry);
 		testerConfig.insecureClient = !useTLS;

@@ -8,9 +8,7 @@ import com.ociweb.pronghorn.pipe.ChannelReader;
 import com.ociweb.pronghorn.stage.scheduling.ElapsedTimeRecorder;
 
 class LoadTestProgress implements PubSubMethodListener, StartupListener {
-	/**
-	 * 
-	 */
+
 	private final ParallelClientLoadTester parallelClientLoadTester;
 
 	private final PubSubFixedTopicService cmd4;
@@ -148,7 +146,8 @@ class LoadTestProgress implements PubSubMethodListener, StartupListener {
 
 		//updates no faster than once every second and only after 1% is complete.
 		if (((percentDone>1) &&  (percentDone > lastPercent) && ((now = System.nanoTime()) - lastTime) > 1_000_000_000L)
-				|| 100L == percentDone) {
+				|| (100L == percentDone && percentDone!=lastPercent)
+				) {
 		    this.parallelClientLoadTester.out.progress(percentDone, sumTimeouts, sumResponsesInvalid);
 
 			lastTime = now;

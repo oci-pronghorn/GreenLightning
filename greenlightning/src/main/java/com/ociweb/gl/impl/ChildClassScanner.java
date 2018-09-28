@@ -182,6 +182,11 @@ public class ChildClassScanner {
 		map.setUTF8Value("com.ociweb.gl.impl.",1); 
 		map.setUTF8Value("[Lcom.ociweb.gl.impl.",1);
 		
+		map.setUTF8Value("com.ociweb.gl.test.",1); 
+		map.setUTF8Value("[Lcom.ociweb.gl.test.",1);
+		
+		map.setUTF8Value("com.ociweb.json.encode.JSONRenderer",1);		
+		
 		map.setUTF8Value("org.slf4j.",1);
 		
 		return map;
@@ -207,10 +212,15 @@ public class ChildClassScanner {
 		boolean result = visitUsedByClass(name, listener, 0, visitor, listener, target, new HashSet<Object>());
 		long duration = System.nanoTime()-start;
 		
-		//just report the longest duration
-		if (duration > 10_000_000L) {
-			Appendables.appendNearestTimeUnit(System.out, duration);
-			System.out.println(" duration for scan to find all "+target.getSimpleName()+" instances inside "+listener.getClass().getSimpleName());
+		//just report the longest durations
+		if (duration > 200_000_000L) {
+			StringBuilder temp = new StringBuilder();//must create this just to show this rare error as a single block.
+			Appendables.appendNearestTimeUnit(temp, duration);
+			temp.append(" duration for scan to find all ");
+			temp.append(target.getSimpleName());
+			temp.append(" instances inside ");
+			temp.append(listener.getClass().getSimpleName());
+			System.out.println(temp);
 		}
 		return result;
 	}

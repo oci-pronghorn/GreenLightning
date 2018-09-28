@@ -121,6 +121,9 @@ public class HTTPRequestService {
 	
 	private boolean httpWithoutPayload(ClientHostPortInstance session, CharSequence route, HeaderWritable headers,
 			int verb) {
+		if (null==session) {
+			return true;//we are already done..
+		}
 		assert(msgCommandChannel.builder.getHTTPClientConfig() != null);
 		assert((msgCommandChannel.initFeatures & MsgCommandChannel.NET_REQUESTER)!=0) : "must turn on NET_REQUESTER to use this method";
 		

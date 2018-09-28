@@ -20,10 +20,17 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
         try {
         	Appendables.appendValue(target, percentDone);
 			target.append("% complete,  ");
-			Appendables.appendValue(target, sumTimeouts);
-			target.append(" failed,  ");
-			Appendables.appendValue(target, sumInvalid);
-			target.append(" invalid,   epoch:");
+			
+			if (sumTimeouts>0) {
+				Appendables.appendValue(target, sumTimeouts);
+				target.append(" retried,  ");
+			}
+			
+			if (sumInvalid>0) {
+				Appendables.appendValue(target, sumInvalid);
+				target.append(" invalid,   epoch:");
+			}
+			
 			Appendables.appendEpochTime(target, System.currentTimeMillis());
 			target.append("\n");
 		} catch (IOException e) {
