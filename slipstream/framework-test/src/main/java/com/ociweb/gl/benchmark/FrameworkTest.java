@@ -24,7 +24,6 @@ public class FrameworkTest implements GreenApp {
 		framework.useHTTP1xServer(bindPort,this::parallelBehavior) //standard auto-scale
     			 .setHost(host)
     			 .setMaxQueueIn(1<<14)
-    			 .setMaxQueueOut(1<<14)
     	         .useInsecureServer(); //turn off TLS
         
 		framework.defineRoute()
