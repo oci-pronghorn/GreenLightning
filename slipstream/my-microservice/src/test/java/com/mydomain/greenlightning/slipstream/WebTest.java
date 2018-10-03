@@ -65,8 +65,8 @@ public class WebTest {
 		ClientSocketReaderStage.abandonSlowConnections = false;
 		
 		        boolean testTelemetry = false;
-				int inFlightBits = 5;  
-				int tracks = 4;
+				int inFlightBits = 6;  
+				int tracks = 8;
 				
 				int callsPerTrack = 10000 /tracks; 
 		
@@ -76,7 +76,7 @@ public class WebTest {
 						(i,r) -> r.statusCode()==200 , 
 						"/update", 
 						useTLS, testTelemetry, 
-						tracks, callsPerTrack * 100, 
+						tracks, callsPerTrack * 10, 
 						host, port, timeoutMS, inFlightBits,
 						MsgRuntime.getGraphManager(runtime),						
 						Appendables.join(uploadConsoleCapture,System.out));	

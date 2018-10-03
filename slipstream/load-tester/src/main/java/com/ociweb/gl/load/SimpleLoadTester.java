@@ -13,6 +13,7 @@ public class SimpleLoadTester {
 		
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//turned off so we wait forever.
+		
 		int timeoutMS = 600_000;
 		
 		boolean useTLS = false;
@@ -22,9 +23,9 @@ public class SimpleLoadTester {
 		int port = Integer.parseInt(MsgRuntime.getOptArg("host", "-p", args, "8080"));
 		int totalCalls = Integer.parseInt(MsgRuntime.getOptArg("calls", "-c", args, "16000000"));
 		int inFlightBits = Integer.parseInt(MsgRuntime.getOptArg("inFlightBits", "-b", args, "9"));
-		int tracks = Integer.parseInt(MsgRuntime.getOptArg("inFlightBits", "-t", args, "8"));
+		int tracks = Integer.parseInt(MsgRuntime.getOptArg("tracks", "-t", args, "8"));
 		
-		boolean testTelemetry = true;
+		boolean testTelemetry = false;
 		//////////////
 		//run
 		//////////////

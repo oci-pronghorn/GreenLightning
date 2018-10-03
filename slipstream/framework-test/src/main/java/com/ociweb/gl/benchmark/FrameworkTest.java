@@ -25,9 +25,7 @@ public class FrameworkTest implements GreenApp {
     	this.bindPort = port;
     	this.host = host;
     }
-    
-    
-    
+
 	@Override
     public void declareConfiguration(GreenFramework framework) {
 
@@ -35,9 +33,9 @@ public class FrameworkTest implements GreenApp {
 		
 		framework.useHTTP1xServer(bindPort, this::parallelBehavior) //standard auto-scale
     			 .setHost(host)
-    			 .setConcurrentChannelsPerDecryptUnit(4)
-    			 .setConcurrentChannelsPerEncryptUnit(4)
-    			 .setMaxQueueIn(1<<14)
+    			 .setConcurrentChannelsPerDecryptUnit(40)
+    			 .setConcurrentChannelsPerEncryptUnit(40)
+    			 .setMaxQueueIn(1<<15)
     	         .useInsecureServer(); //turn off TLS
         
 		framework.defineRoute()
