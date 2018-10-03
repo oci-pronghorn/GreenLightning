@@ -86,7 +86,7 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     	
     	Pipe.addIntValue(context, backingPipe);  //real context    	
     	Pipe.confirmLowLevelWrite(backingPipe);
-    	   	
+
     	writeHeader(this, headerBlobPosition, positionOfLen, statusCode, context, contentType,
     			    len, isChunked);
     	

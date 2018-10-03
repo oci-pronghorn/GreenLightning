@@ -47,6 +47,8 @@ public class WebTest {
 	@Test
 	public void plaintext1024Test() {
 				
+			    //ServerSocketWriterStage.showWrites = true;
+		
 				int inFlightBits = 9; //512 * 2 tracks is 1024
 				int tracks = 2;
 				int callsPerTrack = totalCalls/tracks; 

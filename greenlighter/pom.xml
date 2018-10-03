@@ -4,7 +4,7 @@
     <groupId>com.ociweb</groupId>
     <artifactId>greenlighter</artifactId>
     <name>greenlighter</name>
-    <version>1.0.3</version>
+    <version>1.0.4</version>
 
     <description>A Maven archetype for GreenLightning projects</description>
     <url>https://github.com/oci-pronghorn/GreenLighter</url>

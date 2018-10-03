@@ -308,10 +308,8 @@ public class HTTPResponseService {
 			context = ServerCoordinator.END_RESPONSE_MASK;
 			msgCommandChannel.lastResponseWriterFinished = 1;	
 		}	
-		
-		//NB: context passed in here is looked at to know if this is END_RESPONSE and if so
-		//then the length is added if not then the header will designate chunked.
-		outputStream.openField(statusCode, context, contentType);
+
+		outputStream.openField();
 		writable.write(outputStream); 
 		
 		if (hasContinuation) {
@@ -347,10 +345,13 @@ public class HTTPResponseService {
 		}
 		
 		headerWriter.writeUTF8(HTTPHeaderDefaults.SERVER, SERVER_HEADER_NAME);
+		headerWriter.writeUTF8(HTTPHeaderDefaults.CONTENT_TYPE, contentType.getBytes());
 	
 		headerWriter.write(HTTPHeaderDefaults.CONTENT_LENGTH, len);
 		outputStream.writeByte('\r');
 		outputStream.writeByte('\n');
+		
+	
 		
 		//outputStream.debugAsUTF8();
 		
