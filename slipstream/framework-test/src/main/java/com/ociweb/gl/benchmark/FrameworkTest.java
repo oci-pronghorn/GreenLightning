@@ -9,20 +9,34 @@ import com.ociweb.gl.api.GreenApp;
  */
 import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.gl.api.HTTPResponseService;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class FrameworkTest implements GreenApp {
 
-    private int bindPort = 8080;
-    private String host = "localhost";
+    private int bindPort;
+    private String host;
     static byte[] payload = "Hello, World!".getBytes();
 
+    public FrameworkTest() {
+    	this("localhost",8080);
+    }
+    
+    public FrameworkTest(String host, int port) {
+    	this.bindPort = port;
+    	this.host = host;
+    }
+    
+    
+    
 	@Override
     public void declareConfiguration(GreenFramework framework) {
 
-		framework.useHTTP1xServer(bindPort,this::parallelBehavior) //standard auto-scale
+		GraphManager.showThreadIdOnTelemetry = true;
+		
+		framework.useHTTP1xServer(bindPort, this::parallelBehavior) //standard auto-scale
     			 .setHost(host)
+    			 .setConcurrentChannelsPerDecryptUnit(4)
+    			 .setConcurrentChannelsPerEncryptUnit(4)
     			 .setMaxQueueIn(1<<14)
     	         .useInsecureServer(); //turn off TLS
         
@@ -33,26 +47,16 @@ public class FrameworkTest implements GreenApp {
 		framework.defineRoute()
 		        .path("/json")
 		        .routeId(Struct.JSON_ROUTE);
-		
-		framework.enableTelemetry();
-		
+				
     }
 
 	public void parallelBehavior(GreenRuntime runtime) {
-		 
-		//plain text is so simple we can use a lambda
-		final HTTPResponseService plainResponseService = runtime.newCommandChannel().newHTTPResponseService();    	
-		runtime.addRestListener("PainResponder",(r)->{
-			
-			return plainResponseService.publishHTTPResponse(r, 	
-						HTTPContentTypeDefaults.PLAIN,
-						(w) -> w.write(payload)
-					);
-			
-		}).includeRoutes(Struct.PLAINTEXT_ROUTE);
-		
-		//JSON test is a little more complex and needs a behavior object unlike the lambda above
-		runtime.addRestListener("JSONResponder",new JSONBehaviorInstance(runtime)).includeRoutes(Struct.JSON_ROUTE);
+
+		runtime.addRestListener("PlainResponder",new PlainBehaviorInstance(runtime))
+		       .includeRoutes(Struct.PLAINTEXT_ROUTE);
+
+		runtime.addRestListener("JSONResponder",new JSONBehaviorInstance(runtime))
+		       .includeRoutes(Struct.JSON_ROUTE);
 
 	}
 	 

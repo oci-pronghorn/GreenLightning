@@ -349,7 +349,8 @@ public class HTTPResponseService {
 		headerWriter.writeUTF8(HTTPHeaderDefaults.SERVER, SERVER_HEADER_NAME);
 	
 		headerWriter.write(HTTPHeaderDefaults.CONTENT_LENGTH, len);
-		outputStream.write("\r\n".getBytes());
+		outputStream.writeByte('\r');
+		outputStream.writeByte('\n');
 		
 		//outputStream.debugAsUTF8();
 		

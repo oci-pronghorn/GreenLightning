@@ -11,10 +11,11 @@ import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.ClientAbandonConnectionScanner;
 import com.ociweb.pronghorn.network.ClientSocketReaderStage;
+import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.AppendableBuilder;
 import com.ociweb.pronghorn.util.Appendables;
 
-public class WebTest {
+public class DBWebTest {
 	
 	static GreenRuntime runtime;
 	
@@ -53,14 +54,14 @@ public class WebTest {
 	@Test
 	public void uploadProductsTest() {
 
-		int tracks = 4;
-		int callsPerTrack = 10000; 
-		int inFlightBits = 2;
+		int tracks = 2;
+		int callsPerTrack = 10_000; 
+		int inFlightBits = 3;
 		boolean telemetry2 = false;
 
 		StringBuilder uploadConsoleCapture = new StringBuilder();
 		LoadTester.runClient(
-				(i,w) -> renderer.render(w, new Product((int)i)) ,
+				(i,w) -> renderer.render(w, new Product((int)i%10_000)) ,
 				(i,r) -> r.statusCode()==200 , 
 				"/update", 
 				useTLS, telemetry2, 
@@ -91,7 +92,7 @@ public class WebTest {
 					
 				  }, 
 			(i) -> "/query?id="+i,
-			useTLS, true, 
+			useTLS, false, 
 			tracks, callsPerTrack, 
 			host, port, timeoutMS,
 			captured);		

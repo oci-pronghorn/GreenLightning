@@ -18,11 +18,11 @@ public class WebTest {
 	
 	final static boolean useTLS = false;
 	final static int timeoutMS = 240_000;
-	final static int totalCalls = 100_000;
+	final static int totalCalls = 200_000;
 	
 	static GreenRuntime runtime;
 	
-	static int port = 8080;
+	static int port = 9977;
 	static String host = "127.0.0.1";
 	
 	
@@ -34,7 +34,7 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest());
+		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1",port));
 		
 	}
 		
@@ -70,8 +70,8 @@ public class WebTest {
 	@Test
 	public void plaintext4096Test() {
 		
-				int inFlightBits = 10; //1024 * 4 tracks is 4096
-				int tracks = 4;
+				int inFlightBits = 9; //1024 * 4 tracks is 4096
+				int tracks = 8;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -93,8 +93,8 @@ public class WebTest {
 	
 	@Ignore //reduce memory on build server
 	public void plaintext16KTest() {
-				int inFlightBits = 9; //64 * 256 tracks is 16K
-				int tracks = 32;
+				int inFlightBits = 8; //64 * 256 tracks is 16K
+				int tracks = 64;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		

@@ -193,16 +193,17 @@ public class ParallelClientLoadTester implements GreenApp {
 			header = null;
 		} else {
 		
-			final int cookieSize = 10;//00;
-			final byte[] largeCookie = buildLargeCookie(cookieSize).getBytes();
+			//disable cookie feature for now.
+			//final int cookieSize = 10;//00;
+			//final byte[] largeCookie = buildLargeCookie(cookieSize).getBytes();
 			
 			final HeaderWritable tempHeader = 
 					new HeaderWritable() {
 				@Override
 				public void write(HeaderWriter writer) {
 					
-					writer.writeUTF8(HTTPHeaderDefaults.COOKIE, 
-							largeCookie);
+					//writer.writeUTF8(HTTPHeaderDefaults.COOKIE, 
+					//		largeCookie);
 					
 					writer.writeUTF8(HTTPHeaderDefaults.CONTENT_TYPE,
 							contentType);
@@ -261,15 +262,16 @@ public class ParallelClientLoadTester implements GreenApp {
 
 		//when we have massive connections this is a very small number
 		//HIGHVOLUME test
-		int maxQueuedResponsesFromServer = Math.max(8,maxInFlight/sessionCount);
+		int maxQueuedResponsesFromServer = Math.max(32,maxInFlight/sessionCount);
 		
 		clientConfig.setResponseQueueLength(maxQueuedResponsesFromServer);
 		
 		clientConfig.setMaxSimultaniousRequests(parallelTracks*sessionCount);//each has sequential maxInFlight
 			
-		//clientConfig.setUnwrapCount(2); //hack test
+		//clientConfig.setMaxRequestSize(value)
+		//clientConfig.setUnwrapCount(4); //hack test
 		
-		int maxExpectedMessageSizeFromServer = 128; //TODO: add support to configure this
+		int maxExpectedMessageSizeFromServer = 512; //TODO: add support to configure this
 		clientConfig.setMaxResponseSize(maxExpectedMessageSizeFromServer);
 		
 		System.out.println("Test is running with "+(ClientHostPortInstance.getSessionCount()-base)+" total connections");
@@ -290,7 +292,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		if (rate != null) {
 			builder.setDefaultRate(rate);
 		}
-
+		
 		builder.defineUnScopedTopic(ENDERS_TOPIC);
 		builder.defineUnScopedTopic(PROGRESS_TOPIC);	
 		
@@ -307,6 +309,8 @@ public class ParallelClientLoadTester implements GreenApp {
 				.SLALatencyNS(200_000_000)//due to use of System out and shutdown this is allowed more time
 				.addSubscription(ENDERS_TOPIC, progress::enderMessage)
 		        .addSubscription(PROGRESS_TOPIC, progress::progressMessage);
+		
+		
 	}
 
 	public void declareParallelBehavior(GreenRuntime runtime) {
@@ -366,7 +370,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			//note 28 is a magic number based on the ratio between slab and blob for this schema
 			int queueLength = Math.min(2 *maxInFlight * totalSessionsPerTrack, 1<<Math.max(28-consumedBits,3));
 
-			int httpClientConnections = 1+(sessionCount/256);
+			int httpClientConnections = 1+(sessionCount/24);
 			httpClientService = new HTTPRequestService[httpClientConnections];
 			clientServiceMask = httpClientService.length-1;
 			
@@ -621,11 +625,12 @@ public class ParallelClientLoadTester implements GreenApp {
 		
 				if (s!=null) {
 					//NOTE: only safe place to close the connection.
-						
-					if (insecureClient) {
-						
-						httpClientService[clientServiceMask&sessionIdx].httpClose(s); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. 
-					}
+
+//TODO: testing this seems to close all the connections???					
+//					if (insecureClient) {
+//						
+//						httpClientService[clientServiceMask&sessionIdx].httpClose(s); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. 
+//					}
 					session[track][sessionIdx]=null;
 				}			
 				
@@ -657,11 +662,16 @@ public class ParallelClientLoadTester implements GreenApp {
 			if (lastProgressCheck != callSum) {
 				lastProgressCheck = callSum;
 			} else {			
-				if (callSum != (cyclesPerTrack*connectionSessionData.length)) {
+				long expected = (cyclesPerTrack*connectionSessionData.length);
+				if (callSum != expected) {
 					StringBuilder builder = new StringBuilder(); 
-					Appendables.appendValue(Appendables.appendValue(Appendables.appendValue(
+					
+					Appendables.appendValue(Appendables.appendValue(Appendables.appendValue(Appendables.appendValue(
 							Appendables.appendEpochTime(builder.append("\n"), time)
-							           .append(" status for track: "),track), " progress:", callSum), "/", cyclesPerTrack,"  No progress has been made! Has the server stopped responding?\n");
+							           .append(" status for track: "),track), " progress:", callSum),
+												"/",
+												expected,"  No progress has been made! Has the server stopped responding? waiting for:")
+							,waitingSum).append("\n");
 					
 					System.out.print(builder);
 					
@@ -711,10 +721,10 @@ public class ParallelClientLoadTester implements GreenApp {
 						ClientCoordinator ccm = this.builder.getClientCoordinator();
 						
 						ClientConnection conObj = (ClientConnection)ccm.connectionObjForConnectionId(connectionId, true);
-						System.out.println("Con: "+conObj.id+" registered:"+conObj.isRegistered()+" valid:"+conObj.isValid()+" Outstanding:"
-								+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObj.outstandingCallTime(System.nanoTime()))+" new:"+newConnection+" atIdx: "+connectionId   							
-								+ " closedNoticeSent:"+conObj.isClientClosedNotificationSent()
-								);
+//						System.out.println("Con: "+conObj.id+" registered:"+conObj.isRegistered()+" valid:"+conObj.isValid()+" Outstanding:"
+//								+ Appendables.appendNearestTimeUnit(new StringBuilder(), conObj.outstandingCallTime(System.nanoTime()))+" new:"+newConnection+" atIdx: "+connectionId   							
+//								+ " closedNoticeSent:"+conObj.isClientClosedNotificationSent()
+//								);
 						
 						if (prevConnectionId>=0) {
 							ClientConnection conObjPrev = (ClientConnection)ccm.connectionObjForConnectionId(prevConnectionId, true);

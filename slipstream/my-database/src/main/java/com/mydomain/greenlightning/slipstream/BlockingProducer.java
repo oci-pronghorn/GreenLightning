@@ -50,7 +50,6 @@ public class BlockingProducer implements BlockingBehaviorProducer {
 		public boolean begin(ChannelReader reader) {
 				
 			if (dbURL==null) {
-				System.out.println("new work skipped since we ahve no URL.");
 				//do not pick up any work until the db URL is known.
 				return false;
 			}

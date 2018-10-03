@@ -33,6 +33,7 @@ import com.ociweb.pronghorn.network.HTTPServerConfig;
 import com.ociweb.pronghorn.network.HTTPServerConfigImpl;
 import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
+import com.ociweb.pronghorn.network.ServerNewConnectionStage;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
 import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
@@ -85,28 +86,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
     }
     
 
-	public boolean validateNoPipeLocksHeld() {
-		Thread.yield();
-		if (serverCoord.totalResponsePipeLineIdxLocks()!=0) {
-			//this is used by many validation tests at shutdown so we need to provide a little time
-			//for the data to clear since this thread is not the same as the one working.				
-			try {
-				Thread.sleep(100);
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		
-		if (serverCoord.totalResponsePipeLineIdxLocks()==0) {
-			return true;
-		} else {
-			logger.info("\nUnexpected locks held, should be none held");
-			serverCoord.showPipeLinePool();
-			return false;			
-		}
-	}
-	
 	private void populatePrivateTopicPipeNames() {
 		try {
 			Field f = builder.gm.getClass().getDeclaredField("pipeDOTSchemaNames");
@@ -553,9 +532,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 				config.defaultHostPath(),
 				serverConfig);
 				
+		//NOTE  serverConfig.maxConcurrentInputs = serverRequestUnwrapUnits * concurrentChannelsPerDecryptUnit
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
 		
-		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, encryptedIncomingGroup);
+		boolean readerPerTrack = false;//parallelTrackCount>2;//only turn on when we have more than 2 tracks.
+		
+		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, encryptedIncomingGroup, readerPerTrack);
 		               
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
@@ -712,7 +694,16 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		NetGraphBuilder.buildRouters(gm, serverCoord, acks,
 				fromModulesToOrderSuper, fromRouterToModules, routerConfig, catchAll, reqLog, perTrackFromNet);
 
-		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOFServerStages(gm, serverCoord, handshakeIncomingGroup);
+		Pipe<NetPayloadSchema>[] fromOrderedContent = NetGraphBuilder.buildRemainderOfServerStagesWrite(gm, serverCoord, handshakeIncomingGroup);
+		
+		//////////////////////
+		/////////////////////
+		ServerNewConnectionStage newConStage = new ServerNewConnectionStage(gm, serverCoord); 
+		serverCoord.processNota(gm, newConStage);
+		////////////////////
+		///////////////////
+		
+		
 		//NOTE: the fromOrderedContent must hold var len data which is greater than fromModulesToOrderSuper
 		assert(fromOrderedContent.length >= trackCounts) : "reduce track count since we only have "+fromOrderedContent.length+" pipes";
 		

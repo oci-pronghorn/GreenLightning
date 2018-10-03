@@ -65,7 +65,7 @@ public class WebTest {
 		ClientSocketReaderStage.abandonSlowConnections = false;
 		
 		        boolean testTelemetry = false;
-				int inFlightBits = 3;  
+				int inFlightBits = 5;  
 				int tracks = 4;
 				
 				int callsPerTrack = 10000 /tracks; 

@@ -198,7 +198,8 @@ public class ExampleAppTest {
 				1, 1, 
 				host, port, timeoutMS, results);		
 
-		assertTrue(console.toString(), console.indexOf("Arg Int: 42\nCOOKIE: ")>=0); //test adds a cookie by default..
+		//Cookies turned off in tester
+		//assertTrue(console.toString(), console.indexOf("Arg Int: 42\nCOOKIE: ")>=0); //test adds a cookie by default..
 
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);
 
@@ -219,7 +220,8 @@ public class ExampleAppTest {
 				1, 1, 
 				host, port, timeoutMS, results);		
 
-		assertTrue(console.toString(), console.indexOf("Arg Int: 111\nCOOKIE: ")>=0); //test adds a cookie by default..
+		//Cookies turned off in tester
+		//assertTrue(console.toString(), console.indexOf("Arg Int: 111\nCOOKIE: ")>=0); //test adds a cookie by default..
 
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);
 
@@ -240,7 +242,8 @@ public class ExampleAppTest {
 				1, 1, 
 				host, port, timeoutMS, results);		
 		
-		assertTrue(console.toString(), console.indexOf("COOKIE: ")>=0); //test adds a cookie by default..
+		////Cookies turned off in tester
+		//assertTrue(console.toString(), console.indexOf("COOKIE: ")>=0); //test adds a cookie by default..
 		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);		
 	}
 	

@@ -258,6 +258,17 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 	 * @param maxMessageSize int arg to be passed to HTTPResponseService
 	 * @return new HTTPResponseService
 	 */
+	public HTTPResponseService newHTTPResponseService(int queueLength) {
+		return new HTTPResponseService(this,queueLength,0);
+	}
+
+	
+	/**
+	 *
+	 * @param queueLength int arg to be passed to HTTPResponseService
+	 * @param maxMessageSize int arg to be passed to HTTPResponseService
+	 * @return new HTTPResponseService
+	 */
 	public HTTPResponseService newHTTPResponseService(int queueLength, int maxMessageSize) {
 		return new HTTPResponseService(this,queueLength,maxMessageSize);
 	}

@@ -173,7 +173,8 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	
 	public int sessionCountBase = 0;
     
-    private long defaultSleepRateNS = 6_000;// should normally be between 900 and 20_000; 
+	// Must be just large enough so modern hardware will stay at 1% when we have no work.
+    private long defaultSleepRateNS = 100_000;
     
 	private final int shutdownTimeoutInSeconds = 1;
 
@@ -1119,15 +1120,20 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			int releaseCount = 1024;
 			int responseUnwrapCount = this.client.isTLS()? 
 					             Math.min(this.client.getUnwrapCount(), netResponsePipes.length) //how many decrypters					             
-					             : 1;
+					             : 2;
 			
+		    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+			//TODO: must have N pipes from HTTPClientRequests -> wrap for the count of client connections
+			//TODO: if true then we may need a lock for this wrap logic..		             
+					             
 			int clientWrapperCount = this.client.isTLS()? 1 : 2;
 			
-			int outputsCount = clientWrapperCount*(this.client.isTLS()? 2 : 1); //Multipler per session for total connections ,count of pipes to channel writer
-	
+			int outputsCount = clientWrapperCount*(this.client.isTLS()? 2 : 2); //Multipler per session for total connections ,count of pipes to channel writer
+
+			
 			//due to deadlocks which may happen in TLS handshake we must have as many or more clientWriters
 			//as we have SSLEngineUnwrapStages so each can complete its handshake
-			int clientWriters = responseUnwrapCount*2;//MUST NOT SHARE WRITERS? //count of channel writer stages, can be larger than Unwrap count if needed
+			int clientWriters = responseUnwrapCount;//count of channel writer stages, can be larger than Unwrap count if needed
 			//TODO: must be sure the above is > than the encyption units .
 			
 			if (this.client.isTLS()) {
@@ -2118,21 +2124,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		return parallelInstanceId<0 ? null : ( "/"+Integer.toString(parallelInstanceId)).getBytes();
 	}
 
-	@Override
-	public void useMinimumCPU() {
-        //run graph at a slower rate to ensure the CPU drops to 1% on modern hardware when there is no work.
-        setDefaultRate(Math.max(defaultSleepRateNS, 100_000));
 		
-	}
-
-
-	
-	/////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////
-	/////////////////////////////////////////////////////////////
-	
-	
-	
 	
 	
 }

@@ -20,7 +20,7 @@ public class JSONBehaviorInstance implements RestListener {
 
 	
 	public JSONBehaviorInstance(GreenRuntime runtime) {
-		responseService = runtime.newCommandChannel().newHTTPResponseService();		
+		responseService = runtime.newCommandChannel().newHTTPResponseService(1<<16);		
 	}
 
 

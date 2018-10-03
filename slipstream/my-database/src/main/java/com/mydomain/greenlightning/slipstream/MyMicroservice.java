@@ -29,8 +29,10 @@ public class MyMicroservice implements GreenApp {
     	HTTPServerConfig c = builder
     	  .useHTTP1xServer(port)
     	  .setMaxConnectionBits(9) 
-    	  .setConcurrentChannelsPerDecryptUnit(4)
-    	  .setConcurrentChannelsPerEncryptUnit(4)
+    	  .setConcurrentChannelsPerDecryptUnit(1)
+    	  .setConcurrentChannelsPerEncryptUnit(1)
+    	  .setDecryptionUnitsPerTrack(1) //work is slow so only need 1
+    	  .setEncryptionUnitsPerTrack(1)
     	  .setHost("127.0.0.1");
     	
     	if (!tls) {

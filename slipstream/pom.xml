@@ -11,6 +11,7 @@
     <module>my-proxy</module>
     <module>my-database</module>
     <module>framework-test</module>
+    <module>load-tester</module>
   </modules>
   
   <reporting>

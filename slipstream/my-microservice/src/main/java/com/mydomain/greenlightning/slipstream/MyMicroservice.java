@@ -34,7 +34,7 @@ public class MyMicroservice implements GreenApp {
     	tls = builder.getArgumentValue("encrypt", "-e", tls);
     	telemetry = builder.getArgumentValue("telemetry", "-t", telemetry);
     	port = builder.getArgumentValue("port", "-p", port);
-    	
+
     	//declare web server and its port
     	HTTPServerConfig c = builder
     	  .useHTTP1xServer(port)
