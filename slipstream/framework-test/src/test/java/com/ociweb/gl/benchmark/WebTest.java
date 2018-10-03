@@ -34,7 +34,7 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1",port));
+		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1",port, 10, 4096, -1));
 		
 	}
 		
@@ -91,7 +91,7 @@ public class WebTest {
 	}
 
 	
-	@Ignore //reduce memory on build server
+	//@Ignore //reduce memory on build server
 	public void plaintext16KTest() {
 				int inFlightBits = 8; //64 * 256 tracks is 16K
 				int tracks = 64;

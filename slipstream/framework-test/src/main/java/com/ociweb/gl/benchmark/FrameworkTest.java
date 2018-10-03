@@ -13,29 +13,35 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class FrameworkTest implements GreenApp {
 
-    private int bindPort;
+	static byte[] payload = "Hello, World!".getBytes();
+
+	private int bindPort;
     private String host;
-    static byte[] payload = "Hello, World!".getBytes();
+    private int concurrentWritesPerChannel;
+    private int queueLengthOfPendingRequests;
+    private int telemetryPort;//for monitoring
 
     public FrameworkTest() {
-    	this("localhost",8080);
+    	//this server works best with  -XX:+UseNUMA
+    	this("localhost",8080, 40, 16*1024, 8098);
     }
     
-    public FrameworkTest(String host, int port) {
+    public FrameworkTest(String host, int port, int concurrentWritesPerChannel, int queueLengthOfPendingRequests, int telemetryPort) {
     	this.bindPort = port;
     	this.host = host;
+    	this.concurrentWritesPerChannel = concurrentWritesPerChannel;
+    	this.queueLengthOfPendingRequests = queueLengthOfPendingRequests;
+    	this.telemetryPort = telemetryPort;
     }
 
 	@Override
     public void declareConfiguration(GreenFramework framework) {
-
-		GraphManager.showThreadIdOnTelemetry = true;
 		
 		framework.useHTTP1xServer(bindPort, this::parallelBehavior) //standard auto-scale
     			 .setHost(host)
-    			 .setConcurrentChannelsPerDecryptUnit(40)
-    			 .setConcurrentChannelsPerEncryptUnit(40)
-    			 .setMaxQueueIn(1<<15)
+    			 .setConcurrentChannelsPerDecryptUnit(concurrentWritesPerChannel)
+    			 .setConcurrentChannelsPerEncryptUnit(concurrentWritesPerChannel)
+    			 .setMaxQueueIn(queueLengthOfPendingRequests)
     	         .useInsecureServer(); //turn off TLS
         
 		framework.defineRoute()
@@ -45,7 +51,11 @@ public class FrameworkTest implements GreenApp {
 		framework.defineRoute()
 		        .path("/json")
 		        .routeId(Struct.JSON_ROUTE);
-				
+		
+		if (telemetryPort>0) {
+			GraphManager.showThreadIdOnTelemetry = true;
+			framework.enableTelemetry(telemetryPort);
+		}
     }
 
 	public void parallelBehavior(GreenRuntime runtime) {
