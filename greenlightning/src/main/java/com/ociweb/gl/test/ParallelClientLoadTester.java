@@ -285,6 +285,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			}
 
 		}
+				
 		builder.parallelTracks(session.length, this::declareParallelBehavior);
 		
 		builder.setTimerPulseRate(PROGRESS_CHECK_RATE); 

@@ -535,9 +535,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		//NOTE  serverConfig.maxConcurrentInputs = serverRequestUnwrapUnits * concurrentChannelsPerDecryptUnit
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
 		
-		boolean readerPerTrack = false;//parallelTrackCount>2;//only turn on when we have more than 2 tracks.
+
 		
-		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, encryptedIncomingGroup, readerPerTrack);
+		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, encryptedIncomingGroup);
 		               
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;

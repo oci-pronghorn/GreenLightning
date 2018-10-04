@@ -23,7 +23,7 @@ public class FrameworkTest implements GreenApp {
 
     public FrameworkTest() {
     	//this server works best with  -XX:+UseNUMA
-    	this("localhost",8080, 40, 16*1024, 8098);
+    	this("localhost",8080, 20, 16*1024, 8098);//40
     }
     
     public FrameworkTest(String host, int port, int concurrentWritesPerChannel, int queueLengthOfPendingRequests, int telemetryPort) {
