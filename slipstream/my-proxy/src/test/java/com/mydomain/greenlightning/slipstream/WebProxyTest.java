@@ -8,7 +8,7 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.LoadTester;
 import com.ociweb.pronghorn.util.Appendables;
 
-public class WebTest {
+public class WebProxyTest {
 	
 	static GreenRuntime runtime;
 	
