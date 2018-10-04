@@ -34,7 +34,7 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1",port, 4, 2048, -1));
+		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1",port, 4, 1024, -1));
 		
 	}
 		
@@ -49,8 +49,8 @@ public class WebTest {
 				
 			    //ServerSocketWriterStage.showWrites = true;
 		
-				int inFlightBits = 9; //512 * 2 tracks is 1024
-				int tracks = 2;
+				int inFlightBits = 8; 
+				int tracks = 4;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -72,8 +72,8 @@ public class WebTest {
 	@Test
 	public void plaintext4096Test() {
 		
-				int inFlightBits = 9; //1024 * 4 tracks is 4096
-				int tracks = 8;
+				int inFlightBits = 8; 
+				int tracks = 16;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -118,8 +118,8 @@ public class WebTest {
 	@Test
 	public void json1024Test() {
 				
-				int inFlightBits = 9; //512 * 2 tracks is 1024
-				int tracks = 2;
+				int inFlightBits = 8;
+				int tracks = 4;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -141,8 +141,8 @@ public class WebTest {
 	@Test
 	public void json4096Test() {
 				
-				int inFlightBits = 10; //1024 * 4 tracks is 4096
-				int tracks = 4;
+				int inFlightBits = 8; 
+				int tracks = 16;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
