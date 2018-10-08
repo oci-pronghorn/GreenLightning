@@ -20,13 +20,14 @@ public class AppTest {
 
 	private final int timeoutMS = 240_000; //240 sec
 	private final static Logger logger = LoggerFactory.getLogger(AppTest.class);
-	
+	static int port = (int) (3000 + (System.nanoTime()%12000));
+		
 	 @Test
 	 public void testApp() {
 	 
 	   simulateUser();
 
-	   boolean cleanExit = GreenRuntime.testConcurrentUntilShutdownRequested(new Shutdown("127.0.0.1"), timeoutMS);				
+	   boolean cleanExit = GreenRuntime.testConcurrentUntilShutdownRequested(new Shutdown("127.0.0.1",port), timeoutMS);				
 
 	   assertTrue("Shutdown commands not detected.",cleanExit);
 	   //TODO: second URL should have shut down??
@@ -64,7 +65,7 @@ public class AppTest {
 	
 	private void hitFirstURL() {
 		try {
-			URL url = new URL("https://127.0.0.1:8443/shutdown?key=2709843294721594");
+			URL url = new URL("https://127.0.0.1:"+port+"/shutdown?key=2709843294721594");
 						
 			waitForServer(url);
 						
@@ -83,7 +84,7 @@ public class AppTest {
 
 	private void hitSecondURL() {
 		try {
-			URL url2 = new URL("https://127.0.0.1:8443/shutdown?key=A5E8F4D8C1B987EFCC00A");
+			URL url2 = new URL("https://127.0.0.1:"+port+"/shutdown?key=A5E8F4D8C1B987EFCC00A");
 			
 			HttpURLConnection http2 = (HttpURLConnection)url2.openConnection();
 			http2.setReadTimeout(timeoutMS);

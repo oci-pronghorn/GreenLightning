@@ -20,7 +20,7 @@ public class ParallelClientLoadTesterConfig {
     public Integer telemetryPort = null;
     public String telemetryHost = null;
     public int warmup = 0;
-    public Long cycleRate = 4000L; //very fast rate
+    public Long cycleRate = 4_000L; //very fast rate
 	public int simultaneousRequestsPerTrackBits = 0; // as power of 2. 0 == serial requests on a track
 	public Appendable target = System.out;
 	public GraphManager graphUnderTest;

@@ -19,7 +19,7 @@ public class RestBehaviorEmptyResponse implements RestListener {
 	
 	public RestBehaviorEmptyResponse(GreenRuntime runtime, long nameFieldId, AppendableProxy console) {
 		this.nameFieldId = nameFieldId;		
-		this.cmd = runtime.newCommandChannel().newHTTPResponseService();
+		this.cmd = runtime.newCommandChannel().newHTTPResponseService(4,400);
 		this.console = console;
 	}
 

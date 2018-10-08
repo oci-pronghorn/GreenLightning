@@ -13,7 +13,7 @@ public class RestBehaviorSmallResponse implements RestListener {
 	private final AppendableProxy console;
 	
 	public RestBehaviorSmallResponse(GreenRuntime runtime, AppendableProxy console) {	
-		this.cmd = runtime.newCommandChannel().newHTTPResponseService();
+		this.cmd = runtime.newCommandChannel().newHTTPResponseService(128,400);
 		this.console = console;
 	}
 	

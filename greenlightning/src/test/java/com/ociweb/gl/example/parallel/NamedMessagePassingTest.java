@@ -78,7 +78,8 @@ public class NamedMessagePassingTest {
 		//GraphManager.showThreadIdOnTelemetry = true;
 		//GraphManager.showScheduledRateOnTelemetry = true;
 		
-		boolean telemetry = false;  //must not be true when checked in.
+		boolean telemetry = true;
+		//ust not be true when checked in.
 		long cycleRate = 6_000; //larger rate should be used with greater volume..
 
 		//note only 4 threads in use and this should probably be 3
@@ -92,7 +93,7 @@ public class NamedMessagePassingTest {
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
 
 		//spikes are less frequent when the wifi network is off
-		int cyclesPerTrack = 100_000; //*(1+99_9999);
+		int cyclesPerTrack = 40_000; //*(1+99_9999);
 		int parallelTracks = 1; 
 
 		
@@ -100,6 +101,7 @@ public class NamedMessagePassingTest {
 		assertTrue(0==config2.durationNanos);
 		
 		config2.simultaneousRequestsPerTrackBits  = 0;
+	    
 
 		GreenRuntime.testConcurrentUntilShutdownRequested(
 															new ParallelClientLoadTester(config2, payload),

@@ -18,7 +18,8 @@ public class LoadTester {
 	}
 	
 	//one response actor should only try to manage this many connections unless we are out of cores then we just distribute the load.
-	private static final int LIMITED_CONNECTIONS_PER_ACTOR = 128;//256;
+	private static final int LIMITED_CONNECTIONS_PER_ACTOR = 512;
+	//HIGHVOLUME
 	
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,
 			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int concurrentConnections,
@@ -31,6 +32,7 @@ public class LoadTester {
 																							port, route, telemetry);
 		testerConfig.insecureClient = !useTLS;
 		testerConfig.host = host;
+		testerConfig.telemetryHost = host;
 		testerConfig.simultaneousRequestsPerTrackBits = inFlightBits;		
 		testerConfig.target = target;
 		testerConfig.graphUnderTest = graphUnderTest;

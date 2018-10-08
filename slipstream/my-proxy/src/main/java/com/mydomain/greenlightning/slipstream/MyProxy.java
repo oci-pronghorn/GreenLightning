@@ -13,16 +13,18 @@ public class MyProxy implements GreenApp {
     private ClientHostPortInstance session;
 	private String HANDOFF_TOPIC = "handoff";
 	private final boolean useTLS;
+	private final int port;
 	
-	public MyProxy(boolean useTLS) {
+	public MyProxy(boolean useTLS, int port) {
 		this.useTLS = useTLS;
+		this.port = port;
 	}
 	
 	
 	@Override
     public void declareConfiguration(GreenFramework builder) {
    	
-    	HTTPServerConfig server = builder.useHTTP1xServer(8080)
+    	HTTPServerConfig server = builder.useHTTP1xServer(port)
     	.setConcurrentChannelsPerDecryptUnit(4)
     	.setConcurrentChannelsPerEncryptUnit(4)
     	       .setHost("127.0.0.1");
@@ -40,12 +42,12 @@ public class MyProxy implements GreenApp {
     			? builder.useNetClient() 
     			: builder.useInsecureNetClient();
     	    	    	
-    	session = client.newHTTPSession("127.0.0.1", 8080).finish();
+    	session = client.newHTTPSession("127.0.0.1", port).finish();
     	
     	GraphManager.showThreadIdOnTelemetry = true;
     	GraphManager.showScheduledRateOnTelemetry = true;
     	
-         builder.enableTelemetry();
+      //  builder.enableTelemetry();
          
     }
 

@@ -19,7 +19,7 @@ public class BlockingTaskTest {
 		//HTTP1xRouterStage.showHeader = true;
 		
 		boolean telemetry = false;  //must not be true when checked in.
-		int cyclesPerTrack = 100;
+		int cyclesPerTrack = 20;
 		int parallelTracks = 4;
 		int timeoutMS = 600_000;
 				

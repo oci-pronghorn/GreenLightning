@@ -10,8 +10,6 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.ClientAbandonConnectionScanner;
-import com.ociweb.pronghorn.network.ClientSocketReaderStage;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.AppendableBuilder;
 import com.ociweb.pronghorn.util.Appendables;
 
@@ -19,7 +17,7 @@ public class DBWebTest {
 	
 	static GreenRuntime runtime;
 	
-	static int port = (int) (5000 + (System.nanoTime()%3000));
+	static int port = (int) (3000 + (System.nanoTime()%12000));
 	
 	static String host = "127.0.0.1";
 	static int timeoutMS = 600_000; //10 minutes	
@@ -39,7 +37,7 @@ public class DBWebTest {
 		
 	@AfterClass
 	public static void stopServer() {
-		runtime.shutdownRuntime();	
+		runtime.shutdownRuntime();
 		runtime = null;
 	}
 
@@ -55,14 +53,14 @@ public class DBWebTest {
 	public void uploadProductsTest() {
 
 		int tracks = 2;
-		int callsPerTrack = 10_000; 
+		int callsPerTrack = 1_000; 
 		int inFlightBits = 3;
 		boolean telemetry2 = false;
 
 		StringBuilder uploadConsoleCapture = new StringBuilder();
 		LoadTester.runClient(
 				(i,w) -> renderer.render(w, new Product((int)i%10_000)) ,
-				(i,r) -> r.statusCode()==200 , 
+				(i,r) -> r.statusCode()==200, 
 				"/update", 
 				useTLS, telemetry2, 
 				tracks, callsPerTrack, 

@@ -26,7 +26,7 @@ public class ProductsBehavior implements RestMethodListener, StartupListener {
 				.endObject();	
 	
 	public ProductsBehavior(GreenRuntime runtime, int maxProductId) {	
-		responseService = runtime.newCommandChannel().newHTTPResponseService();
+		responseService = runtime.newCommandChannel().newHTTPResponseService(4,256);
 		
 		names = new StringBuilder[maxProductId+1];
 		int i = names.length;

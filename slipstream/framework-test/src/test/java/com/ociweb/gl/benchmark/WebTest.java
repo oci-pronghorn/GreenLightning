@@ -22,7 +22,7 @@ public class WebTest {
 	
 	static GreenRuntime runtime;
 	
-	static int port = 9977;
+	static int port = (int) (3000 + (System.nanoTime()%12000));
 	static String host = "127.0.0.1";
 	
 	
@@ -34,7 +34,7 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1",port, 4, 256, -1)); ///TODO: for very small values must not hang!
+		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 8, 512, 1<<14, -1)); ///TODO: for very small values must not hang!
 		
 	}
 		

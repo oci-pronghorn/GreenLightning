@@ -1105,13 +1105,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 											totalSessions,
 	                    					this.client.getCertificates(), gm.recordTypeData);
 			}
-			
-			if (!this.client.isTLS()) {
-				pcm.ensureSize(NetPayloadSchema.class, 
-						client.getMaxSimultaniousRequests(), 
-						client.getMaxRequestSize()); //TLS does its own thing elsewhere.
-			}
-			
+				
 			int netResponseCount = 64; //needed for heavy load tests to consume all the responses when they arrive.
 			int responseQueue = 16;
 			
@@ -1124,18 +1118,14 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			
 		    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 			//TODO: must have N pipes from HTTPClientRequests -> wrap for the count of client connections
-			//TODO: if true then we may need a lock for this wrap logic..		             
-					             
-			int clientWrapperCount = this.client.isTLS()? 1 : 2;
+			//TODO: if true then we may need a lock for this wrap logic..	             
 			
-			int outputsCount = clientWrapperCount*(this.client.isTLS()? 2 : 2); //Multipler per session for total connections ,count of pipes to channel writer
-
-			
-			//due to deadlocks which may happen in TLS handshake we must have as many or more clientWriters
-			//as we have SSLEngineUnwrapStages so each can complete its handshake
-			int clientWriters = responseUnwrapCount;//count of channel writer stages, can be larger than Unwrap count if needed
-			//TODO: must be sure the above is > than the encyption units .
-			
+		    int clientSocketWriters = client.getSocketWriterCount();
+			int clientWrapperCount = this.client.isTLS()? clientSocketWriters*2 : clientSocketWriters; //writer/encrypter units
+						
+			int totalOutputPipes = Math.min(clientWrapperCount*client.getConcurentPipesPerWriter(),ClientHostPortInstance.getSessionCount());
+			assert(totalOutputPipes<=ClientHostPortInstance.getSessionCount()) : "do not need more output  pipes than we have sesssions.";
+		
 			if (this.client.isTLS()) {
 				pcm.ensureSize(NetPayloadSchema.class, 8, SSLUtil.MinTLSBlock); ///must be large enough for encrypt/decrypt 
 			}
@@ -1143,11 +1133,12 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 					
 			//BUILD GRAPH
 		
-			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[outputsCount];
-			int r = outputsCount;
+			Pipe<NetPayloadSchema>[] clientRequests = new Pipe[totalOutputPipes];
+			int r = totalOutputPipes;
 			while (--r>=0) {
 				clientRequests[r] = new Pipe<NetPayloadSchema>(clientNetRequestConfig);		
 			}			
+			
 			
 			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
 					responseQueue, clientRequests, 
@@ -1156,7 +1147,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 					releaseCount,
 					responseUnwrapCount,
 					clientWrapperCount,
-					clientWriters);
+					clientSocketWriters);
 
 			assert(isAllNull(masterGoOut[IDX_NET])) : "ordered traffic calling not supported with HTTP Client.";
 			

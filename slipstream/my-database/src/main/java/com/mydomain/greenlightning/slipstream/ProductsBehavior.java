@@ -25,7 +25,7 @@ public class ProductsBehavior implements RestMethodListener, StartupListener, Sh
 	
 	public ProductsBehavior(GreenRuntime runtime, int maxProductId, String topic) {
 			
-		publishService = runtime.newCommandChannel().newPubSubService(topic);
+		publishService = runtime.newCommandChannel().newPubSubService(topic,4,400);
 
 	}
 		

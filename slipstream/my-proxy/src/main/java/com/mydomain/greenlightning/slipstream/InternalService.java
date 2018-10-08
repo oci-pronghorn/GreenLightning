@@ -11,7 +11,7 @@ public class InternalService implements RestListener {
 	private final HTTPResponseService responseService;
 
 	public InternalService(GreenRuntime runtime) {
-		responseService = runtime.newCommandChannel().newHTTPResponseService();		
+		responseService = runtime.newCommandChannel().newHTTPResponseService(4,400);		
 	}
 	
 	@Override

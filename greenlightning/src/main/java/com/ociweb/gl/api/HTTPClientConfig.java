@@ -8,9 +8,11 @@ public interface HTTPClientConfig {
     TLSCertificates getCertificates();
     ClientHostPortConfig newHTTPSession(String host, int port);
     HTTPClientConfig setUnwrapCount(int unwrapCount);
-	HTTPClientConfig setMaxSimultaniousRequests(int value);
 	HTTPClientConfig setMaxResponseSize(int value);
 	HTTPClientConfig setMaxRequestSize(int value);
-	HTTPClientConfig setResponseQueueLength(int value);    
+	HTTPClientConfig setResponseQueueLength(int value);
+	HTTPClientConfig setConcurentPipesPerWriter(int value);
+	HTTPClientConfig setRequestQueueLength(int value);
+	HTTPClientConfig setSocketWriterCount(int value);    
     
 }

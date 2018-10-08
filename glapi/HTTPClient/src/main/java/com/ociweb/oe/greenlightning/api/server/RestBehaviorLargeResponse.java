@@ -16,7 +16,7 @@ public class RestBehaviorLargeResponse implements RestListener {
 	private final AppendableProxy console;
 	
 	public RestBehaviorLargeResponse(GreenRuntime runtime, AppendableProxy console) {	
-		this.cmd = runtime.newCommandChannel().newHTTPResponseService();
+		this.cmd = runtime.newCommandChannel().newHTTPResponseService(4,400);
 		this.console = console;
 	}
 	

@@ -4,6 +4,7 @@ import com.ociweb.gl.api.ClientHostPortConfig;
 import com.ociweb.gl.api.HTTPClientConfig;
 import com.ociweb.gl.impl.BridgeConfigStage;
 import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
 import com.ociweb.pronghorn.network.schema.NetResponseSchema;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
 
@@ -11,10 +12,8 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     private TLSCertificates certificates;
     
     private int unwrapCount = 2;//default
-        
-    private int maxRequestSize = 512;//default 
-    private int maxSimultaniousRequests = 1024;//default max HTTP calls to clientSocketWriter 
-    
+    private int concurentPipesPerWriter = 2;
+    private int socketWriterCount = 2;
 
     
     private BridgeConfigStage configStage = BridgeConfigStage.Construction;
@@ -53,13 +52,6 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
 		return unwrapCount;
 	}
 
-	public int getMaxRequestSize() {
-		return maxRequestSize;
-	}
-
-	public int getMaxSimultaniousRequests() {
-		return maxSimultaniousRequests;
-	}
 	
 	@Override
 	public HTTPClientConfig setUnwrapCount(int unwrapCount) {
@@ -67,28 +59,52 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
 		this.unwrapCount = unwrapCount;
 		return this;
 	}
-	
-    @Override
-    public HTTPClientConfig setMaxSimultaniousRequests(int value) {
-    	maxSimultaniousRequests = value;
-    	return this;
-    }
     
     @Override
     public HTTPClientConfig setMaxResponseSize(int value) {
     	this.pcm.ensureSize(NetResponseSchema.class, 4, value);
     	return this;
     }
-    
-    @Override
-    public HTTPClientConfig setMaxRequestSize(int value) {
-    	maxRequestSize = value;
-    	return this;
-    }       
+ 
     
     @Override
     public HTTPClientConfig setResponseQueueLength(int value) {    
     	this.pcm.ensureSize(NetResponseSchema.class, value, 32);  
     	return this;
-    }   
+    }
+
+	public int getConcurentPipesPerWriter() {
+		return concurentPipesPerWriter;
+	}   
+	
+	@Override
+	public HTTPClientConfig setConcurentPipesPerWriter(int value) {
+		concurentPipesPerWriter = value;
+		return this;
+	}
+	
+    @Override
+    public HTTPClientConfig setRequestQueueLength(int value) {    
+    	this.pcm.ensureSize(NetPayloadSchema.class, value, 32);  
+    	return this;
+    }
+	
+    @Override
+    public HTTPClientConfig setMaxRequestSize(int value) {
+    	this.pcm.ensureSize(NetPayloadSchema.class, 4, value);
+    	return this;
+    }
+
+	public int getSocketWriterCount() {
+		return socketWriterCount;
+	}
+	
+	@Override
+    public HTTPClientConfig setSocketWriterCount(int value) {
+	    this.socketWriterCount = value;
+	    return this;
+	}
+	
+	
+	
 }

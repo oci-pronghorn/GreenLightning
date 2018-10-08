@@ -12,12 +12,13 @@ public class WebProxyTest {
 	
 	static GreenRuntime runtime;
 	
-	static int port = 8080;
+	static int port = (int) (3000 + (System.nanoTime()%12000));
+
 	static int telemetryPort = 8097;
 	static String host = "127.0.0.1";	
 	static int timeoutMS = 240_000;	
 	static boolean telemetry = false;
-	static int cyclesPerTrack = 2_000; 
+	static int cyclesPerTrack = 100; 
 	static boolean useTLS = true;
 	static int parallelTracks = 2;
 	
@@ -25,7 +26,7 @@ public class WebProxyTest {
 	@BeforeClass
 	public static void startServer() {
 		
-		runtime = GreenRuntime.run(new MyProxy(useTLS));
+		runtime = GreenRuntime.run(new MyProxy(useTLS,port));
 		
 	}
 

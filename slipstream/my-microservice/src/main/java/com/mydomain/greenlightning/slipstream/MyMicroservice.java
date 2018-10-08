@@ -49,7 +49,7 @@ public class MyMicroservice implements GreenApp {
     	  .setConcurrentChannelsPerDecryptUnit(4)
     	  
     	  .setDecryptionUnitsPerTrack(1)
-    	  .setEncryptionUnitsPerTrack(1)
+    	  .setEncryptionUnitsPerTrack(1) 
     	  
     	  //IP home where this site is hosted.  This is the internal IP.
     	  //This value supports stars so "10.*.*.*" is a common value used.

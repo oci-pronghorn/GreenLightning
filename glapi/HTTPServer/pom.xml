@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
   <artifactId>http-server</artifactId>
-  <version>1.0.3</version>
+  <version>1.0.6</version>
   
   <properties>
     <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
@@ -16,7 +16,7 @@
   		<dependency>
 	  		<groupId>com.ociweb</groupId>
             <artifactId>greenlightning</artifactId>
-            <version>1.0.3</version>
+            <version>1.0.6</version>
     	</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

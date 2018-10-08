@@ -18,8 +18,8 @@ public class ExternalRequest implements RestListener {
 			               ClientHostPortInstance session, String path,
 			               String topic) {
 	
-		this.clientService = runtime.newCommandChannel().newHTTPClientService();
-		this.pubSubService = runtime.newCommandChannel().newPubSubService(topic);
+		this.clientService = runtime.newCommandChannel().newHTTPClientService(4,400);
+		this.pubSubService = runtime.newCommandChannel().newPubSubService(topic,4,400);
 		this.session = session;
 		this.path = path;
 	}

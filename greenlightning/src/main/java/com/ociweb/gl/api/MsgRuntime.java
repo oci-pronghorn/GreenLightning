@@ -112,7 +112,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
     protected static final int defaultCommandChannelSubscriberLength = 8;
     
     public static final int defaultCommandChannelLength = 32;
-    public static final int defaultCommandChannelMaxPayload = 256; //largest i2c request or pub sub payload
+    public static final int defaultCommandChannelMaxPayload = 64;
 
     protected boolean transducerAutowiring = true;
 
@@ -494,7 +494,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		int incomingMsgFragCount = r.defaultComputedChunksCount();
 		
 		int queueIn = config.getMaxQueueIn();   //router to modules
-		int queueOut = config.getMaxQueueOut();  //orderSuper to socketWriter
+		
+		//orderSuper to socketWriter
+		int queueOut = 
+				Math.max(config.getMaxQueueOut(), (1<<21)/r.getMaxResponseSize()) ;
 		
 		///////////////////////
 		///////////////////////
@@ -533,7 +536,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 				serverConfig);
 				
 		//NOTE  serverConfig.maxConcurrentInputs = serverRequestUnwrapUnits * concurrentChannelsPerDecryptUnit
-		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
+		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(
+				 serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
 		
 
 		

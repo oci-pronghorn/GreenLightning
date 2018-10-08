@@ -15,11 +15,11 @@ import com.ociweb.pronghorn.network.ClientSocketReaderStage;
 import com.ociweb.pronghorn.util.AppendableBuilder;
 import com.ociweb.pronghorn.util.Appendables;
 
-public class WebTest {
+public class WebMicroServiceTest {
 	
 	static GreenRuntime runtime;
 	
-	static int port = (int) (5000 + (System.nanoTime()%3000));
+	static int port = (int) (3000 + (System.nanoTime()%12000));
 	
 	static String host = "127.0.0.1";
 	static int timeoutMS = 1200_000; //20 minutes	
@@ -73,7 +73,7 @@ public class WebTest {
 				StringBuilder uploadConsoleCapture = new StringBuilder();
 				LoadTester.runClient(
 						(i,w) -> renderer.render(w, new Product((int)i%10_000)) ,
-						(i,r) -> r.statusCode()==200 , 
+						(i,r) -> r.statusCode()==200, 
 						"/update", 
 						useTLS, testTelemetry, 
 						tracks, callsPerTrack * 10, 

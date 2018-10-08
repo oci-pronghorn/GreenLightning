@@ -31,8 +31,8 @@ public class ExampleAppTest {
 	static GreenRuntime runtime;
 	static StringBuilder console;
 	
-	static int port = 8050;
-	static int telemetryPort = 8097;
+	static int port = (int) (3000 + (System.nanoTime()%12000));
+	static int telemetryPort = -1;//8097;
 	static String host = "127.0.0.1";
 	
 	int timeoutMS = 60_000;	

@@ -262,16 +262,16 @@ public class ParallelClientLoadTester implements GreenApp {
 
 		//when we have massive connections this is a very small number
 		//HIGHVOLUME test
-		int maxQueuedResponsesFromServer = Math.max(32,maxInFlight/sessionCount);
+	
+		clientConfig.setResponseQueueLength(maxInFlight);	
 		
-		clientConfig.setResponseQueueLength(maxQueuedResponsesFromServer);
+		clientConfig.setMaxRequestSize(256);//TODO: what is the expected request size..
 		
-		clientConfig.setMaxSimultaniousRequests(parallelTracks*sessionCount);//each has sequential maxInFlight
-			
-		//clientConfig.setMaxRequestSize(value)
-		//clientConfig.setUnwrapCount(4); //hack test
+		clientConfig.setRequestQueueLength(maxInFlight);		
+		clientConfig.setConcurentPipesPerWriter(Math.max(4, parallelTracks*sessionCount));
+		clientConfig.setSocketWriterCount(Math.min(4, sessionCount));
 		
-		int maxExpectedMessageSizeFromServer = 512; //TODO: add support to configure this
+		int maxExpectedMessageSizeFromServer = 250; //TODO: add support to configure this
 		clientConfig.setMaxResponseSize(maxExpectedMessageSizeFromServer);
 		
 		System.out.println("Test is running with "+(ClientHostPortInstance.getSessionCount()-base)+" total connections");
@@ -371,7 +371,8 @@ public class ParallelClientLoadTester implements GreenApp {
 			//note 28 is a magic number based on the ratio between slab and blob for this schema
 			int queueLength = Math.min(2 *maxInFlight * totalSessionsPerTrack, 1<<Math.max(28-consumedBits,3));
 
-			int httpClientConnections = 1+(sessionCount/24);
+			//Need many pipes so the messages can be combined and so we can push that much volume
+			int httpClientConnections = Math.max(1, (sessionCount/8));
 			httpClientService = new HTTPRequestService[httpClientConnections];
 			clientServiceMask = httpClientService.length-1;
 			
@@ -626,8 +627,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		
 				if (s!=null) {
 					//NOTE: only safe place to close the connection.
-
-//TODO: testing this seems to close all the connections???					
+//TODO: testing, must ensure this does not close all connections
 //					if (insecureClient) {
 //						
 //						httpClientService[clientServiceMask&sessionIdx].httpClose(s); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. 

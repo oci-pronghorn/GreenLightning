@@ -13,7 +13,7 @@ public class AppTest {
 	 @Test
 	 public void testApp() {
 		    int timeoutMS = 2000;
-		    GreenRuntime.testUntilShutdownRequested(new MyProxy(true), timeoutMS);
+		    GreenRuntime.testUntilShutdownRequested(new MyProxy(true,6898), timeoutMS);
 
 	 }
 	 

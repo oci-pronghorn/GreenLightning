@@ -12,7 +12,7 @@ public class RestResponder implements PubSubListener {
 	private HTTPResponseService responseService;
 
 	public RestResponder(GreenRuntime runtime) {		
-		responseService = runtime.newCommandChannel().newHTTPResponseService();		
+		responseService = runtime.newCommandChannel().newHTTPResponseService(4,400);		
 	}
 
 	@Override
