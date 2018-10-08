@@ -23,7 +23,7 @@ public class JSONBehaviorInstance implements RestListener {
 	
 		//NOTE: this is only done here for the framework test
 		//      in a normal production deployment this JSONRender will only
-		//      be created once and held as an member.
+		//      be created once and held as a member.
 		JSONRenderer<HTTPRequestReader> renderJSON = new JSONRenderer<HTTPRequestReader>()
 				.startObject()
 					.string("message", (o,t) -> t.write(FrameworkTest.payload) )
