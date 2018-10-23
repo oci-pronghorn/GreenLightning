@@ -15,7 +15,7 @@ public class SimpleLoadTester {
 		//ClientAbandonConnectionScanner.absoluteNSToKeep = 20_000_000_000L;
 		//ClientAbandonConnectionScanner.absoluteNSToAbandon = 40_000_000_000L;
 		
-		int timeoutMS = 600_000;
+		int timeoutMS = 2_400_000;
 		
 		boolean useTLS = false;
 

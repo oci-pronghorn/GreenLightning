@@ -13,14 +13,13 @@ public class AppTest {
 
 	//cloud bees has no MQTT server to talk to.
 	@Test
-	public void testApp()
-	{
+	public void testApp() {
 		long timeoutMS = 1_000;
 		boolean exitWithoutTimeout = GreenRuntime.testConcurrentUntilShutdownRequested(new MQTTClient("egress","ingress","testClient42"), timeoutMS);
 		assertFalse(exitWithoutTimeout);
 	}
 
-//	
+	
 //	@Test
 //	public void roundTripTest()
 //	{

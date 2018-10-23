@@ -5,23 +5,20 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.blocking.BlockableStageFactory;
-import com.ociweb.gl.api.blocking.BlockingBehavior;
-import com.ociweb.gl.api.blocking.BlockingBehaviorProducer;
-import com.ociweb.gl.api.blocking.ChoosableLongField;
 import com.ociweb.gl.impl.BridgeConfigImpl;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.ChildClassScanner;
 import com.ociweb.gl.impl.ChildClassScannerVisitor;
 import com.ociweb.gl.impl.GreenFrameworkImpl;
-import com.ociweb.gl.impl.PrivateTopic;
-import com.ociweb.gl.impl.schema.MessagePrivate;
+import com.ociweb.gl.impl.blocking.BalanceBlockingBehavior;
+import com.ociweb.gl.impl.blocking.JoinBlockingBehavior;
+import com.ociweb.gl.impl.blocking.TargetSelector;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.gl.impl.stage.EgressConverter;
@@ -42,14 +39,17 @@ import com.ociweb.pronghorn.network.schema.HTTPLogRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPLogResponseSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.NetPayloadSchema;
+import com.ociweb.pronghorn.network.schema.ReleaseSchema;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeConfigManager;
+import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
-import com.ociweb.pronghorn.stage.blocking.Choosable;
+import com.ociweb.pronghorn.stage.blocking.BlockingWorkStage;
+import com.ociweb.pronghorn.stage.blocking.BlockingWorkerProducer;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
@@ -427,7 +427,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 	protected void constructingParallelInstance(int i) {
 		parallelInstanceUnderActiveConstruction = i;
 	}
-
+	
+	public int constructingParallelInstance() {
+		return parallelInstanceUnderActiveConstruction;
+	}
+	
 	protected void constructingParallelInstancesEnding() {
 		parallelInstanceUnderActiveConstruction = -1;
 	}
@@ -502,11 +506,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		///////////////////////
 		///////////////////////
 		
-		r.pcm.addConfig(new PipeConfig<HTTPRequestSchema>(HTTPRequestSchema.instance, 
+		r.pcm.ensureSize(HTTPRequestSchema.class, 
 						Math.max(incomingMsgFragCount-2, 2), 
-						r.getMaxRequestSize()));
+						r.getMaxRequestSize());
 		
-		r.pcm.ensureSize(ServerResponseSchema.class, 4, r.getMaxResponseSize());		
+		r.pcm.ensureSize(ServerResponseSchema.class, 4, r.getMaxResponseSize());	
+		
+		r.pcm.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
 		
 		ServerPipesConfig serverConfig = new ServerPipesConfig(
 					r.logFileConfig(),
@@ -826,32 +832,27 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 	//end of file server
 	///////////////////////////
 		
-	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> L registerBlockingListener(
-			P producer,
-			Object chooserFieldAssoc,
-			int threadsCount,
-			long timeoutNS, String topicToBlockingTask, String topicFromBlockingTask) {
-		return registerBlockingListener(null, producer, chooserFieldAssoc, threadsCount, timeoutNS, topicToBlockingTask, topicFromBlockingTask);
-	}
-	
-	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> L registerBlockingListener(
+	public <P extends BlockingWorkerProducer & TargetSelector> L registerBlockingListener(
 			P producer,	Object chooserFieldAssoc, String topicToBlockingTask, String topicFromBlockingTask) {
 		int threadsCount = 64;//default
-		long timeoutNS = 60L*1_000_000_000L;//default 1m
-		return registerBlockingListener(null, producer, chooserFieldAssoc, threadsCount, timeoutNS, topicToBlockingTask, topicFromBlockingTask);
+		return registerBlockingListener(producer, chooserFieldAssoc, threadsCount, topicToBlockingTask, topicFromBlockingTask);
 	}
-	
-	public <T extends BlockingBehavior, P extends BlockingBehaviorProducer> L registerBlockingListener(
-			String behaviorName,
+
+	public <P extends BlockingWorkerProducer & TargetSelector> L registerBlockingListener(
 			P producer,
 			Object chooserFieldAssoc,
 			int threadsCount,
-			long timeoutNS, 
 			String topicToBlockingTask, String topicFromBlockingTask) {
+		return registerBlockingListener(null, producer, threadsCount, chooserFieldAssoc, topicToBlockingTask, topicFromBlockingTask);
+	}
 	
+
+	public <P extends BlockingWorkerProducer & TargetSelector> L registerBlockingListener(String behaviorName, P producer,
+			final int threadsCount, Object chooserFieldAssoc, String topicToBlockingTask, String ... topicsFromBlockingTask) {
+		
 		if (null == behaviorName) {
 			//by default unless a name is given use the behavior
-			behaviorName = topicToBlockingTask+"->"+topicFromBlockingTask;
+			behaviorName = topicToBlockingTask+"->"+(topicsFromBlockingTask.length==1?topicsFromBlockingTask[0]:Arrays.toString(topicsFromBlockingTask).replaceAll(" ",""));
 		}
 		
 		final String name = behaviorName;
@@ -859,52 +860,45 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		
 		behaviorName = builder.validateUniqueName(behaviorName, parallelInstanceUnderActiveConstruction);	
 		
-		byte[] track = parallelInstanceUnderActiveConstruction<0 ? null : BuilderImpl.trackNameBuilder(parallelInstanceUnderActiveConstruction);
+		//byte[] track = parallelInstanceUnderActiveConstruction<0 ? null : BuilderImpl.trackNameBuilder(parallelInstanceUnderActiveConstruction);
+				
+		final MsgRuntime<B, L, G> r = this;
+		
+		final PipeConfig commonConfig = RawDataSchema.instance.newPipeConfig(2*1024, 500*14); //TODO: too small??
+		final Pipe<RawDataSchema>[] toBlockingWork = Pipe.buildPipes(threadsCount, commonConfig);
+		final Pipe<RawDataSchema>[] fromBlockingWork = Pipe.buildPipes(threadsCount, commonConfig);
+		
+		
+		ListenerFilter balanceWork = r.registerListener("BalanceWork", new BalanceBlockingBehavior(toBlockingWork, chooserFieldAssoc))
+				                               .addSubscription(topicToBlockingTask);
+		((ReactiveListenerStage)balanceWork).addOutputPronghornPipes(toBlockingWork);
+		
+		
+		JoinBlockingBehavior join = new JoinBlockingBehavior(r, 
+															 fromBlockingWork,								 
+											                 topicsFromBlockingTask, 
+											                 producer);		
+		
+		
+		ListenerFilter joinWork = r.registerListener("JoinWork", join);
+		((ReactiveListenerStage)joinWork).addInputPronghornPipes(fromBlockingWork);
 		
 
-		
 		PendingStageBuildable pendingBuilder = new PendingStageBuildable() {
 
 			@Override
-			public void initRealStage() {
-		
-				
-				List<PrivateTopic> targetTopics = builder.getPrivateTopicsFromTarget(name);		
-				if (1 != targetTopics.size()) {
-					throw new UnsupportedOperationException("Blocking behavior only supports 1 private target topic at this time. found:"+targetTopics.size());
+			public void initRealStage() {			
+					new BlockingWorkStage(gm, toBlockingWork, fromBlockingWork, producer);
 				}
-				Pipe<MessagePrivate> input = targetTopics.get(0).getPipe(capturedTrack);
-				
-				
-				List<PrivateTopic> sourceTopics = builder.getPrivateTopicsFromSource(name);
-				if (1 != sourceTopics.size()) {
-					throw new UnsupportedOperationException("Blocking behavior only supports 1 private source topic at this time. found:"+sourceTopics.size());
-				}
-				Pipe<MessagePrivate> output = sourceTopics.get(0).getPipe(capturedTrack);
-				Pipe<MessagePrivate> timeout = output;
-
-				
-				//TODO: add register listener behavior,
-				
-				Choosable<MessagePrivate> chooser = new ChoosableLongField<MessagePrivate>(chooserFieldAssoc, threadsCount);
-				
-				BlockableStageFactory.buildBlockingSupportStage(gm, timeoutNS, threadsCount, input, output, timeout, producer, chooser);
-
-			}
-
+	
 			@Override
 			public String behaviorName() {
-				return name;
-			}
+				 return name;
+				}
 		};
-		
-		
-		builder.possiblePrivateTopicProducer(pendingBuilder, topicFromBlockingTask, parallelInstanceUnderActiveConstruction);
-		builder.possiblePrivateTopicConsumer(pendingBuilder, topicToBlockingTask,  parallelInstanceUnderActiveConstruction);
-		
+
 		/////////////////////////////////////remove?
-		builder.pendingInit(pendingBuilder);//not needed if we use normal register listner
-		
+		builder.pendingInit(pendingBuilder);//not needed if we use normal register listener
 
 		//if this producer is also a behavior register it.
 		if (producer instanceof Behavior) {

@@ -31,14 +31,16 @@ public class DBWebTest {
 		ClientAbandonConnectionScanner.absoluteNSToKeep = 120_000_000_000L; 
 		ClientAbandonConnectionScanner.absoluteNSToAbandon = 300_000_000_000L; //kill after 5 Min
 
-		runtime = GreenRuntime.run(new MyMicroservice(useTLS, port, telemetry));
+		runtime = GreenRuntime.run(new MyDBMicroservice(useTLS, port, telemetry));
 		
 	}
 		
 	@AfterClass
 	public static void stopServer() {
-		runtime.shutdownRuntime();
-		runtime = null;
+		if (null!=runtime) {
+			runtime.shutdownRuntime();
+			runtime = null;
+		}
 	}
 
 	private JSONRenderer<Product> renderer = new JSONRenderer<Product>()

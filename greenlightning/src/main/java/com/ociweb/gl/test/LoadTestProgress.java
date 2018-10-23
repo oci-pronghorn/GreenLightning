@@ -98,14 +98,13 @@ class LoadTestProgress implements PubSubMethodListener, StartupListener {
 	
 	boolean progressMessage(CharSequence topic, ChannelReader payload) {
 		int track = payload.readPackedInt();
-		long countDown = payload.readPackedLong();
+		this.finished[track] = payload.readPackedLong();
 		//long sendAttempts = payload.readPackedInt();
 		//long sendFailures = payload.readPackedInt();
 		long timeouts = payload.readPackedInt();
 		//long responsesReceived = payload.readPackedInt();
 		long responsesInvalid = payload.readPackedInt();
-
-		this.finished[track] = (this.parallelClientLoadTester.cyclesPerTrack * this.parallelClientLoadTester.sessionCount) - countDown; //TODO: this value is not right and using the session vlues.
+		
 		//this.sendAttempts[track] = sendAttempts;
 		//this.sendFailures[track] = sendFailures;
 		this.timeouts[track] = timeouts;
@@ -119,27 +118,23 @@ class LoadTestProgress implements PubSubMethodListener, StartupListener {
 		//long sumResponsesReceived = 0;
 		long sumResponsesInvalid = 0;
 		int trackId = this.parallelClientLoadTester.parallelTracks;
-		long minFin = Long.MAX_VALUE;
+	
 		while (--trackId >= 0) {
 			
-			long f = this.finished[trackId];
-			if (f < minFin) {
-				minFin = f;
-			}
-			
-			sumFinished += f;
+			sumFinished += this.finished[trackId];
 			//sumSendAttempts += this.sendAttempts[track];
 			//sumSendFailures += this.sendFailures[track];
 			sumTimeouts += this.timeouts[track];
 			//sumResponsesReceived += this.responsesReceived[i];
 			sumResponsesInvalid += this.responsesInvalid[trackId];
 		}
-		this.parallelClientLoadTester.minFinished = minFin;
 
-		long totalRequests = this.parallelClientLoadTester.cyclesPerTrack 
-				           * this.parallelClientLoadTester.parallelTracks 
-				           * this.parallelClientLoadTester.sessionCount;
+		long totalRequests = (long)this.parallelClientLoadTester.cyclesPerTrack 
+				           * (long)this.parallelClientLoadTester.parallelTracks 
+				           * (long)this.parallelClientLoadTester.sessionCount;
 		int percentDone = (int)((100L * sumFinished) / totalRequests);
+        long curDuration = System.nanoTime() - this.parallelClientLoadTester.startupTime;
+        long estCallsPerSecond = (1_000_000_000L * sumFinished) / curDuration;
 		assert(percentDone>=0);
 
 		long now = 0;
@@ -148,7 +143,7 @@ class LoadTestProgress implements PubSubMethodListener, StartupListener {
 		if (((percentDone>1) &&  (percentDone > lastPercent) && ((now = System.nanoTime()) - lastTime) > 1_000_000_000L)
 				|| (100L == percentDone && percentDone!=lastPercent)
 				) {
-		    this.parallelClientLoadTester.out.progress(percentDone, sumTimeouts, sumResponsesInvalid);
+		    this.parallelClientLoadTester.out.progress(percentDone, sumTimeouts, sumResponsesInvalid, estCallsPerSecond);
 
 			lastTime = now;
 			lastPercent = percentDone;

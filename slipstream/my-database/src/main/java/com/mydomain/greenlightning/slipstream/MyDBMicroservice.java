@@ -1,12 +1,20 @@
 package com.mydomain.greenlightning.slipstream;
 
+import java.io.File;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.Statement;
+
+import org.h2.tools.Server;
+
 import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.json.JSONRequired;
 import com.ociweb.pronghorn.network.HTTPServerConfig;
 
-public class MyMicroservice implements GreenApp {
+public class MyDBMicroservice implements GreenApp {
 
 	private final static int maxProductId = 99999;
 	
@@ -16,11 +24,21 @@ public class MyMicroservice implements GreenApp {
 	private final int port;	
 	private final boolean tls;
 	private final boolean telemetry;
+
+	private Server server;
+
+	private static String dbURL;
 	
-	public MyMicroservice(boolean tls, int port, boolean telemetry) {
+	public MyDBMicroservice(boolean tls, int port, boolean telemetry) {
 		this.port = port;
 		this.tls = tls;
 		this.telemetry = telemetry;
+		
+		//ensure we have a database to test against.
+		//this is not needed for production code
+		if (dbURL==null) {
+			dbURL = startupTestDB();
+		}
 	}
 	
     @Override
@@ -105,21 +123,77 @@ public class MyMicroservice implements GreenApp {
 
     @Override
     public void declareBehavior(GreenRuntime runtime) { 
-        ProductsBehavior listener = new ProductsBehavior(runtime, maxProductId, BEGIN_TOPIC);
+        ProductsBehavior listener = new ProductsBehavior(runtime, maxProductId, BEGIN_TOPIC, server);
 		runtime.registerListener(listener)
 				.includeRoutes(Struct.PRODUCT_UPDATE, listener::productUpdate)
 				.includeRoutes(Struct.ALL_PRODUCTS, listener::productAll)				
                 .includeRoutes(Struct.PRODUCT_QUERY, listener::productQuery);
-   
-		int threads = 40;
-		long timeoutNS = 10_000_000_000L; //10 sec		
+   		
+		int threads = 40;		
 		
-		runtime.registerBlockingListener(new BlockingProducer(), Field.CONNECTION, 
-				                         threads, timeoutNS, BEGIN_TOPIC, FINISHED_TOPIC);
+		runtime.registerBlockingListener(new BlockingProducer(dbURL), Field.CONNECTION, 
+				                         threads, BEGIN_TOPIC, FINISHED_TOPIC);
 		
 		runtime.addPubSubListener(new RestResponder(runtime)).addSubscription(FINISHED_TOPIC);
 		
 		runtime.addResourceServer("/site","index.html").includeRoutesByAssoc(Struct.STATIC_PAGES);
 		
     }
+    
+	
+	public String startupTestDB() {
+
+		String url = null;
+		try {
+			
+			File f = new File(System.getProperty("user.home","~")+"/test.mv.db");
+			System.out.println(f);
+			if (f.exists()) {
+				f.delete();//we want to start with a fresh database
+			}
+			
+			//startup the SQL server so we can show how to communicate with it 
+			server = Server.createTcpServer().start();
+			
+			url = "jdbc:h2:"+server.getURL()+"/~/test";
+			System.out.println("Server running at: "+url);
+			
+			Connection connection = DriverManager.getConnection(url, "sa", "");
+            connection.setAutoCommit(false);
+            Statement stmt = connection.createStatement();
+            stmt.execute("CREATE TABLE PRODUCT(id int primary key, quantity int, name varchar(255), disabled boolean)");
+            stmt.close();
+            connection.commit();
+            
+            connection.setAutoCommit(false);
+
+            /////
+            //add some default products
+            /////
+            
+            PreparedStatement insertPreparedStatement = connection.prepareStatement("INSERT INTO PRODUCT(id, quantity, name, disabled) values(?,?,?,?)");
+            insertPreparedStatement.setInt(1, 2);
+            insertPreparedStatement.setInt(2, 200);            
+			insertPreparedStatement.setString(3, "hammer");
+			insertPreparedStatement.setBoolean(4, false);			
+            insertPreparedStatement.executeUpdate();           
+            connection.commit();
+            
+            insertPreparedStatement.setInt(1, 7);
+            insertPreparedStatement.setInt(2, 400);            
+			insertPreparedStatement.setString(3, "wrench");
+			insertPreparedStatement.setBoolean(4, false);			
+            insertPreparedStatement.executeUpdate();
+            connection.commit();
+            
+            insertPreparedStatement.close();  
+            connection.close();
+	
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return url;	
+		        
+		
+	}
 }

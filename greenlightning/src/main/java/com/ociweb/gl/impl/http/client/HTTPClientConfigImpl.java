@@ -92,6 +92,7 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     @Override
     public HTTPClientConfig setMaxRequestSize(int value) {
     	this.pcm.ensureSize(NetPayloadSchema.class, 4, value);
+    	//System.out.println("set max size: "+value+" maxVar:"+pcm.getConfig(NetPayloadSchema.class).maxVarLenSize()+" "+pcm.getConfig(NetPayloadSchema.class));
     	return this;
     }
 

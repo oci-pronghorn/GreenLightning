@@ -382,7 +382,10 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
     public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
     	routerConfig() {
     	if (null==routerConfig) {
-    		
+    		assert(null!=server) : "No server defined!";
+    		if (null==server) {
+    			throw new UnsupportedOperationException("Server must be defined BEFORE any routes.");
+    		}
     		routerConfig = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(
     				httpSpec,
     				server.connectionStruct()); 
@@ -1752,6 +1755,8 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	private CharSequence[] possiblePrivateTopicsTopic = new CharSequence[16];
 	
 	public void possiblePrivateTopicProducer(BehaviorNameable producer, String topic, int track) {
+		
+		
 		//do not want to confuse all the tracks while looking for private topics, we only look at no track and first track
 		if (track<=0) {
 		
@@ -1831,7 +1836,8 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			
 			
 			
-			//logger.info("possible private topic {} {}->{}",topic, possiblePrivateTopicsProducerCount[i], null==possiblePrivateBehaviors[i] ? -1 :possiblePrivateBehaviors[i].size());
+			logger.info("possible private topic {} {}->{}",topic, possiblePrivateTopicsProducerCount[i], null==possiblePrivateBehaviors[i] ? -1 :possiblePrivateBehaviors[i].size());
+			
 			boolean madePrivate = false;
 			String reasonSkipped = "";
 			final int consumers = (null==possiblePrivateBehaviors[i]) ? 0 : possiblePrivateBehaviors[i].size();

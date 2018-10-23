@@ -15,7 +15,7 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
 	}
 	
     @Override
-    public void progress(int percentDone, long sumTimeouts, long sumInvalid) {
+    public void progress(int percentDone, long sumTimeouts, long sumInvalid, long estCallsPerSecond) {
     	
         try {
         	Appendables.appendValue(target, percentDone);
@@ -28,8 +28,17 @@ public class DefaultParallelClientLoadTesterOutput implements ParallelClientLoad
 			
 			if (sumInvalid>0) {
 				Appendables.appendValue(target, sumInvalid);
-				target.append(" invalid,   epoch:");
+				target.append(" invalid");
 			}
+			
+			if (estCallsPerSecond>10_000) {
+				Appendables.appendValue(target, estCallsPerSecond/1000);
+				target.append(" kTPS,   epoch:");				
+			} else {
+				Appendables.appendValue(target, estCallsPerSecond);
+				target.append(" TPS,   epoch:");
+			}
+			
 			
 			Appendables.appendEpochTime(target, System.currentTimeMillis());
 			target.append("\n");

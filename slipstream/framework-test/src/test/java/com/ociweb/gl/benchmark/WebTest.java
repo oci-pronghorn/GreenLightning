@@ -17,8 +17,8 @@ import com.ociweb.pronghorn.util.Appendables;
 public class WebTest {
 	
 	final static boolean useTLS = false;
-	final static int timeoutMS = 240_000;
-	final static int totalCalls = 200_000;
+	final static int timeoutMS = 600_000;
+	final static int totalCalls = 1_000_000;
 	
 	static GreenRuntime runtime;
 	
@@ -28,22 +28,34 @@ public class WebTest {
 	
 	static int telemetryPort = 8097;
 	static boolean telemetry = false;
+
 	
 	@BeforeClass
 	public static void startServer() {
+
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 8, 512, 1<<14, -1)); ///TODO: for very small values must not hang!
+		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 10, 2048, 1<<17, 8089));//-1)); ///TODO: for very small values must not hang!
 		
 	}
 		
+
+
 	@AfterClass
 	public static void stopServer() {
-		runtime.shutdownRuntime();	
-		runtime = null;
+		if (null != runtime) {
+			runtime.shutdownRuntime();	
+			runtime = null;
+		}
+//		if (RunLocalDB.server!=null) {
+//			RunLocalDB.server.shutdown();
+//			RunLocalDB.server = null;
+//		}
 	}
-		
+
+
+
 	@Test
 	public void plaintext1024Test() {
 				
@@ -184,4 +196,6 @@ public class WebTest {
 				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
 				
 	}
+	
+    
 }

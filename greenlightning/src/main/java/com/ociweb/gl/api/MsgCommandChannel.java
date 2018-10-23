@@ -207,7 +207,7 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 	 * @param maxMessageSize int to be passed to PubSubService
 	 * @return new PubSubFixedTopicService
 	 */
-	public PubSubFixedTopicService newPubSubService(String baseTopic, int queueLength, int maxMessageSize) {
+	public PubSubFixedTopicService newPubSubService(String baseTopic, final int queueLength, final int maxMessageSize) {
 			
 		String trackTopic = BuilderImpl.buildTrackTopic(baseTopic, track);
 		

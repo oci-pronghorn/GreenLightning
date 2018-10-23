@@ -1338,11 +1338,11 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	
 	private void addRoutesToPipeMapping(int ... routeIds) {
 
+		final PipeConfig<HTTPRequestSchema> pipeConfig = builder.pcm.getConfig(HTTPRequestSchema.class);
+
 		final int track = parallelInstance==-1 ? 0 : parallelInstance;
 		int i = routeIds.length;
-		while (--i>=0) {
-		
-			PipeConfig<HTTPRequestSchema> pipeConfig = builder.pcm.getConfig(HTTPRequestSchema.class);
+		while (--i>=0) {	
 			
 			if (null==builder.routerConfig().JSONExtractor(routeIds[i])) {
 				//this route does not use JSON so we can join them together

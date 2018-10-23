@@ -89,7 +89,7 @@ public class ParallelClientLoadTester implements GreenApp {
 	
 	static final int PUB_MSGS      = 8000;
 	static final int PUB_MSGS_SIZE = 48;
-	long minFinished;
+
 
 	private int[] sessionLookup;
 	
@@ -552,25 +552,31 @@ public class ParallelClientLoadTester implements GreenApp {
 			return connectionSessionData[sessionIdx].lastResponseOk = nextCall(sessionIdx);
 		}
 
+		long lastProgressTime = 0;
+		
 		private boolean nextCall(int sessionIdx) {
-			if ((0xFFFF & connectionSessionData[sessionIdx].waitingCountDown) == 0) {
-				pubService.publishTopic(PROGRESS_TOPIC, writer-> {
-					writer.writePackedInt(track);
-					
-					int sumCountDown = 0;
+	
+			long now = System.nanoTime();
+			if (now-lastProgressTime > 500_000_000L) { //500ms				
+				if (pubService.hasRoomFor(PROGRESS_TOPIC, 1)) {
+					lastProgressTime = now;
+					long sumRec = 0;
 					int s = connectionSessionData.length;
 					while (--s >= 0) {
-						sumCountDown+=connectionSessionData[s].waitingCountDown;
+						sumRec = sumRec + connectionSessionData[s].responsesReceived;
 					}					
-					writer.writePackedLong(sumCountDown);					
+					final long recieved = sumRec;
 					
-					//writer.writePackedLong(sendAttempts);
-					//writer.writePackedLong(sendFailures);
-					writer.writePackedLong(timeouts);
-					//writer.writePackedLong(responsesReceived);
-					writer.writePackedLong(responsesInvalid);
-				});				
-				
+					pubService.publishTopic(PROGRESS_TOPIC, writer-> {
+						writer.writePackedInt(track);					
+						writer.writePackedLong(recieved);
+						//writer.writePackedLong(sendAttempts);
+						//writer.writePackedLong(sendFailures);
+						writer.writePackedLong(timeouts);
+						//writer.writePackedLong(responsesReceived);
+						writer.writePackedLong(responsesInvalid);
+					});				
+				}
 			}
 			
 
@@ -593,12 +599,12 @@ public class ParallelClientLoadTester implements GreenApp {
 				boolean clean = pubService.publishTopic(PROGRESS_TOPIC, writer-> {
 					writer.writePackedInt(track);
 					
-					int sumCountDown = 0;
+					long sumRec = 0;
 					int s = connectionSessionData.length;
 					while (--s >= 0) {
-						sumCountDown += connectionSessionData[s].waitingCountDown;						
+						sumRec = sumRec + connectionSessionData[s].responsesReceived;						
 					}					
-					writer.writePackedLong(sumCountDown);
+					writer.writePackedLong(sumRec);
 					
 					
 					//writer.writePackedLong(sendAttempts);
@@ -621,7 +627,7 @@ public class ParallelClientLoadTester implements GreenApp {
 				
 				--connectionSessionData[sessionIdx].waitingCountDown;//ensure it goes negative so we do not finish more than once, this can happen when connections have been timed out and new requests sent.
 				
-				//logger.info("publish enders clean:{} for track: {} session: {},",clean,track,sessionIdx);				
+		//logger.info("publish enders clean:{} for track: {} session: {},",clean,track,sessionIdx);				
 				
 				ClientHostPortInstance s = session[track][sessionIdx];
 		
@@ -632,6 +638,7 @@ public class ParallelClientLoadTester implements GreenApp {
 //						
 //						httpClientService[clientServiceMask&sessionIdx].httpClose(s); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. 
 //					}
+	
 					session[track][sessionIdx]=null;
 				}			
 				

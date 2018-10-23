@@ -6,7 +6,7 @@ public interface ParallelClientLoadTesterOutput {
 
     void failedToStart(int maxInFlight);
 
-    void progress(int percentDone, long sumTimeouts, long sumInvalid);
+    void progress(int percentDone, long sumTimeouts, long sumInvalid, long estCallsPerSec);
 
     void longCallDetected(int track, long duration, long now, long start);
 

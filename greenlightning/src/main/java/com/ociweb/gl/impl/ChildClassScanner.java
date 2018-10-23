@@ -198,7 +198,11 @@ public class ChildClassScanner {
 	    if (null!=obj) {
 		    Class<? extends Object> c = obj.getClass();
 		    while ((null!=c) && (c!=Object.class)) {
-		    	if (!visitByClass(name, obj, depth, visitor, c, targetType, topParent, seen)) {
+		    	try {
+			    	if (!visitByClass(name, obj, depth, visitor, c, targetType, topParent, seen)) {
+			    		return false;
+			    	}
+		    	} catch (Exception e) {
 		    		return false;
 		    	}
 		    	c = c.getSuperclass();

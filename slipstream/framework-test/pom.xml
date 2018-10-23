@@ -1,24 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 	<modelVersion>4.0.0</modelVersion>
-	<parent>
-    <artifactId>slipstream</artifactId>
-    <groupId>com.ociweb</groupId>
-    <version>1.0.6</version>
-  </parent>
+
 	<groupId>com.ociweb.gl.benchmark</groupId>
-	<artifactId>framework-test</artifactId>
-	<version>1.0.0</version>
+	<artifactId>greenlightning-test</artifactId>
+	<version>1.0.1-SNAPSHOT</version>
 
 	<properties>
-		<keystore.path>./certificates/ocikeystore.jks</keystore.path>
-		<keystore.alias>OCI</keystore.alias>
-		<keystore.password>ocipassword</keystore.password>
-		<keystore.store.password>${keystore.password}</keystore.store.password>
-		<keystore.key.password>${keystore.password}</keystore.key.password>
-		<java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
-		<java.cryptographic.extension.classes>${java.home}/lib/jce.jar</java.cryptographic.extension.classes>
-		<java.secure.socket.extension.classes>${java.home}/lib/jsse.jar</java.secure.socket.extension.classes>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 	</properties>
 
@@ -26,7 +14,7 @@
 		<dependency>
 			<groupId>com.ociweb</groupId>
 			<artifactId>greenlightning</artifactId>
-			<version>1.0.6</version>
+			<version>[1.0.7,1.1)</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -46,6 +34,16 @@
 			<type>jar</type>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+		    <groupId>io.reactiverse</groupId>
+		    <artifactId>reactive-pg-client</artifactId>
+		    <version>0.10.6</version>
+		</dependency>
+		<dependency>
+		    <groupId>io.netty</groupId>
+		    <artifactId>netty-transport-native-epoll</artifactId>
+		    <version>4.1.30.Final</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -58,7 +56,7 @@
 				<version>3.0</version>
 				<configuration>
 					<compilerArguments>
-						<profile>compact1</profile>
+						<profile>compact2</profile>
 					</compilerArguments>
 					<source>1.8</source>
 					<target>1.8</target>
@@ -139,7 +137,7 @@
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 
-					<finalName>uberframework-test</finalName>
+					<finalName>greenlightning-test</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 
 				</configuration>
@@ -155,67 +153,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
-
-				<groupId>com.github.wvengen</groupId>
-				<artifactId>proguard-maven-plugin</artifactId>
-				<version>2.0.13</version>
-				<executions>
-					<execution>
-						<id>proguard</id>
-						<phase>package</phase>
-						<goals>
-							<goal>proguard</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<obfuscate>false</obfuscate>
-					<libs>
-						<lib>${java.bootstrap.classes}</lib>
-						<lib>${java.cryptographic.extension.classes}</lib>
-						<lib>${java.secure.socket.extension.classes}</lib>
-					</libs>
-					<injar>uberframework-test.jar</injar>
-					<outjar>framework-test.jar</outjar>
-
-					<outputDirectory>${project.build.directory}</outputDirectory>
-					<proguardInclude>${basedir}/proguard.conf</proguardInclude>
-				</configuration>
-				<dependencies>
-					<dependency>
-						<groupId>net.sf.proguard</groupId>
-						<artifactId>proguard-base</artifactId>
-						<version>5.1</version>
-						<scope>runtime</scope>
-					</dependency>
-				</dependencies>
-			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jarsigner-plugin</artifactId>
-				<version>1.4</version>
-
-				<executions>
-					<execution>
-						<id>sign</id>
-						<phase>install</phase>
-						<goals>
-							<goal>sign</goal>
-						</goals>
-					</execution>
-				</executions>
-				<configuration>
-					<archiveDirectory>${project.build.directory}</archiveDirectory>
-					<includes>
-						<include>**/*.jar</include>
-					</includes>
-					<keystore>${keystore.path}</keystore>
-					<alias>${keystore.alias}</alias>
-					<storepass>${keystore.store.password}</storepass>
-					<keypass>${keystore.key.password}</keypass>
-				</configuration>
-			</plugin>
+						
 		</plugins>
 	</build>
 
