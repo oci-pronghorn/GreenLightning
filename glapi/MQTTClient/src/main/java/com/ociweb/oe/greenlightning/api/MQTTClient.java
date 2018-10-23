@@ -59,7 +59,7 @@ public class MQTTClient implements GreenApp {
 		builder.setTimerPulseRate(1000); //once per second
 		
 	//off for build server//	
-		builder.enableTelemetry(8099);
+		//builder.enableTelemetry(8099);
 	}
 
 	@Override
