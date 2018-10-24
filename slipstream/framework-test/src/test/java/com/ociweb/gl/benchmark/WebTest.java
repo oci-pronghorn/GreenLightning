@@ -36,7 +36,7 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 4, 512, 1<<15, -1, null, null, null, null));
+		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 2, 128, 1<<14, -1, null, null, null, null));
 		
 		
 	}
