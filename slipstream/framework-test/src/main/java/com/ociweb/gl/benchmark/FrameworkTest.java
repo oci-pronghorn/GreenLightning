@@ -13,6 +13,8 @@ import com.ociweb.pronghorn.network.ServerSocketWriterStage;
 
 import io.reactiverse.pgclient.PgClient;
 import io.reactiverse.pgclient.PgPoolOptions;
+import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 
 public class FrameworkTest implements GreenApp {
 
@@ -29,6 +31,10 @@ public class FrameworkTest implements GreenApp {
     private int pipelineBits;
 	
     private final PgPoolOptions options;
+    private final Vertx vertx = Vertx.vertx(new VertxOptions().
+			  			setPreferNativeTransport(true)
+    			);
+    
     
 	public static int connectionsPerTrack =   2;
 	public static int connectionPort =        5432;
@@ -143,13 +149,15 @@ public class FrameworkTest implements GreenApp {
 
 	public void parallelBehavior(GreenRuntime runtime) {
 
-		SimpleRest restTest = new SimpleRest(runtime);		
+
+		SimpleRest restTest = new SimpleRest(runtime);
+		
 		runtime.registerListener("Simple", restTest)
 		       .includeRoutes(Struct.PLAINTEXT_ROUTE, restTest::plainRestRequest)
 		       .includeRoutes(Struct.JSON_ROUTE, restTest::jsonRestRequest);
 		 
 		//each track has its own pool with its own async thread
-		DBRest dbRestInstance = new DBRest(runtime, PgClient.pool(options), pipelineBits);
+		DBRest dbRestInstance = new DBRest(runtime, PgClient.pool(vertx,options), pipelineBits);
 		runtime.registerListener("DBRest", dbRestInstance)
 				.includeRoutes(Struct.DB_SINGLE_ROUTE, dbRestInstance::singleRestRequest)
 				.includeRoutes(Struct.DB_MULTI_ROUTE, dbRestInstance::multiRestRequest);		
