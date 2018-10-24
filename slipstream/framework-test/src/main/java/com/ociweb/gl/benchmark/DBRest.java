@@ -28,6 +28,7 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 	//this collector is for the multi db test so we can collect all the objects until we have them all for 
 	//the request we are currently sending back
 	private final List<ResultObject> collector = new ArrayList<ResultObject>();
+	private final ObjectPipe<ResultObject> inFlight;
 	
 	JSONRenderer<List<ResultObject>> multiTemplate = new JSONRenderer<List<ResultObject>>()
 	    	  .array((o,i,node) -> i<o.size()?o:null)
@@ -43,71 +44,52 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 	          .endObject();
 	
 	
-	public DBRest(GreenRuntime runtime, PgPool pool) {
-
+	public DBRest(GreenRuntime runtime, PgPool pool, int pipelineBits) {
 		this.pool = pool;	
-		this.service = runtime.newCommandChannel().newHTTPResponseService(256, 500*20); //TODO: too big?
-
-	}
-		
-	private ObjectPipe<ResultObject> inFlight = new ObjectPipe<ResultObject>(
-			16,//pipelining bits... TODO: pass in...
-			ResultObject.class,	ResultObject::new
-	);
-	
+		this.service = runtime.newCommandChannel().newHTTPResponseService(128, 18_000); //for large multi response 
+		this.inFlight = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
+	}		
 	
 	private int randomValue() {
 		return 1+localRandom.nextInt(10000);
-	}
-		
+	}		
 	
 	public boolean multiRestRequest(HTTPRequestReader request) { 
 		
-		int queries = request.structured().readInt(Field.QUERIES);
+		int queries = Math.max(1, request.structured().readInt(Field.QUERIES));
 		
 		//do later if we have no room.
 		if (!inFlight.hasRoomFor(queries)) {
 			return false;
-		}
-				
+		}	
 		
 		int q = queries;
-		while (--q>=0) {
+		while (--q >= 0) {
 		
-			final ResultObject target = inFlight.headObject();
-			assert(null!=target);
+				final ResultObject target = inFlight.headObject();
+				assert(null!=target);
 			
 				target.setConnectionId(request.getConnectionId());
 				target.setSequenceId(request.getSequenceCode());
 				target.setStatus(-2);//out for work	
 				target.setGroupSize(queries);
-		
-				if (useDB) {
-				
-					pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
-							if (r.succeeded()) {
-								
-								PgIterator resultSet = r.result().iterator();
-						        Tuple row = resultSet.next();			        
-						        
-						        target.setId(row.getInteger(0));
-						        target.setResult(row.getInteger(1));					
-								target.setStatus(200);
-								
-							} else {
-								System.out.println("fail: "+r.cause().getLocalizedMessage());
-								target.setStatus(500);
-							}				
-						});
-					
-				} else {
-				 
-					   //this gets 930K...
-					    target.setId(randomValue());
-				        target.setResult(-1);					
-						target.setStatus(200);
-				}
-				
+			
+				pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
+						if (r.succeeded()) {
+							
+							PgIterator resultSet = r.result().iterator();
+					        Tuple row = resultSet.next();			        
+					        
+					        target.setId(row.getInteger(0));
+					        target.setResult(row.getInteger(1));					
+							target.setStatus(200);
+							
+						} else {
+							System.out.println("fail: "+r.cause().getLocalizedMessage());
+							target.setStatus(500);
+						}				
+					});	
+							
 				inFlight.moveHeadForward(); //always move to ensure this can be read.
 		
 		}
@@ -127,32 +109,23 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 			target.setSequenceId(request.getSequenceCode());
 			target.setStatus(-2);//out for work	
 			target.setGroupSize(0);//do not put in a list so mark as 0.
-			
-			if (useDB) {
-			
-				pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
-						if (r.succeeded()) {
-							
-							PgIterator resultSet = r.result().iterator();
-					        Tuple row = resultSet.next();			        
-					        
-					        target.setId(row.getInteger(0));
-					        target.setResult(row.getInteger(1));					
-							target.setStatus(200);
-							
-						} else {
-							System.out.println("fail: "+r.cause().getLocalizedMessage());
-							target.setStatus(500);
-						}				
-					});
-				
-			} else {
-			 
-				   //this gets 930K...
-				    target.setId(randomValue());
-			        target.setResult(-1);					
-					target.setStatus(200);
-			}
+		
+			pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
+					if (r.succeeded()) {
+						
+						PgIterator resultSet = r.result().iterator();
+				        Tuple row = resultSet.next();			        
+				        
+				        target.setId(row.getInteger(0));
+				        target.setResult(row.getInteger(1));					
+						target.setStatus(200);
+						
+					} else {
+						System.out.println("fail: "+r.cause().getLocalizedMessage());
+						target.setStatus(500);
+					}				
+				});
+
 			
 			inFlight.moveHeadForward(); //always move to ensure this can be read.
 			return true;
@@ -165,6 +138,16 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 	@Override
 	public void tickEvent() { 
      		
+		if (collector.size()>0 && (collector.size() == collector.get(0).getGroupSize())) {
+			//now ready to send, we have all the data	
+			if (!publishMultiResponse(collector.get(0))) {
+				return;
+			} else {
+				inFlight.tryMoveTailForward();
+			}
+		}
+		
+		
 		ResultObject temp = inFlight.tailObject();
 		if (null==temp && inFlight.tryMoveTailForward()) {
 			temp = inFlight.tailObject();
@@ -173,63 +156,42 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 		while (temp!=null && temp.getStatus()>=0) {
 		
 			boolean ok = false;
-			
-			if (service.hasRoomFor(1)) {
-			
-				if (collector.size()>0 && collector.get(0).getGroupSize()== collector.size()) {
-					//need to try resend
-					ok = service.publishHTTPResponse(collector.get(0).getConnectionId(), collector.get(0).getSequenceId(), 200,
-		    				   HTTPContentTypeDefaults.JSON,
-		    				   w-> {
-		    					   multiTemplate.render(w, collector);
-		    				   });						
 							
-	    			if (ok) {
-	    				//clear collection for next collection.
-	    				collector.clear();
-	    			} else {
-	    				break;
-	    			}
-					
-				}
-				
-				
-				final ResultObject t = temp;
-				
-				if (0 == t.getGroupSize()) {
-					ok = service.publishHTTPResponse(temp.getConnectionId(), temp.getSequenceId(), 200,
-		  				   HTTPContentTypeDefaults.JSON,
-		  				   w-> {
-		  					   singleTemplate.render(w, t);
-		  					   t.setStatus(-1);
-		  				   });
-				} else {
-					//collect all the objects
-					collector.add(t);
-					
-					if (collector.size()==t.getGroupSize()) {
-						//now ready to send, we have all the data
-						
-		    			ok = service.publishHTTPResponse(temp.getConnectionId(), temp.getSequenceId(), 200,
-	    				   HTTPContentTypeDefaults.JSON,
-	    				   w-> {
-	    					   multiTemplate.render(w, collector);
-	    				   });						
-						
-		    			if (ok) {
-		    				//clear collection for next collection.
-		    				collector.clear();
-		    			}
-					}		
-				}
-			}
+			final ResultObject t = temp;
+			///////////////////////////////
+			if (0 == t.getGroupSize()) {	
+				ok = service.publishHTTPResponse(temp.getConnectionId(), temp.getSequenceId(), 200,
+	  				   HTTPContentTypeDefaults.JSON,
+	  				   w-> {
+	  					   singleTemplate.render(w, t);
+	  					   t.setStatus(-1);
+	  				   });					
+			} else {
+				//collect all the objects
+				collector.add(t);					
+				if (collector.size() == t.getGroupSize()) {
+					//now ready to send, we have all the data						
+	    			ok =publishMultiResponse(t);
+	    		} else {
+	    			ok = true;//added to list
+	    		}				
+			}	
 
 			temp = (ok && inFlight.tryMoveTailForward()) ? inFlight.tailObject() : null;
-		}		
-	   
+		}	   
 	}
-	
 
-
+	private boolean publishMultiResponse(ResultObject temp) {
+		return service.publishHTTPResponse(temp.getConnectionId(), temp.getSequenceId(), 200,
+					    				   HTTPContentTypeDefaults.JSON,
+					    				   w-> {
+					    					   multiTemplate.render(w, collector);
+					    					   int c = collector.size();
+					    					   while (--c>=0) {
+					    						   collector.get(c).setStatus(-1);
+					    					   }
+					    					   collector.clear();
+					    				   });
+	}
 }
 

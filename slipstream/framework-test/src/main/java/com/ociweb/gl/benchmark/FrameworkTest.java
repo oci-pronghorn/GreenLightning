@@ -12,7 +12,6 @@ import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.network.ServerSocketWriterStage;
 
 import io.reactiverse.pgclient.PgClient;
-import io.reactiverse.pgclient.PgPool;
 import io.reactiverse.pgclient.PgPoolOptions;
 
 public class FrameworkTest implements GreenApp {
@@ -26,29 +25,19 @@ public class FrameworkTest implements GreenApp {
     private int queueLengthOfPendingRequests;
     private int telemetryPort;//for monitoring
     private int minMemoryOfInputPipes;
+    private int maxResponseSize;
+    private int pipelineBits;
 	
     private final PgPoolOptions options;
     
-	public static int connectionsPerTrack = 2;
-	public static String url = "jdbc:postgresql://tfb-database:5432/hello_world";
-	public static String user = "benchmarkdbuser";
-	public static String pass = "benchmarkdbpass";
+	public static int connectionsPerTrack =   2;
+	public static int connectionPort =        5432;
 	
-	//  jdbc:postgresql://tfb-database:5432/hello_world
-	// database: hello_world
-	// username: benchmarkdbuser
-	// password: benchmarkdbpass
-	//
-	// poolSize: 256/tracks
-	// no tls
-	// cache prepared statements
-	// NOTE: thread creation for this pool must be careful to create those with very small stacks/heaps...
-	
-	//To use the PostgreSQL mode, use the database URL jdbc:h2:~/test;MODE=PostgreSQL
-	//  or the SQL statement SET MODE PostgreSQL.
-	// user pass/  "sa", ""
-	
-    
+	public static String connectionHost =     "localhost";
+	public static String connectionDB =       "testdb";
+	public static String connectionUser =     "postgres";
+	public static String connectionPassword = "postgres";
+			    
     public FrameworkTest() {
     	//this server works best with  -XX:+UseNUMA    	
     	this(System.getProperty("host","0.0.0.0"), 
@@ -56,71 +45,73 @@ public class FrameworkTest implements GreenApp {
     		 10,      //default concurrency, 10 to support 280 channels on 14 core boxes
     		 8*1024, //default max rest requests allowed to queue in wait
     		 1<<21,   //default network buffer per input socket connection
-    		 Integer.parseInt(System.getProperty("telemetry.port", "-1")));
-    	
-    //	RunLocalDB.buildH2Table();
-//    	
-//		//This url does not turn on the server but instead uses the embedded system.
-//		//FrameworkTest.url = "jdbc:h2:~/test;MODE=PostgreSQL";
-//		//FrameworkTest.url = "jdbc:postgresql://tfb-database:5432/hello_world";
-		FrameworkTest.url =  //"jdbc:h2:tcp://127.0.1.1:5432/hello_world"; 
-		                   //"jdbc:h2:tcp://127.0.1.1:5432/~/hello_world";
-				              "jdbc:postgresql://localhost/testdb";//test??
-		FrameworkTest.user = "postgres";
-		FrameworkTest.pass = "postgres";
-		///RunLocalDB.populateTargetDB();
-//		
-//		
-//		System.out.println("Connecting to server running at: "+FrameworkTest.url);
-//		
-	
-
-
-				
-				
-    	
-    }
-   
-    
+    		 Integer.parseInt(System.getProperty("telemetry.port", "-1")),
+    		 "tfb-database", // jdbc:postgresql://tfb-database:5432/hello_world
+    		 "hello_world",
+    		 "benchmarkdbuser",
+    		 "benchmarkdbpass"
+    		 );    	
+    }   
+        
     public FrameworkTest(String host, int port, 
     		             int concurrentWritesPerChannel, 
     		             int queueLengthOfPendingRequests, 
     		             int minMemoryOfInputPipes,
-    		             int telemetryPort) {
+    		             int telemetryPort,
+    		             String dbHost,
+    		             String dbName,
+    		             String dbUser,
+    		             String dbPass) {
     	this.bindPort = port;
     	this.host = host;
     	this.concurrentWritesPerChannel = concurrentWritesPerChannel;
     	this.queueLengthOfPendingRequests = queueLengthOfPendingRequests;
     	this.minMemoryOfInputPipes = minMemoryOfInputPipes;
     	this.telemetryPort = telemetryPort;
+    	this.maxResponseSize = 18_000;
+    	this.pipelineBits = 16;
+    	
+    	if (!"127.0.0.1".equals(System.getProperty("host",null))) { 
+    		    		
+	    	if (null!=dbHost) {
+	    		this.connectionHost = dbHost;
+	    	}
+	    	if (null!=dbName) {
+	    		this.connectionDB = dbName;
+	    	}
+	    	if (null!=dbUser) {
+	    		this.connectionUser = dbUser;
+	    	}
+	    	if (null!=dbPass) {
+	    		this.connectionPassword = dbPass;
+	    	}    	
+    	}
     	
     	options = new PgPoolOptions()
-    			.setPort(5432)
+    			.setPort(connectionPort)
     			.setPipeliningLimit(1<<16)
     			.setTcpFastOpen(true)
-    			.setHost("localhost")
-    			.setDatabase("testdb")
-    			.setUser("postgres")
-    			.setPassword("postgres")
+    			.setHost(connectionHost)
+    			.setDatabase(connectionDB)
+    			.setUser(connectionUser)
+    			.setPassword(connectionPassword)
     			.setCachePreparedStatements(true)
-    			.setMaxSize(1);//connectionsPerTrack);
-
-
+    			.setMaxSize(connectionsPerTrack);
+    
     }
 
     
 	@Override
     public void declareConfiguration(GreenFramework framework) {
 		
-		//TODO: hack 14 for testing.
-		framework.useHTTP1xServer(bindPort, 14, this::parallelBehavior) //standard auto-scale
+		//for 14 cores this is expected to use less than 16G
+		framework.useHTTP1xServer(bindPort, this::parallelBehavior) //standard auto-scale
     			 .setHost(host)
     			 .setConcurrentChannelsPerDecryptUnit(concurrentWritesPerChannel)
     			 .setConcurrentChannelsPerEncryptUnit(concurrentWritesPerChannel)
     			 .setMaxQueueIn(queueLengthOfPendingRequests)
     			 .setMinimumInputPipeMemory(minMemoryOfInputPipes)
-    			 .setMaxQueueOut(1<<7)//8)//12) ///TODO: value??
-    			 .setMaxResponseSize(12_000) //what is payload size for reponses?
+    			 .setMaxResponseSize(maxResponseSize) //big enough for large mult db response
     	         .useInsecureServer(); //turn off TLS
 
 		
@@ -141,39 +132,24 @@ public class FrameworkTest implements GreenApp {
 		        .path("/queries")
 		        .refineInteger("queries", Field.QUERIES, 1)
 		        .routeId(Struct.DB_MULTI_ROUTE);
-			
-		framework.defineStruct()
-		         .longField(Field.CONNECTION)
-		         .longField(Field.SEQUENCE)
-		         .register(Struct.DB_SINGLE_REQUEST);
-		        		
 		
 		if (telemetryPort>0) {
 			framework.enableTelemetry(host,telemetryPort);
 		}
 		
-		ServerSocketWriterStage.lowLatency = false; //turn on high volume mode, less concerned about low latency. (enum?)
+		ServerSocketWriterStage.lowLatency = false; //turn on high volume mode, less concerned about low latency. 
 	
     }
 
 	public void parallelBehavior(GreenRuntime runtime) {
 
-//		Vertx vertx = Vertx.vertx(new VertxOptions().
-//				  setPreferNativeTransport(true)
-//		);
-
-		SimpleRest restTest = new SimpleRest(runtime);
-		
+		SimpleRest restTest = new SimpleRest(runtime);		
 		runtime.registerListener("Simple", restTest)
 		       .includeRoutes(Struct.PLAINTEXT_ROUTE, restTest::plainRestRequest)
 		       .includeRoutes(Struct.JSON_ROUTE, restTest::jsonRestRequest);
-
-		
-	 
+		 
 		//each track has its own pool with its own async thread
-		PgPool pool = PgClient.pool(options);
-		
-		DBRest dbRestInstance = new DBRest(runtime, pool);
+		DBRest dbRestInstance = new DBRest(runtime, PgClient.pool(options), pipelineBits);
 		runtime.registerListener("DBRest", dbRestInstance)
 				.includeRoutes(Struct.DB_SINGLE_ROUTE, dbRestInstance::singleRestRequest)
 				.includeRoutes(Struct.DB_MULTI_ROUTE, dbRestInstance::multiRestRequest);		

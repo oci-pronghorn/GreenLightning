@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.HTTPUtilResponse;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
@@ -39,8 +40,7 @@ public class HTTPResponseService {
 			int queueLength, int maxMessageSize) {
 		this.msgCommandChannel = msgCommandChannel;
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
-		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;    	
-		
+		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER; 		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, queueLength, maxMessageSize);
 	}
 
@@ -52,6 +52,9 @@ public class HTTPResponseService {
 	public boolean hasRoomFor(int messageCount) {
 		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
 		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
+		
+	    //NOTE: warning this is not checking the response pipe and it cant.. so we must ensure pipes are created the right size...	
+		
 	}
 
 	/**
@@ -150,10 +153,10 @@ public class HTTPResponseService {
 		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[trackIdx] : msgCommandChannel.netResponse[0];
 		
 		//logger.info("try new publishHTTPResponse "+pipe);
-		if (!Pipe.hasRoomForWrite(pipe, 
-				2*Pipe.sizeOf(pipe, ServerResponseSchema.MSG_TOCHANNEL_100))) {
+		if (!Pipe.hasRoomForWrite(pipe, 2*Pipe.sizeOf(pipe, ServerResponseSchema.MSG_TOCHANNEL_100))) {
 			return false;
-		}		
+		}
+		
 		//simple check to ensure we have room.
 		assert(Pipe.workingHeadPosition(pipe)<(Pipe.tailPosition(pipe)+ pipe.sizeOfSlabRing  /*    pipe.slabMask*/  )) : "Working position is now writing into published(unreleased) tail "+
 		Pipe.workingHeadPosition(pipe)+"<"+Pipe.tailPosition(pipe)+"+"+pipe.sizeOfSlabRing /*pipe.slabMask*/+" total "+((Pipe.tailPosition(pipe)+pipe.slabMask));

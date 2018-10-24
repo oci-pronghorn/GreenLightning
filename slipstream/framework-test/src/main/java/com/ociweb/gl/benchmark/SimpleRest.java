@@ -11,6 +11,8 @@ import com.ociweb.pronghorn.pipe.ChannelWriter;
 
 public class SimpleRest implements RestMethodListener {
 
+	private static final int QUEUE_LENGTH = 1<<14;
+	private static final int MAX_MESSAGE_SIZE = 1<<9;
 
 	private final HTTPResponseService responseService;
 
@@ -23,7 +25,7 @@ public class SimpleRest implements RestMethodListener {
 	};
 		
 	public SimpleRest(GreenRuntime runtime) {
-		responseService = runtime.newCommandChannel().newHTTPResponseService(1<<14, 1<<9);		
+		responseService = runtime.newCommandChannel().newHTTPResponseService(QUEUE_LENGTH, MAX_MESSAGE_SIZE);		
 	}
 	
 	public boolean jsonRestRequest(HTTPRequestReader request) {

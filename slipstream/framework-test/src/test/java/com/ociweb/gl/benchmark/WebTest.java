@@ -36,25 +36,18 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 10, 2048, 1<<17, 8089));//-1)); ///TODO: for very small values must not hang!
+		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 10, 2048, 1<<17, -1, null, null, null, null));
+		
 		
 	}
 		
-
-
 	@AfterClass
 	public static void stopServer() {
 		if (null != runtime) {
 			runtime.shutdownRuntime();	
 			runtime = null;
 		}
-//		if (RunLocalDB.server!=null) {
-//			RunLocalDB.server.shutdown();
-//			RunLocalDB.server = null;
-//		}
 	}
-
-
 
 	@Test
 	public void plaintext1024Test() {
