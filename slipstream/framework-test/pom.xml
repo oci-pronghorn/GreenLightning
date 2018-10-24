@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>com.ociweb.gl.benchmark</groupId>
-	<artifactId>greenlightning-test</artifactId>
+	<artifactId>benchmark-test</artifactId>
 	<version>1.0.1-SNAPSHOT</version>
 
 	<properties>

@@ -36,7 +36,7 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 10, 2048, 1<<17, -1, null, null, null, null));
+		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 10, 2048, 1<<16, -1, null, null, null, null));
 		
 		
 	}
@@ -74,51 +74,51 @@ public class WebTest {
 				
 	}
 
-	//@Ignore //reduce memory on build server
-	public void plaintext4096Test() {
-		
-				int inFlightBits = 8; 
-				int tracks = 16;
-				int callsPerTrack = totalCalls/tracks; 
-				boolean testTelemetry = false;
-		
-				StringBuilder uploadConsoleCapture = new StringBuilder();
-				LoadTester.runClient(
-						null,
-						(i,r) -> r.statusCode()==200 , 
-						"/plaintext", 
-						useTLS, testTelemetry, 
-						tracks, callsPerTrack, 
-						host, port, timeoutMS, inFlightBits,
-						MsgRuntime.getGraphManager(runtime),						
-						Appendables.join(uploadConsoleCapture,System.out));	
-				
-				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-				
-	}
+//	//@Ignore //reduce memory on build server
+//	public void plaintext4096Test() {
+//		
+//				int inFlightBits = 8; 
+//				int tracks = 16;
+//				int callsPerTrack = totalCalls/tracks; 
+//				boolean testTelemetry = false;
+//		
+//				StringBuilder uploadConsoleCapture = new StringBuilder();
+//				LoadTester.runClient(
+//						null,
+//						(i,r) -> r.statusCode()==200 , 
+//						"/plaintext", 
+//						useTLS, testTelemetry, 
+//						tracks, callsPerTrack, 
+//						host, port, timeoutMS, inFlightBits,
+//						MsgRuntime.getGraphManager(runtime),						
+//						Appendables.join(uploadConsoleCapture,System.out));	
+//				
+//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+//				
+//	}
 
 	
-	//@Ignore //reduce memory on build server
-	public void plaintext16KTest() {
-				int inFlightBits = 8; //64 * 256 tracks is 16K
-				int tracks = 64;
-				int callsPerTrack = totalCalls/tracks; 
-				boolean testTelemetry = false;
-		
-				StringBuilder uploadConsoleCapture = new StringBuilder();
-				LoadTester.runClient(
-						null,
-						(i,r) -> r.statusCode()==200, 
-						"/plaintext", 
-						useTLS, testTelemetry, 
-						tracks, callsPerTrack, 
-						host, port, timeoutMS, inFlightBits,
-						MsgRuntime.getGraphManager(runtime),						
-						Appendables.join(uploadConsoleCapture,System.out));	
-				
-				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-				
-	}
+//	//@Ignore //reduce memory on build server
+//	public void plaintext16KTest() {
+//				int inFlightBits = 8; //64 * 256 tracks is 16K
+//				int tracks = 64;
+//				int callsPerTrack = totalCalls/tracks; 
+//				boolean testTelemetry = false;
+//		
+//				StringBuilder uploadConsoleCapture = new StringBuilder();
+//				LoadTester.runClient(
+//						null,
+//						(i,r) -> r.statusCode()==200, 
+//						"/plaintext", 
+//						useTLS, testTelemetry, 
+//						tracks, callsPerTrack, 
+//						host, port, timeoutMS, inFlightBits,
+//						MsgRuntime.getGraphManager(runtime),						
+//						Appendables.join(uploadConsoleCapture,System.out));	
+//				
+//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+//				
+//	}
 	
 	@Test
 	public void json1024Test() {
@@ -143,52 +143,52 @@ public class WebTest {
 				
 	}
 	
-	//@Ignore //reduce memory on build server
-	public void json4096Test() {
-				
-				int inFlightBits = 8; 
-				int tracks = 16;
-				int callsPerTrack = totalCalls/tracks; 
-				boolean testTelemetry = false;
-		
-				StringBuilder uploadConsoleCapture = new StringBuilder();
-				LoadTester.runClient(
-						null,
-						(i,r) -> r.statusCode()==200 , 
-						"/json", 
-						useTLS, testTelemetry, 
-						tracks, callsPerTrack, 
-						host, port, timeoutMS, inFlightBits,
-						MsgRuntime.getGraphManager(runtime),						
-						Appendables.join(uploadConsoleCapture,System.out));	
-				
-				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-				
-	}
+//	//@Ignore //reduce memory on build server
+//	public void json4096Test() {
+//				
+//				int inFlightBits = 8; 
+//				int tracks = 16;
+//				int callsPerTrack = totalCalls/tracks; 
+//				boolean testTelemetry = false;
+//		
+//				StringBuilder uploadConsoleCapture = new StringBuilder();
+//				LoadTester.runClient(
+//						null,
+//						(i,r) -> r.statusCode()==200 , 
+//						"/json", 
+//						useTLS, testTelemetry, 
+//						tracks, callsPerTrack, 
+//						host, port, timeoutMS, inFlightBits,
+//						MsgRuntime.getGraphManager(runtime),						
+//						Appendables.join(uploadConsoleCapture,System.out));	
+//				
+//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+//				
+//	}
 	
 	
-	@Ignore //reduce memory on build server
-	public void json16kTest() {
-				
-				int inFlightBits = 9;// 16K
-				int tracks = 32;
-				int callsPerTrack = totalCalls/tracks; 
-				boolean testTelemetry = false;
-		
-				StringBuilder uploadConsoleCapture = new StringBuilder();
-				LoadTester.runClient(
-						null,
-						(i,r) -> r.statusCode()==200 , 
-						"/json", 
-						useTLS, testTelemetry, 
-						tracks, callsPerTrack, 
-						host, port, timeoutMS, inFlightBits,
-						MsgRuntime.getGraphManager(runtime),						
-						Appendables.join(uploadConsoleCapture,System.out));	
-				
-				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-				
-	}
+//	@Ignore //reduce memory on build server
+//	public void json16kTest() {
+//				
+//				int inFlightBits = 9;// 16K
+//				int tracks = 32;
+//				int callsPerTrack = totalCalls/tracks; 
+//				boolean testTelemetry = false;
+//		
+//				StringBuilder uploadConsoleCapture = new StringBuilder();
+//				LoadTester.runClient(
+//						null,
+//						(i,r) -> r.statusCode()==200 , 
+//						"/json", 
+//						useTLS, testTelemetry, 
+//						tracks, callsPerTrack, 
+//						host, port, timeoutMS, inFlightBits,
+//						MsgRuntime.getGraphManager(runtime),						
+//						Appendables.join(uploadConsoleCapture,System.out));	
+//				
+//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+//				
+//	}
 	
     
 }
