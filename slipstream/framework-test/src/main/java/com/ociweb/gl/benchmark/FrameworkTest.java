@@ -127,11 +127,11 @@ public class FrameworkTest implements GreenApp {
 		framework.defineRoute()
 		        .path("/db")
 		        .routeId(Struct.DB_SINGLE_ROUTE);
-		
+			
 		framework.defineRoute()
-		        .path("/queries?queries=#{queries}")
+		        .path("/queries?queries=${queries}")
 		        .path("/queries")
-		        .refineInteger("queries", Field.QUERIES, 1)
+		        .refineText("queries", Field.QUERIES, "1")
 		        .routeId(Struct.DB_MULTI_ROUTE);
 		
 		if (telemetryPort>0) {

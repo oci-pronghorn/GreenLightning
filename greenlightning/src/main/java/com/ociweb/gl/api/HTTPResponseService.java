@@ -1,6 +1,5 @@
 package com.ociweb.gl.api;
 
-import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.HTTPUtilResponse;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
@@ -16,22 +15,22 @@ import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.util.Appendables;
-import com.ociweb.pronghorn.util.HTTPHeaderDateTimeFormatterLowGC;
 
 public class HTTPResponseService {
 
 	private final MsgCommandChannel<?> msgCommandChannel;
 	public static final byte[] SERVER_HEADER_NAME = "GreenLightning".getBytes();
-
+	private static final int minHeader = 128;
+	
+	
 	public HTTPResponseService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
-		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;
-		
-		
+		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;		
+		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, 1, minHeader);
 	}
 
 	/**
-	 *
+	 *	
 	 * @param msgCommandChannel MsgCommandChannel arg used in
 	 * @param queueLength int arg specifying que length
 	 * @param maxMessageSize int arg specifying max message size
@@ -41,7 +40,7 @@ public class HTTPResponseService {
 		this.msgCommandChannel = msgCommandChannel;
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER; 		
-		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, queueLength, maxMessageSize);
+		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, queueLength, Math.max(minHeader, maxMessageSize));
 	}
 
 	/**
@@ -208,7 +207,6 @@ public class HTTPResponseService {
 		}
 		
 		assert(isValidContent(contentType,outputStream)) : "content type is not matching payload";
-				
 		
 		outputStream.publishWithHeader(
 				msgCommandChannel.data.block1HeaderBlobPosition, 
@@ -260,7 +258,7 @@ public class HTTPResponseService {
 				200, false, null, contentType, writable);
 	}
 	
-	public HTTPHeaderDateTimeFormatterLowGC dateFormatter = new HTTPHeaderDateTimeFormatterLowGC();
+	
 	
 	/**
 	 *
@@ -338,7 +336,7 @@ public class HTTPResponseService {
 		//write date GC free direct copy
 		///////////////////////
 		outputStream.write(HTTPHeaderDefaults.DATE.rootBytes());
-		dateFormatter.write(System.currentTimeMillis(), outputStream);
+		outputStream.dateFormatter.write(System.currentTimeMillis(), outputStream);
 		outputStream.writeByte('\r');
 		outputStream.writeByte('\n');
 

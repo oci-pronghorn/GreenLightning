@@ -57,7 +57,13 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 	
 	public boolean multiRestRequest(HTTPRequestReader request) { 
 		
-		int queries = Math.min(Math.max(1, request.structured().readInt(Field.QUERIES)),500);
+		int queries = 1;
+		try {			
+			queries = Math.min(Math.max(1, Integer.parseInt(request.structured().readText(Field.QUERIES))),500);
+		} catch (NumberFormatException e) {
+			//default value of 1 will be used in this non numeric case
+		}
+		
 		
 		if (inFlight.hasRoomFor(queries)) {
 			

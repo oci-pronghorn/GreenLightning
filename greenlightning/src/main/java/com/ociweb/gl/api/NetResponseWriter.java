@@ -5,14 +5,17 @@ import org.slf4j.LoggerFactory;
 
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
+import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.http.HTTPUtil;
+import com.ociweb.pronghorn.network.http.HeaderValue;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.DataOutputBlobWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.util.Appendables;
+import com.ociweb.pronghorn.util.HTTPHeaderDateTimeFormatterLowGC;
 
 public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema> implements Appendable {
 
@@ -21,6 +24,15 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
     private int context;
     public int statusCode;
     private HTTPContentType contentType;
+    public HTTPHeaderDateTimeFormatterLowGC dateFormatter = new HTTPHeaderDateTimeFormatterLowGC();
+    
+    public HeaderValue headerDate = new HeaderValue() {
+		@Override
+		public <A extends Appendable> A appendTo(A target) {
+			dateFormatter.write(System.currentTimeMillis(), target);
+			return target;
+		}	
+	};
     
     private static final byte[] RETURN_NEWLINE = "\r\n".getBytes();
     
@@ -45,9 +57,10 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 		int connectionIsClosed = 1&(context>>ServerCoordinator.CLOSE_CONNECTION_SHIFT);
 		
 		HTTPUtil.writeHeader(revisionBytes, statusCode, 0, etagBytes, null!=contentType?contentType.getBytes():null, 
-					                  length, chunked, false, 
-					                  outputStream, connectionIsClosed, null);
-
+					                  length, chunked, true, 
+					                  outputStream, connectionIsClosed, 
+					                  w -> w.write(HTTPHeaderDefaults.DATE, outputStream.headerDate)  );
+		
 		int propperLength = DataOutputBlobWriter.length(outputStream);
 		Pipe.validateVarLength(outputStream.getPipe(), propperLength);
 		Pipe.setIntValue(propperLength, outputStream.getPipe(), positionOfLen); //go back and set the right length.
@@ -269,6 +282,5 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 		checkLimit(this, 6); //Estimate (maximum length)
 		return super.append(c);
 	}
-
 
 }
