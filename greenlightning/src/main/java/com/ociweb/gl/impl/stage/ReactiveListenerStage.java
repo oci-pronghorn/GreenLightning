@@ -897,7 +897,8 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 				  reader.setRevisionId(revision);
     	    	  int context = Pipe.takeInt(p);   	    	  
     	    	  
-    	    	  reader.setRouteId(routeId, graphManager.recordTypeData.structAssociatedObject(DataInputBlobReader.getStructType(reader)));
+    	    	  int structType = DataInputBlobReader.getStructType(reader);    	    	  
+				  reader.setRouteId(routeId, graphManager.recordTypeData.structAssociatedObject(structType));
     	    	      	    	  
     	    	  assert(parallelIdx<OrderSupervisorStage.CLOSE_CONNECTION_MASK);
     	    	  

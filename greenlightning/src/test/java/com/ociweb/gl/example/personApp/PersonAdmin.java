@@ -29,7 +29,7 @@ public class PersonAdmin implements RestListener {
 						StructuredWriter output = w.structured();
 												
 						output.writeLong(GreenField.connectionId, con);
-						output.writeLong(GreenField.connectionId, seq);
+						output.writeLong(GreenField.sequenceId, seq);
 						
 						StructuredReader input = request.structured();
 												

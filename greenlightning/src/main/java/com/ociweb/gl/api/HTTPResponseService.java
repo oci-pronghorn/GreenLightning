@@ -11,6 +11,7 @@ import com.ociweb.pronghorn.network.http.HTTPResponseStatusCodes;
 import com.ociweb.pronghorn.network.http.HTTPUtil;
 import com.ociweb.pronghorn.network.http.HeaderWritable;
 import com.ociweb.pronghorn.network.http.HeaderWriter;
+import com.ociweb.pronghorn.network.http.SequenceValidator;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -259,6 +260,7 @@ public class HTTPResponseService {
 	}
 	
 	
+	SequenceValidator validator = new SequenceValidator();
 	
 	/**
 	 *
@@ -282,10 +284,13 @@ public class HTTPResponseService {
 		
 		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[parallelIndex] : msgCommandChannel.netResponse[0];
 		
-		if (!Pipe.hasRoomForWrite(pipe)) {
+		//header and pay load sent as 2 writes
+		if (!Pipe.hasRoomForWrite(pipe, 2*Pipe.sizeOf(pipe, ServerResponseSchema.MSG_TOCHANNEL_100))) {
 			return false;
 		}		
 						
+		assert(validator.isValidSequence(connectionId, sequenceCode));
+		
 		///////////////////////////////////////
 		//message 1 which contains the headers
 		//////////////////////////////////////
@@ -352,10 +357,6 @@ public class HTTPResponseService {
 		outputStream.writeByte('\r');
 		outputStream.writeByte('\n');
 		
-	
-		
-		//outputStream.debugAsUTF8();
-		
 		HTTPUtilResponse.finalizeLengthOfFirstBlock(data, outputStream);
 		
 		//now publish both header and payload
@@ -396,8 +397,8 @@ public class HTTPResponseService {
 		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[parallelIndex] : msgCommandChannel.netResponse[0];
 		
 		//logger.trace("calling publishHTTPResponseContinuation");
-		
-		if (!Pipe.hasRoomForWrite(pipe)) {
+		//header and pay load sent as 2 writes
+		if (!Pipe.hasRoomForWrite(pipe, 2*Pipe.sizeOf(pipe, ServerResponseSchema.MSG_TOCHANNEL_100))) {
 			return false;
 		}
 		

@@ -5,6 +5,8 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class LoadTester {
 	
+	private final static long cycleRate = 2_000_000L;//for high volume we slow the cycle rate
+	
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,
 			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int parallelTracks,
 			int cyclesPerTrack, String host, int port, int timeoutMS, A target) {
@@ -36,6 +38,7 @@ public class LoadTester {
 		testerConfig.simultaneousRequestsPerTrackBits = inFlightBits;		
 		testerConfig.target = target;
 		testerConfig.graphUnderTest = graphUnderTest;
+		testerConfig.cycleRate = cycleRate;
 		
 		//must be floor because the tracks may not divide evenly, we do not support more  pipes than we have sessions.
 		testerConfig.sessionsPerTrack = (int)Math.floor(concurrentConnections/(float)tracks);
@@ -45,9 +48,11 @@ public class LoadTester {
 		payload.post = testData;
 		
 		payload.validator = validator;
-
+;
 		GreenRuntime.testConcurrentUntilShutdownRequested(new ParallelClientLoadTester(testerConfig, payload), timeoutMS);
 
+		
+		
 		return target;
 	}
 	
@@ -67,6 +72,7 @@ public class LoadTester {
 		testerConfig.host = host;
 		testerConfig.target = target;
 		testerConfig.simultaneousRequestsPerTrackBits = inFlightBits;
+		testerConfig.cycleRate = cycleRate;
 		
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload(); // calling get
 		

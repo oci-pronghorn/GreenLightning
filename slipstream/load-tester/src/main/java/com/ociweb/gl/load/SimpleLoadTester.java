@@ -10,6 +10,8 @@ public class SimpleLoadTester {
 	
 		//ClientSocketReaderStage.showResponse = true;
 		
+		//ClientSocketReaderStage.showResponse = true;
+		
 		//GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//turned off so we wait forever.
 		//ClientAbandonConnectionScanner.absoluteNSToKeep = 20_000_000_000L;

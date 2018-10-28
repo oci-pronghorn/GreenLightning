@@ -10,6 +10,7 @@ import com.ociweb.gl.api.GreenApp;
 import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.network.ServerSocketWriterStage;
+import com.ociweb.pronghorn.pipe.ObjectPipe;
 
 import io.reactiverse.pgclient.PgClient;
 import io.reactiverse.pgclient.PgPoolOptions;
@@ -29,7 +30,6 @@ public class FrameworkTest implements GreenApp {
     private int pipelineBits;
 	
     private final PgPoolOptions options;
-   
     
 	public static int connectionsPerTrack =   2;
 	public static int connectionPort =        5432;
@@ -115,7 +115,6 @@ public class FrameworkTest implements GreenApp {
     			 .setMaxResponseSize(maxResponseSize) //big enough for large mult db response
     	         .useInsecureServer(); //turn off TLS
 
-		
 		framework.defineRoute()
 		         .path("/plaintext")
 		         .routeId(Struct.PLAINTEXT_ROUTE);
@@ -129,10 +128,30 @@ public class FrameworkTest implements GreenApp {
 		        .routeId(Struct.DB_SINGLE_ROUTE);
 			
 		framework.defineRoute()
-		        .path("/queries?queries=${queries}")
+		        .path("/queries?queries=#{queries}")
 		        .path("/queries")
-		        .refineText("queries", Field.QUERIES, "1")
-		        .routeId(Struct.DB_MULTI_ROUTE);
+		        .refineInteger("queries", Field.QUERIES, 1)
+		        .routeId(Struct.DB_MULTI_ROUTE_INT);
+		
+		framework.defineRoute()
+		        .path("/queries?queries=${queries}")
+			    .routeId(Struct.DB_MULTI_ROUTE_TEXT);
+		
+//		framework.defineRoute()
+//		        .path("/updates?queries=#{queries}")
+//		        .path("/updates")
+//		        .refineInteger("queries", Field.QUERIES, 1)
+//		        .routeId(Struct.UPDATES_ROUTE_INT);
+//
+//		framework.defineRoute()
+//		        .path("/updates=?queries=${queries}")
+//		        .routeId(Struct.UPDATES_ROUTE_TEXT);
+//		
+//		framework.defineRoute()
+//		        .path("/fortunes")
+//		        .routeId(Struct.FORTUNES_ROUTE);
+
+		
 		
 		if (telemetryPort>0) {
 			framework.enableTelemetry(host,telemetryPort);
@@ -150,12 +169,22 @@ public class FrameworkTest implements GreenApp {
 		       .includeRoutes(Struct.PLAINTEXT_ROUTE, restTest::plainRestRequest)
 		       .includeRoutes(Struct.JSON_ROUTE, restTest::jsonRestRequest);
 		 
-		//each track has its own pool with its own async thread
-		DBRest dbRestInstance = new DBRest(runtime, PgClient.pool(options), pipelineBits, maxResponseSize);
+		ObjectPipe<ResultObject> resultCollector = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
+		DBRest dbRestInstance = new DBRest(runtime, PgClient.pool(options), resultCollector, maxResponseSize);
 		runtime.registerListener("DBRest", dbRestInstance)
 				.includeRoutes(Struct.DB_SINGLE_ROUTE, dbRestInstance::singleRestRequest)
-				.includeRoutes(Struct.DB_MULTI_ROUTE, dbRestInstance::multiRestRequest);		
+				.includeRoutes(Struct.DB_MULTI_ROUTE_TEXT, dbRestInstance::multiRestRequest)		
+		        .includeRoutes(Struct.DB_MULTI_ROUTE_INT, dbRestInstance::multiRestRequest)
+		        //.includeRoutes(Struct.UPDATES_ROUTE_TEXT, dbRestInstance::updateRestRequest)
+		        //.includeRoutes(Struct.UPDATES_ROUTE_INT, dbRestInstance::updateRestRequest)
+		        ;
 
+		
+//		int pipelineBits = 15; 
+//		ObjectPipe<FortunesObject> fortunesCollector = new ObjectPipe<FortunesObject>(pipelineBits, FortunesObject.class,	FortunesObject::new);
+//		runtime.registerListener("Fortune", new FortuneRest(runtime, PgClient.pool(options), fortunesCollector)).includeRoutes(Struct.FORTUNES_ROUTE);
+				      
+		
 	}
 	 
     @Override

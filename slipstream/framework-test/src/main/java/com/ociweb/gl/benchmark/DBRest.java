@@ -22,33 +22,16 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 
 	private final PgPool pool;
 	private final ThreadLocalRandom localRandom = ThreadLocalRandom.current();
-	private final HTTPResponseService service;
-	private static final boolean useDB = true;	
 
-	//this collector is for the multi db test so we can collect all the objects until we have them all for 
-	//the request we are currently sending back
-	private final List<ResultObject> collector = new ArrayList<ResultObject>();
-	private boolean collectionPending = false;
 	private final ObjectPipe<ResultObject> inFlight;
 	
-	JSONRenderer<List<ResultObject>> multiTemplate = new JSONRenderer<List<ResultObject>>()
-	    	  .array((o,i,node) -> i<o.size()?o:null)
-		          .startObject((o, i) -> o.get(i))
-					.integer("id", o -> o.getId() )
-					.integer("randomNumber", o -> o.getResult())
-		          .endObject();
+
 	
-	JSONRenderer<ResultObject> singleTemplate = new JSONRenderer<ResultObject>()
-		   	  .startObject()
-				.integer("id", o -> o.getId() )
-				.integer("randomNumber", o -> o.getResult())
-	          .endObject();
-	
-	
-	public DBRest(GreenRuntime runtime, PgPool pool, int pipelineBits, int maxResponseSize) {
-		this.pool = pool;	
-		this.service = runtime.newCommandChannel().newHTTPResponseService(128, maxResponseSize); 
-		this.inFlight = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
+	public DBRest(GreenRuntime runtime, PgPool pool, ObjectPipe<ResultObject> inFlight, int maxResponseSize) {
+		this.pool = pool;		
+		this.inFlight = inFlight; 
+		this.service = runtime.newCommandChannel().newHTTPResponseService(1<<8, maxResponseSize); 
+					
 	}		
 	
 	private int randomValue() {
@@ -56,14 +39,11 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 	}		
 	
 	public boolean multiRestRequest(HTTPRequestReader request) { 
-		
+
 		int queries = 1;
-		try {			
-			queries = Math.min(Math.max(1, Integer.parseInt(request.structured().readText(Field.QUERIES))),500);
-		} catch (NumberFormatException e) {
-			//default value of 1 will be used in this non numeric case
-		}
-		
+		if (Struct.DB_MULTI_ROUTE_INT == request.getRouteAssoc() ) {		
+			queries = Math.min(Math.max(1, (request.structured().readInt(Field.QUERIES))),500);		
+		}		
 		
 		if (inFlight.hasRoomFor(queries)) {
 			
@@ -140,52 +120,126 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 		}
 	}
 
+
 	
+	
+	
+	
+	
+	
+	public boolean updateRestRequest(HTTPRequestReader request) {
+		
+		
+//		pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
+//			if (r.succeeded()) {
+//				
+//				PgIterator resultSet = r.result().iterator();
+//		        Tuple row = resultSet.next();			        
+//		        
+//		        target.setId(row.getInteger(0));
+//		        target.setResult(row.getInteger(1));					
+//				target.setStatus(200);
+//				
+//			} else {
+//				System.out.println("fail: "+r.cause().getLocalizedMessage());
+//				target.setStatus(500);
+//			}				
+//		});
+
+		
+//		List<Tuple> batch = new ArrayList<>(queries);
+//        for (World world : worlds) {
+//            batch.add(Tuple.of(world.randomNumber, world.id));
+//        }
+//
+//        pool.preparedBatch("UPDATE world SET randomnumber=$1 WHERE id=$2", batch, ar -> {
+
+        	
+		return false;//service.publishHTTPResponse(request, 404);
+		
+	}
+	
+	////////////////////////////////////
+	////////////////////////////////////
+	
+	private final JSONRenderer<List<ResultObject>> multiTemplate = new JSONRenderer<List<ResultObject>>()
+	    	  .array((o,i,node) -> i<o.size()?o:null)
+		          .startObject((o, i) -> o.get(i))
+					.integer("id", o -> o.getId() )
+					.integer("randomNumber", o -> o.getResult())
+		          .endObject();
+	
+	private final JSONRenderer<ResultObject> singleTemplate = new JSONRenderer<ResultObject>()
+		   	  .startObject()
+				.integer("id", o -> o.getId() )
+				.integer("randomNumber", o -> o.getResult())
+	          .endObject();
+	
+	private boolean collectionPending = false;
+
+	//this collector is for the multi db test so we can collect all the objects until we have them all for 
+	//the request we are currently sending back
+	private final List<ResultObject> collector = new ArrayList<ResultObject>();
+	private final HTTPResponseService service;
+
+
 	@Override
 	public void tickEvent() { 
-     		
+		
+		ResultObject temp = inFlight.tailObject();
+		while (isReady(temp)) {			
+			if (consumeResultObject(temp)) {
+				inFlight.moveTailForward();
+				temp = inFlight.tailObject();
+			} else {
+				break;
+			}
+		}	   
+		
+	}
+
+	private boolean isReady(ResultObject temp) {
+
 		if (collectionPending) {
 			//now ready to send, we have all the data	
 			if (publishMultiResponse(collector.get(0).getConnectionId(), collector.get(0).getSequenceId() )) {
-				inFlight.tryMoveTailForward();
+				inFlight.moveTailForward();//only move forward when it is consumed.
 				collectionPending = false;
 			} else {
-				return;
+				return false;
 			}
-		}		
+		}
 		
-		ResultObject temp = inFlight.tailObject();
-		while (temp!=null && temp.getStatus()>=0) {
-			final ResultObject t = temp;
-		
-			boolean ok = false;
-							
-			///////////////////////////////
-			if (0 == t.getGroupSize()) {	
-				ok = service.publishHTTPResponse(temp.getConnectionId(), temp.getSequenceId(), 200,
-	  				   HTTPContentTypeDefaults.JSON,
-	  				   w-> {
-	  					   singleTemplate.render(w, t);
-	  					   t.setStatus(-1);
-	  				   });					
-			} else {
-				//collect all the objects
-				collector.add(t);					
-				if (collector.size() == t.getGroupSize()) {
-					//now ready to send, we have all the data						
-	    			ok =publishMultiResponse(t.getConnectionId(), t.getSequenceId());
-	    			collectionPending = !ok;
-	    		} else {
-	    			ok = true;//added to list
-	    		}				
-			}	
+		return null!=temp && temp.getStatus()>=0;
+	}
 
-			temp = (ok && inFlight.tryMoveTailForward()) ? inFlight.tailObject() : null;
-		}	   
+	private boolean consumeResultObject(final ResultObject t) {
+		boolean ok;
+						
+		///////////////////////////////
+		if (0 == t.getGroupSize()) {	
+			ok = service.publishHTTPResponse(t.getConnectionId(), t.getSequenceId(), 200,
+				   HTTPContentTypeDefaults.JSON,
+				   w-> {
+					   singleTemplate.render(w, t);
+					   t.setStatus(-1);
+				   });					
+		} else {
+			//collect all the objects
+			collector.add(t);					
+			if (collector.size() == t.getGroupSize()) {
+				//now ready to send, we have all the data						
+				ok =publishMultiResponse(t.getConnectionId(), t.getSequenceId());
+				
+			} else {
+				ok = true;//added to list
+			}				
+		}
+		return ok;
 	}
 
 	private boolean publishMultiResponse(long conId, long seqCode) {
-		return service.publishHTTPResponse(conId, seqCode, 200,
+		boolean result =  service.publishHTTPResponse(conId, seqCode, 200,
 					    				   HTTPContentTypeDefaults.JSON,
 					    				   w-> {
 					    					   multiTemplate.render(w, collector);
@@ -197,6 +251,10 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 					    					   }
 					    					   collector.clear();
 					    				   });
+		collectionPending = !result;
+		return result;
 	}
+	
+	
 }
 
