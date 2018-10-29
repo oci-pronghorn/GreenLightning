@@ -3,7 +3,7 @@
     <groupId>com.ociweb</groupId>
     <artifactId>greenlightning</artifactId>
     <name>greenlightning</name>
-    <version>1.0.9</version>
+    <version>1.0.10-SNAPSHOT</version>
 
     <description>Open Edge - Green Lightning Micro-Service Runtime</description>
     <url>https://github.com/oci-pronghorn/GreenLightning</url>
@@ -110,7 +110,7 @@
         <dependency>
             <groupId>com.ociweb</groupId>
             <artifactId>pronghorn</artifactId>
-            <version>[1.0.11,1.1)</version>
+            <version>[1.0.12,1.1)</version>
         </dependency>
 
         <dependency>
