@@ -1,16 +1,22 @@
 package com.ociweb.gl.benchmark;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
 import com.ociweb.gl.api.RestListener;
 import com.ociweb.gl.api.TickListener;
 import com.ociweb.pronghorn.pipe.ObjectPipe;
+import com.ociweb.pronghorn.util.AppendableBuilder;
+import com.ociweb.pronghorn.util.Appendables;
+import com.ociweb.pronghorn.util.template.StringTemplateBuilder;
+import com.ociweb.pronghorn.util.template.StringTemplateRenderer;
 
 import io.reactiverse.pgclient.PgIterator;
 import io.reactiverse.pgclient.PgPool;
 import io.reactiverse.pgclient.Row;
-import io.reactiverse.pgclient.Tuple;
 
 public class FortuneRest implements RestListener, TickListener {
 
@@ -76,14 +82,56 @@ public class FortuneRest implements RestListener, TickListener {
 		//return service.publishHTTPResponse(request, 404);
 	}
 
+	class DemoObject {
+
+		private final int id;
+		private String message;
+		
+		public DemoObject(int id, String message) {
+			this.id = id;
+			this.message = message;
+		}
+		
+		public int getId() {
+			return id;			
+		}
+
+		public String getMessage() {
+			return message;
+		}
+		
+	}
+	
+	StringTemplateRenderer<List<DemoObject>> template =		
+			new StringTemplateBuilder<List<DemoObject>>()
+			       .add("<!DOCTYPE html> <html> <head><title>Fortunes</title></head> <body> <table> <tr><th>id</th><th>message</th></tr>\n")
+			       .add((t,s,i)-> {
+						if (i<s.size()) {													
+							Appendables.appendHTMLEntityEscaped(
+								Appendables.appendValue(t, 
+										"<tr><td>", s.get(i).getId(),"</td><td>"), s.get(i).getMessage() ).append("</td></tr>\n");
+							return true;
+						} else {
+							return false;
+						}
+			         })		
+			       .add("</table></body></html>")
+			       .finish();
+	
 	@Override
 	public void tickEvent() { //TODO: remove tickEvent here and replace with  pub sub to take next...
 		
 		//  insert our custom fortune
+		List<DemoObject> obj = new ArrayList();
 		
 		//  sort the response
 		
 		//  apply template  (note must have escape support)
+		
+	///	JSONRenderer<T>
+		AppendableBuilder target = new AppendableBuilder(1<<21);
+		template.render(target, obj);
+		
 		
 	}
 	

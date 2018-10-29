@@ -27,6 +27,7 @@ public class FrameworkTest implements GreenApp {
     private int telemetryPort;//for monitoring
     private int minMemoryOfInputPipes;
     private int maxResponseSize;
+	private	int maxResponseCount = 1<<8;
     private int pipelineBits;
 	
     private final PgPoolOptions options;
@@ -137,16 +138,16 @@ public class FrameworkTest implements GreenApp {
 		        .path("/queries?queries=${queries}")
 			    .routeId(Struct.DB_MULTI_ROUTE_TEXT);
 		
-//		framework.defineRoute()
-//		        .path("/updates?queries=#{queries}")
-//		        .path("/updates")
-//		        .refineInteger("queries", Field.QUERIES, 1)
-//		        .routeId(Struct.UPDATES_ROUTE_INT);
-//
-//		framework.defineRoute()
-//		        .path("/updates=?queries=${queries}")
-//		        .routeId(Struct.UPDATES_ROUTE_TEXT);
-//		
+		framework.defineRoute()
+		        .path("/updates?queries=#{queries}")
+		        .path("/updates")
+		        .refineInteger("queries", Field.QUERIES, 1)
+		        .routeId(Struct.UPDATES_ROUTE_INT);
+
+		framework.defineRoute()
+		        .path("/updates=?queries=${queries}")
+		        .routeId(Struct.UPDATES_ROUTE_TEXT);
+		
 //		framework.defineRoute()
 //		        .path("/fortunes")
 //		        .routeId(Struct.FORTUNES_ROUTE);
@@ -169,16 +170,19 @@ public class FrameworkTest implements GreenApp {
 		       .includeRoutes(Struct.PLAINTEXT_ROUTE, restTest::plainRestRequest)
 		       .includeRoutes(Struct.JSON_ROUTE, restTest::jsonRestRequest);
 		 
-		ObjectPipe<ResultObject> resultCollector = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
-		DBRest dbRestInstance = new DBRest(runtime, PgClient.pool(options), resultCollector, maxResponseSize);
+
+		DBRest dbRestInstance = new DBRest(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
 		runtime.registerListener("DBRest", dbRestInstance)
 				.includeRoutes(Struct.DB_SINGLE_ROUTE, dbRestInstance::singleRestRequest)
 				.includeRoutes(Struct.DB_MULTI_ROUTE_TEXT, dbRestInstance::multiRestRequest)		
-		        .includeRoutes(Struct.DB_MULTI_ROUTE_INT, dbRestInstance::multiRestRequest)
-		        //.includeRoutes(Struct.UPDATES_ROUTE_TEXT, dbRestInstance::updateRestRequest)
-		        //.includeRoutes(Struct.UPDATES_ROUTE_INT, dbRestInstance::updateRestRequest)
-		        ;
+		        .includeRoutes(Struct.DB_MULTI_ROUTE_INT, dbRestInstance::multiRestRequest);
 
+		
+		DBUpdate dbUpdateInstance = new DBUpdate(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
+		runtime.registerListener("DBUpdate", dbUpdateInstance)
+		        .includeRoutes(Struct.UPDATES_ROUTE_TEXT, dbUpdateInstance::updateRestRequest)
+		        .includeRoutes(Struct.UPDATES_ROUTE_INT, dbUpdateInstance::updateRestRequest);
+		
 		
 //		int pipelineBits = 15; 
 //		ObjectPipe<FortunesObject> fortunesCollector = new ObjectPipe<FortunesObject>(pipelineBits, FortunesObject.class,	FortunesObject::new);
