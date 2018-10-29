@@ -122,48 +122,11 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 
 
 	
-	
-	
-	
-	
-	
-	public boolean updateRestRequest(HTTPRequestReader request) {
-		
-		
-//		pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
-//			if (r.succeeded()) {
-//				
-//				PgIterator resultSet = r.result().iterator();
-//		        Tuple row = resultSet.next();			        
-//		        
-//		        target.setId(row.getInteger(0));
-//		        target.setResult(row.getInteger(1));					
-//				target.setStatus(200);
-//				
-//			} else {
-//				System.out.println("fail: "+r.cause().getLocalizedMessage());
-//				target.setStatus(500);
-//			}				
-//		});
-
-		
-//		List<Tuple> batch = new ArrayList<>(queries);
-//        for (World world : worlds) {
-//            batch.add(Tuple.of(world.randomNumber, world.id));
-//        }
-//
-//        pool.preparedBatch("UPDATE world SET randomnumber=$1 WHERE id=$2", batch, ar -> {
-
-        	
-		return false;//service.publishHTTPResponse(request, 404);
-		
-	}
-	
 	////////////////////////////////////
 	////////////////////////////////////
 	
 	private final JSONRenderer<List<ResultObject>> multiTemplate = new JSONRenderer<List<ResultObject>>()
-	    	  .array((o,i,node) -> i<o.size()?o:null)
+	    	  .array((o,i) -> i<o.size()?o:null)
 		          .startObject((o, i) -> o.get(i))
 					.integer("id", o -> o.getId() )
 					.integer("randomNumber", o -> o.getResult())
