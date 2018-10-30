@@ -138,15 +138,15 @@ public class FrameworkTest implements GreenApp {
 		        .path("/queries?queries=${queries}")
 			    .routeId(Struct.DB_MULTI_ROUTE_TEXT);
 		
-		framework.defineRoute()
-		        .path("/updates?queries=#{queries}")
-		        .path("/updates")
-		        .refineInteger("queries", Field.QUERIES, 1)
-		        .routeId(Struct.UPDATES_ROUTE_INT);
-
-		framework.defineRoute()
-		        .path("/updates=?queries=${queries}")
-		        .routeId(Struct.UPDATES_ROUTE_TEXT);
+//		framework.defineRoute()
+//		        .path("/updates?queries=#{queries}")
+//		        .path("/updates")
+//		        .refineInteger("queries", Field.QUERIES, 1)
+//		        .routeId(Struct.UPDATES_ROUTE_INT);
+//
+//		framework.defineRoute()
+//		        .path("/updates=?queries=${queries}")
+//		        .routeId(Struct.UPDATES_ROUTE_TEXT);
 		
 //		framework.defineRoute()
 //		        .path("/fortunes")
@@ -178,10 +178,10 @@ public class FrameworkTest implements GreenApp {
 		        .includeRoutes(Struct.DB_MULTI_ROUTE_INT, dbRestInstance::multiRestRequest);
 
 		
-		DBUpdate dbUpdateInstance = new DBUpdate(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
-		runtime.registerListener("DBUpdate", dbUpdateInstance)
-		        .includeRoutes(Struct.UPDATES_ROUTE_TEXT, dbUpdateInstance::updateRestRequest)
-		        .includeRoutes(Struct.UPDATES_ROUTE_INT, dbUpdateInstance::updateRestRequest);
+//		DBUpdate dbUpdateInstance = new DBUpdate(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
+//		runtime.registerListener("DBUpdate", dbUpdateInstance)
+//		        .includeRoutes(Struct.UPDATES_ROUTE_TEXT, dbUpdateInstance::updateRestRequest)
+//		        .includeRoutes(Struct.UPDATES_ROUTE_INT, dbUpdateInstance::updateRestRequest);
 		
 		
 //		int pipelineBits = 15; 
