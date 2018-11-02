@@ -52,6 +52,10 @@ public class FortunesObject {
 		Collections.sort(list);
 	}
 
+	public List<FortuneObject> list() {
+		return list;
+	}
+	
 	public void addFortune(int id, String fortune) {
 		
 		FortuneObject obj = new FortuneObject(); //TODO: if we need recycle else not...

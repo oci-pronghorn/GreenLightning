@@ -21,13 +21,13 @@ public class DBUpdate implements RestMethodListener, TickListener {
 
 
 	private final PgPool pool;
-	private final ThreadLocalRandom localRandom = ThreadLocalRandom.current();
 	private final HTTPResponseService service;
 	private ObjectPipe<ResultObject> inFlight;	
 	private boolean collectionPending = false;	
 	private final List<ResultObject> collector = new ArrayList<ResultObject>();
 	
-	private final JSONRenderer<List<ResultObject>> multiTemplate = new JSONRenderer<List<ResultObject>>()
+	private static final ThreadLocalRandom localRandom = ThreadLocalRandom.current();
+	private static final JSONRenderer<List<ResultObject>> multiTemplate = new JSONRenderer<List<ResultObject>>()
 	    	  .array((o,i) -> i<o.size()?o:null)
 		          .startObject((o, i) -> o.get(i))
 					.integer("id", o -> o.getId() )
@@ -45,57 +45,77 @@ public class DBUpdate implements RestMethodListener, TickListener {
 	}	
 	
 	public boolean updateRestRequest(HTTPRequestReader request) {
-		int queries = 1;
-		if (Struct.DB_MULTI_ROUTE_INT == request.getRouteAssoc() ) {		
+		int queries;
+		if (Struct.UPDATES_ROUTE_INT == request.getRouteAssoc() ) {		
 			queries = Math.min(Math.max(1, (request.structured().readInt(Field.QUERIES))),500);		
-		}		
-		
-		if (inFlight.hasRoomFor(queries)) {
-			
-			int q = queries;
-			while (--q >= 0) {
-			
-					final ResultObject target = inFlight.headObject();
-					assert(null!=target);
+		} else {
+			queries = 1;
+		}
+		long conId = request.getConnectionId();
+		long seqCode = request.getSequenceCode();
+
+		if (inFlight.hasRoomFor(queries)) {		
+				    	
+				int q = queries;
+				while (--q >= 0) {
 				
-					target.setConnectionId(request.getConnectionId());
-					target.setSequenceId(request.getSequenceCode());
-					target.setStatus(-2);//out for work	
-					target.setGroupSize(queries);
+						final ResultObject target = inFlight.headObject();
+						assert(null!=target);
+					
+						target.setConnectionId(conId);
+						target.setSequenceId(seqCode);
+						target.setStatus(-2);//out for work	
+						target.setGroupSize(queries);
+						
+						final int targetId = randomValue();
+						final int targetUpdate = randomValue();
+						
+						pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(targetId), r -> {
+								if (r.succeeded()) {
+									
+									PgIterator resultSet = r.result().iterator();
+							        Tuple row = resultSet.next();			        
+							        
+							        int oldRnd = row.getInteger(1);
+							        
+							        ///////////////////////////////////
+							        //update the value since we got our call back
+							        //////////////////////////////////
+							        							       
+							        
+							        final Tuple updateTuple = Tuple.of(targetUpdate, row.getInteger(0));
+							        
+							        pool.preparedQuery("UPDATE world SET randomnumber=$1 WHERE id=$2", updateTuple, ar -> {
+							        	
+										if (ar.succeeded()) {									
+								        	target.setId(updateTuple.getInteger(1));
+								        	target.setResult(updateTuple.getInteger(0));					
+								        	target.setStatus(200);
+										} else {	
+											
+											if (ar.cause()!=null) {
+												ar.cause().printStackTrace();
+											}
+											
+											target.setStatus(500);
+										}	
+																													
+							        });
+								} else {	
+									
+									if (r.cause()!=null) {
+										r.cause().printStackTrace();
+									}
+									
+									target.setStatus(500);
+								}		
+								
+								
+							});	
+									
+						inFlight.moveHeadForward(); //always move to ensure this can be read.
 				
-					pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
-							if (r.succeeded()) {
-								
-								PgIterator resultSet = r.result().iterator();
-						        Tuple row = resultSet.next();			        
-						        
-						        int oldRnd = row.getInteger(1);
-						        
-						        ///////////////////////////////////
-						        //update the value since we got our call back
-						        //////////////////////////////////
-						        
-						        final Tuple updateTuple = Tuple.of(randomValue(), row.getInteger(0));
-								pool.preparedQuery("UPDATE world SET randomnumber=$1 WHERE id=$2", updateTuple, ar -> {
-						        	
-									if (ar.succeeded()) {									
-							        	target.setId(updateTuple.getInteger(1));
-							        	target.setResult(updateTuple.getInteger(0));					
-							        	target.setStatus(200);
-									} else {
-										System.out.println("fail: "+r.cause().getLocalizedMessage());
-										target.setStatus(500);
-									}						        	
-						        });
-							} else {
-								System.out.println("fail: "+r.cause().getLocalizedMessage());
-								target.setStatus(500);
-							}				
-						});	
-								
-					inFlight.moveHeadForward(); //always move to ensure this can be read.
-			
-			}
+				}
 				
 			return true;
 		} else {
@@ -110,7 +130,6 @@ public class DBUpdate implements RestMethodListener, TickListener {
 		ResultObject temp = inFlight.tailObject();
 		while (isReady(temp)) {			
 			if (consumeResultObject(temp)) {
-				inFlight.moveTailForward();
 				temp = inFlight.tailObject();
 			} else {
 				break;
@@ -123,10 +142,7 @@ public class DBUpdate implements RestMethodListener, TickListener {
 
 		if (collectionPending) {
 			//now ready to send, we have all the data	
-			if (publishMultiResponse(collector.get(0).getConnectionId(), collector.get(0).getSequenceId() )) {
-				inFlight.moveTailForward();//only move forward when it is consumed.
-				collectionPending = false;
-			} else {
+			if (!publishMultiResponse(collector.get(0).getConnectionId(), collector.get(0).getSequenceId() )) {
 				return false;
 			}
 		}
@@ -138,7 +154,8 @@ public class DBUpdate implements RestMethodListener, TickListener {
 		boolean ok;
 				
 		//collect all the objects
-		collector.add(t);					
+		collector.add(t);
+		inFlight.moveTailForward();//only move forward when it is consumed.
 		if (collector.size() == t.getGroupSize()) {
 			//now ready to send, we have all the data						
 			ok =publishMultiResponse(t.getConnectionId(), t.getSequenceId());
@@ -161,6 +178,7 @@ public class DBUpdate implements RestMethodListener, TickListener {
 					    						   collector.get(c).setStatus(-1);
 					    					   }
 					    					   collector.clear();
+					    					   inFlight.publishTailPosition();
 					    				   });
 		collectionPending = !result;
 		return result;

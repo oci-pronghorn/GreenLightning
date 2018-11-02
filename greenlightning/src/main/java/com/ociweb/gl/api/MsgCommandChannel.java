@@ -38,8 +38,6 @@ import com.ociweb.pronghorn.util.TrieParserReaderLocal;
  */
 public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameable{
 
-	final TrieParserReader READER = new TrieParserReader(true);
-
 	private final static Logger logger = LoggerFactory.getLogger(MsgCommandChannel.class);
 	
 	private boolean isInit = false;
@@ -66,7 +64,9 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 
     protected static final long MS_TO_NS = 1_000_000;
          
-    public Behavior listener;
+    //transient, this is set at runtime and not subject to the CommandChannel scanner
+    public transient Behavior listener;
+    
     private String behaviorName;
     
     //TODO: add GreenService class for getting API specific objects.
@@ -80,16 +80,16 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
     
     public static final int ALL = DYNAMIC_MESSAGING | NET_REQUESTER | NET_RESPONDER | USE_SERIAL_STORE;
       
-    public final B builder;
+    public final transient B builder; //transient to limit scan.
 
 	public int maxHTTPContentLength;
 	
 	protected Pipe<?>[] optionalOutputPipes;
 	public int initFeatures; //this can be modified up to the moment that we build the pipes.
 
-	PublishPrivateTopics publishPrivateTopics;	
+	transient PublishPrivateTopics publishPrivateTopics;	
 
-	public final PipeConfigManager pcm;
+	public final transient PipeConfigManager pcm;
 	public final int parallelInstanceId;
 
 
@@ -353,6 +353,7 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 			   ////////////////////////       
 			   Pipe<ServerResponseSchema>[] netResponse = null;
 			   if ((this.initFeatures & NET_RESPONDER) != 0) {
+		
 				   //int parallelInstanceId = hardware.ac
 				   if (-1 == parallelInstanceId) {
 					   //we have only a single instance of this object so we must have 1 pipe for each parallel track
@@ -366,6 +367,9 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 					   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[1];
 					   netResponse[0] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), parallelInstanceId);
 				   }
+				   assert(null!=netResponse) : "internal build error";
+				   assert(netResponse.length>0) : "net response array is zero";
+				   
 			   }
 			   this.netResponse = netResponse;
 			   ///////////////////////////
@@ -693,7 +697,7 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
     }
 
 	
-	final HeaderWriter headerWriter = new HeaderWriter();//used in each post call.
+	final transient HeaderWriter headerWriter = new HeaderWriter();//used in each post call.
 	
     
     String cachedTopic="";
@@ -789,7 +793,7 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 	}
 	
 	
-	private final BloomFilter topicsTooShort = new BloomFilter(10000, .00001); //32K
+	private final transient BloomFilter topicsTooShort = new BloomFilter(10000, .00001); //32K
 	
     private void logPrivateTopicTooShort(int token, Pipe<?> p) {
 

@@ -1,21 +1,21 @@
 package com.ociweb.gl.impl;
 
+import java.io.Externalizable;
+import java.lang.reflect.Array;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.util.Collection;
+import java.util.HashSet;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.io.Externalizable;
-import java.lang.reflect.Array;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
 
 /**
  * Scans up the object tree to find instances of specific classes
@@ -60,20 +60,27 @@ public class ChildClassScanner {
 												 Object topParent,
 												 Collection<Object> seen) {
 			
+		
+		
 			Field[] fields = c.getDeclaredFields();
 	                        
 	        int f = fields.length;
+	        
 	        while (--f >= 0) {
-	      
-	                fields[f].setAccessible(true);   
+	        		final Field field = fields[f];
+	        	
+	                field.setAccessible(true);   
 	                Object obj = null;
 					try {
-						obj = fields[f].get(listener);
-			
+						if (Modifier.isTransient(field.getModifiers())) {
+							continue;//skip over all transient fields
+						};						
+						
+						obj = field.get(listener);
 						if (targetType.isInstance(obj)) {
 							if (!visitor.visit(obj, topParent, topName)) {
 								return false;
-							}                              
+							}							
 						} else {   
 							String name;
 							
@@ -82,7 +89,7 @@ public class ChildClassScanner {
 								
 								Class<?> cType = obj.getClass().getComponentType();
 								if ((!cType.isPrimitive()) 
-									&& !cType.isSynthetic()
+									&& !cType.isSynthetic()									
 								    && (!CharSequence.class.isAssignableFrom(cType))
 								    && (!String.class.isAssignableFrom(cType))
 								    && (!Externalizable.class.isAssignableFrom(cType))								    
@@ -117,38 +124,44 @@ public class ChildClassScanner {
 									&& (!(name=obj.getClass().getName()).startsWith("java.")) 
 									
 									&& (-1 == TrieParserReaderLocal.get().query(textToBlock, name))
-																		
+									&& (!name.endsWith("Logger"))
+									&& (!name.endsWith("Factory"))
+									&& (!name.endsWith("Executor"))
+									
 									&& (!obj.getClass().isEnum())
 									&& (!(obj instanceof MsgRuntime))  
 									&& (!(obj instanceof ChannelWriter))  
 									&& (!(obj instanceof BuilderImpl))
-									&& (!(obj instanceof Externalizable))
-									
+									&& (!(obj instanceof Externalizable))									
 									
 									&& !fields[f].isSynthetic()
 									&& fields[f].isAccessible() 
-									&& depth<=9) { //stop recursive depth at this point...
+									&& depth<=8) { //stop recursive depth at this point...
 								
 								if (!seen.contains(obj)) {
 									seen.add(obj);
 									
-									//System.out.println("     "+depth+"  "+obj.getClass().getName());
-								                		//if (depth >4 ) {
+									//if (depth<=2) {
+									//	System.out.println("     "+depth+"  "+obj.getClass().getName()+"  "+name+"  "+topParent.getClass().getName());
+									//}            	
+									//if (depth >4 ) {
 								                		//	logger.info(depth+" "+obj.getClass().getName());
 								                		//}
 								
-								//recursive check for command channels
+								    //recursive check for command channels
 									if (!visitUsedByClass(topName, obj, depth+1, visitor, topParent, targetType, seen)) {
 										return false;
 									}
 								}
 							}
 						}
-					} catch (IllegalArgumentException e) {
-						throw new RuntimeException(e);
-					} catch (IllegalAccessException e) {
-						throw new RuntimeException(e);
-					}                                
+					} catch (Exception e) {
+						//do not stop on exception, must continue scan
+						if (e instanceof UnsupportedOperationException) {							
+						} else {
+							logger.trace("unxpected error while scanning", e);							
+						}
+					}                             
 	   
 	        }
 	        return true;
@@ -164,6 +177,12 @@ public class ChildClassScanner {
 		map.setUTF8Value("[J",1);
 		map.setUTF8Value("[S",1);
 				
+		map.setUTF8Value("io.reactiverse.pgclient.impl.",1); 
+		map.setUTF8Value("[Lio.reactiverse.pgclient.impl.",1);
+		
+		map.setUTF8Value("sun.",1); 
+		map.setUTF8Value("[Lsun.",1);
+		
 		map.setUTF8Value("com.ociweb.pronghorn.stage.",1);
 		map.setUTF8Value("[Lcom.ociweb.pronghorn.stage.",1);
 				
@@ -212,6 +231,8 @@ public class ChildClassScanner {
 	}
 
 	public static boolean visitUsedByClass(String name, Object listener, ChildClassScannerVisitor visitor, Class target) {
+
+				
 		long start = System.nanoTime();
 		boolean result = visitUsedByClass(name, listener, 0, visitor, listener, target, new HashSet<Object>());
 		long duration = System.nanoTime()-start;

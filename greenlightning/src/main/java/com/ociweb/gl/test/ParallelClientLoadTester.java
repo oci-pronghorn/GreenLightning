@@ -271,8 +271,9 @@ public class ParallelClientLoadTester implements GreenApp {
 		clientConfig.setRequestQueueLength(maxInFlight);		
 		clientConfig.setConcurentPipesPerWriter(Math.max(4, parallelTracks*sessionCount));
 		clientConfig.setSocketWriterCount(Math.min(4, sessionCount));
-		
-		int maxExpectedMessageSizeFromServer = 250; //TODO: add support to configure this
+				
+		//fortune size is 1.3 K
+		int maxExpectedMessageSizeFromServer = 2048;//250; //TODO: add support to configure this
 		clientConfig.setMaxResponseSize(maxExpectedMessageSizeFromServer);
 		
 		System.out.println("Test is running with "+(ClientHostPortInstance.getSessionCount()-base)+" total connections");

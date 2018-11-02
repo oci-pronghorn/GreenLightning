@@ -1,13 +1,11 @@
 package com.ociweb.gl.benchmark;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
-import com.ociweb.gl.api.RestListener;
+import com.ociweb.gl.api.RestMethodListener;
 import com.ociweb.gl.api.TickListener;
+import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ObjectPipe;
 import com.ociweb.pronghorn.util.AppendableBuilder;
 import com.ociweb.pronghorn.util.Appendables;
@@ -18,40 +16,52 @@ import io.reactiverse.pgclient.PgIterator;
 import io.reactiverse.pgclient.PgPool;
 import io.reactiverse.pgclient.Row;
 
-public class FortuneRest implements RestListener, TickListener {
+public class FortuneRest implements RestMethodListener, TickListener {
 
-	private HTTPResponseService service;
-	private PgPool pool;
-	
-	//new write must select next free so it knows we are free up to...
-	//new read/release must select next data so it knows we have data up to...
-	
-	//each time we add new one we must notify the output of the new stop position.  -> pub new consume
-	//each time we consume one we must notify the input of the new position.     <- pub new release
-	//objects remain private at all times. NO because new work msut pick object and pass it over..
-	
-	
-	
-	
-	
+	private static final byte[] ROW_FINISH = "</td></tr>\n".getBytes();
+	private static final byte[] ROW_MIDDLE = "\"</td><td>\"".getBytes();
+	private static final byte[] ROW_START = "<tr><td>".getBytes();
+	private final HTTPResponseService service; 
+	private final PgPool pool;
+			
 	//SQL results write to these object, these same objects are used by template
 	private ObjectPipe<FortunesObject> inFlight;
 	
-	public FortuneRest(GreenRuntime runtime, PgPool pool, ObjectPipe<FortunesObject> inFlight) {;
-	    int maxResponseSize = 1<<18;
+	private static final StringTemplateRenderer<FortunesObject> template =		
+			new StringTemplateBuilder<FortunesObject>()
+				   .add("<!DOCTYPE html> <html> <head><title>Fortunes</title></head> <body> <table> <tr><th>id</th><th>message</th></tr>\n")
+			       .add((t,s,i)-> {
+						if (i<s.list().size()) {													
+							t.write(ROW_START);
+							Appendables.appendValue(t, s.list().get(i).getId());
+							t.write(ROW_MIDDLE);							
+							Appendables.appendHTMLEntityEscaped(t, s.list().get(i).getFortune());							
+							t.write(ROW_FINISH);
+							return true;
+						} else {
+							return false;
+						}
+			         })		
+			       .add("</table></body></html>")
+			       .finish();
+
+	
+	public FortuneRest(GreenRuntime runtime, PgPool pool, int pipelineBits, int responseCount, int maxResponseSize) {;
 	    
 		this.pool = pool;	
-		this.service = runtime.newCommandChannel().newHTTPResponseService(128, maxResponseSize); 
-		this.inFlight = inFlight;
+		this.service = runtime.newCommandChannel().newHTTPResponseService(responseCount, maxResponseSize);
+		this.inFlight =  new ObjectPipe<FortunesObject>(pipelineBits, FortunesObject.class,	FortunesObject::new);
+		
 	}
 
-	@Override
+	int x = 0;
 	public boolean restRequest(HTTPRequestReader request) {
-		
-		final FortunesObject target = inFlight.headObject(); //TODO: combined method to TAKE NEXT EMPY...
+	
+		final FortunesObject target = inFlight.headObject(); 
 		if (null!=target) {
 			target.setConnectionId(request.getConnectionId());
 			target.setSequenceId(request.getSequenceCode());
+	
 			target.setStatus(-2);//out for work	
 		
 			pool.preparedQuery( "SELECT id, message FROM fortune", r -> {
@@ -69,74 +79,71 @@ public class FortuneRest implements RestListener, TickListener {
 					} else {
 						System.out.println("fail: "+r.cause().getLocalizedMessage());
 						target.setStatus(500);
-					}									
+					}		
+					
 				});
 			
 			inFlight.moveHeadForward(); //always move to ensure this can be read.  //TODO: remove and combined with above
 			return true;
 		} else {
 			return false;//can not pick up new work now			
-		}
-		
-		
-		//return service.publishHTTPResponse(request, 404);
-	}
-
-	class DemoObject {
-
-		private final int id;
-		private String message;
-		
-		public DemoObject(int id, String message) {
-			this.id = id;
-			this.message = message;
-		}
-		
-		public int getId() {
-			return id;			
-		}
-
-		public String getMessage() {
-			return message;
-		}
-		
+		}		
 	}
 	
-	StringTemplateRenderer<List<DemoObject>> template =		
-			new StringTemplateBuilder<List<DemoObject>>()
-			       .add("<!DOCTYPE html> <html> <head><title>Fortunes</title></head> <body> <table> <tr><th>id</th><th>message</th></tr>\n")
-			       .add((t,s,i)-> {
-						if (i<s.size()) {													
-							Appendables.appendHTMLEntityEscaped(
-								Appendables.appendValue(t, 
-										"<tr><td>", s.get(i).getId(),"</td><td>"), s.get(i).getMessage() ).append("</td></tr>\n");
-							return true;
-						} else {
-							return false;
-						}
-			         })		
-			       .add("</table></body></html>")
-			       .finish();
+
 	
 	@Override
 	public void tickEvent() { //TODO: remove tickEvent here and replace with  pub sub to take next...
 		
-		//  insert our custom fortune
-		List<DemoObject> obj = new ArrayList();
-		
-		//  sort the response
-		
-		//  apply template  (note must have escape support)
-		
-	///	JSONRenderer<T>
-		AppendableBuilder target = new AppendableBuilder(1<<21);
-		template.render(target, obj);
-		
-		
+		FortunesObject temp = inFlight.tailObject();
+		while (isReady(temp)) {			
+			if (consumeResultObject(temp)) {
+				temp = inFlight.tailObject();
+			} else {
+				break;
+			}
+		}		
 	}
 	
+	private boolean isReady(FortunesObject temp) {
+		return null!=temp && temp.getStatus()>=0;
+	}
+
+	//private final StringBuilderWriter htmlBuffer = new StringBuilderWriter();//room for any size response
+	private final AppendableBuilder htmlBuffer = new AppendableBuilder(1<<24); //TODO: need to grow as needed
 	
-	
+	private boolean consumeResultObject(final FortunesObject t) {
+		
+		return service.publishHTTPResponse(t.getConnectionId(), t.getSequenceId(), 200,
+					   HTTPContentTypeDefaults.HTML, 
+					   w-> {
+						   
+						   t.addFortune(0, "Additional fortune added at request time.");
+						   t.sort();
+						   
+						   htmlBuffer.clear();
+						   template.render(htmlBuffer, t);
+						   
+						   //TODO: if the htmlBuffer has more data we must publish continuations as needed...
+						   int pos = 0;
+						   int len = htmlBuffer.copyTo(w,pos);
+						 
+						   
+						   //w.write
+						   //w.append(htmlBuffer); //TODO: what if the output pipe is too small..
+						   
+						 //  w.append("hello");
+						   //  w.remaining() use remaining to only render this much? Need caching component...
+						   //template.render(w, t);
+						   
+						   t.setStatus(-1);
+						   inFlight.moveTailForward();//only move forward when it is consumed.
+						   inFlight.publishTailPosition();
+						   t.list().clear();
+						   
+					   });
+			
+	}
 	
 
 }

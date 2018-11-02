@@ -55,8 +55,10 @@ public class NetResponseWriter extends DataOutputBlobWriter<ServerResponseSchema
 		byte[] revisionBytes = HTTPRevisionDefaults.HTTP_1_1.getBytes();		
 		byte[] etagBytes = null;//TODO: nice feature to add later		
 		int connectionIsClosed = 1&(context>>ServerCoordinator.CLOSE_CONNECTION_SHIFT);
-		
-		HTTPUtil.writeHeader(revisionBytes, statusCode, 0, etagBytes, null!=contentType?contentType.getBytes():null, 
+	
+		byte[] typeBytes = null!=contentType?contentType.getBytes():null;
+				
+		HTTPUtil.writeHeader(revisionBytes, statusCode, 0, etagBytes, typeBytes, 
 					                  length, chunked, true, 
 					                  outputStream, connectionIsClosed, 
 					                  w -> w.write(HTTPHeaderDefaults.DATE, outputStream.headerDate)  );

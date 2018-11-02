@@ -1,5 +1,7 @@
 package com.ociweb.gl.benchmark;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 import com.ociweb.gl.api.GreenApp;
 /**
  * ************************************************************************
@@ -9,11 +11,15 @@ import com.ociweb.gl.api.GreenApp;
  */
 import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.api.HTTPResponseService;
+import com.ociweb.pronghorn.network.ServerSocketReaderStage;
 import com.ociweb.pronghorn.network.ServerSocketWriterStage;
+import com.ociweb.pronghorn.network.http.HTTP1xRouterStage;
 import com.ociweb.pronghorn.pipe.ObjectPipe;
 
 import io.reactiverse.pgclient.PgClient;
 import io.reactiverse.pgclient.PgPoolOptions;
+import io.reactiverse.reactivex.pgclient.PgConnection;
 
 public class FrameworkTest implements GreenApp {
 
@@ -34,7 +40,7 @@ public class FrameworkTest implements GreenApp {
     
 	public static int connectionsPerTrack =   2;
 	public static int connectionPort =        5432;
-	
+	public AtomicBoolean foundDB = new AtomicBoolean(false);
 	public static String connectionHost =     "localhost";
 	public static String connectionDB =       "testdb";
 	public static String connectionUser =     "postgres";
@@ -64,6 +70,7 @@ public class FrameworkTest implements GreenApp {
     		             String dbName,
     		             String dbUser,
     		             String dbPass) {
+    	
     	this.bindPort = port;
     	this.host = host;
     	this.concurrentWritesPerChannel = concurrentWritesPerChannel;
@@ -71,7 +78,7 @@ public class FrameworkTest implements GreenApp {
     	this.minMemoryOfInputPipes = minMemoryOfInputPipes;
     	this.telemetryPort = telemetryPort;
     	this.maxResponseSize = 20_000; //for 500 mult db call in JSON format
-    	this.pipelineBits = 18;
+    	this.pipelineBits = 19;
     	
     	if (!"127.0.0.1".equals(System.getProperty("host",null))) { 
     		    		
@@ -99,7 +106,14 @@ public class FrameworkTest implements GreenApp {
     			.setPassword(connectionPassword)
     			.setCachePreparedStatements(true)
     			.setMaxSize(connectionsPerTrack);
-    
+    	    	
+    	///early check to know if we have a database or not,
+    	///this helps testing to know which tests should be run on different boxes.
+    	PgClient.pool(options).getConnection(a->{
+    		foundDB.set(a.succeeded());
+    		a.result().close();
+    	});
+    	
     }
 
     
@@ -138,25 +152,24 @@ public class FrameworkTest implements GreenApp {
 		        .path("/queries?queries=${queries}")
 			    .routeId(Struct.DB_MULTI_ROUTE_TEXT);
 		
-//		framework.defineRoute()
-//		        .path("/updates?queries=#{queries}")
-//		        .path("/updates")
-//		        .refineInteger("queries", Field.QUERIES, 1)
-//		        .routeId(Struct.UPDATES_ROUTE_INT);
-//
-//		framework.defineRoute()
-//		        .path("/updates=?queries=${queries}")
-//		        .routeId(Struct.UPDATES_ROUTE_TEXT);
-		
-//		framework.defineRoute()
-//		        .path("/fortunes")
-//		        .routeId(Struct.FORTUNES_ROUTE);
+		framework.defineRoute()
+		        .path("/updates?queries=#{queries}")
+		        .path("/updates")
+		        .refineInteger("queries", Field.QUERIES, 1)
+		        .routeId(Struct.UPDATES_ROUTE_INT);
 
+		framework.defineRoute()
+		        .path("/updates?queries=${queries}") 
+		        .routeId(Struct.UPDATES_ROUTE_TEXT);
 		
+		framework.defineRoute()
+		        .path("/fortunes")
+		        .routeId(Struct.FORTUNES_ROUTE);		
 		
 		if (telemetryPort>0) {
 			framework.enableTelemetry(host,telemetryPort);
 		}
+		
 		
 		ServerSocketWriterStage.lowLatency = false; //turn on high volume mode, less concerned about low latency. 
 	
@@ -178,16 +191,21 @@ public class FrameworkTest implements GreenApp {
 		        .includeRoutes(Struct.DB_MULTI_ROUTE_INT, dbRestInstance::multiRestRequest);
 
 		
-//		DBUpdate dbUpdateInstance = new DBUpdate(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
-//		runtime.registerListener("DBUpdate", dbUpdateInstance)
-//		        .includeRoutes(Struct.UPDATES_ROUTE_TEXT, dbUpdateInstance::updateRestRequest)
-//		        .includeRoutes(Struct.UPDATES_ROUTE_INT, dbUpdateInstance::updateRestRequest);
+		DBUpdate dbUpdateInstance = new DBUpdate(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
+		runtime.registerListener("DBUpdate", dbUpdateInstance)
+		        .includeRoutes(Struct.UPDATES_ROUTE_TEXT, dbUpdateInstance::updateRestRequest)
+		        .includeRoutes(Struct.UPDATES_ROUTE_INT,  dbUpdateInstance::updateRestRequest);
 		
+		FortuneRest fortuneInstance = new FortuneRest(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
+		runtime.registerListener("Fortune", fortuneInstance)
+		        .includeRoutes(Struct.FORTUNES_ROUTE, fortuneInstance::restRequest);	
 		
-//		int pipelineBits = 15; 
-//		ObjectPipe<FortunesObject> fortunesCollector = new ObjectPipe<FortunesObject>(pipelineBits, FortunesObject.class,	FortunesObject::new);
-//		runtime.registerListener("Fortune", new FortuneRest(runtime, PgClient.pool(options), fortunesCollector)).includeRoutes(Struct.FORTUNES_ROUTE);
-				      
+		//NOTE: catch all unknown routes to 404...  TODO: was built in but...
+//  		HTTPResponseService service = runtime.newCommandChannel().newHTTPResponseService(maxResponseCount, maxResponseSize);
+//		runtime.addRestListener(r->{
+//					return service.publishHTTPResponse(r, 404);
+//				}).includeAllRoutes();
+		
 		
 	}
 	 

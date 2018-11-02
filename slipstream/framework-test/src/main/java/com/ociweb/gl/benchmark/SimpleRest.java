@@ -15,15 +15,7 @@ public class SimpleRest implements RestMethodListener {
 	private static final int MAX_MESSAGE_SIZE = 1<<9;
 
 	private final HTTPResponseService responseService;
-
-	//a lambda could be used if you like
-	private Writable writePayload = new Writable() {
-		@Override
-		public void write(ChannelWriter writer) {
-			writer.write(FrameworkTest.payload);
-		}		
-	};
-		
+	
 	public SimpleRest(GreenRuntime runtime) {
 		responseService = runtime.newCommandChannel().newHTTPResponseService(QUEUE_LENGTH, MAX_MESSAGE_SIZE);		
 	}
@@ -54,7 +46,7 @@ public class SimpleRest implements RestMethodListener {
 	
 		return responseService.publishHTTPResponse(request, 	
 					HTTPContentTypeDefaults.PLAIN,
-					writePayload
+					w -> w.write(FrameworkTest.payload)
 				);
 		
 	}

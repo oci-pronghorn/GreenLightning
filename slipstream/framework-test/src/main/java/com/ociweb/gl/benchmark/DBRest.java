@@ -35,9 +35,7 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 	private int randomValue() {
 		return 1+localRandom.nextInt(10000);
 	}		
-	
-	AtomicInteger totalCountInFlight = new AtomicInteger(0);//patch needed until we add better access methods to the ObjectPipe.
-	
+
 	public boolean multiRestRequest(HTTPRequestReader request) { 
 
 		final int queries;
@@ -48,12 +46,11 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 		}
 		
 	
-		if (inFlight.hasRoomFor(queries) &&  totalCountInFlight.get()==inFlight.count()) {
+		if (inFlight.hasRoomFor(queries)) {
 			
 			
 			int q = queries;
 			while (--q >= 0) {
-				    totalCountInFlight.incrementAndGet();
 				
 					final ResultObject target = inFlight.headObject();
 					
@@ -78,7 +75,7 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 								
 							} else {
 								System.out.println("fail: "+r.cause().getLocalizedMessage());
-								target.setStatus(500); //TODO: need to do something with this.
+								target.setStatus(500); 
 							}				
 						});	
 								
@@ -192,12 +189,14 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 					   singleTemplate.render(w, t);
 					   t.setStatus(-1);
 					   inFlight.moveTailForward();//only move forward when it is consumed.
-					   totalCountInFlight.decrementAndGet();
+					   inFlight.publishTailPosition();
+
 				   });					
 		} else {
 			//collect all the objects
 			assert(isValidToAdd(t, collector));
 			collector.add(t);					
+			inFlight.moveTailForward();
 			if (collector.size() == t.getGroupSize()) {
 				//now ready to send, we have all the data						
 				ok =publishMultiResponse(t.getConnectionId(), t.getSequenceId());
@@ -205,7 +204,6 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 			} else {
 				ok = true;//added to list
 			}	
-			inFlight.moveTailForward();
 			//moved forward so we can read next but write logic will still be blocked by state not -1			 
 			
 		}
@@ -240,9 +238,10 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 					    						   assert(collector.get(c).getConnectionId() == conId) : c+" expected conId "+conId+" error: "+showCollection(collector);
 					    						   assert(collector.get(c).getSequenceId() == seqCode) : c+" sequence error: "+showCollection(collector);    						   
 					    						   collector.get(c).setStatus(-1);
-					    						   totalCountInFlight.decrementAndGet();
+					    						 
 					    					   }
 					    					   collector.clear();					    					   
+					    					   inFlight.publishTailPosition();
 					    				   });
 		collectionPending = !result;
 		return result;

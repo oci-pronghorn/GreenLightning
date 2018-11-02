@@ -62,6 +62,7 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
     
     @Override
     public HTTPClientConfig setMaxResponseSize(int value) {
+    	//System.out.println("response size: "+value);
     	this.pcm.ensureSize(NetResponseSchema.class, 4, value);
     	return this;
     }

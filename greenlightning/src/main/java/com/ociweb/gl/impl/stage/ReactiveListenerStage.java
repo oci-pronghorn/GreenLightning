@@ -678,10 +678,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	
     };
     
-    private int consumeRequestMask;
-    private int[] consumeRequestSequence;
-    private long[] consumeRequestConnection;
-    
     @Override
     public void startup() {              
     	
@@ -690,10 +686,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	consumer = new ReactiveManagerPipeConsumer(listener, builder.operators, inputPipes);
     	    	
     	if (listener instanceof RestMethodListenerBase) {
-    		
-    		consumeRequestMask = (1<<builder.getHTTPServerConfig().getMaxConnectionBits())-1;
-    		consumeRequestSequence = new int[1<<builder.getHTTPServerConfig().getMaxConnectionBits()];
-    		consumeRequestConnection = new long[consumeRequestSequence.length];
+ 
     		if (!restRoutesDefined) {
     			throw new UnsupportedOperationException("a RestListener requires a call to includeRoutes() first to define which routes it consumes.");
     		}
@@ -839,42 +832,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		}
     }
 
-    private void clearNextInSequence(long chnl, int seq) {
-    	assert(consumeRequestConnection[(int)(chnl&consumeRequestMask)]==chnl) : "internal error";    	
-    	consumeRequestSequence[(int)(chnl&consumeRequestMask)]=seq;
-    }
-    
-	private boolean isNextInSequence(Pipe<HTTPRequestSchema> p) {
-
-		if (Pipe.peekMsg(p, HTTPRequestSchema.MSG_RESTREQUEST_300)) {
-			long chnl = Pipe.peekLong(p, HTTPRequestSchema.MSG_RESTREQUEST_300_FIELD_CHANNELID_21);
-			int seq  = Pipe.peekInt(p, HTTPRequestSchema.MSG_RESTREQUEST_300_FIELD_SEQUENCE_26);
-			
-			int idxPos = (int)(chnl&consumeRequestMask);
-			
-			if (seq==0) {
-				//starting fresh, wipe out old connection
-				consumeRequestSequence[idxPos] = 0;
-				consumeRequestConnection[idxPos] = chnl;
-			} else {
-				if (consumeRequestConnection[idxPos] == chnl) {
-					//connection is still live is the the right index
-					return (consumeRequestSequence[idxPos]==(seq-1));
-				} else {
-					//this is an old discontinued connection so we should drop it
-					Pipe.skipNextFragment(p);
-					return Pipe.hasContentToRead(p);					
-				}
-			}
-		}
-		return true;
-	}
-	
-	
 	
     final void consumeRestRequest(Object listener, Pipe<HTTPRequestSchema> p) {
 		
-    	  while (Pipe.hasContentToRead(p) && isNextInSequence(p)) {                
+    	  while (Pipe.hasContentToRead(p)) {                
              
     		  Pipe.markTail(p);             
               int msgIdx = Pipe.takeMsgIdx(p);
@@ -908,7 +869,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	    	  
     	    	  //all these values are required in order to ensure the right sequence order once processed.
     	    	  long sequenceCode = (((long)(parallelIdx|(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context))  )<<32) | ((long)sequenceNo);
-    	    	  
     	    	  reader.setConnectionId(connectionId, sequenceCode);
     	    	  
     	    	  //assign verbs as strings...
@@ -932,7 +892,6 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			              }
     	    		  }
     	    	  }
-    	    	  clearNextInSequence(connectionId, sequenceNo);
     	      } else {
     	    	  logger.error("unrecognized message on {} ",p);
     	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);

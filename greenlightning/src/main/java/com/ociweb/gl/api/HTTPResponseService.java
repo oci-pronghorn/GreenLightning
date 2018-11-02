@@ -22,12 +22,18 @@ public class HTTPResponseService {
 	private final MsgCommandChannel<?> msgCommandChannel;
 	public static final byte[] SERVER_HEADER_NAME = "GreenLightning".getBytes();
 	private static final int minHeader = 128;
+	private transient SequenceValidator validator; //will be null unless assertions are on.
 	
+	private boolean setupValidator() {
+		validator = new SequenceValidator();
+		return true;
+	}
 	
 	public HTTPResponseService(MsgCommandChannel<?> msgCommandChannel) {
 		this.msgCommandChannel = msgCommandChannel;
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, 1, minHeader);
+		assert(setupValidator());
 	}
 
 	/**
@@ -42,6 +48,7 @@ public class HTTPResponseService {
 		MsgCommandChannel.growCommandCountRoom(msgCommandChannel, queueLength);
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER; 		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, queueLength, Math.max(minHeader, maxMessageSize));
+		assert(setupValidator());
 	}
 
 	/**
@@ -150,6 +157,7 @@ public class HTTPResponseService {
 		
 		assert(1==msgCommandChannel.lastResponseWriterFinished) : "Previous write was not ended can not start another.";
 			
+		assert(null != msgCommandChannel.netResponse) : "no target pipe for response at time of write.";
 		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[trackIdx] : msgCommandChannel.netResponse[0];
 		
 		//logger.info("try new publishHTTPResponse "+pipe);
@@ -206,9 +214,7 @@ public class HTTPResponseService {
 			// for chunking we must end this block			
 			outputStream.write(MsgCommandChannel.RETURN_NEWLINE);
 		}
-		
-		assert(isValidContent(contentType,outputStream)) : "content type is not matching payload";
-		
+
 		outputStream.publishWithHeader(
 				msgCommandChannel.data.block1HeaderBlobPosition, 
 				msgCommandChannel.data.block1PositionOfLen); //closeLowLevelField and publish 
@@ -217,27 +223,6 @@ public class HTTPResponseService {
 				
 	}
 
-	private boolean isValidContent(HTTPContentType contentType, NetResponseWriter outputStream) {
-		StringBuilder target = new StringBuilder();
-		
-		if (HTTPContentTypeDefaults.JSON == contentType ||
-			HTTPContentTypeDefaults.TXT == contentType) {		
-			//simple check to make sure JSON starts with text not the length
-			outputStream.debugAsUTF8(target);
-			if (target.length()>0) {
-				if (target.charAt(0)<32) {
-					return false;
-				}
-				if (target.length()>1) {
-					if (target.charAt(1)<32) {
-						return false;
-					}	
-				}
-			}
-		}
-		
-		return true;
-	}
 
 	/**
 	 *
@@ -258,9 +243,6 @@ public class HTTPResponseService {
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
 				200, false, null, contentType, writable);
 	}
-	
-	
-	SequenceValidator validator = new SequenceValidator();
 	
 	/**
 	 *

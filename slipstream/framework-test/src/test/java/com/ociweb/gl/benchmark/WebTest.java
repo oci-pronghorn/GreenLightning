@@ -20,7 +20,8 @@ public class WebTest {
 	final static int timeoutMS = 600_000;
 	final static int totalCalls = 1_000_000;
 	
-	static GreenRuntime runtime;
+	private static FrameworkTest app;
+	private static GreenRuntime runtime;
 	
 	static int port = (int) (3000 + (System.nanoTime()%12000));
 	static String host = "127.0.0.1";
@@ -36,7 +37,8 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		runtime = GreenRuntime.run(new FrameworkTest("127.0.0.1", port, 2, 128, 1<<14, -1, null, null, null, null));
+		app = new FrameworkTest("127.0.0.1", port, 2, 128, 1<<14, -1, null, null, null, null);
+		runtime = GreenRuntime.run(app);
 		
 		
 	}
@@ -50,7 +52,7 @@ public class WebTest {
 	}
 
 	@Test
-	public void plaintext1024Test() {
+	public void plaintextTest() {
 				
 			    //ServerSocketWriterStage.showWrites = true;
 		
@@ -74,54 +76,9 @@ public class WebTest {
 				
 	}
 
-//	//@Ignore //reduce memory on build server
-//	public void plaintext4096Test() {
-//		
-//				int inFlightBits = 8; 
-//				int tracks = 16;
-//				int callsPerTrack = totalCalls/tracks; 
-//				boolean testTelemetry = false;
-//		
-//				StringBuilder uploadConsoleCapture = new StringBuilder();
-//				LoadTester.runClient(
-//						null,
-//						(i,r) -> r.statusCode()==200 , 
-//						"/plaintext", 
-//						useTLS, testTelemetry, 
-//						tracks, callsPerTrack, 
-//						host, port, timeoutMS, inFlightBits,
-//						MsgRuntime.getGraphManager(runtime),						
-//						Appendables.join(uploadConsoleCapture,System.out));	
-//				
-//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-//				
-//	}
-
-	
-//	//@Ignore //reduce memory on build server
-//	public void plaintext16KTest() {
-//				int inFlightBits = 8; //64 * 256 tracks is 16K
-//				int tracks = 64;
-//				int callsPerTrack = totalCalls/tracks; 
-//				boolean testTelemetry = false;
-//		
-//				StringBuilder uploadConsoleCapture = new StringBuilder();
-//				LoadTester.runClient(
-//						null,
-//						(i,r) -> r.statusCode()==200, 
-//						"/plaintext", 
-//						useTLS, testTelemetry, 
-//						tracks, callsPerTrack, 
-//						host, port, timeoutMS, inFlightBits,
-//						MsgRuntime.getGraphManager(runtime),						
-//						Appendables.join(uploadConsoleCapture,System.out));	
-//				
-//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-//				
-//	}
 	
 	@Test
-	public void json1024Test() {
+	public void jsonTest() {
 				
 				int inFlightBits = 8;
 				int tracks = 4;
@@ -143,52 +100,62 @@ public class WebTest {
 				
 	}
 	
-//	//@Ignore //reduce memory on build server
-//	public void json4096Test() {
-//				
-//				int inFlightBits = 8; 
-//				int tracks = 16;
-//				int callsPerTrack = totalCalls/tracks; 
-//				boolean testTelemetry = false;
-//		
-//				StringBuilder uploadConsoleCapture = new StringBuilder();
-//				LoadTester.runClient(
-//						null,
-//						(i,r) -> r.statusCode()==200 , 
-//						"/json", 
-//						useTLS, testTelemetry, 
-//						tracks, callsPerTrack, 
-//						host, port, timeoutMS, inFlightBits,
-//						MsgRuntime.getGraphManager(runtime),						
-//						Appendables.join(uploadConsoleCapture,System.out));	
-//				
-//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-//				
-//	}
+	
+	@Test
+	public void queryTest() {		
+		if (app.foundDB.get()) {			
+				int totalCalls = 2_000;
+				int inFlightBits = 8;
+				int tracks = 4;
+				int callsPerTrack = totalCalls/tracks; 
+				boolean testTelemetry = false;
+		
+				StringBuilder uploadConsoleCapture = new StringBuilder();
+				LoadTester.runClient(
+						null,
+						(i,r) -> r.statusCode()==200, 
+						"/queries?queries=40", 
+						useTLS, testTelemetry, 
+						tracks, callsPerTrack, 
+						host, port, timeoutMS, inFlightBits,
+						MsgRuntime.getGraphManager(runtime),						
+						Appendables.join(uploadConsoleCapture,System.out));	
+				
+				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+		} else {
+			System.out.println("DB testing skipped. No DB");
+			assertTrue(true);//no DB to test with
+		}
+	}
 	
 	
-//	@Ignore //reduce memory on build server
-//	public void json16kTest() {
-//				
-//				int inFlightBits = 9;// 16K
-//				int tracks = 32;
-//				int callsPerTrack = totalCalls/tracks; 
-//				boolean testTelemetry = false;
-//		
-//				StringBuilder uploadConsoleCapture = new StringBuilder();
-//				LoadTester.runClient(
-//						null,
-//						(i,r) -> r.statusCode()==200 , 
-//						"/json", 
-//						useTLS, testTelemetry, 
-//						tracks, callsPerTrack, 
-//						host, port, timeoutMS, inFlightBits,
-//						MsgRuntime.getGraphManager(runtime),						
-//						Appendables.join(uploadConsoleCapture,System.out));	
-//				
-//				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-//				
-//	}
+	@Test
+	public void updatesTest() {
+		if (app.foundDB.get()) {
+	
+				int totalCalls = 2_000;
+				int inFlightBits = 8;
+				int tracks = 4;
+				int callsPerTrack = totalCalls/tracks; 
+				boolean testTelemetry = false;
+		
+				StringBuilder uploadConsoleCapture = new StringBuilder();
+				LoadTester.runClient(
+						null,
+						(i,r) -> r.statusCode()==200, 
+						"/updates?queries=40", 
+						useTLS, testTelemetry, 
+						tracks, callsPerTrack, 
+						host, port, timeoutMS, inFlightBits,
+						MsgRuntime.getGraphManager(runtime),						
+						Appendables.join(uploadConsoleCapture,System.out));	
+				
+				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+		} else {
+				System.out.println("DB testing skipped. No DB");
+				assertTrue(true);//no DB to test with
+		}
+	}
 	
     
 }
