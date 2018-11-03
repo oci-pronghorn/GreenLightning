@@ -47,6 +47,9 @@ public class FrameworkTest implements GreenApp {
 	public static String connectionPassword = "postgres";
 			    
     public FrameworkTest() {
+    	// use this in commit messages to narrow travis testing to just this project
+    	// [ci fw-only Java/greenlightning]
+    	
     	//this server works best with  -XX:+UseNUMA    	
     	this(System.getProperty("host","0.0.0.0"), 
     		 8080,    //default port for test 

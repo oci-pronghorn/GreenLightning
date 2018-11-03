@@ -354,18 +354,20 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 			   Pipe<ServerResponseSchema>[] netResponse = null;
 			   if ((this.initFeatures & NET_RESPONDER) != 0) {
 		
-				   //int parallelInstanceId = hardware.ac
+				   //NOTE: it is critical that all the netResponse pipes use exactly the same config to ensure
+				   //      we know exactly how large the maxVarLen is regardless of which pipe we choose.
+				   final PipeConfig<ServerResponseSchema> commonConfig = pcm.getConfig(ServerResponseSchema.class);
 				   if (-1 == parallelInstanceId) {
 					   //we have only a single instance of this object so we must have 1 pipe for each parallel track
 					   int p = builder.parallelTracks();
 					   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[p];
 					   while (--p>=0) {
-						   netResponse[p] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), p);
+						netResponse[p] = builder.newNetResponsePipe(commonConfig, p);
 					   }
 				   } else {
 					   //we have multiple instances of this object so each only has 1 pipe
 					   netResponse = ( Pipe<ServerResponseSchema>[])new Pipe[1];
-					   netResponse[0] = builder.newNetResponsePipe(pcm.getConfig(ServerResponseSchema.class), parallelInstanceId);
+					   netResponse[0] = builder.newNetResponsePipe(commonConfig, parallelInstanceId);
 				   }
 				   assert(null!=netResponse) : "internal build error";
 				   assert(netResponse.length>0) : "net response array is zero";

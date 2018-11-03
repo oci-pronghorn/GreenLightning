@@ -51,18 +51,7 @@ public class HTTPResponseService {
 		assert(setupValidator());
 	}
 
-	/**
-	 *
-	 * @param messageCount int arg for number of messages
-	 * @return has room for
-	 */
-	public boolean hasRoomFor(int messageCount) {
-		return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
-		FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
-		
-	    //NOTE: warning this is not checking the response pipe and it cant.. so we must ensure pipes are created the right size...	
-		
-	}
+
 
 	/**
 	 *
@@ -438,5 +427,50 @@ public class HTTPResponseService {
 		} finally {
 		    assert(msgCommandChannel.exitBlockOk()) : "Concurrent usage error, ensure this never called concurrently";      
 		}
+	}
+
+	/**
+	 *
+	 * @param messageCount int arg for number of messages
+	 * @return has room for
+	 */
+	public boolean hasRoomFor(int messageCount) {
+		
+		boolean goHasRoom = null==msgCommandChannel.goPipe 
+				|| Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
+						FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
+		
+		if (goHasRoom) {
+			//since we do not know the exact publication we must check 
+			//all of them and ensure they each have room.
+			int i = msgCommandChannel.netResponse.length;
+			while (--i >= 0) {
+				Pipe<ServerResponseSchema> dataPipe = msgCommandChannel.netResponse[i];
+				if (!Pipe.hasRoomForWrite(dataPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(dataPipe))*messageCount)) {
+					return false;
+				}		
+			}
+			return goHasRoom;
+		} else {
+			return false;//go had no room so we stopped early
+		}
+		
+	}
+	
+	
+	public int maxVarLength() {
+		//NOTE: we know that all msgCommandChannel.netResponse pipes used the same config so we can just pick the first
+		assert(allSameConfig(msgCommandChannel.netResponse)) : "all the configs should have been the same";	
+		return msgCommandChannel.netResponse[0].maxVarLen;
+	}
+
+	private boolean allSameConfig(Pipe<ServerResponseSchema>[] pipes) {
+		int i = pipes.length;
+		while (--i>=0) {
+			if (pipes[i].config() != pipes[0].config()) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

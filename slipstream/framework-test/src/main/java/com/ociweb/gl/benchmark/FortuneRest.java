@@ -19,7 +19,7 @@ import io.reactiverse.pgclient.Row;
 public class FortuneRest implements RestMethodListener, TickListener {
 
 	private static final byte[] ROW_FINISH = "</td></tr>\n".getBytes();
-	private static final byte[] ROW_MIDDLE = "\"</td><td>\"".getBytes();
+	private static final byte[] ROW_MIDDLE = "</td><td>".getBytes();
 	private static final byte[] ROW_START = "<tr><td>".getBytes();
 	private final HTTPResponseService service; 
 	private final PgPool pool;
@@ -109,40 +109,64 @@ public class FortuneRest implements RestMethodListener, TickListener {
 		return null!=temp && temp.getStatus()>=0;
 	}
 
-	//private final StringBuilderWriter htmlBuffer = new StringBuilderWriter();//room for any size response
-	private final AppendableBuilder htmlBuffer = new AppendableBuilder(1<<24); //TODO: need to grow as needed
+	private int htmlPos=0;
+	private final AppendableBuilder htmlBuffer = new AppendableBuilder();
+	
 	
 	private boolean consumeResultObject(final FortunesObject t) {
+					
+		if (0 == htmlBuffer.byteLength()) {
+			//capture all the output text
+			t.addFortune(0, "Additional fortune added at request time.");
+			t.sort();
+			template.render(htmlBuffer, t);
+			htmlPos = 0;
+		}
 		
-		return service.publishHTTPResponse(t.getConnectionId(), t.getSequenceId(), 200,
-					   HTTPContentTypeDefaults.HTML, 
-					   w-> {
-						   
-						   t.addFortune(0, "Additional fortune added at request time.");
-						   t.sort();
-						   
-						   htmlBuffer.clear();
-						   template.render(htmlBuffer, t);
-						   
-						   //TODO: if the htmlBuffer has more data we must publish continuations as needed...
-						   int pos = 0;
-						   int len = htmlBuffer.copyTo(w,pos);
-						 
-						   
-						   //w.write
-						   //w.append(htmlBuffer); //TODO: what if the output pipe is too small..
-						   
-						 //  w.append("hello");
-						   //  w.remaining() use remaining to only render this much? Need caching component...
-						   //template.render(w, t);
-						   
-						   t.setStatus(-1);
-						   inFlight.moveTailForward();//only move forward when it is consumed.
-						   inFlight.publishTailPosition();
-						   t.list().clear();
-						   
-					   });
+		
+		int bytesRemaining = htmlBuffer.byteLength() - htmlPos;
+		int roomForWrite = service.maxVarLength();
+		boolean hasContinuation  = bytesRemaining >roomForWrite;
+		
+		//as long as htmlPos does not match the total bytes of the payload keep 
+		//sending out continuation chunks. We do not know how many rows of fortunes
+		//may be in the database.
+		boolean ok;
+		if (0 == htmlPos) {	
 			
+			ok = service.publishHTTPResponse(t.getConnectionId(), t.getSequenceId(), 200, hasContinuation,
+						   HTTPContentTypeDefaults.HTML, 
+						   w-> {
+							   htmlPos = htmlBuffer.copyTo(w, htmlPos);								   
+							   assert(hasContinuation == (htmlPos!=htmlBuffer.byteLength())) : "internal error";
+							   
+						   });
+		} else {		
+			ok =service.publishHTTPResponseContinuation(t.getConnectionId(), t.getSequenceId(), hasContinuation,  
+							w-> {
+								htmlPos = htmlBuffer.copyTo(w,htmlPos);	
+								assert(hasContinuation == (htmlPos!=htmlBuffer.byteLength())) : "internal error";
+								
+							});
+		}
+		
+		if (ok) {
+			if (htmlPos == htmlBuffer.byteLength()) {
+				
+				t.setStatus(-1);
+				inFlight.moveTailForward();//only move forward when it is consumed.
+				inFlight.publishTailPosition();
+				t.list().clear();
+				htmlBuffer.clear();
+				return true;//do consume this since it is now fully sent
+			} else {
+				assert(htmlPos < htmlBuffer.byteLength()) : "internal error";			
+				return false;//still have more to send later
+			}	
+		} else {
+			return false;
+		}		
+		
 	}
 	
 
