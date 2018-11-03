@@ -78,7 +78,7 @@ public class NamedMessagePassingTest {
 		//GraphManager.showThreadIdOnTelemetry = true;
 		//GraphManager.showScheduledRateOnTelemetry = true;
 		
-		boolean telemetry = true;
+		boolean telemetry = false;
 		//ust not be true when checked in.
 		long cycleRate = 6_000; //larger rate should be used with greater volume..
 
