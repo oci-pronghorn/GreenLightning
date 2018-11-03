@@ -14,7 +14,7 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 
 
-public class DBWebTest {
+public class WebTest {
 	
 	final static boolean useTLS = false;
 	final static int timeoutMS = 600_000;
@@ -27,7 +27,7 @@ public class DBWebTest {
 	static String host = "127.0.0.1";
 	
 	
-	static int telemetryPort = 8087;
+	static int telemetryPort = 8097;
 	static boolean telemetry = false;
 
 	
@@ -51,13 +51,62 @@ public class DBWebTest {
 		}
 	}
 
+	@Test
+	public void plaintextTest() {
+			
+			    //ServerSocketWriterStage.showWrites = true;
+		
+				int inFlightBits = 8; 
+				int tracks = 2;
+				int callsPerTrack = totalCalls/tracks; 
+				boolean testTelemetry = false;
+		
+				StringBuilder uploadConsoleCapture = new StringBuilder();
+				LoadTester.runClient(
+						null,
+						(i,r) -> r.statusCode()==200 , 
+						"/plaintext", 
+						useTLS, testTelemetry, 
+						tracks, callsPerTrack, 
+						host, port, timeoutMS, inFlightBits,
+						MsgRuntime.getGraphManager(runtime),						
+						Appendables.join(uploadConsoleCapture,System.out));	
+				
+				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+
+	}
+
+	
+	@Test
+	public void jsonTest() {
+		
+				int inFlightBits = 8;
+				int tracks = 2;
+				int callsPerTrack = totalCalls/tracks; 
+				boolean testTelemetry = false;
+		
+				StringBuilder uploadConsoleCapture = new StringBuilder();
+				LoadTester.runClient(
+						null,
+						(i,r) -> r.statusCode()==200 , 
+						"/json", 
+						useTLS, testTelemetry, 
+						tracks, callsPerTrack, 
+						host, port, timeoutMS, inFlightBits,
+						MsgRuntime.getGraphManager(runtime),						
+						Appendables.join(uploadConsoleCapture,System.out));	
+				
+				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+		
+	}
+	
 	
 	@Test
 	public void queryTest() {		
 		if (app.foundDB.get()) {			
 				int totalCalls = 2_000;
 				int inFlightBits = 8;
-				int tracks = 4;
+				int tracks = 2;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -85,7 +134,7 @@ public class DBWebTest {
 		if (app.foundDB.get()) {
 	
 				int inFlightBits = 8;
-				int tracks = 4;
+				int tracks = 2;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -113,7 +162,7 @@ public class DBWebTest {
 	
 				int totalCalls = 2_000;
 				int inFlightBits = 8;
-				int tracks = 4;
+				int tracks = 2;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -133,7 +182,9 @@ public class DBWebTest {
 				System.out.println("DB testing skipped. No DB");
 				assertTrue(true);//no DB to test with
 		}
-	}
+	}	
+	
+	
 	
     
 }
