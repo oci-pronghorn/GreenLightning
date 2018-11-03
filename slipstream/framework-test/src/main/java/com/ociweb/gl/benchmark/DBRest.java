@@ -3,7 +3,6 @@ package com.ociweb.gl.benchmark;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
@@ -15,22 +14,31 @@ import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ObjectPipe;
 
-import io.reactiverse.pgclient.PgConnection;
+import io.reactiverse.pgclient.PgClient;
 import io.reactiverse.pgclient.PgIterator;
 import io.reactiverse.pgclient.PgPool;
+import io.reactiverse.pgclient.PgPoolOptions;
 import io.reactiverse.pgclient.Tuple;
 
 public class DBRest implements RestMethodListener, PubSubMethodListener, TickListener {
 
-	private final PgPool pool;
+	private final PgPoolOptions options;
+	private PgPool pool;
 	private final ThreadLocalRandom localRandom = ThreadLocalRandom.current();
 	private final ObjectPipe<ResultObject> inFlight;
 		
-	public DBRest(GreenRuntime runtime, PgPool pool, int pipelineBits, int maxResponseCount, int maxResponseSize) {
-		this.pool = pool;		
+	public DBRest(GreenRuntime runtime, PgPoolOptions options, int pipelineBits, int maxResponseCount, int maxResponseSize) {
+		this.options = options;	
 		this.inFlight = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
 		this.service = runtime.newCommandChannel().newHTTPResponseService(maxResponseCount, maxResponseSize);
 	}		
+	
+	private PgPool pool() {
+		if (null==pool) {
+			pool = PgClient.pool(options);
+		}
+		return pool;
+	}
 	
 	private int randomValue() {
 		return 1+localRandom.nextInt(10000);
@@ -63,7 +71,7 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 					target.setStatus(-2);//out for work	
 					target.setGroupSize(queries);
 				
-					pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
+					pool().preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
 							if (r.succeeded()) {
 								
 								PgIterator resultSet = r.result().iterator();
@@ -102,7 +110,7 @@ public class DBRest implements RestMethodListener, PubSubMethodListener, TickLis
 			target.setStatus(-2);//out for work	
 			target.setGroupSize(0);//do not put in a list so mark as 0.
 		
-			pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
+			pool().preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(randomValue()), r -> {
 					if (r.succeeded()) {
 						
 						PgIterator resultSet = r.result().iterator();

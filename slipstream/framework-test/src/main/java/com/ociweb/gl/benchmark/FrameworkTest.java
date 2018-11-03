@@ -192,19 +192,19 @@ public class FrameworkTest implements GreenApp {
 		       .includeRoutes(Struct.JSON_ROUTE, restTest::jsonRestRequest);
 		 
 
-		DBRest dbRestInstance = new DBRest(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
+		DBRest dbRestInstance = new DBRest(runtime, options, pipelineBits, maxResponseCount, maxResponseSize);
 		runtime.registerListener("DBRest", dbRestInstance)
 				.includeRoutes(Struct.DB_SINGLE_ROUTE, dbRestInstance::singleRestRequest)
 				.includeRoutes(Struct.DB_MULTI_ROUTE_TEXT, dbRestInstance::multiRestRequest)		
 		        .includeRoutes(Struct.DB_MULTI_ROUTE_INT, dbRestInstance::multiRestRequest);
 
 		
-		DBUpdate dbUpdateInstance = new DBUpdate(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
+		DBUpdate dbUpdateInstance = new DBUpdate(runtime, options, pipelineBits, maxResponseCount, maxResponseSize);
 		runtime.registerListener("DBUpdate", dbUpdateInstance)
 		        .includeRoutes(Struct.UPDATES_ROUTE_TEXT, dbUpdateInstance::updateRestRequest)
 		        .includeRoutes(Struct.UPDATES_ROUTE_INT,  dbUpdateInstance::updateRestRequest);
 		
-		FortuneRest fortuneInstance = new FortuneRest(runtime, PgClient.pool(options), pipelineBits, maxResponseCount, maxResponseSize);
+		FortuneRest fortuneInstance = new FortuneRest(runtime, options, pipelineBits, maxResponseCount, maxResponseSize);
 		runtime.registerListener("Fortune", fortuneInstance)
 		        .includeRoutes(Struct.FORTUNES_ROUTE, fortuneInstance::restRequest);	
 		

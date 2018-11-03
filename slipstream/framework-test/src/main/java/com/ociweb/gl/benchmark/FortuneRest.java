@@ -12,8 +12,10 @@ import com.ociweb.pronghorn.util.Appendables;
 import com.ociweb.pronghorn.util.template.StringTemplateBuilder;
 import com.ociweb.pronghorn.util.template.StringTemplateRenderer;
 
+import io.reactiverse.pgclient.PgClient;
 import io.reactiverse.pgclient.PgIterator;
 import io.reactiverse.pgclient.PgPool;
+import io.reactiverse.pgclient.PgPoolOptions;
 import io.reactiverse.pgclient.Row;
 
 public class FortuneRest implements RestMethodListener, TickListener {
@@ -22,7 +24,9 @@ public class FortuneRest implements RestMethodListener, TickListener {
 	private static final byte[] ROW_MIDDLE = "</td><td>".getBytes();
 	private static final byte[] ROW_START = "<tr><td>".getBytes();
 	private final HTTPResponseService service; 
-	private final PgPool pool;
+	
+	private final PgPoolOptions options;
+	private PgPool pool;
 			
 	//SQL results write to these object, these same objects are used by template
 	private ObjectPipe<FortunesObject> inFlight;
@@ -46,15 +50,22 @@ public class FortuneRest implements RestMethodListener, TickListener {
 			       .finish();
 
 	
-	public FortuneRest(GreenRuntime runtime, PgPool pool, int pipelineBits, int responseCount, int maxResponseSize) {;
+	public FortuneRest(GreenRuntime runtime, PgPoolOptions options, int pipelineBits, int responseCount, int maxResponseSize) {;
 	    
-		this.pool = pool;	
+		this.options = options;	
 		this.service = runtime.newCommandChannel().newHTTPResponseService(responseCount, maxResponseSize);
 		this.inFlight =  new ObjectPipe<FortunesObject>(pipelineBits, FortunesObject.class,	FortunesObject::new);
 		
 	}
+	
+	
+	private PgPool pool() {
+		if (null==pool) {
+			pool = PgClient.pool(options);
+		}
+		return pool;
+	}
 
-	int x = 0;
 	public boolean restRequest(HTTPRequestReader request) {
 	
 		final FortunesObject target = inFlight.headObject(); 
@@ -65,7 +76,7 @@ public class FortuneRest implements RestMethodListener, TickListener {
 			target.setStatus(-2);//out for work	
 			target.clear();
 		
-			pool.preparedQuery( "SELECT id, message FROM fortune", r -> {
+			pool().preparedQuery( "SELECT id, message FROM fortune", r -> {
 				    //NOTE: we want to do as little work here a s possible since
 				    //      we want this thread to get back to work on other calls.
 					if (r.succeeded()) {

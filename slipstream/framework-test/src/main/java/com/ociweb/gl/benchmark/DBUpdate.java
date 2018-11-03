@@ -13,14 +13,18 @@ import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ObjectPipe;
 
+import io.reactiverse.pgclient.PgClient;
 import io.reactiverse.pgclient.PgIterator;
 import io.reactiverse.pgclient.PgPool;
+import io.reactiverse.pgclient.PgPoolOptions;
 import io.reactiverse.pgclient.Tuple;
 
 public class DBUpdate implements RestMethodListener, TickListener {
 
 
-	private final PgPool pool;
+	private final PgPoolOptions options;
+	private PgPool pool;
+	
 	private final HTTPResponseService service;
 	private ObjectPipe<ResultObject> inFlight;	
 	private boolean collectionPending = false;	
@@ -34,12 +38,19 @@ public class DBUpdate implements RestMethodListener, TickListener {
 					.integer("randomNumber", o -> o.getResult())
 		          .endObject();
 	
-	public DBUpdate(GreenRuntime runtime, PgPool pool, int pipelineBits, int maxResponseCount, int maxResponseSize) {
-		this.pool = pool;
+	public DBUpdate(GreenRuntime runtime, PgPoolOptions options, int pipelineBits, int maxResponseCount, int maxResponseSize) {
+		this.options = options;
 		this.service = runtime.newCommandChannel().newHTTPResponseService(maxResponseCount, maxResponseSize);
 		this.inFlight = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
 	}
-
+	
+	private PgPool pool() {
+		if (null==pool) {
+			pool = PgClient.pool(options);
+		}
+		return pool;
+	}
+	
 	private int randomValue() {
 		return 1+localRandom.nextInt(10000);
 	}	
@@ -70,7 +81,7 @@ public class DBUpdate implements RestMethodListener, TickListener {
 						final int targetId = randomValue();
 						final int targetUpdate = randomValue();
 						
-						pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(targetId), r -> {
+						pool().preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(targetId), r -> {
 								if (r.succeeded()) {
 									
 									PgIterator resultSet = r.result().iterator();
@@ -85,7 +96,7 @@ public class DBUpdate implements RestMethodListener, TickListener {
 							        
 							        final Tuple updateTuple = Tuple.of(targetUpdate, row.getInteger(0));
 							        
-							        pool.preparedQuery("UPDATE world SET randomnumber=$1 WHERE id=$2", updateTuple, ar -> {
+							        pool().preparedQuery("UPDATE world SET randomnumber=$1 WHERE id=$2", updateTuple, ar -> {
 							        	
 										if (ar.succeeded()) {									
 								        	target.setId(updateTuple.getInteger(1));
