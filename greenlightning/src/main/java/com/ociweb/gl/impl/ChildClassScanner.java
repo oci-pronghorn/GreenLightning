@@ -177,8 +177,8 @@ public class ChildClassScanner {
 		map.setUTF8Value("[J",1);
 		map.setUTF8Value("[S",1);
 				
-		map.setUTF8Value("io.reactiverse.pgclient.impl.",1); 
-		map.setUTF8Value("[Lio.reactiverse.pgclient.impl.",1);
+		map.setUTF8Value("io.reactiverse.pgclient.",1); 
+		map.setUTF8Value("[Lio.reactiverse.pgclient.",1);
 		
 		map.setUTF8Value("sun.",1); 
 		map.setUTF8Value("[Lsun.",1);

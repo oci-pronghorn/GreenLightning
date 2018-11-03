@@ -22,8 +22,8 @@ import io.reactiverse.pgclient.Tuple;
 public class DBUpdate implements RestMethodListener, TickListener {
 
 
-	private final PgPoolOptions options;
-	private PgPool pool;
+	private final transient PgPoolOptions options;
+	private transient PgPool pool;
 	
 	private final HTTPResponseService service;
 	private ObjectPipe<ResultObject> inFlight;	

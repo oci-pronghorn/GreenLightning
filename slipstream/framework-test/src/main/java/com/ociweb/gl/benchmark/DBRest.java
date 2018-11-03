@@ -22,8 +22,8 @@ import io.reactiverse.pgclient.Tuple;
 
 public class DBRest implements RestMethodListener, PubSubMethodListener, TickListener {
 
-	private final PgPoolOptions options;
-	private PgPool pool;
+	private final transient PgPoolOptions options;
+	private transient PgPool pool;
 	private final ThreadLocalRandom localRandom = ThreadLocalRandom.current();
 	private final ObjectPipe<ResultObject> inFlight;
 		

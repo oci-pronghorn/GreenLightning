@@ -25,13 +25,13 @@ public class FortuneRest implements RestMethodListener, TickListener {
 	private static final byte[] ROW_START = "<tr><td>".getBytes();
 	private final HTTPResponseService service; 
 	
-	private final PgPoolOptions options;
-	private PgPool pool;
+	private final transient PgPoolOptions options;
+	private transient PgPool pool;
 			
 	//SQL results write to these object, these same objects are used by template
-	private ObjectPipe<FortunesObject> inFlight;
+	private transient ObjectPipe<FortunesObject> inFlight;
 	
-	private static final StringTemplateRenderer<FortunesObject> template =		
+	private static final transient StringTemplateRenderer<FortunesObject> template =		
 			new StringTemplateBuilder<FortunesObject>()
 				   .add("<!DOCTYPE html> <html> <head><title>Fortunes</title></head> <body> <table> <tr><th>id</th><th>message</th></tr>\n")
 			       .add((t,s,i)-> {
@@ -120,7 +120,7 @@ public class FortuneRest implements RestMethodListener, TickListener {
 	}
 
 	private int htmlPos=0;
-	private final AppendableBuilder htmlBuffer = new AppendableBuilder();
+	private final transient AppendableBuilder htmlBuffer = new AppendableBuilder();
 	
 	
 	private boolean consumeResultObject(final FortunesObject t) {
