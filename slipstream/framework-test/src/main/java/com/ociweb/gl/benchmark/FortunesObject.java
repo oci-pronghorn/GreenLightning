@@ -12,7 +12,7 @@ public class FortunesObject {
 	private long sequenceId;
 	private int status;
 	private List<FortuneObject> list = new ArrayList<FortuneObject>();
-	
+	private List<FortuneObject> recycle = new ArrayList<FortuneObject>();
 
 	public long getConnectionId() {
 		return connectionId;
@@ -45,6 +45,7 @@ public class FortunesObject {
 
 
 	public void clear() {
+		recycle.addAll(list);
 		list.clear();
 	}
 
@@ -52,13 +53,19 @@ public class FortunesObject {
 		Collections.sort(list);
 	}
 
-	public List<FortuneObject> list() {
+	public List<FortuneObject> list() {		
 		return list;
 	}
 	
 	public void addFortune(int id, String fortune) {
 		
-		FortuneObject obj = new FortuneObject(); //TODO: if we need recycle else not...
+		FortuneObject obj; //This eliminates any GC by recycling the old Fortune Objects to be repopulated with new data.
+		if (recycle.isEmpty()) {
+			obj = new FortuneObject(); 
+		} else {
+			obj = recycle.remove(recycle.size()-1);			
+		}
+		
 		obj.setId(id);
 		obj.setFortune(fortune);
 		list.add(obj);
