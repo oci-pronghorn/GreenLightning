@@ -99,23 +99,28 @@ public class FrameworkTest implements GreenApp {
 	    	}    	
     	}
     	
-    	options = new PgPoolOptions()
-    			.setPort(connectionPort)
-    			.setPipeliningLimit(1<<pipelineBits)
-    			.setTcpFastOpen(true)
-    			.setHost(connectionHost)
-    			.setDatabase(connectionDB)
-    			.setUser(connectionUser)
-    			.setPassword(connectionPassword)
-    			.setCachePreparedStatements(true)
-    			.setMaxSize(connectionsPerTrack);
-    	    	
-    	///early check to know if we have a database or not,
-    	///this helps testing to know which tests should be run on different boxes.
-    	PgClient.pool(options).getConnection(a->{
-    		foundDB.set(a.succeeded());
-    		a.result().close();
-    	});
+	    	options = new PgPoolOptions()
+	    			.setPort(connectionPort)
+	    			.setPipeliningLimit(1<<pipelineBits)
+	    			.setTcpFastOpen(true)
+	    			.setHost(connectionHost)
+	    			.setDatabase(connectionDB)
+	    			.setUser(connectionUser)
+	    			.setPassword(connectionPassword)
+	    			.setCachePreparedStatements(true)
+	    			.setMaxSize(connectionsPerTrack);
+	    	    	
+    	try {
+	    	///early check to know if we have a database or not,
+	    	///this helps testing to know which tests should be run on different boxes.
+	    	PgClient.pool(options).getConnection(a->{
+	    		foundDB.set(a.succeeded());
+	    		a.result().close();
+	    	});
+    	} catch (Throwable t) {
+    		t.printStackTrace();
+    		System.out.println("No database in use");
+    	}
     	
     }
 
