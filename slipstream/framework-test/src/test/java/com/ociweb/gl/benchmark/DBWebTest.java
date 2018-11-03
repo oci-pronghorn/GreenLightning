@@ -14,7 +14,7 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.Appendables;
 
 
-public class WebTest {
+public class DBWebTest {
 	
 	final static boolean useTLS = false;
 	final static int timeoutMS = 600_000;
@@ -27,7 +27,7 @@ public class WebTest {
 	static String host = "127.0.0.1";
 	
 	
-	static int telemetryPort = 8097;
+	static int telemetryPort = 8087;
 	static boolean telemetry = false;
 
 	
@@ -51,55 +51,6 @@ public class WebTest {
 		}
 	}
 
-	@Test
-	public void plaintextTest() {
-			
-			    //ServerSocketWriterStage.showWrites = true;
-		
-				int inFlightBits = 8; 
-				int tracks = 4;
-				int callsPerTrack = totalCalls/tracks; 
-				boolean testTelemetry = false;
-		
-				StringBuilder uploadConsoleCapture = new StringBuilder();
-				LoadTester.runClient(
-						null,
-						(i,r) -> r.statusCode()==200 , 
-						"/plaintext", 
-						useTLS, testTelemetry, 
-						tracks, callsPerTrack, 
-						host, port, timeoutMS, inFlightBits,
-						MsgRuntime.getGraphManager(runtime),						
-						Appendables.join(uploadConsoleCapture,System.out));	
-				
-				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-
-	}
-
-	
-	@Test
-	public void jsonTest() {
-		
-				int inFlightBits = 8;
-				int tracks = 4;
-				int callsPerTrack = totalCalls/tracks; 
-				boolean testTelemetry = false;
-		
-				StringBuilder uploadConsoleCapture = new StringBuilder();
-				LoadTester.runClient(
-						null,
-						(i,r) -> r.statusCode()==200 , 
-						"/json", 
-						useTLS, testTelemetry, 
-						tracks, callsPerTrack, 
-						host, port, timeoutMS, inFlightBits,
-						MsgRuntime.getGraphManager(runtime),						
-						Appendables.join(uploadConsoleCapture,System.out));	
-				
-				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-		
-	}
-	
 	
 	@Test
 	public void queryTest() {		
