@@ -203,13 +203,6 @@ public class FrameworkTest implements GreenApp {
 		runtime.registerListener("Fortune", fortuneInstance)
 		        .includeRoutes(Struct.FORTUNES_ROUTE, fortuneInstance::restRequest);	
 		
-		//NOTE: catch all unknown routes to 404...  TODO: was built in but...
-//  		HTTPResponseService service = runtime.newCommandChannel().newHTTPResponseService(maxResponseCount, maxResponseSize);
-//		runtime.addRestListener(r->{
-//					return service.publishHTTPResponse(r, 404);
-//				}).includeAllRoutes();
-		
-		
 	}
 	 
     @Override

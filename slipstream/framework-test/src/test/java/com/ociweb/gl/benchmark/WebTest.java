@@ -18,7 +18,7 @@ public class WebTest {
 	
 	final static boolean useTLS = false;
 	final static int timeoutMS = 600_000;
-	final static int totalCalls = 1_000_000;
+	final static int totalCalls = 8_000;
 	
 	private static FrameworkTest app;
 	private static GreenRuntime runtime;
@@ -53,7 +53,7 @@ public class WebTest {
 
 	@Test
 	public void plaintextTest() {
-				
+			
 			    //ServerSocketWriterStage.showWrites = true;
 		
 				int inFlightBits = 8; 
@@ -73,13 +73,13 @@ public class WebTest {
 						Appendables.join(uploadConsoleCapture,System.out));	
 				
 				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-				
+
 	}
 
 	
 	@Test
 	public void jsonTest() {
-				
+		
 				int inFlightBits = 8;
 				int tracks = 4;
 				int callsPerTrack = totalCalls/tracks; 
@@ -97,7 +97,7 @@ public class WebTest {
 						Appendables.join(uploadConsoleCapture,System.out));	
 				
 				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
-				
+		
 	}
 	
 	
@@ -133,7 +133,6 @@ public class WebTest {
 	public void updatesTest() {
 		if (app.foundDB.get()) {
 	
-				int totalCalls = 2_000;
 				int inFlightBits = 8;
 				int tracks = 4;
 				int callsPerTrack = totalCalls/tracks; 
