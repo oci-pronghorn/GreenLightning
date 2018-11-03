@@ -63,14 +63,13 @@ public class FortuneRest implements RestMethodListener, TickListener {
 			target.setSequenceId(request.getSequenceCode());
 	
 			target.setStatus(-2);//out for work	
+			target.clear();
 		
 			pool.preparedQuery( "SELECT id, message FROM fortune", r -> {
 				    //NOTE: we want to do as little work here a s possible since
 				    //      we want this thread to get back to work on other calls.
 					if (r.succeeded()) {
-						target.clear();
-						PgIterator resultSet = r.result().iterator();
-						
+						PgIterator resultSet = r.result().iterator();						
 						while (	resultSet.hasNext() ) {
 					        Row next = resultSet.next();
 							target.addFortune(next.getInteger(0), next.getString(1));						
@@ -137,14 +136,14 @@ public class FortuneRest implements RestMethodListener, TickListener {
 			ok = service.publishHTTPResponse(t.getConnectionId(), t.getSequenceId(), 200, hasContinuation,
 						   HTTPContentTypeDefaults.HTML, 
 						   w-> {
-							   htmlPos = htmlBuffer.copyTo(w, htmlPos);								   
+							   htmlPos += htmlBuffer.copyTo(w, htmlPos);								   
 							   assert(hasContinuation == (htmlPos!=htmlBuffer.byteLength())) : "internal error";
 							   
 						   });
 		} else {		
 			ok =service.publishHTTPResponseContinuation(t.getConnectionId(), t.getSequenceId(), hasContinuation,  
 							w-> {
-								htmlPos = htmlBuffer.copyTo(w,htmlPos);	
+								htmlPos += htmlBuffer.copyTo(w,htmlPos);	
 								assert(hasContinuation == (htmlPos!=htmlBuffer.byteLength())) : "internal error";
 								
 							});
