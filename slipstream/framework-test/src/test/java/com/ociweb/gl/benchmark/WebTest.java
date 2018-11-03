@@ -157,5 +157,33 @@ public class WebTest {
 		}
 	}
 	
+	@Test
+	public void fortunesTest() {
+		if (app.foundDB.get()) {
+	
+				int totalCalls = 2_000;
+				int inFlightBits = 8;
+				int tracks = 4;
+				int callsPerTrack = totalCalls/tracks; 
+				boolean testTelemetry = false;
+		
+				StringBuilder uploadConsoleCapture = new StringBuilder();
+				LoadTester.runClient(
+						null,
+						(i,r) -> r.statusCode()==200, 
+						"/fortunes", 
+						useTLS, testTelemetry, 
+						tracks, callsPerTrack, 
+						host, port, timeoutMS, inFlightBits,
+						MsgRuntime.getGraphManager(runtime),						
+						Appendables.join(uploadConsoleCapture,System.out));	
+				
+				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
+		} else {
+				System.out.println("DB testing skipped. No DB");
+				assertTrue(true);//no DB to test with
+		}
+	}
+	
     
 }
