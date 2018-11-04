@@ -338,7 +338,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	}
 	
 	@Override
-	public HTTPServerConfig useHTTP1xServer(int bindPort, DeclareBehavior<R> behaviorDefinition) {
+	public HTTPServerConfig useHTTP1xServer(int bindPort, DeclareBehavior<R> behaviorDefinition) {		
 		return useHTTP1xServer(bindPort, -1, behaviorDefinition);
 	}
 	
@@ -349,7 +349,17 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		}
 		if (tracks<=0) {
 			//auto select tracks based on cores
-			tracks = Math.max(1, Runtime.getRuntime().availableProcessors()/2);			
+			tracks = Math.max(1, Runtime.getRuntime().availableProcessors()/2);	
+			
+			String maxTrack = System.getProperty("greenlightning.tracks.max");
+			if (null!=maxTrack) {
+				try {
+				tracks = Math.min(tracks, Integer.parseInt(maxTrack));
+				} catch (Exception e) {
+					logger.warn("unable to enforce greenlightning.tracks.max property '{}', the value was not parsable",maxTrack);
+				}				
+			}		
+			
 		}
 		
 		this.behaviorTracks = tracks;

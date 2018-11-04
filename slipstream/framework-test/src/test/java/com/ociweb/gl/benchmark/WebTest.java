@@ -29,7 +29,6 @@ public class WebTest {
 	
 	static int telemetryPort = 8097;
 	static boolean telemetry = false;
-
 	
 	@BeforeClass
 	public static void startServer() {
@@ -37,8 +36,10 @@ public class WebTest {
 		GraphManager.showThreadIdOnTelemetry = true;
 		ClientSocketReaderStage.abandonSlowConnections = false;//allow tester to wait for responses.
 				
-		app = new FrameworkTest("127.0.0.1", port, 1, 128, 1<<15, -1, null, null, null, null);
-		runtime = GreenRuntime.run(app);		
+		System.setProperty("greenlightning.tracks.max", "1");
+		app = new FrameworkTest("127.0.0.1", port, 1, 128, 1<<15, -1,
+				                  null, null, null, null);
+		runtime = GreenRuntime.run(app);	
 		
 	}
 		
@@ -53,10 +54,11 @@ public class WebTest {
 	@Test
 	public void plaintextTest() {
 			
+		
 			    //ServerSocketWriterStage.showWrites = true;
 		
 				int inFlightBits = 8; 
-				int tracks = 2;
+				int tracks = 1;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -73,6 +75,7 @@ public class WebTest {
 				
 				assertTrue(uploadConsoleCapture.toString(), uploadConsoleCapture.indexOf("Responses invalid: 0 out of "+(callsPerTrack*tracks))>=0);
 
+				
 	}
 
 	
@@ -80,7 +83,7 @@ public class WebTest {
 	public void jsonTest() {
 		
 				int inFlightBits = 8;
-				int tracks = 2;
+				int tracks = 1;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -105,7 +108,7 @@ public class WebTest {
 		if (app.foundDB.get()) {			
 				int totalCalls = 2_000;
 				int inFlightBits = 8;
-				int tracks = 2;
+				int tracks = 1;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -133,7 +136,7 @@ public class WebTest {
 		if (app.foundDB.get()) {
 	
 				int inFlightBits = 8;
-				int tracks = 2;
+				int tracks = 1;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
@@ -161,7 +164,7 @@ public class WebTest {
 	
 				int totalCalls = 2_000;
 				int inFlightBits = 8;
-				int tracks = 2;
+				int tracks = 1;
 				int callsPerTrack = totalCalls/tracks; 
 				boolean testTelemetry = false;
 		
