@@ -109,7 +109,7 @@ public class FrameworkTest implements GreenApp {
 	    			.setPassword(connectionPassword)
 	    			.setCachePreparedStatements(true)
 	    			.setMaxSize(connectionsPerTrack);
-	    	    	
+	    		
     	try {
 	    	///early check to know if we have a database or not,
 	    	///this helps testing to know which tests should be run on different boxes.
