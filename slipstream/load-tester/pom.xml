@@ -4,7 +4,7 @@
 	<parent>
     <artifactId>slipstream</artifactId>
     <groupId>com.ociweb</groupId>
-    <version>1.0.7</version>
+    <version>1.0.11</version>
   </parent>
 	<groupId>com.ociweb.gl.load</groupId>
 	<artifactId>load-tester</artifactId>
