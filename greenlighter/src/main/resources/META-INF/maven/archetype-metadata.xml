@@ -42,5 +42,11 @@
         <include>proguard.conf</include>
       </includes>
     </fileSet>
+    <fileSet filtered="true" packaged="false">
+      <directory/>
+      <includes>
+        <include>Dockerfile</include>
+      </includes>
+    </fileSet>    
   </fileSets>
 </archetype-descriptor>
