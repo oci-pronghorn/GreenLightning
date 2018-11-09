@@ -115,10 +115,12 @@ public class FrameworkTest implements GreenApp {
 	    	///this helps testing to know which tests should be run on different boxes.
 	    	PgClient.pool(options).getConnection(a->{
 	    		foundDB.set(a.succeeded());
-	    		a.result().close();
+	    		if (null!=a.result()) {
+	    			a.result().close();
+	    		}
 	    	});
     	} catch (Throwable t) {
-    		t.printStackTrace();
+    		//t.printStackTrace();
     		System.out.println("No database in use");
     	}
     	
