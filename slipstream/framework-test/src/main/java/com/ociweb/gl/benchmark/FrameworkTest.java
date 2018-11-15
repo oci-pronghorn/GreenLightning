@@ -39,7 +39,7 @@ public class FrameworkTest implements GreenApp {
 	private final int jsonMaxResponseCount;
 	private final int jsonMaxResponseSize;
 	
-    private final PgPoolOptions options;
+    private PgPoolOptions options;
     
 	public static int connectionsPerTrack =   2;
 	public static int connectionPort =        5432;
@@ -107,19 +107,20 @@ public class FrameworkTest implements GreenApp {
 	    	}    	
     	}
     	
-	    	options = new PgPoolOptions()
-	    			.setPort(connectionPort)
-	    			.setPipeliningLimit(1<<pipelineBits)
-	    			.setTcpFastOpen(true)
-	    			.setHost(connectionHost)
-	    			.setDatabase(connectionDB)
-	    			.setUser(connectionUser)
-	    			.setPassword(connectionPassword)
-	    			.setCachePreparedStatements(true)
-	    			.setMaxSize(connectionsPerTrack);	    	
 	    		
     	try {
-	    	///early check to know if we have a database or not,
+    		options = new PgPoolOptions()
+    				.setPort(connectionPort)
+    				.setPipeliningLimit(1<<pipelineBits)
+    				.setTcpFastOpen(true)
+    				.setHost(connectionHost)
+    				.setDatabase(connectionDB)
+    				.setUser(connectionUser)
+    				.setPassword(connectionPassword)
+    				.setCachePreparedStatements(true)
+    				.setMaxSize(connectionsPerTrack);	    	
+
+    		///early check to know if we have a database or not,
 	    	///this helps testing to know which tests should be run on different boxes.
 	    	PgClient.pool(options).getConnection(a->{
 	    		foundDB.set(a.succeeded());
