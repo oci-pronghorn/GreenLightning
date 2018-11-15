@@ -5,13 +5,9 @@ import com.ociweb.gl.api.GreenRuntime;
 public class GreenLightning {
 
 	public static void main(String[] args) {
-		//ServerSocketWriterStage.showWrites=true;
-	
-		//  [{"id":1480,"randomNumber":1784090351}
-		//  ,{"id":6038,"randomNumber":-447995528}
-		//  ,{"id":2669,"randomNumber":493033553}
-		//  ,{"id":2487,"randomNumber":511963400}]
 		
+		//System.setProperty("pronghorn.processors", "28"); //this is what server will see in production test
+		//less stack per thread??
 		GreenRuntime.run(new FrameworkTest(),args);
 	
 	}
