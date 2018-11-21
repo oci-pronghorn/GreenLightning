@@ -2,7 +2,6 @@ package com.ociweb.gl.impl.stage;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -14,7 +13,6 @@ import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseListener;
 import com.ociweb.gl.api.HTTPResponseReader;
-import com.ociweb.gl.api.ListenerConfig;
 import com.ociweb.gl.api.ListenerFilter;
 import com.ociweb.gl.api.MsgCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
@@ -31,6 +29,8 @@ import com.ociweb.gl.api.transducer.StartupListenerTransducer;
 import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.ChildClassScanner;
 import com.ociweb.gl.impl.ChildClassScannerVisitor;
+import com.ociweb.gl.impl.FileWatchListenerBase;
+import com.ociweb.gl.impl.FileWatchMethodListenerBase;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.PrivateTopic;
 import com.ociweb.gl.impl.PubSubListenerBase;
@@ -62,8 +62,10 @@ import com.ociweb.pronghorn.pipe.DataInputBlobReader;
 import com.ociweb.pronghorn.pipe.Pipe;
 import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.pipe.PipeUTF8MutableCharSquence;
+import com.ociweb.pronghorn.pipe.RawDataSchema;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
 import com.ociweb.pronghorn.stage.PronghornStage;
+import com.ociweb.pronghorn.stage.file.WatchFileReadStage;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadProducerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
@@ -215,6 +217,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	
     	@Override
     	public boolean visit(MsgCommandChannel cmdChnl, Object topParent, String topName) {
+    		//This memory allocation seems to take up most of our startup time...
     		outputPipes = PronghornStage.join(outputPipes, cmdChnl.getOutputPipes());
     		return true;
     	}
@@ -494,14 +497,22 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 										r.consumePubSubMessage(target, input);										
 									}        		                	 
         		                 })
+        		                 
+//         		                 .addOperator(FileWatchMethodListenerBase.class, 
+//        		                		 RawDataSchema.instance,
+//        		                		 new ReactiveOperator() {
+// 									@Override
+// 									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {								
+// 											r.consumeFileWatch(target, input);
+// 									}        		                	 
+//         		                 })
+        		                 
         		                 .addOperator(HTTPResponseListenerBase.class, 
         		                		 NetResponseSchema.instance,
         		                		 new ReactiveOperator() {
  									@Override
- 									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {
- 										
- 											r.consumeNetResponse(target, input);	
- 									 										
+ 									public void apply(int index, Object target, Pipe input, ReactiveListenerStage r) {								
+ 											r.consumeNetResponse(target, input);
  									}        		                	 
          		                 })
         		                 .addOperator(RestMethodListenerBase.class, 
@@ -515,7 +526,38 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	}
 
     
-    protected void consumeStoreWriteAck(int index, Object target, Pipe<PersistedBlobLoadProducerSchema> p) {
+    protected void consumeFileWatch(Object target, Pipe p) {
+		
+    	while (Pipe.hasContentToRead(p)) {
+    		Pipe.markTail(p);
+
+    		if (target instanceof FileWatchListenerBase) {
+    			FileWatchListenerBase t = ((FileWatchListenerBase)target);
+    			
+    		//	t.fileEvent(reader);
+    			
+    			
+    		} else {
+    			FileWatchMethodListenerBase t = ((FileWatchMethodListenerBase)target);
+    			
+    			//method??
+    			
+    			
+    		}
+    		
+     	
+    	}
+    	//(WatchFileReadStage) target
+    	
+    	//TODO: take in the data and write the messsage...  what about updates and delete???
+    	//TODO: raw pipe may be a mistack to use..
+    	
+    	throw new UnsupportedOperationException("not yet implemented");
+		
+    	
+	}
+
+	protected void consumeStoreWriteAck(int index, Object target, Pipe<PersistedBlobLoadProducerSchema> p) {
 	   	
 		final int store = IntHashTable.getItem(serialStoreProdAckPipeMap, NON_ZERO_BASE+p.id)-NON_ZERO_BASE;
 		    	

@@ -1,6 +1,5 @@
-package com.ociweb.gl.api;
+package com.ociweb.gl.impl;
 
-import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.gl.impl.schema.MessageSubscription;
 import com.ociweb.pronghorn.pipe.Pipe;
 

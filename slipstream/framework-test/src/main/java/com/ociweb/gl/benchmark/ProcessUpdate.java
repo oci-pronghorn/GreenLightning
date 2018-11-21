@@ -4,57 +4,49 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.gl.api.HTTPRequestReader;
 import com.ociweb.gl.api.HTTPResponseService;
-import com.ociweb.gl.api.RestMethodListener;
-import com.ociweb.gl.api.TickListener;
-import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ObjectPipe;
 
-import io.reactiverse.pgclient.PgClient;
 import io.reactiverse.pgclient.PgIterator;
-import io.reactiverse.pgclient.PgPool;
-import io.reactiverse.pgclient.PgPoolOptions;
 import io.reactiverse.pgclient.Tuple;
 
-public class DBUpdate implements RestMethodListener, TickListener {
-
-
-	private final transient PgPoolOptions options;
-	private transient PgPool pool;
+public class ProcessUpdate {
 	
+	private ObjectPipe<ResultObject> DBUpdateInFlight;	
+	private boolean collectionPendingDBUpdate = false;	
+	private final List<ResultObject> collectorDBUpdate = new ArrayList<ResultObject>();
+	private final ThreadLocalRandom localRandom = ThreadLocalRandom.current();
 	private final HTTPResponseService service;
-	private ObjectPipe<ResultObject> inFlight;	
-	private boolean collectionPending = false;	
-	private final List<ResultObject> collector = new ArrayList<ResultObject>();
+	private final PoolManager pm;
 	
-	private static final ThreadLocalRandom localRandom = ThreadLocalRandom.current();
-	private static final JSONRenderer<List<ResultObject>> multiTemplate = new JSONRenderer<List<ResultObject>>()
-	    	  .array((o,i) -> i<o.size()?o:null)
-		          .startObject((o, i) ->  o.get(i))  
-					.integer("id", o -> o.getId() )
-					.integer("randomNumber", o -> o.getResult())
-		          .endObject();
-	
-	public DBUpdate(GreenRuntime runtime, PgPoolOptions options, int pipelineBits, int maxResponseCount, int maxResponseSize) {
-		this.options = options;
-		this.options.setMaxSize(6);//bump up the connections since we use the pool nested twice		
-		this.service = runtime.newCommandChannel().newHTTPResponseService(maxResponseCount, maxResponseSize);
-		this.inFlight = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
+	public ProcessUpdate(int pipelineBits, HTTPResponseService service, PoolManager pm) {
+		this.DBUpdateInFlight = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
+		this.service = service;
+		this.pm = pm;
 	}
 	
-	private PgPool pool() {
-		if (null==pool) {
-			pool = PgClient.pool(options);
+	
+	public void tickEvent() { 
+
+		{
+			ResultObject temp = DBUpdateInFlight.tailObject();
+			while (isReadyDBUpdate(temp)) {			
+				if (consumeResultObjectDBUpdate(temp)) {
+					temp = DBUpdateInFlight.tailObject();
+				} else {
+					break;
+				}
+			}	   
 		}
-		return pool;
+			
 	}
 	
+
 	private int randomValue() {
 		return 1+localRandom.nextInt(10000);
-	}	
+	}
 	
 	public boolean updateRestRequest(HTTPRequestReader request) {
 		int queries;
@@ -66,12 +58,12 @@ public class DBUpdate implements RestMethodListener, TickListener {
 		long conId = request.getConnectionId();
 		long seqCode = request.getSequenceCode();
 
-		if (inFlight.hasRoomFor(queries)) {		
+		if (DBUpdateInFlight.hasRoomFor(queries)) {		
 				    	
 				int q = queries;
 				while (--q >= 0) {
 				
-						final ResultObject worldObject = inFlight.headObject();
+						final ResultObject worldObject = DBUpdateInFlight.headObject();
 						assert(null!=worldObject);
 											
 						worldObject.setConnectionId(conId);
@@ -81,7 +73,7 @@ public class DBUpdate implements RestMethodListener, TickListener {
 						
 						worldObject.setId(randomValue());
 												
-						pool().preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(worldObject.getId()), r -> {
+						pm.pool().preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(worldObject.getId()), r -> {
 								if (r.succeeded()) {
 																		
 									PgIterator resultSet = r.result().iterator();
@@ -97,7 +89,7 @@ public class DBUpdate implements RestMethodListener, TickListener {
 							        worldObject.setResult(randomValue());
 							        							       
 							        
-							        pool().preparedQuery("UPDATE world SET randomnumber=$1 WHERE id=$2", 							        		
+							        pm.pool().preparedQuery("UPDATE world SET randomnumber=$1 WHERE id=$2", 							        		
 							        			Tuple.of(worldObject.getResult(), worldObject.getId()), ar -> {							        	
 										if (ar.succeeded()) {
 											
@@ -125,7 +117,7 @@ public class DBUpdate implements RestMethodListener, TickListener {
 								
 							});	
 									
-						inFlight.moveHeadForward(); //always move to ensure this can be read.
+						DBUpdateInFlight.moveHeadForward(); //always move to ensure this can be read.
 				
 				}
 				
@@ -134,27 +126,12 @@ public class DBUpdate implements RestMethodListener, TickListener {
 			return false;
 		}
 	}
-	
-	
-	@Override
-	public void tickEvent() { 
-		
-		ResultObject temp = inFlight.tailObject();
-		while (isReady(temp)) {			
-			if (consumeResultObject(temp)) {
-				temp = inFlight.tailObject();
-			} else {
-				break;
-			}
-		}	   
-		
-	}
 
-	private boolean isReady(ResultObject temp) {
+	private boolean isReadyDBUpdate(ResultObject temp) {
 
-		if (collectionPending) {
+		if (collectionPendingDBUpdate) {
 			//now ready to send, we have all the data	
-			if (!publishMultiResponse(collector.get(0).getConnectionId(), collector.get(0).getSequenceId() )) {
+			if (!publishMultiResponseDBUpdate(collectorDBUpdate.get(0).getConnectionId(), collectorDBUpdate.get(0).getSequenceId() )) {
 				return false;
 			}
 		}
@@ -162,14 +139,14 @@ public class DBUpdate implements RestMethodListener, TickListener {
 		return null!=temp && temp.getStatus()>=0;
 	}
 
-	private boolean consumeResultObject(final ResultObject t) {
+	private boolean consumeResultObjectDBUpdate(final ResultObject t) {
 		boolean ok;
 		//collect all the objects
-		collector.add(t);
-		inFlight.moveTailForward();//only move forward when it is consumed.
-		if (collector.size() == t.getGroupSize()) {
+		collectorDBUpdate.add(t);
+		DBUpdateInFlight.moveTailForward();//only move forward when it is consumed.
+		if (collectorDBUpdate.size() == t.getGroupSize()) {
 			//now ready to send, we have all the data						
-			ok =publishMultiResponse(t.getConnectionId(), t.getSequenceId());
+			ok =publishMultiResponseDBUpdate(t.getConnectionId(), t.getSequenceId());
 		} else {
 			ok = true;//added to list
 		}				
@@ -177,23 +154,25 @@ public class DBUpdate implements RestMethodListener, TickListener {
 		return ok;
 	}
 
-	private boolean publishMultiResponse(long conId, long seqCode) {
+	private boolean publishMultiResponseDBUpdate(long conId, long seqCode) {
 		boolean result =  service.publishHTTPResponse(conId, seqCode, 200,
 					    				   HTTPContentTypeDefaults.JSON,
 					    				   w-> {
-					    					   multiTemplate.render(w, collector);
-					    					   int c = collector.size();
+					    					   Templates.multiTemplate.render(w, collectorDBUpdate);
+					    					   int c = collectorDBUpdate.size();
 					    					   while (--c>=0) {
-					    						   assert(collector.get(c).getConnectionId() == conId);
-					    						   assert(collector.get(c).getSequenceId() == seqCode);					    						   
-					    						   collector.get(c).setStatus(-1);
+					    						   assert(collectorDBUpdate.get(c).getConnectionId() == conId);
+					    						   assert(collectorDBUpdate.get(c).getSequenceId() == seqCode);					    						   
+					    						   collectorDBUpdate.get(c).setStatus(-1);
 					    					   }
-					    					   collector.clear();
-					    					   inFlight.publishTailPosition();
+					    					   collectorDBUpdate.clear();
+					    					   DBUpdateInFlight.publishTailPosition();
 					    				   });
-		collectionPending = !result;
+		collectionPendingDBUpdate = !result;
 		return result;
 	}
+	
+	
 	
 	
 	

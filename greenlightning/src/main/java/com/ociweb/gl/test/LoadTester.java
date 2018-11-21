@@ -1,6 +1,7 @@
 package com.ociweb.gl.test;
 
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.stage.scheduling.CoresUtil;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class LoadTester {
@@ -28,7 +29,7 @@ public class LoadTester {
 			int cyclesPerTrack, String host, int port, int timeoutMS, int inFlightBits, GraphManager graphUnderTest, A target) {
 		
 
-		int tracks = Math.min(1+(concurrentConnections/(LIMITED_CONNECTIONS_PER_ACTOR+1)), Runtime.getRuntime().availableProcessors()*2);		
+		int tracks = Math.min(1+(concurrentConnections/(LIMITED_CONNECTIONS_PER_ACTOR+1)), CoresUtil.availableProcessors()*2);		
 			
 		ParallelClientLoadTesterConfig testerConfig = new ParallelClientLoadTesterConfig(tracks, cyclesPerTrack,
 																							port, route, telemetry);

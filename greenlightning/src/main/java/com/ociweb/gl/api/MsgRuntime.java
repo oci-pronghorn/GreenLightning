@@ -16,6 +16,7 @@ import com.ociweb.gl.impl.BuilderImpl;
 import com.ociweb.gl.impl.ChildClassScanner;
 import com.ociweb.gl.impl.ChildClassScannerVisitor;
 import com.ociweb.gl.impl.GreenFrameworkImpl;
+import com.ociweb.gl.impl.MessageReader;
 import com.ociweb.gl.impl.blocking.BalanceBlockingBehavior;
 import com.ociweb.gl.impl.blocking.JoinBlockingBehavior;
 import com.ociweb.gl.impl.blocking.TargetSelector;
@@ -32,7 +33,7 @@ import com.ociweb.pronghorn.network.NetGraphBuilder;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.ServerNewConnectionStage;
 import com.ociweb.pronghorn.network.ServerPipesConfig;
-import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
+import com.ociweb.pronghorn.network.http.HTTPRouterStageConfig;
 import com.ociweb.pronghorn.network.module.FileReadModuleStage;
 import com.ociweb.pronghorn.network.module.ResourceModuleStage;
 import com.ociweb.pronghorn.network.schema.HTTPLogRequestSchema;
@@ -214,6 +215,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
     public final L addRestListener(RestListener listener) {
     	return (L) registerListenerImpl(listener);
     }
+    
+    public final L addFileWatchListener(FileWatchListener listener) {
+    	return (L) registerListenerImpl(listener);
+    }
         
     public final L addResponseListener(HTTPResponseListener listener) {
     	return (L) registerListenerImpl(listener);
@@ -248,7 +253,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
     public final L addRestListener(String id, RestListener listener) {
     	return (L) registerListenerImpl(id, listener);
     }
-        
+      
+    public final L addFileWatchListener(String id, FileWatchListener listener) {
+    	return (L) registerListenerImpl(id, listener);
+    }
+    
     public final L addResponseListener(String id, HTTPResponseListener listener) {
     	return (L) registerListenerImpl(id, listener);
     }
@@ -380,45 +389,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
     	return cmdChannelUsageChecker;
     }
 
-//    /**
-//     * This pipe returns all the data this object has requested via subscriptions elsewhere.
-//     * @param listener
-//     */
-//	public Pipe<MessageSubscription> buildPublishPipe(Behavior listener) {
-//		
-//		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
-//		if (builder.isAllPrivateTopics()) {
-//			throw new RuntimeException("oops");
-//		}
-//		
-//		
-//		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe(builder);		
-//		builder.populateListenerIdentityHash(listener);
-//				
-//		return subscriptionPipe;
-//	}
-//	
-//	public Pipe<MessageSubscription> buildPublishPipe(int listenerHash) {
-//		
-//		assert(!builder.isAllPrivateTopics()) : "must not call when private topics are exclusivly in use";
-//		if (builder.isAllPrivateTopics()) {
-//			throw new RuntimeException("oops");
-//		}
-//		
-//		
-//		Pipe<MessageSubscription> subscriptionPipe = buildMessageSubscriptionPipe(builder);	
-//		builder.populateListenerIdentityHash(listenerHash);
-//
-//		return subscriptionPipe;
-//	}
-
 	public static Pipe<MessageSubscription> buildMessageSubscriptionPipe(BuilderImpl b) {
 		
 	    Pipe<MessageSubscription> subscriptionPipe = new Pipe<MessageSubscription>(b.pcm.getConfig(MessageSubscription.class)) {
 			@SuppressWarnings("unchecked")
 			@Override
 			protected DataInputBlobReader<MessageSubscription> createNewBlobReader() {
-				return new MessageReader(this);//, gm.recordTypeData);
+				return new MessageReader(this);
 			}
 		};
 		return subscriptionPipe;
@@ -497,22 +474,17 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		HTTPServerConfigImpl r = ((HTTPServerConfigImpl) config);
 		int incomingMsgFragCount = r.defaultComputedChunksCount();
 		
-		int queueIn = config.getMaxQueueIn();   //router to modules
-		
-		//orderSuper to socketWriter
-		int queueOut = 
-				Math.max(config.getMaxQueueOut(), (1<<21)/r.getMaxResponseSize()) ;
-		
-		///////////////////////
 		///////////////////////
 		
-		r.pcm.ensureSize(HTTPRequestSchema.class, 
+		r.pcmIn.ensureSize(HTTPRequestSchema.class, 
 						Math.max(incomingMsgFragCount-2, 2), 
 						r.getMaxRequestSize());
 		
-		r.pcm.ensureSize(ServerResponseSchema.class, 4, r.getMaxResponseSize());	
+		r.pcmOut.ensureSize(ServerResponseSchema.class, 4, r.getMaxResponseSize());	
 		
-		r.pcm.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
+		r.pcmIn.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
+		r.pcmOut.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
+		
 		
 		ServerPipesConfig serverConfig = new ServerPipesConfig(
 					r.logFileConfig(),
@@ -527,9 +499,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 					incomingMsgFragCount,
 					r.getMaxRequestSize(),
 					r.getMaxResponseSize(),
-					queueIn,
-					queueOut,
-					r.pcm);
+					config.getMaxQueueIn(),
+					config.getMaxQueueOut(),
+					r.pcmIn,r.pcmOut);
 
 		serverCoord = new ServerCoordinator(
 				config.getCertificates(),
@@ -540,10 +512,14 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 				"Server",
 				config.defaultHostPath(),
 				serverConfig);
-				
+	
 		//NOTE  serverConfig.maxConcurrentInputs = serverRequestUnwrapUnits * concurrentChannelsPerDecryptUnit
-		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(
-				 serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);           
+		//this is only 600MB for this NetPayloadSchema inputs of 280   building: 280 of Primary:15 Secondary:21 NetPayloadSchema total: 623902720
+		//System.out.println("building: "+serverConfig.maxConcurrentInputs+" of "+serverConfig.incomingDataConfig+" total: "+(serverConfig.maxConcurrentInputs*serverConfig.incomingDataConfig.totalBytesAllocated()));
+		
+		
+		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, 
+											serverConfig.pcmIn.getConfig(NetPayloadSchema.class));           
 		
 
 		
@@ -553,9 +529,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		Pipe[] planIncomingGroup;
 		
 		if (config.isTLS()) {
-			planIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, serverConfig.incomingDataConfig);
+			planIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs,
+												serverConfig.pcmIn.getConfig(NetPayloadSchema.class));  
 			handshakeIncomingGroup = NetGraphBuilder.populateGraphWithUnWrapStages(gm, serverCoord, 
-					                      serverConfig.serverRequestUnwrapUnits, serverConfig.incomingDataConfig,
+					                      serverConfig.serverRequestUnwrapUnits, 
+					                    	serverConfig.pcmIn.getConfig(NetPayloadSchema.class),
 					                      encryptedIncomingGroup, planIncomingGroup, acks);
 		} else {
 			planIncomingGroup = encryptedIncomingGroup;
@@ -618,7 +596,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		//////////////////
 		//////////////////
 
-		final HTTP1xRouterStageConfig routerConfig = builder.routerConfig();
+		final HTTPRouterStageConfig routerConfig = builder.routerConfig();
 				
 		
 		/////////////////
@@ -690,10 +668,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 			int c = temp.length;
 			while (--c>=0) {
 				//ensure that the ordering stage can consume messages of this size
-				serverConfig.ensureServerCanWrite(spaceForEchos+temp[c].config().maxVarLenSize());
+				serverConfig.ensureServerCanWrite((spaceForEchos+temp[c].config().maxVarLenSize()));
 			}		
 		}
-		serverConfig.ensureServerCanWrite(spaceForEchos+errConfig.maxVarLenSize());
+		serverConfig.ensureServerCanWrite((spaceForEchos+errConfig.maxVarLenSize()));
 		//TODO: use ServerCoordinator to hold information about log?
 		Pipe<HTTPLogRequestSchema>[] reqLog = new Pipe[trackCounts];
 		Pipe<HTTPLogResponseSchema>[] resLog = new Pipe[trackCounts];
@@ -782,7 +760,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		}
 		
 		inputs[idx] = builder.newHTTPRequestPipe(fileRequestConfig);
-		outputs[idx] = builder.newNetResponsePipe(builder.pcm.getConfig(ServerResponseSchema.class), parallelIndex);
+
+		outputs[idx] = builder.newNetResponsePipe(this.serverCoord.pcmOut.getConfig(ServerResponseSchema.class), parallelIndex);
 
 	}
 	

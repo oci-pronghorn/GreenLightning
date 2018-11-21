@@ -10,6 +10,7 @@ import java.util.HashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.GreenCommandChannel;
 import com.ociweb.gl.api.MsgRuntime;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.util.hash.IntHashTable;
@@ -24,6 +25,7 @@ import com.ociweb.pronghorn.util.TrieParserReaderLocal;
  */
 public class ChildClassScanner {
 
+	private static final long SCAN_LIMIT_TIME_NS = 20_000_000L;
 	private static final Logger logger = LoggerFactory.getLogger(ChildClassScanner.class);
 
 	/**
@@ -59,37 +61,42 @@ public class ChildClassScanner {
 												 Class targetType, 
 												 Object topParent,
 												 Collection<Object> seen) {
-			
-		
+					
 		
 			Field[] fields = c.getDeclaredFields();
 	                        
 	        int f = fields.length;
-	        
+	        	        
 	        while (--f >= 0) {
 	        		final Field field = fields[f];
 	        	
-	                field.setAccessible(true);   
+	        		//do before we modify access to save time
+	        		if (   Modifier.isStatic(field.getModifiers())
+	        			|| Modifier.isTransient(field.getModifiers())) {
+	        			continue;//skip over all static and transient fields
+	        		};					
+	        		
+	        		if (!field.isAccessible()) {
+	        			field.setAccessible(true);  
+	        		}
 	                Object obj = null;
-					try {
-						if (Modifier.isTransient(field.getModifiers())) {
-							continue;//skip over all transient fields
-						};						
-						
+					try {						
 						obj = field.get(listener);
 						if (targetType.isInstance(obj)) {
 							if (!visitor.visit(obj, topParent, topName)) {
 								return false;
 							}							
 						} else {   
+							
+				
 							String name;
+		
 							
 							//check for array
 							if (obj!=null && obj.getClass().isArray()) {
 								
 								Class<?> cType = obj.getClass().getComponentType();
-								if ((!cType.isPrimitive()) 
-									&& !cType.isSynthetic()									
+								if ((!cType.isPrimitive())								
 								    && (!CharSequence.class.isAssignableFrom(cType))
 								    && (!String.class.isAssignableFrom(cType))
 								    && (!Externalizable.class.isAssignableFrom(cType))								    
@@ -99,7 +106,9 @@ public class ChildClassScanner {
 								    && (-1 == TrieParserReaderLocal.get().query(textToBlock, name))
 								    																				
 										) {
-										
+									
+									//System.out.println("array     "+depth+"  "+obj.getClass().getName()+"  "+name+"  "+topParent.getClass().getName());
+
 									
 									int i = Array.getLength(obj);
 								    while(--i>=0) {
@@ -114,19 +123,19 @@ public class ChildClassScanner {
 										}
 								    }
 								}
-							} else
-							
+							} else {
+						
 							//NOTE: using the TrieParser would be better here.... (faster startup)
 							if (    (obj!=null)
 									&& (obj.getClass()!=null)
 									&&  (!obj.getClass().isPrimitive()) 
 									&& (obj != listener) 
-									&& (!(name=obj.getClass().getName()).startsWith("java.")) 
 									
+									&& !field.isSynthetic()
+									&& field.isAccessible() 
+									
+									&& (!(name=obj.getClass().getName()).startsWith("java.")) 
 									&& (-1 == TrieParserReaderLocal.get().query(textToBlock, name))
-									&& (!name.endsWith("Logger"))
-									&& (!name.endsWith("Factory"))
-									&& (!name.endsWith("Executor"))
 									
 									&& (!obj.getClass().isEnum())
 									&& (!(obj instanceof MsgRuntime))  
@@ -134,26 +143,32 @@ public class ChildClassScanner {
 									&& (!(obj instanceof BuilderImpl))
 									&& (!(obj instanceof Externalizable))									
 									
-									&& !fields[f].isSynthetic()
-									&& fields[f].isAccessible() 
+									&& (!name.endsWith("Logger"))
+									&& (!name.endsWith("Factory"))
+									&& (!name.endsWith("Executor"))
+									
 									&& depth<=8) { //stop recursive depth at this point...
 								
+								//System.out.println("     "+depth+"  "+obj.getClass().getName()+"  "+name+"  "+topParent.getClass().getName());
+
+							
 								if (!seen.contains(obj)) {
 									seen.add(obj);
 									
 									//if (depth<=2) {
-									//	System.out.println("     "+depth+"  "+obj.getClass().getName()+"  "+name+"  "+topParent.getClass().getName());
+									//System.out.println("     "+depth+"  "+obj.getClass().getName()+"  "+name+"  "+topParent.getClass().getName());
 									//}            	
 									//if (depth >4 ) {
 								                		//	logger.info(depth+" "+obj.getClass().getName());
 								                		//}
-								
+		
 								    //recursive check for command channels
 									if (!visitUsedByClass(topName, obj, depth+1, visitor, topParent, targetType, seen)) {
 										return false;
 									}
 								}
 							}
+						}
 						}
 					} catch (Exception e) {
 						//do not stop on exception, must continue scan
@@ -217,7 +232,12 @@ public class ChildClassScanner {
 	    if (null!=obj) {
 		    Class<? extends Object> c = obj.getClass();
 		    while ((null!=c) && (c!=Object.class)) {
-		    	try {
+		    	
+		    	if (c == GreenCommandChannel.class) {
+		    		c = c.getSuperclass(); //nothing looks for this leaf so skip to the good stuff
+		    	}
+
+		    	try {		    	
 			    	if (!visitByClass(name, obj, depth, visitor, c, targetType, topParent, seen)) {
 			    		return false;
 			    	}
@@ -233,19 +253,23 @@ public class ChildClassScanner {
 	public static boolean visitUsedByClass(String name, Object listener, ChildClassScannerVisitor visitor, Class target) {
 
 				
+		HashSet<Object> seen = new HashSet<Object>();//NOTE: should recycle this.
+		
 		long start = System.nanoTime();
-		boolean result = visitUsedByClass(name, listener, 0, visitor, listener, target, new HashSet<Object>());
+		boolean result = visitUsedByClass(name, listener, 0, visitor, listener, target, seen);
 		long duration = System.nanoTime()-start;
 		
 		//just report the longest durations
-		if (duration > 200_000_000L) {
+		if (duration > SCAN_LIMIT_TIME_NS) {
+			
 			StringBuilder temp = new StringBuilder();//must create this just to show this rare error as a single block.
 			Appendables.appendNearestTimeUnit(temp, duration);
 			temp.append(" duration for scan to find all ");
 			temp.append(target.getSimpleName());
 			temp.append(" instances inside ");
 			temp.append(listener.getClass().getSimpleName());
-			System.out.println(temp);
+			System.out.println(temp);		
+			
 		}
 		return result;
 	}

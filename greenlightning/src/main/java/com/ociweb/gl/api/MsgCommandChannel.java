@@ -41,14 +41,14 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 	private final static Logger logger = LoggerFactory.getLogger(MsgCommandChannel.class);
 	
 	private boolean isInit = false;
-    Pipe<TrafficOrderSchema> goPipe;
+	transient Pipe<TrafficOrderSchema> goPipe;
     
     ///////////////////////////All the known data pipes
-    Pipe<MessagePubSub> messagePubSub;
-    Pipe<ClientHTTPRequestSchema> httpRequest;
-    Pipe<ServerResponseSchema>[] netResponse;
-	private Pipe<PersistedBlobStoreProducerSchema>[] serialStoreProdPipes;
-	private Pipe<PersistedBlobStoreConsumerSchema>[] serialStoreConsPipes;
+	transient Pipe<MessagePubSub> messagePubSub;
+	transient Pipe<ClientHTTPRequestSchema> httpRequest;
+	transient Pipe<ServerResponseSchema>[] netResponse;
+	private transient Pipe<PersistedBlobStoreProducerSchema>[] serialStoreProdPipes;
+	private transient Pipe<PersistedBlobStoreConsumerSchema>[] serialStoreConsPipes;
 	
 	private final byte[] track;
     
@@ -60,7 +60,7 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
     
     private String[] exclusiveTopics =  new String[0];
     
-    protected AtomicBoolean aBool = new AtomicBoolean(false);   
+    protected transient AtomicBoolean aBool = new AtomicBoolean(false);   
 
     protected static final long MS_TO_NS = 1_000_000;
          
@@ -376,21 +376,6 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 			   this.netResponse = netResponse;
 			   ///////////////////////////
 			   
-			   
-			   if (null != this.netResponse) {
-				   
-				   int x = this.netResponse.length;
-	 
-				   while(--x>=0) {
-				   
-			    	   if (!Pipe.isInit(netResponse[x])) {
-			    		   //hack for now.
-			    		   netResponse[x].initBuffers();
-			    	   }
-				   }
-			   }
-	
-	
 			   
 			   ///////////////////
 	

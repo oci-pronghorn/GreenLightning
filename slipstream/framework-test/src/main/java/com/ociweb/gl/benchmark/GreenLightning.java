@@ -6,8 +6,9 @@ public class GreenLightning {
 
 	public static void main(String[] args) {
 		
-		//System.setProperty("pronghorn.processors", "28"); //this is what server will see in production test
-		//less stack per thread??
+		//PipeConfig.showConfigsCreatedLargerThan = 1<<23;
+		
+		//System.setProperty("pronghorn.processors", "28"); //TODO: could also lower memory usage by shrinking the stack space...
 		GreenRuntime.run(new FrameworkTest(),args);
 	
 	}

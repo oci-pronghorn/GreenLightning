@@ -34,7 +34,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, Listener
      
      public GreenCommandChannel newCommandChannel() { 
 
-      	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
+    	PipeConfigManager pcm = new PipeConfigManager(4, defaultCommandChannelLength, defaultCommandChannelMaxPayload);
 
       	pcm.addConfig(defaultCommandChannelLength, 0,TrafficOrderSchema.class);
       	

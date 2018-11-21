@@ -4,7 +4,6 @@ import com.ociweb.pronghorn.network.HTTPUtilResponse;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
-import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.http.HTTPResponseStatusCodes;
@@ -19,6 +18,7 @@ import com.ociweb.pronghorn.util.Appendables;
 
 public class HTTPResponseService {
 
+	private static final int TWO_RESPONSE_BLOCKS_SIZE = 2*Pipe.sizeOf(ServerResponseSchema.instance, ServerResponseSchema.MSG_TOCHANNEL_100);
 	private final MsgCommandChannel<?> msgCommandChannel;
 	public static final byte[] SERVER_HEADER_NAME = "GreenLightning".getBytes();
 	private static final int minHeader = 128;
@@ -248,7 +248,6 @@ public class HTTPResponseService {
 							           HTTPContentType contentType, Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.NET_RESPONDER))) : "CommandChannel must be created with NET_RESPONDER flag";
 		
-		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
 		final int parallelIndex = 0xFFFFFFFF & (int)(sequenceCode>>32);
 		
 		assert(1==msgCommandChannel.lastResponseWriterFinished) : "Previous write was not ended can not start another.";
@@ -256,9 +255,10 @@ public class HTTPResponseService {
 		Pipe<ServerResponseSchema> pipe = msgCommandChannel.netResponse.length>1 ? msgCommandChannel.netResponse[parallelIndex] : msgCommandChannel.netResponse[0];
 		
 		//header and pay load sent as 2 writes
-		if (!Pipe.hasRoomForWrite(pipe, 2*Pipe.sizeOf(pipe, ServerResponseSchema.MSG_TOCHANNEL_100))) {
+		if (!Pipe.hasRoomForWrite(pipe, TWO_RESPONSE_BLOCKS_SIZE)) {
 			return false;
 		}		
+		final int sequenceNo = 0xFFFFFFFF & (int)sequenceCode;
 						
 		assert(validator.isValidSequence(connectionId, sequenceCode));
 		
@@ -278,26 +278,24 @@ public class HTTPResponseService {
 		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 		
 		int context;
-		if (hasContinuation) {
+		if (!hasContinuation) {
+			context = ServerCoordinator.END_RESPONSE_MASK;
+			msgCommandChannel.lastResponseWriterFinished = 1;
+			outputStream.openField();
+			writable.write(outputStream);
+		} else {
 			context = 0;
 			msgCommandChannel.lastResponseWriterFinished = 0;
-		} else {
-			context = ServerCoordinator.END_RESPONSE_MASK;
-			msgCommandChannel.lastResponseWriterFinished = 1;	
-		}	
-
-		outputStream.openField();
-		writable.write(outputStream); 
-		
-		if (hasContinuation) {
+			outputStream.openField();
+			writable.write(outputStream);
 			// for chunking we must end this block			
 			outputStream.write(MsgCommandChannel.RETURN_NEWLINE);
-		}
+		}	
 		
 		int len = NetResponseWriter.closeLowLevelField(outputStream); //end of writing the payload    	
 		
-		Pipe.addIntValue(context, outputStream.getPipe());  //real context    	
-		Pipe.confirmLowLevelWrite(outputStream.getPipe());
+		Pipe.addIntValue(context, pipe);  //real context    	
+		Pipe.confirmLowLevelWrite(pipe);
 		   	
 		////////////////////Write the header
 		
@@ -331,7 +329,7 @@ public class HTTPResponseService {
 		HTTPUtilResponse.finalizeLengthOfFirstBlock(data, outputStream);
 		
 		//now publish both header and payload
-		Pipe.publishWrites(outputStream.getPipe());
+		Pipe.publishWrites(pipe);
 		
 		return true;
 	}

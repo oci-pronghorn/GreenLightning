@@ -3,7 +3,7 @@ package com.ociweb.gl.api;
 import com.ociweb.gl.impl.http.server.HTTPPayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
 import com.ociweb.pronghorn.network.http.FieldExtractionDefinitions;
-import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
+import com.ociweb.pronghorn.network.http.HTTPRouterStageConfig;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
 import com.ociweb.pronghorn.pipe.Pipe;
@@ -15,15 +15,14 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	private int revisionId;
 	private int routeId;
 	private Object routeAssoc;
-	private int requestContext;
+
 	private HTTPVerbDefaults verb;
 	private final boolean hasNoRoutes;
 
-	//TODO: rename this, it should not be HTTP1.x specific but more general...
-	private HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig;
+	private HTTPRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig;
 
 	public HTTPRequestReader(Pipe<HTTPRequestSchema> pipe, boolean hasNoRoutes,
-			                 HTTP1xRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig) {
+			                 HTTPRouterStageConfig<?, ?, ?, ?> http1xRouterStageConfig) {
 		super(pipe);
 		this.hasNoRoutes = hasNoRoutes;
 		this.httpSpec = http1xRouterStageConfig.httpSpec;
@@ -110,9 +109,6 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	public int getRevisionId() {
 		return revisionId;
 	}
-	
-	private FieldExtractionDefinitions fieldDefs;
-	
 
 	
 	/**

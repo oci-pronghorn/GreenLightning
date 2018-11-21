@@ -2,9 +2,7 @@ package com.ociweb.gl.impl.http.server;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.ociweb.gl.api.FailablePayloadReading;
 import com.ociweb.gl.api.HeaderReader;
-import com.ociweb.gl.api.Payloadable;
 import com.ociweb.gl.impl.PayloadReader;
 import com.ociweb.pronghorn.network.config.HTTPContentType;
 import com.ociweb.pronghorn.network.config.HTTPHeader;
@@ -40,30 +38,5 @@ public class HTTPPayloadReader<S extends MessageSchema<S>> extends PayloadReader
 		return this.httpSpec;
 	}
 
-	/**
-	 *
-	 * @param reader Payloadable arg used to read(this)
-	 * @return if (hasRemainingBytes()) true else false
-	 */
-	public boolean openPayloadData(Payloadable reader) {
-		if (hasRemainingBytes()) {			
-			reader.read(this.structured().readPayload());//even when we have zero length...
-			return true;
-		} else {
-			return false;
-		}
-	}
 
-	/**
-	 *
-	 * @param reader FailablePayloadReading arg used to read(this)
-	 * @return if (hasRemainingBytes()) return reader.read(this) else false
-	 */
-	public boolean openPayloadDataFailable(FailablePayloadReading reader) {
-		if (hasRemainingBytes()) {
-			return reader.read(this.structured().readPayload());//even when we have zero length...
-		} else {
-			return false;
-		}
-	}
 }

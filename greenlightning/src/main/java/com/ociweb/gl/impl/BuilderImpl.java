@@ -69,7 +69,7 @@ import com.ociweb.pronghorn.network.config.HTTPHeaderDefaults;
 import com.ociweb.pronghorn.network.config.HTTPRevisionDefaults;
 import com.ociweb.pronghorn.network.config.HTTPSpecification;
 import com.ociweb.pronghorn.network.config.HTTPVerbDefaults;
-import com.ociweb.pronghorn.network.http.HTTP1xRouterStageConfig;
+import com.ociweb.pronghorn.network.http.HTTPRouterStageConfig;
 import com.ociweb.pronghorn.network.http.HTTPClientRequestStage;
 import com.ociweb.pronghorn.network.schema.ClientHTTPRequestSchema;
 import com.ociweb.pronghorn.network.schema.HTTPRequestSchema;
@@ -94,6 +94,7 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
+import com.ociweb.pronghorn.stage.scheduling.CoresUtil;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.stage.scheduling.StageScheduler;
 import com.ociweb.pronghorn.struct.StructBuilder;
@@ -140,8 +141,8 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 
 	private static final Logger logger = LoggerFactory.getLogger(BuilderImpl.class);
 
-	public final PipeConfigManager pcm = new PipeConfigManager(4,2,128);
-
+	public final PipeConfigManager pcm = new PipeConfigManager(4,2,64);
+	
 	public Enum<?> beginningState;
     
 	private int behaviorTracks = 1;//default is one
@@ -215,7 +216,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	public final HTTPSpecification<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
 	             httpSpec = HTTPSpecification.defaultSpec();
 	
-	private HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
+	private HTTPRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
 	             routerConfig;	//////////////////////////////
 	//////////////////////////////
 
@@ -334,7 +335,10 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			};
 		}
 		
-		return server = new HTTPServerConfigImpl(bindPort, this.pcm, gm.recordTypeData);
+		return server = new HTTPServerConfigImpl(bindPort, 
+												pcm,
+												new PipeConfigManager(),
+												gm.recordTypeData);
 	}
 	
 	@Override
@@ -349,7 +353,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		}
 		if (tracks<=0) {
 			//auto select tracks based on cores
-			tracks = Math.max(1, Runtime.getRuntime().availableProcessors()/2);	
+			tracks = Math.max(1, CoresUtil.availableProcessors()/2);	
 			
 			String maxTrack = System.getProperty("greenlightning.tracks.max");
 			if (null!=maxTrack) {
@@ -370,7 +374,10 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		
 		this.behaviorTracksDefinition = behaviorDefinition;
 		
-		return server = new HTTPServerConfigImpl(bindPort, this.pcm, gm.recordTypeData);
+		return server = new HTTPServerConfigImpl(bindPort, 
+												pcm,
+												new PipeConfigManager(),
+												gm.recordTypeData);
 		
 	}
 	
@@ -389,14 +396,14 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
     }
 
     
-    public final HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
+    public final HTTPRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>
     	routerConfig() {
     	if (null==routerConfig) {
     		assert(null!=server) : "No server defined!";
     		if (null==server) {
     			throw new UnsupportedOperationException("Server must be defined BEFORE any routes.");
     		}
-    		routerConfig = new HTTP1xRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(
+    		routerConfig = new HTTPRouterStageConfig<HTTPContentTypeDefaults, HTTPRevisionDefaults, HTTPVerbDefaults, HTTPHeaderDefaults>(
     				httpSpec,
     				server.connectionStruct()); 
     	
@@ -907,7 +914,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	}
 
 	private int idealThreadCount() {
-		return Runtime.getRuntime().availableProcessors()*4;
+		return CoresUtil.availableProcessors()*4;
 	}
 
 	@Override
@@ -1224,12 +1231,10 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	@Override
 	public MQTTConfigImpl useMQTT(CharSequence host, int port, CharSequence clientId, int maxInFlight, int maxMessageLength) {
 		
-		PipeConfigManager localPCM = pcm;
-		
 		//all these use a smaller rate to ensure MQTT can stay ahead of the internal message passing
 		long rate = defaultSleepRateNS>200_000?defaultSleepRateNS/4:defaultSleepRateNS;
 		
-		return buildMQTTBridge(gm, host, port, clientId, maxInFlight, maxMessageLength, localPCM, rate);
+		return buildMQTTBridge(gm, host, port, clientId, maxInFlight, maxMessageLength, pcm, rate);
 	}
 
 	private static MQTTConfigImpl buildMQTTBridge(GraphManager gm, CharSequence host, int port, CharSequence clientId, 
