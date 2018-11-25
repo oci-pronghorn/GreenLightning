@@ -11,7 +11,7 @@
 
 ## Starting Your Own Project
 ```
-mvn archetype:generate -DarchetypeGroupId=com.ociweb -DarchetypeArtifactId=greenlighter -DarchetypeVersion=1.0.14
+mvn archetype:generate -DarchetypeGroupId=com.ociweb -DarchetypeArtifactId=greenlighter -DarchetypeVersion=1.0.15
 ```
 The terminal now asks for:
 
