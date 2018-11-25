@@ -1126,12 +1126,6 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	                    					this.client.getCertificates(), gm.recordTypeData);
 			}
 				
-			int netResponseCount = 64; //needed for heavy load tests to consume all the responses when they arrive.
-			int responseQueue = 16;
-			
-			//must be adjusted together
-
-			int releaseCount = 1024;
 			int responseUnwrapCount = this.client.isTLS()? 
 					             Math.min(this.client.getUnwrapCount(), netResponsePipes.length) //how many decrypters					             
 					             : 2;
@@ -1161,10 +1155,10 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			
 			
 			NetGraphBuilder.buildHTTPClientGraph(gm, ccm, 
-					responseQueue, clientRequests, 
+					this.client.getResponseQueue(), clientRequests, 
 					netResponsePipes,
-					netResponseCount,
-					releaseCount,
+					this.client.getNetResponseCount(),
+					this.client.getReleaseCount(),
 					responseUnwrapCount,
 					clientWrapperCount,
 					clientSocketWriters);

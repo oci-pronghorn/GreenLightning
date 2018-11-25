@@ -106,6 +106,18 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
 	    this.socketWriterCount = value;
 	    return this;
 	}
+
+	public int getReleaseCount() {
+		return 1024;
+	}
+
+	public int getResponseQueue() {
+		return 32;
+	}
+
+	public int getNetResponseCount() { //needed for heavy load tests to consume all the responses when they arrive.
+		return 256;
+	}
 	
 	
 	
