@@ -41,7 +41,7 @@ public class SerialStoreConsumer {
 			return false;
 		}
 	}
-
+	
 	/**
 	 *
 	 * @param blockId long arg specifying block id

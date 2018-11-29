@@ -683,7 +683,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			                                    int parallelInstanceId,
 			                                    PipeConfigManager pcm
 			                                ) {
-		return (G) new GreenCommandChannel(gm, this, features, parallelInstanceId,
+		return (G) new GreenCommandChannel(this, features, parallelInstanceId,
 				                           pcm);
 	}
 
@@ -697,7 +697,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
             int parallelInstanceId,
             PipeConfigManager pcm
         ) {
-		return (G) new GreenCommandChannel(gm, this, 0, parallelInstanceId,
+		return (G) new GreenCommandChannel(this, 0, parallelInstanceId,
 				                           pcm);
 	}
 
@@ -975,6 +975,11 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	}
 	
 	@Override
+	public void enableTelemetryLogging() {
+		enableTelemetry(null, 0);
+	}
+	
+	@Override
 	public TelemetryConfig enableTelemetry(int port) {
 		return enableTelemetry(null, port);
 	}
@@ -991,10 +996,9 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		}
 
 		this.telemetry = new TelemetryConfigImpl(host, port);
-		this.telemetry.beginDeclarations();
-		
+				
 		if (threadLimit>0 && threadLimit>0 && threadLimit<64) {
-			//we must increase the thread limit to ensure telemetry is not started
+			//we must increase the thread limit to ensure telemetry is not starved
 			threadLimit += 2;			
 		}
 		

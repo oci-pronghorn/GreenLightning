@@ -59,6 +59,11 @@ public class HTTPRequestService {
 						Pipe.from(msgCommandChannel.httpRequest))*messageCount);
 	}
 
+	
+	
+	public void logTelemetrySnapshot() {
+		msgCommandChannel.logTelemetrySnapshot();
+	}
 
 	/**
 	 *

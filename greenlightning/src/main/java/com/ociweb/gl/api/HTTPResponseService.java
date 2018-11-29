@@ -68,6 +68,12 @@ public class HTTPResponseService {
 				statusCode,false,null,Writable.NO_OP); //no type and no body so use null
 	}
 
+	
+	
+	public void logTelemetrySnapshot() {
+		msgCommandChannel.logTelemetrySnapshot();
+	}
+
 	/**
 	 *
 	 * @param requestReader HTTPFieldReader arg used in publishHTTPResponse

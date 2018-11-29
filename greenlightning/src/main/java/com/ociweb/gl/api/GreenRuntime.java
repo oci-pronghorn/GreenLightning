@@ -81,6 +81,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, Listener
 
 		TelemetryConfig telemetryConfig = runtime.builder.getTelemetryConfig();
 		if (telemetryConfig != null) {
+			//telemetryHost is not null only when we are running the HTTP telemetry server
 			runtime.telemetryHost = runtime.gm.enableTelemetry(telemetryConfig.getHost(), telemetryConfig.getPort());
 		}				
 

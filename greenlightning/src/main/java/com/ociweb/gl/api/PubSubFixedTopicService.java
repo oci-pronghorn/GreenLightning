@@ -56,9 +56,12 @@ public class PubSubFixedTopicService {
 		msgCommandChannel.pcm.ensureSize(IngressMessages.class, queueLength, maxMessageSize);
 		
 		msgCommandChannel.builder.possiblePrivateTopicProducer(msgCommandChannel, baseTopic, msgCommandChannel.parallelInstanceId);
-
-		
-		
+	
+	}
+	
+	
+	public void logTelemetrySnapshot() {
+		msgCommandChannel.logTelemetrySnapshot();
 	}
 
 

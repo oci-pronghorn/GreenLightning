@@ -97,10 +97,19 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 				  		    int parallelInstanceId,
 				  		    PipeConfigManager pcm
 				           ) {
-    	this(gm,hardware,ALL, parallelInstanceId, pcm);
+    	this(hardware,ALL, parallelInstanceId, pcm);
     }
 
     protected MsgCommandChannel(GraphManager gm, B builder,
+							  int features,
+							  int parallelInstanceId,
+							  PipeConfigManager pcm
+				           ) {
+    	this(builder, features, parallelInstanceId, pcm);
+    	assert(gm == builder.gm);
+    }
+    
+    protected MsgCommandChannel(B builder,
     					  int features,
     					  int parallelInstanceId,
     					  PipeConfigManager pcm
@@ -118,6 +127,7 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
     public String behaviorName() { //part of namable..
     	return behaviorName;
     }
+
     
     ////////////////////////////////////
     //new method API
@@ -143,6 +153,11 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
     	return new SerialStoreProducer(myPipe);
 	}
 
+    
+    public void logTelemetrySnapshot() {
+    	GraphManager.logTelemetrySnapshot(builder.gm);
+    }
+	
 	/**
 	 *
 	 * @param id int id be passed to builder.serialStoreRequestReplay

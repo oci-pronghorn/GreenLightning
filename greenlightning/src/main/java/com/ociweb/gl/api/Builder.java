@@ -212,5 +212,7 @@ public interface Builder<R extends MsgRuntime<?,?,R>> extends ArgumentProvider {
 	long lookupFieldByName(int aRouteId, String name);
 	long lookupFieldByIdentity(int aRouteId, Object obj);
 
+	void enableTelemetryLogging();
+
 
 }

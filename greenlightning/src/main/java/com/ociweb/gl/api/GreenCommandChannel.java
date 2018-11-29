@@ -14,9 +14,9 @@ public class GreenCommandChannel extends MsgCommandChannel<BuilderImpl> {
 	 * @param parallelInstanceId int arg
 	 * @param pcm arg of data type PipeConfigManager
 	 */
-	public GreenCommandChannel(GraphManager gm, BuilderImpl builder, int features, int parallelInstanceId,
+	public GreenCommandChannel(BuilderImpl builder, int features, int parallelInstanceId,
 			PipeConfigManager pcm) {
-		super(gm, builder, features, parallelInstanceId, pcm);
+		super(builder, features, parallelInstanceId, pcm);
 	}
 
 }

@@ -63,6 +63,11 @@ public class PubSubService {
 		
 	}
 
+	
+	public void logTelemetrySnapshot() {
+		msgCommandChannel.logTelemetrySnapshot();
+	}
+	
 	/**
 	 * A method used to subscribe to a specified topic
 	 * @param topic CharSequence arg used for output.append

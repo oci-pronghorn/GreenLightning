@@ -7,15 +7,10 @@ import com.ociweb.pronghorn.network.NetGraphBuilder;
 public class TelemetryConfigImpl implements TelemetryConfig {
     private String host;
     private int port = TelemetryConfig.defaultTelemetryPort;
-    private BridgeConfigStage configStage = BridgeConfigStage.Construction;
 
     public TelemetryConfigImpl(String host, int port) {
         this.port = port;
         this.host = host;
-    }
-
-    public void beginDeclarations() {
-        this.configStage = BridgeConfigStage.DeclareConnections;
     }
 
     @Override
@@ -29,7 +24,6 @@ public class TelemetryConfigImpl implements TelemetryConfig {
     }
 
     public void finalizeDeclareConnections() {
-    	this.host = NetGraphBuilder.bindHost(this.host);
-        this.configStage = BridgeConfigStage.DeclareBehavior;
+    	this.host = port>0?NetGraphBuilder.bindHost(this.host):null; //if port is positive ensure we have the right host
     }
 }
