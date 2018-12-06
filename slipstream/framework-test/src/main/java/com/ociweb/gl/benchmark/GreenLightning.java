@@ -6,10 +6,14 @@ public class GreenLightning {
 
 	public static void main(String[] args) {
 		
-		//PipeConfig.showConfigsCreatedLargerThan = 1<<23;
-		///GraphManager.showThreadIdOnTelemetry = true;
+		//ServerSocketReaderStage.showRequests = true;
 		
-		//System.setProperty("pronghorn.processors", "28"); 
+		//PipeConfig.showConfigsCreatedLargerThan = 1<<23;
+	//	GraphManager.showThreadIdOnTelemetry = true;
+		//set to 15G? or have fewerpipes?
+	//	System.setProperty("pronghorn.processors", "28"); //simulate the techempower testing box
+	//	System.setProperty("pronghorn.processors", "8"); //set lower since we do testing here... //6 , 8,  12,  16
+		                                                  
 		GreenRuntime.run(new FrameworkTest(),args);
 	
 	}

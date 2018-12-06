@@ -1,7 +1,4 @@
 /.classpath
 /.project
-/.attach_pid24349
-/.attach_pid27401
-/hs_err_pid5213.log
-/hs_err_pid16480.log
-/hs_err_pid17220.log
+/.attach_*
+/hs_err_*.log

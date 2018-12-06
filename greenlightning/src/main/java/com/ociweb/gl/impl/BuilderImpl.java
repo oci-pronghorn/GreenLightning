@@ -106,6 +106,7 @@ import com.ociweb.pronghorn.util.CharSequenceToUTF8Local;
 import com.ociweb.pronghorn.util.TrieParser;
 import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
+import com.ociweb.pronghorn.util.math.PMath;
 
 public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builder<R> {
 
@@ -353,7 +354,10 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		}
 		if (tracks<=0) {
 			//auto select tracks based on cores
-			tracks = Math.max(1, CoresUtil.availableProcessors()/2);	
+			int availableProcessors = CoresUtil.availableProcessors();
+			//if for large processor count we want to reduce the socket readers by increasing the sub pipes count
+			int subTracks = (availableProcessors >= 16)? 3: 2; //this value can only be 2 or 3 at this time
+			tracks = Math.max(1, subTracks*PMath.nextPrime(((int)(availableProcessors*.75))/subTracks) ); //one pipeline track per core	
 			
 			String maxTrack = System.getProperty("greenlightning.tracks.max");
 			if (null!=maxTrack) {

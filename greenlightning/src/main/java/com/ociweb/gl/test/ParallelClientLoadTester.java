@@ -265,16 +265,16 @@ public class ParallelClientLoadTester implements GreenApp {
 	
 		int responseMultiplier = 4;//server may batch up a lot of calls and we need to pick them up without causing delay.
 		clientConfig.setResponseQueueLength(maxInFlight*responseMultiplier);	
+		//fortune size is 1.3 K
+		int maxExpectedMessageSizeFromServer = 2048;//250; //TODO: add support to configure this
+		clientConfig.setMaxResponseSize(maxExpectedMessageSizeFromServer);
+
 		
 		clientConfig.setMaxRequestSize(256);//TODO: what is the expected request size..
-		
 		clientConfig.setRequestQueueLength(maxInFlight);		
 		clientConfig.setConcurentPipesPerWriter(Math.max(4, parallelTracks*sessionCount));
 		clientConfig.setSocketWriterCount(Math.min(4, sessionCount));
 				
-		//fortune size is 1.3 K
-		int maxExpectedMessageSizeFromServer = 2048;//250; //TODO: add support to configure this
-		clientConfig.setMaxResponseSize(maxExpectedMessageSizeFromServer);
 		
 		System.out.println("Test is running with "+(ClientHostPortInstance.getSessionCount()-base)+" total connections");
 		
@@ -360,7 +360,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			
 			GreenCommandChannel newCommandChannel = runtime.newCommandChannel();
 			callService = newCommandChannel.newPubSubService(CALL_TOPIC, maxInFlight*sessionCount, PUB_MSGS_SIZE);
-			pubService = newCommandChannel.newPubSubService(parallelTracks*4, PUB_MSGS_SIZE);
+			pubService = newCommandChannel.newPubSubService(parallelTracks*2, PUB_MSGS_SIZE);
 			
 			if (durationNanos > 0) {//this service requires cops but is only needed when delay is enabled. to save resources only create as needed.
 				delayService = newCommandChannel.newDelayService();
@@ -371,7 +371,8 @@ public class ParallelClientLoadTester implements GreenApp {
 			//do not make too large, when doing giant load testing. This can cause memory issues.
 			//we do need this long enough to all all the requests unless it will consume more than 1Gb
 			//note 28 is a magic number based on the ratio between slab and blob for this schema
-			int queueLength = Math.min(2 *maxInFlight * totalSessionsPerTrack, 1<<Math.max(28-consumedBits,3));
+			int queueLength = Math.min(maxInFlight * (totalSessionsPerTrack+1),
+					                   1<<Math.max(28-consumedBits,3));
 
 			//Need many pipes so the messages can be combined and so we can push that much volume
 			int httpClientConnections = Math.max(1, (sessionCount/8));
