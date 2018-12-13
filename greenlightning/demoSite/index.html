@@ -8,6 +8,9 @@
 
 <body>
   <h2>Green Lightning demo page</h2>
-  <img src="OCILogo.png" alt="OCI logo" height="64" width="64">  
+  <img src="OCILogo.png" alt="OCI logo" height="64" width="64"> 
+  <h3>Example docker file</h3>
+  	FROM greenlightning/gl-webserver:latest
+  	COPY mySite /usr/share/greenlightning/html   
 </body>
 </html>

@@ -28,7 +28,7 @@ public class TrafficReleaseSchema extends MessageSchema<TrafficReleaseSchema> {
 
     /**
      *
-     * @param input Pipe<TrafficReleaseSchema> arg used for PipeReader.tryReadFragment, PipeReader.getMsgIdx, consumeRelease and PipeReader.releaseReadLock
+     * @param input Pipe arg used for PipeReader.tryReadFragment, PipeReader.getMsgIdx, consumeRelease and PipeReader.releaseReadLock
      */
     public static void consume(Pipe<TrafficReleaseSchema> input) {
         while (PipeReader.tryReadFragment(input)) {
@@ -47,7 +47,7 @@ public class TrafficReleaseSchema extends MessageSchema<TrafficReleaseSchema> {
 
     /**
      *
-     * @param input Pipe<TrafficReleaseSchema> arg used in PipeReader.readInt
+     * @param input Pipe arg used in PipeReader.readInt
      */
     public static void consumeRelease(Pipe<TrafficReleaseSchema> input) {
         int fieldCount = PipeReader.readInt(input,MSG_RELEASE_20_FIELD_COUNT_22);
@@ -55,7 +55,7 @@ public class TrafficReleaseSchema extends MessageSchema<TrafficReleaseSchema> {
 
     /**
      *
-     * @param output Pipe<TrafficReleaseSchema> arg used in PipeWriter.presumeWriteFragment, .writeInt and publishWrites
+     * @param output Pipe arg used in PipeWriter.presumeWriteFragment, .writeInt and publishWrites
      * @param fieldCount
      */
     public static void publishRelease(Pipe<TrafficReleaseSchema> output, int fieldCount) {

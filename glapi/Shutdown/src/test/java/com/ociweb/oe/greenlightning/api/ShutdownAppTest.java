@@ -16,10 +16,10 @@ import static org.junit.Assert.fail;
 /**
  * Unit test for simple App.
  */
-public class AppTest { 
+public class ShutdownAppTest { 
 
 	private final int timeoutMS = 240_000; //240 sec
-	private final static Logger logger = LoggerFactory.getLogger(AppTest.class);
+	private final static Logger logger = LoggerFactory.getLogger(ShutdownAppTest.class);
 	static int port = (int) (3000 + (System.nanoTime()%12000));
 		
 	 @Test

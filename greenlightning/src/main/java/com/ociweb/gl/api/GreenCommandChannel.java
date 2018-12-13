@@ -8,7 +8,6 @@ public class GreenCommandChannel extends MsgCommandChannel<BuilderImpl> {
 
 	/**
 	 *
-	 * @param gm arg of data type GraphManager
 	 * @param builder arg of data type BuilderImpl
 	 * @param features int arg
 	 * @param parallelInstanceId int arg

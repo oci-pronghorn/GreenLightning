@@ -263,8 +263,8 @@ public class ParallelClientLoadTester implements GreenApp {
 		//when we have massive connections this is a very small number
 		//HIGHVOLUME test
 	
-		int responseMultiplier = 4;//server may batch up a lot of calls and we need to pick them up without causing delay.
-		clientConfig.setResponseQueueLength(maxInFlight*responseMultiplier);	
+		int responseMultiplier = 2;//server may batch up a lot of calls and we need to pick them up without causing delay.
+		clientConfig.setResponseQueueLength(maxInFlight*responseMultiplier); //parser->responder	
 		//fortune size is 1.3 K
 		int maxExpectedMessageSizeFromServer = 2048;//250; //TODO: add support to configure this
 		clientConfig.setMaxResponseSize(maxExpectedMessageSizeFromServer);

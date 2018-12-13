@@ -8,6 +8,7 @@ public class SimpleLoadTester {
 
 	public static void main(String[] args) {
 	
+		LoadTester.cycleRate = 50_000_000L;
 		//ClientSocketReaderStage.showResponse = true;
 		
 		//ClientSocketReaderStage.showResponse = true;
@@ -24,7 +25,7 @@ public class SimpleLoadTester {
 		String route = MsgRuntime.getOptArg("route", "-r", args, "/plaintext");
 		String host  = MsgRuntime.getOptArg("host", "-h", args, "127.0.0.1");		
 		int port = Integer.parseInt(MsgRuntime.getOptArg("host", "-p", args, "8080"));
-		int totalCalls = Integer.parseInt(MsgRuntime.getOptArg("calls", "-c", args, "16000000"));
+		long totalCalls = Long.parseLong(MsgRuntime.getOptArg("calls", "-c", args, "16000000"));
 		int inFlightBits = Integer.parseInt(MsgRuntime.getOptArg("inFlightBits", "-b", args, "9"));
 		int tracks = Integer.parseInt(MsgRuntime.getOptArg("tracks", "-t", args, "8"));		
 		boolean testTelemetry = Boolean.parseBoolean(MsgRuntime.getOptArg("monitor", "-m", args, "false"));
@@ -32,14 +33,14 @@ public class SimpleLoadTester {
 		//////////////
 		//run
 		//////////////
-		int callsPerTrack = totalCalls/tracks; 
+		long callsPerTrack = totalCalls/tracks; 
 
 		LoadTester.runClient(
 				null,
 				(i,r) -> r.statusCode()==200 , 
 				route, 
 				useTLS, testTelemetry, 
-				tracks, callsPerTrack, 
+				tracks, (int)callsPerTrack, //TODO: pass long is for calls per track..
 				host, port, timeoutMS, inFlightBits,
 				null,						
 				System.out);	

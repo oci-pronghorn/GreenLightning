@@ -117,7 +117,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, Listener
 				} catch (InterruptedException e) {
 					throw new RuntimeException(e);
 				} catch (BrokenBarrierException e) {
-					throw new RuntimeException(e);
+					//throw new RuntimeException(e);
 				}    
 			}
 	    };
@@ -131,7 +131,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, Listener
 				} catch (InterruptedException e) {
 					throw new RuntimeException(e);
 				} catch (BrokenBarrierException e) {
-					throw new RuntimeException(e);
+					//throw new RuntimeException(e);
 				}    
 			}
 		   };
@@ -212,7 +212,7 @@ public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, Listener
 	    }
 
 	      //exportGraphDotFile();
-	    boolean reverseOrder = false;
+	    boolean reverseOrder = true;
 		StageVisitor badPlayers = new StageVisitor(){
 			
 			byte[] seen = new byte[GraphManager.countStages(runtime.gm)+1];

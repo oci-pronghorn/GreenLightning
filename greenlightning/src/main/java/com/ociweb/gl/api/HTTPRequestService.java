@@ -192,7 +192,7 @@ public class HTTPRequestService {
 	 * @param route CharSequence arg used in PipeWriter
 	 * @param headers HeaderWritable arg used in PipeWriter
 	 * @param payload
-	 * @return true if session.getConnnectionId() < 0 <p> false otherwise
+	 * @return true if session.getConnnectionId() LT 0 , false otherwise
 	 */
 	public boolean httpPost(ClientHostPortInstance session, CharSequence route, HeaderWritable headers, Writable payload) {
 		return httpWithPayload(session, route, headers, payload, ClientHTTPRequestSchema.MSG_POST_201);

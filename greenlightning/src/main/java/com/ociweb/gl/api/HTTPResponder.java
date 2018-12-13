@@ -43,7 +43,7 @@ public class HTTPResponder {
 	/**
 	 *
 	 * @param reader ChannelReader arg used to set connectionId and sequenceCode
-	 * @return <code>true</code> if Pipe.hasContentToRead(pipe) <p> <code>false</code> if connectionId >= 0 && sequenceCode >= 0
+	 * @return <code>true</code> if Pipe.hasContentToRead(pipe) <p> <code>false</code> if connectionId gte 0 and sequenceCode gte 0
 	 */
 	public boolean readHandoffData(ChannelReader reader) {
 		
@@ -167,10 +167,10 @@ public class HTTPResponder {
 	 *
 	 * @param statusCode int arg used in commandChannel.publishHTTPResponse
 	 * @param hasContinuation boolean arg
-	 * @Param headers HeaderWritable
+	 * @param headers HeaderWritable
 	 * @param contentType HTTPContentType arg used in commandChannel.publishHTTPResponse
 	 * @param writable Writable arg used in commandChannel.publishHTTPResponse
-	 * @return publishResult if connectionId >= 0 && sequenceCode >= 0 <p> <code>false</code> if Pipe.hasContentToRead(pipe) else <code>true</code>
+	 * @return publishResult if connectionId GTE 0 AND sequenceCode GTE 0 , <code>false</code> if Pipe.hasContentToRead(pipe) else <code>true</code>
 	 */
     public boolean respondWith(int statusCode, boolean hasContinuation, 
     		                   HeaderWritable headers, HTTPContentType contentType, Writable writable) {
@@ -224,7 +224,7 @@ public class HTTPResponder {
 	 * @param hasContinuation boolean arg
 	 * @param contentType HTTPContentType arg used in commandChannel.publishHTTPResponse
 	 * @param writable Writable arg used in commandChannel.publishHTTPResponse
-	 * @return publishResult if connectionId >= 0 && sequenceCode >= 0 <p> <code>false</code> if Pipe.hasContentToRead(pipe) else <code>true</code>
+	 * @return publishResult if connectionId GTE 0 AND sequenceCode GTE 0 <p> <code>false</code> if Pipe.hasContentToRead(pipe) else <code>true</code>
 	 */
    public boolean respondWith(int statusCode, boolean hasContinuation, 
 		                      HTTPContentType contentType, Writable writable) {

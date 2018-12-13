@@ -31,7 +31,7 @@ public class MessageSubscription extends MessageSchema<MessageSubscription> {
 
 	/**
 	 *
-	 * @param input Pipe<MessageSubscription> arg used for consumePublish and consumeStateChanged
+	 * @param input Pipe arg used for consumePublish and consumeStateChanged
 	 */
 	public static void consume(Pipe<MessageSubscription> input) {
 	    while (PipeReader.tryReadFragment(input)) {
@@ -53,7 +53,7 @@ public class MessageSubscription extends MessageSchema<MessageSubscription> {
 
 	/**
 	 *
-	 * @param input Pipe<MessageSubscription> arg used for PipeReader.readUTF8 and PipeReader.readBytes
+	 * @param input Pipe arg used for PipeReader.readUTF8 and PipeReader.readBytes
 	 */
 	public static void consumePublish(Pipe<MessageSubscription> input) {
 	    StringBuilder fieldTopic = PipeReader.readUTF8(input,MSG_PUBLISH_103_FIELD_TOPIC_1,new StringBuilder(PipeReader.readBytesLength(input,MSG_PUBLISH_103_FIELD_TOPIC_1)));
@@ -62,7 +62,7 @@ public class MessageSubscription extends MessageSchema<MessageSubscription> {
 
 	/**
 	 *
-	 * @param input Pipe<MessageSubscription> arg used for PipeReader.readInt
+	 * @param input Pipe arg used for PipeReader.readInt
 	 */
 	public static void consumeStateChanged(Pipe<MessageSubscription> input) {
 	    int fieldOldOrdinal = PipeReader.readInt(input,MSG_STATECHANGED_71_FIELD_OLDORDINAL_8);
@@ -71,7 +71,7 @@ public class MessageSubscription extends MessageSchema<MessageSubscription> {
 
 	/**
 	 *
-	 * @param output Pipe<MessageSubscription> arg used for PipeWriter.presumeWriteFragment
+	 * @param output Pipe arg used for PipeWriter.presumeWriteFragment
 	 * @param fieldTopic CharSequence arg used for PipeWriter.writeUTF8
 	 * @param fieldPayloadBacking byte[] arg used for PipeWriter.writeBytes
 	 * @param fieldPayloadPosition int arg used for PipeWriter.Bytes
@@ -86,7 +86,7 @@ public class MessageSubscription extends MessageSchema<MessageSubscription> {
 
 	/**
 	 *
-	 * @param output Pipe<MessageSubscription> arg used in PipeWriter.presumeWriteFragment, .writeInt and .publishWrites
+	 * @param output Pipe arg used in PipeWriter.presumeWriteFragment, .writeInt and .publishWrites
 	 * @param fieldOldOrdinal int arg used for PipeWriter.writeInt
 	 * @param fieldNewOrdinal int arg used for PipeWriter.writeInt
 	 */

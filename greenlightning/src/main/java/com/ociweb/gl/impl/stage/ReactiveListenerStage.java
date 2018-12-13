@@ -76,7 +76,8 @@ import com.ociweb.pronghorn.util.TrieParserReader;
 
 public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy implements ListenerFilter, PendingStageBuildable {
 
-    private static final int SIZE_OF_PRIVATE_MSG_PUB = Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1);
+    private static final int SIZE_OF_REST_REQUEST = Pipe.sizeOf(HTTPRequestSchema.instance,HTTPRequestSchema.MSG_RESTREQUEST_300);
+	private static final int SIZE_OF_PRIVATE_MSG_PUB = Pipe.sizeOf(MessagePrivate.instance, MessagePrivate.MSG_PUBLISH_1);
 	private static final int SIZE_OF_MSG_STATECHANGE = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_STATECHANGED_71);
 	private static final int SIZE_OF_MSG_PUBLISH     = Pipe.sizeOf(MessageSubscription.instance, MessageSubscription.MSG_PUBLISH_103);
 	
@@ -876,7 +877,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 
 	
     final void consumeRestRequest(Object listener, Pipe<HTTPRequestSchema> p) {
-		
+
     	  while (Pipe.hasContentToRead(p)) {                
              
     		  Pipe.markTail(p);             
@@ -897,24 +898,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	    	  int parallelIdx = parallelRevision >>> HTTPRevision.BITS;
     	    	  int revision = HTTPRevision.MASK & parallelRevision;
     	    	  
-				  reader.setRevisionId(revision);
-    	    	  int context = Pipe.takeInt(p);   	    	  
-    	    	  
-    	    	  int structType = DataInputBlobReader.getStructType(reader);    	    	  
-				  reader.setRouteId(routeId, graphManager.recordTypeData.structAssociatedObject(structType));
-    	    	      	    	  
-    	    	  assert(parallelIdx<OrderSupervisorStage.CLOSE_CONNECTION_MASK);
-    	    	  
-    	    	  //if (0!=(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context)) {
-    	    	  //	  logger.info("\nclosed discovered {} sent from client.. ",connectionId);
-    	    	  //}
-    	    	  
-    	    	  //all these values are required in order to ensure the right sequence order once processed.
-    	    	  long sequenceCode = (((long)(parallelIdx|(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context))  )<<32) | ((long)sequenceNo);
-    	    	  reader.setConnectionId(connectionId, sequenceCode);
-    	    	  
-    	    	  //assign verbs as strings...
-    	    	  reader.setVerb((HTTPVerbDefaults)httpSpec.verbs[verbId]);
+				  populateReader(p, connectionId, sequenceNo, routeId, verbId, reader, parallelIdx, revision);
  			
     	    	  if (null!=restRequestReader && 
     	    	      routeId<restRequestReader.length &&
@@ -934,17 +918,40 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 			              }
     	    		  }
     	    	  }
+    	    	  
+    	    	  Pipe.confirmLowLevelRead(p, SIZE_OF_REST_REQUEST);
+    	    	  Pipe.releaseReadLock(p);
+    	    	  
     	      } else {
     	    	  logger.error("unrecognized message on {} ",p);
     	    	  throw new UnsupportedOperationException("unexpected message "+msgIdx);
     	      }
-        
-    	      Pipe.confirmLowLevelRead(p, Pipe.sizeOf(p,msgIdx));
-              Pipe.releaseReadLock(p);
               
     	  }
     	   	
     	
+	}
+
+	private void populateReader(Pipe<HTTPRequestSchema> p, long connectionId, final int sequenceNo, int routeId,
+			int verbId, HTTPRequestReader reader, int parallelIdx, int revision) {
+		reader.setRevisionId(revision);
+		  int context = Pipe.takeInt(p);   	    	  
+		  
+		  int structType = DataInputBlobReader.getStructType(reader);    	    	  
+		  reader.setRouteId(routeId, graphManager.recordTypeData.structAssociatedObject(structType));
+		      	    	  
+		  assert(parallelIdx<OrderSupervisorStage.CLOSE_CONNECTION_MASK);
+		  
+		  //if (0!=(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context)) {
+		  //	  logger.info("\nclosed discovered {} sent from client.. ",connectionId);
+		  //}
+		  
+		  //all these values are required in order to ensure the right sequence order once processed.
+		  long sequenceCode = (((long)(parallelIdx|(OrderSupervisorStage.CLOSE_CONNECTION_MASK&context))  )<<32) | ((long)sequenceNo);
+		  reader.setConnectionId(connectionId, sequenceCode);
+		  
+		  //assign verbs as strings...
+		  reader.setVerb((HTTPVerbDefaults)httpSpec.verbs[verbId]);
 	}
 
 

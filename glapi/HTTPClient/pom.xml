@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
   <artifactId>http-client</artifactId>
-  <version>1.0.14</version>
+  <version>1.0.18</version>
   
   <properties>
     <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
@@ -17,7 +17,7 @@
   		<dependency>
 	  		<groupId>com.ociweb</groupId>
             <artifactId>greenlightning</artifactId>
-            <version>1.0.14</version>
+            <version>[1.0.18,)</version>
     	</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -65,23 +65,9 @@
         </plugin>
 
         <plugin>
-		   <groupId>org.apache.maven.plugins</groupId>
-		   <artifactId>maven-jar-plugin</artifactId>
-		   <version>2.6</version>
-		   <configuration>
-		     <forceCreation>true</forceCreation>
-		     <archive>
-                 <manifestEntries>
-	              	<Build-Time>${maven.build.timestamp}</Build-Time>
-	            </manifestEntries>
-             </archive>
-		   </configuration>
-		</plugin>
-
-        <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-        <version>2.4</version>
+        <version>3.0.1</version>
         <executions>
           <execution>
             <id>attach-sources</id>
@@ -129,7 +115,9 @@
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 
+					<!-- finalName>uberexample</finalName -->
 					<finalName>uberexample</finalName>
+					
 					<appendAssemblyId>false</appendAssemblyId>
 
 				</configuration>
@@ -145,7 +133,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
+			<!--  plugin>
 
 				<groupId>com.github.wvengen</groupId>
 				<artifactId>proguard-maven-plugin</artifactId>
@@ -180,7 +168,7 @@
 						<scope>runtime</scope>
 					</dependency>
 				</dependencies>
-			</plugin>
+			</plugin -->
         
 	  </plugins>
 	</build>	 

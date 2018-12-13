@@ -30,9 +30,8 @@ public class ReactiveOperators {
 	/**
 	 *
 	 * @param p Pipe arg used for Pipe.isForSchema
-	 * @Param doNotThrow boolean if the pipe does not match return null instead of throwing
+	 * @param doNotThrow boolean if the pipe does not match return null instead of throwing
 	 * @return operators.get(i) if (Pipe.isForSchema(p, schemas.get(i)))
-	 * @throws UnsupportedOperationException
 	 */
 	public ReactiveOperator getOperator(Pipe p, boolean doNotThrow) {
 		

@@ -19,7 +19,7 @@ public class HeaderTypeCapture implements Headable {
 	@Override
 	public void read(HTTPHeader header, ChannelReader reader) {
 		
-		short type = reader.readShort();
+		short type = reader.available()>=2 ? reader.readShort() : -1;
 		if ((type<0) || (type>=httpSpec.contentTypes.length)) {
 			this.type = HTTPContentTypeDefaults.UNKNOWN;
 		} else {

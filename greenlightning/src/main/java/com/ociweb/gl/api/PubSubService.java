@@ -500,7 +500,7 @@ public class PubSubService {
 	 * Publishes specified topic with data written onto this channel
      * @param topic CharSequence arg to be specified for publish
      * @param writable to write data into this channel
-	 * @return published topic if token >= 0
+	 * @return published topic if token GTE 0
 	 */
 	public boolean publishTopic(CharSequence topic, Writable writable) {
 		
@@ -568,7 +568,7 @@ public class PubSubService {
      * @param topic CharSequence arg to be specified for publish
      * @param writable to write data into this channel
 	 * @param waitFor waitFor arg used in PipeWriter.writeInt
-	 * @return published topic if token >= 0
+	 * @return published topic if token GTE 0
 	 */
 	public boolean publishTopic(CharSequence topic, Writable writable, WaitFor waitFor) {
 		
@@ -658,7 +658,7 @@ public class PubSubService {
      * @param topic CharSequence arg to be specified for publish
      * @param writable to write data into this channel
 	 * @param ap WaitFor arg used in PipeWriter.writeInt
-	 * @return published topic if token >= 0
+	 * @return published topic if token GTE 0
 	 */
 	public boolean publishTopic(TopicWritable topic, Writable writable, WaitFor ap) {
 		
@@ -711,7 +711,7 @@ public class PubSubService {
 
     /**
      * Takes previous state and changes it to specified state
-     * @param state state used to convert original
+     * @param state used to convert original
       */
 	public <E extends Enum<E>> boolean changeStateTo(E state) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";

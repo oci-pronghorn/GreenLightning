@@ -28,7 +28,7 @@ public class IngressMessages extends MessageSchema<IngressMessages> {
 
 	/**
 	 *
-	 * @param input Pipe<IngressMessages> arg used in consumePublish and PipeReader.releaseReadLock
+	 * @param input Pipe arg used in consumePublish and PipeReader.releaseReadLock
 	 */
 		public static void consume(Pipe<IngressMessages> input) {
 		    while (PipeReader.tryReadFragment(input)) {
@@ -47,7 +47,7 @@ public class IngressMessages extends MessageSchema<IngressMessages> {
 
 	/**
 	 *
-	 * @param input Pipe<IngressMessages> arg used in PipeReader.readUTF8 and PipeReader.readBytes
+	 * @param input Pipe arg used in PipeReader.readUTF8 and PipeReader.readBytes
 	 */
 		public static void consumePublish(Pipe<IngressMessages> input) {
 		    StringBuilder fieldTopic = PipeReader.readUTF8(input,MSG_PUBLISH_103_FIELD_TOPIC_1,new StringBuilder(PipeReader.readBytesLength(input,MSG_PUBLISH_103_FIELD_TOPIC_1)));
@@ -56,7 +56,7 @@ public class IngressMessages extends MessageSchema<IngressMessages> {
 
 	/**
 	 *
-	 * @param output Pipe<IngressMessages> used in PipeWriter.presumeWriteFragment, writeUTF8, writeBytes and publishWrites
+	 * @param output Pipe used in PipeWriter.presumeWriteFragment, writeUTF8, writeBytes and publishWrites
 	 * @param fieldTopic CharSequence arg used in PipeWriter.writeUTF8
 	 * @param fieldPayloadBacking byte[] arg used in PipeWriter.writeBytes
 	 * @param fieldPayloadPosition int arg used in PipeWriter.writeBytes

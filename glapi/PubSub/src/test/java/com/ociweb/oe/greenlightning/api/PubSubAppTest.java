@@ -10,7 +10,7 @@ import com.ociweb.gl.api.GreenRuntime;
 /**
  * Unit test for simple App.
  */
-public class AppTest { 
+public class PubSubAppTest { 
 
 	
 	    @Test

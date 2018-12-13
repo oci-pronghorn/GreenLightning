@@ -70,7 +70,7 @@ public class ReactiveManagerPipeConsumer {
 	 * A method used to switch old pipe with new pipe if true
 	 * @param oldPipe Pipe arg used to determine swap
 	 * @param newPipe Pipe arg used to determine swap
-	 * @return true if --i> = 0 else false
+	 * @return true if --i GTE 0 else false
 	 */
 	public boolean swapIfFound(Pipe oldPipe, Pipe newPipe) {		
 		int i = inputs.length;

@@ -305,7 +305,7 @@ public class PubSubFixedTopicService {
 	/**
 	 * Publishes specified topic with data written onto this channel
      * @param writable to write data into this channel
-	 * @return published topic if token >= 0
+	 * @return published topic if token GTE 0
 	 */
 	public boolean publishTopic(Writable writable) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";
@@ -355,7 +355,7 @@ public class PubSubFixedTopicService {
      * Publishes specified topic with data written onto this channel while not accepting new messages until published message is received
      * @param writable to write data into this channel
 	 * @param waitFor waitFor arg used in PipeWriter.writeInt
-	 * @return published topic if token >= 0
+	 * @return published topic if token GTE 0
 	 */
 	public boolean publishTopic(Writable writable, WaitFor waitFor) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";

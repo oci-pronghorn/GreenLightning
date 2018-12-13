@@ -27,7 +27,7 @@
 		<dependency>
 			<groupId>com.ociweb</groupId>
 			<artifactId>greenlightning</artifactId>
-			<version>1.0.17</version>
+			<version>1.0.18</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -70,7 +70,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
-				<version>2.6</version>
+				<version>3.1.0</version>
 				<configuration>
 					<forceCreation>true</forceCreation>
 					<archive>
@@ -84,7 +84,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>2.4</version>
+				<version>3.0.1</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -132,7 +132,9 @@
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 
-					<finalName>uber${artifactId}</finalName>
+					<!--  finalName>uber${artifactId}</finalName for proguard-->
+					<finalName>${artifactId}</finalName>
+										
 					<appendAssemblyId>false</appendAssemblyId>
 
 				</configuration>
@@ -148,7 +150,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
+			<!--  plugin only works for JDK8, follow here https://sourceforge.net/p/proguard/feature-requests/188/ >
 
 				<groupId>com.github.wvengen</groupId>
 				<artifactId>proguard-maven-plugin</artifactId>
@@ -183,7 +185,7 @@
 						<scope>runtime</scope>
 					</dependency>
 				</dependencies>
-			</plugin>
+			</plugin -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jarsigner-plugin</artifactId>

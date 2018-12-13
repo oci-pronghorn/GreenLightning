@@ -4,7 +4,7 @@
     <groupId>com.ociweb</groupId>
     <artifactId>greenlighter</artifactId>
     <name>greenlighter</name>
-    <version>1.0.17</version>
+    <version>1.0.18</version>
 
     <description>A Maven archetype for GreenLightning projects</description>
     <url>https://github.com/oci-pronghorn/GreenLighter</url>
@@ -80,6 +80,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-jar-plugin</artifactId>
+                        <version>3.1.0</version>
                         <executions>
                             <execution>
                                 <id>empty-javadoc-jar</id> <!-- creates javadocs jar for maven central compliance -->
@@ -115,18 +116,12 @@
     </profiles>
 
     <build>
-        <extensions>
-            <extension>
-                <groupId>org.apache.maven.wagon</groupId>
-                <artifactId>wagon-webdav-jackrabbit</artifactId>
-                <version>2.2</version>
-            </extension>
-        </extensions>
+       
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.9.1</version>
+                <version>3.0.1</version>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
@@ -142,7 +137,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>2.4</version>
+                <version>3.0.1</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>

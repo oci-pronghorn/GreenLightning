@@ -85,7 +85,7 @@ public class PublishPrivateTopics {
 
 	/**
 	 *
-	 * @param tempTopicPipe Pipe<RawDataSchema> arg used in TrieParserReader.query
+	 * @param tempTopicPipe Pipe arg used in TrieParserReader.query
 	 * @return (int)TrieParserReader.query(privateTopicsTrieReader, privateTopicsPublishTrie, tempTopicPipe, - 1)
 	 */
 	public int getToken(Pipe<RawDataSchema> tempTopicPipe) {

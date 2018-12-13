@@ -397,7 +397,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	
 	/**
 	 *
-	 * @param msgRuntime MsgRuntime<?, ?> arg used in EgressMQTTStage
+	 * @param msgRuntime MsgRuntime arg used in EgressMQTTStage
 	 */
 	public void finalizeDeclareConnections(MsgRuntime<?,?,?> msgRuntime) {
 		configStage = BridgeConfigStage.Finalized;

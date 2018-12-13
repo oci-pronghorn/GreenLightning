@@ -4,7 +4,7 @@
 	<groupId>com.mydomain.greenlightning.slipstream</groupId>
 	<artifactId>my-microservice</artifactId>
 	<name>my-microservice</name>
-	<version>1.0.14</version>
+	<version>1.0.18</version>
 
 	<properties>
 		<keystore.path>./certificates/ocikeystore.jks</keystore.path>
@@ -29,7 +29,7 @@
 		<dependency>
 			<groupId>com.ociweb</groupId>
 			<artifactId>greenlightning</artifactId>
-			<version>1.0.14</version>
+			<version>[1.0.18,)</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -68,25 +68,11 @@
 					<target>1.8</target>
 				</configuration>
 			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>2.6</version>
-				<configuration>
-					<forceCreation>true</forceCreation>
-					<archive>
-						<manifestEntries>
-							<Build-Time>${maven.build.timestamp}</Build-Time>
-						</manifestEntries>
-					</archive>
-				</configuration>
-			</plugin>
-
+			
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>2.4</version>
+				<version>3.0.1</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -134,7 +120,8 @@
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
 
-					<finalName>ubermy-microservice</finalName>
+					<!--  finalName>ubermy-microservice</finalName -->
+					<finalName>my-microservice</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 
 				</configuration>
@@ -150,7 +137,7 @@
 					</execution>
 				</executions>
 			</plugin>
-			<plugin>
+			<!-- plugin>
 
 				<groupId>com.github.wvengen</groupId>
 				<artifactId>proguard-maven-plugin</artifactId>
@@ -185,7 +172,7 @@
 						<scope>runtime</scope>
 					</dependency>
 				</dependencies>
-			</plugin>
+			</plugin -->
 			<!-- Jar signing has problems in the cloud build server,  uncomment if this feature is needed -->
 			<!-- plugin>
 				<groupId>org.apache.maven.plugins</groupId>

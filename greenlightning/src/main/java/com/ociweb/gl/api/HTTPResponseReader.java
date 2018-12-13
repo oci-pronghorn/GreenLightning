@@ -34,6 +34,7 @@ public class HTTPResponseReader extends HTTPPayloadReader<NetResponseSchema> {
 	/**
     * statusCode Status code of the response. -1 indicates
     *                   the network connection was lost.
+    *   @return status code                
     */                   
 	public short statusCode() {
 		return this.status;

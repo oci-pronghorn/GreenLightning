@@ -13,7 +13,7 @@ import com.ociweb.oe.greenlightning.api.server.HTTPServer;
 /**
  * Unit test for simple App.
  */
-public class AppTest { 
+public class ClientAppTest { 
 	
 	 private static final String host = "127.0.0.1";
 	

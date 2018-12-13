@@ -9,7 +9,7 @@ import com.ociweb.gl.api.GreenRuntime;
 /**
  * Unit test for simple App.
  */
-public class AppTest { 
+public class MQTTAppTest { 
 
 	//cloud bees has no MQTT server to talk to.
 	@Test

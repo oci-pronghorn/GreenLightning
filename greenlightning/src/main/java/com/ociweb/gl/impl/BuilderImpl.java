@@ -253,7 +253,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	/**
 	 * a method to validate fullName and add it to behaviorNames
 	 * @param behaviorName String arg used in behaviorNames
-	 * @param trackId int arg used with fullName if arg >= 0
+	 * @param trackId int arg used with fullName if arg GTE 0
 	 * @return behaviorName + trackId
 	 */
 	//will throw if a duplicate stage name is detected.
@@ -308,7 +308,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	/**
 	 *
 	 * @param count int arg used to set count in MsgCommandChannel.publishGo
-	 * @param gcc MsgCommandChannel<?>
+	 * @param gcc MsgCommandChannel
 	 */
 	public void releasePubSubTraffic(int count, MsgCommandChannel<?> gcc) { //TODO: non descriptive arg name gcc??
 		MsgCommandChannel.publishGo(count, IDX_MSG, gcc);
@@ -417,8 +417,8 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 
 	/**
 	 * A method to append pipe mapping and group ids when invoked by builder
-	 * @param pipe Pipe<HTTPRequestSchema> arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
-	 * @param parallelId int arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
+	 * @param pipe Pipe arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
+	 * @param track int arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
 	 * @param routeIds int arg used for routerConfig().appendPipeIdMappingForIncludedGroupIds
 	 * @return routerConfig().appendPipeIdMappingForIncludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds)
 	 */
@@ -431,7 +431,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 
 	/**
 	 * A method to append pipe mapping but not including group ids when invoked by builder
-	 * @param pipe Pipe<HTTPRequestSchema> arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
+	 * @param pipe Pipe arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
 	 * @param parallelId int arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
 	 * @param routeIds int arg used for routerConfig().appendPipeIdMappingForExcludedGroupIds
 	 * @return routerConfig().appendPipeIdMappingForExcludedGroupIds(pipe, parallelId, collectedHTTPRequestPipes, groupIds)
@@ -457,7 +457,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	 *
 	 * @param track int arg used as index in collectedHTTPRequestPipes array
 	 * @param route int arg used as index in collectedHTTPRequestPipes array
-	 * @return null!= collectedHTTPRequestPipes ? collectedHTTPRequestPipes[r][p] : new ArrayList<Pipe<HTTPRequestSchema>>()
+	 * @return null!= collectedHTTPRequestPipes ? collectedHTTPRequestPipes[r][p] : new ArrayList()
 	 */
 	public final ArrayList<Pipe<HTTPRequestSchema>> buildFromRequestArray(int track, int route) {
 		assert(null== collectedHTTPRequestPipes || track< collectedHTTPRequestPipes.length);
@@ -518,7 +518,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	/**
 	 *
 	 * @param track int arg used in collectedServerResponsePipes
-	 * @return (Pipe<ServerResponseSchema>[]) list.toArray(new Pipe[list.size()])
+	 * @return (Pipe[]) list.toArray(new Pipe[list.size()])
 	 */
 	public final Pipe<ServerResponseSchema>[] buildToOrderArray(int track) {
 		if (null==collectedServerResponsePipes || collectedServerResponsePipes.length==0) {
@@ -531,7 +531,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 
 	/**
 	 *
-	 * @param config
+	 * @param config PipeConfig
 	 * @param parallelInstanceId int arg used for recordPipeMapping
 	 * @return pipe
 	 */
@@ -755,7 +755,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 
     /**
      *
-     * @param runtime final MsgRuntime arg used to check if  arg.builder.threadLimit > 0
+     * @param runtime final MsgRuntime arg used to check if  arg.builder.threadLimit GT 0
      * @param cleanRunnable final Runnable arg used with runtime.addCleanShutdownRunnable
      * @param dirtyRunnable final Runnable arg used with runtime.addDirtyShutdownRunnable
      * @return scheduler
@@ -1853,7 +1853,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			
 			
 			
-			logger.info("possible private topic {} {}->{}",topic, possiblePrivateTopicsProducerCount[i], null==possiblePrivateBehaviors[i] ? -1 :possiblePrivateBehaviors[i].size());
+			logger.trace("possible private topic {} {}->{}",topic, possiblePrivateTopicsProducerCount[i], null==possiblePrivateBehaviors[i] ? -1 :possiblePrivateBehaviors[i].size());
 			
 			boolean madePrivate = false;
 			String reasonSkipped = "";

@@ -12,9 +12,9 @@ import com.ociweb.gl.test.LoadTester;
 import com.ociweb.json.encode.JSONRenderer;
 import com.ociweb.pronghorn.network.config.HTTPContentTypeDefaults;
 import com.ociweb.pronghorn.pipe.ChannelWriter;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
+import com.ociweb.pronghorn.util.Appendables;
 
-public class ExampleAppTest {
+public class ServerAppTest {
 
 	public class Person {
 
@@ -45,6 +45,10 @@ public class ExampleAppTest {
 	@BeforeClass
 	public static void startServer() {
 		
+		//speed up load testers
+		LoadTester.cycleRate = 4_0000;
+		
+		
 		console = new StringBuilder();
 		runtime = GreenRuntime.run(new HTTPServer(host,port,console,telemetryPort, useTLS));
 		
@@ -58,6 +62,9 @@ public class ExampleAppTest {
 	
 	@Test
 	public void jsonCallTest() {
+		
+		int cycles = 3;
+		int tracks = 4;
 		
 		 Writable testData = new Writable() {			 
 				@Override
@@ -79,15 +86,18 @@ public class ExampleAppTest {
 					  }, 
 				"/testJSON", 
 				useTLS, telemetry, 
-				parallelTracks, cyclesPerTrack, 
+				tracks, cycles,
 				host, port, timeoutMS, results);		
 		
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);
 
 	}
 	
 	@Test
 	public void jsonCall2Test() {
+		
+		int cycles = 3;
+		int tracks = 4;
 		
 		Person person = new Person("bob",42);
 		JSONRenderer<Person> renderer = new JSONRenderer<Person>()
@@ -107,17 +117,17 @@ public class ExampleAppTest {
 					  }, 
 				"/testJSON", 
 				useTLS, telemetry, 
-				parallelTracks, cyclesPerTrack, 
+				tracks, cycles,
 				host, port, timeoutMS, results);		
 		
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
-
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);
 	}
 		
 	@Test
 	public void fileCallTest() {
 		
-		GraphManager.showPipeIdOnTelemetry=true;
+		int cycles = 3;
+		int tracks = 4;
 		
 		StringBuilder results = new StringBuilder(); 
 		LoadTester.runClient(
@@ -139,34 +149,41 @@ public class ExampleAppTest {
 					  }, 
 				"/files/index.html", 
 				useTLS, telemetry, 
-				parallelTracks, cyclesPerTrack, 
-				host, port, timeoutMS, results);		
+				tracks, cycles,
+				host, port, timeoutMS, results);	
 		
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
-
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);
 	}
 	
 	@Test
 	public void resourceCallTest() {
 		
+		
+		int cycles = 1; //TODO: why is this not wokring with larger values?
+		int tracks = 4;
+		
 		StringBuilder results = new StringBuilder(); 
 		LoadTester.runClient(
 				null, 
 				(i,r)->{
+					   // System.out.println("Check now"); //Why is this so slow!!
 						return  (HTTPContentTypeDefaults.HTML==r.contentType()) 
 								&& "hello world".equals(r.structured().readPayload().readUTFFully());
 					  }, 
 				"/resources/index.html", 
 				useTLS, telemetry, 
-				parallelTracks, 1, //TODO: second call not working, need to investigate..
-				host, port, timeoutMS, results);		
+				tracks, cycles,
+				host, port, timeoutMS, Appendables.join(results,System.out));		
 		
-	//	assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);
 
 	}
 	
 	@Test
 	public void pageBTest() {
+		
+		int cycles = 3;
+		int tracks = 4;
 		
 		StringBuilder results = new StringBuilder(); 
 		LoadTester.runClient(
@@ -177,15 +194,18 @@ public class ExampleAppTest {
 					  }, 
 				"/testPageB", 
 				useTLS, telemetry, 
-				parallelTracks, cyclesPerTrack, 
+				tracks, cycles, 
 				host, port, timeoutMS, results);		
 		
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cyclesPerTrack*parallelTracks))>=0);
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);
 
 	}
 
 	@Test
 	public void pageATest() {
+		
+		int cycles = 3;
+		int tracks = 4;
 		
 		console.setLength(0);
 		
@@ -195,13 +215,14 @@ public class ExampleAppTest {
 				(i,r)-> 0 == r.structured().readPayload().available(), 
 				"/testpageA?arg=42", 
 				useTLS, telemetry, 
-				1, 1, 
+				tracks, cycles, 
 				host, port, timeoutMS, results);		
 
+		
 		//Cookies turned off in tester
 		//assertTrue(console.toString(), console.indexOf("Arg Int: 42\nCOOKIE: ")>=0); //test adds a cookie by default..
 
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);
 
 		
 	}
@@ -209,6 +230,10 @@ public class ExampleAppTest {
 	@Test
 	public void pageADefaultTest() {
 		
+		
+		
+		int cycles = 3;
+		int tracks = 4;
 		console.setLength(0);
 		
 		StringBuilder results = new StringBuilder();
@@ -217,19 +242,22 @@ public class ExampleAppTest {
 				(i,r)-> 0 == r.structured().readPayload().available(), 
 				"/testpageA?f=g", 
 				useTLS, telemetry, 
-				1, 1, 
+				tracks, cycles, 
 				host, port, timeoutMS, results);		
 
 		//Cookies turned off in tester
 		//assertTrue(console.toString(), console.indexOf("Arg Int: 111\nCOOKIE: ")>=0); //test adds a cookie by default..
 
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);
 
 		
 	}
 	
 	@Test
 	public void pageCTest() {
+		
+		int cycles = 3;
+		int tracks = 4;
 		
 		console.setLength(0);
 		
@@ -239,17 +267,22 @@ public class ExampleAppTest {
 				(i,r)-> 0 == r.structured().readPayload().available(), 
 				"/testPageC", 
 				useTLS, telemetry, 
-				1, 1, 
+				tracks, cycles, 
 				host, port, timeoutMS, results);		
 		
 		////Cookies turned off in tester
 		//assertTrue(console.toString(), console.indexOf("COOKIE: ")>=0); //test adds a cookie by default..
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);		
+
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);	
 	}
 	
 	
 	@Test
 	public void pageDTest() {
+		
+		
+		int cycles = 3;
+		int tracks = 4;
 		
 		console.setLength(0);
 		
@@ -261,9 +294,9 @@ public class ExampleAppTest {
 					},
 				"/testpageD", 
 				useTLS, telemetry, 
-				1, 1, 
+				tracks, cycles, 
 				host, port, timeoutMS, results);		
 		
-		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of 1")>=0);		
+		assertTrue(results.toString(), results.indexOf("Responses invalid: 0 out of "+(cycles*tracks))>=0);	
 	}
 }

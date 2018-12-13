@@ -6,7 +6,9 @@ import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class LoadTester {
 	
-	private final static long cycleRate = 20_000_000L;//for high volume we slow the cycle rate
+	//TODO: need auto fallback of cycle to slow and get more volume!!!!
+	
+	public static long cycleRate = 200_000_000L;//for high volume we slow the cycle rate
 	
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,
 			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int parallelTracks,

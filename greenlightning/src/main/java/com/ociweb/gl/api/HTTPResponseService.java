@@ -130,8 +130,8 @@ public class HTTPResponseService {
 	}
 	/**
 	 *
-	 * @param connectionId long val used as arg in @link <Pipe.addLongValue> //better to write like this?
-	 * @param sequenceCode long val used as arg in Pipe.addIntValue  //or this?
+	 * @param connectionId long val used as arg in Pipe.addLongValue
+	 * @param sequenceCode long val used as arg in Pipe.addIntValue 
 	 * @param statusCode int val used as arg in outputField.openStream
 	 * @param hasContinuation boolean val used to determine if msgCommandChannel.lastResponseWriterFinished = 0 || 1
 	 * @param contentType HTTPContentType used as arg in outputField.openStream
@@ -221,13 +221,13 @@ public class HTTPResponseService {
 
 	/**
 	 *
-	 * @param reqeustReader HTTPFieldReader<?> arg used in publishHTTPResponse
+	 * @param reqeustReader HTTPFieldReader arg used in publishHTTPResponse
 	 * @param headers HeaderWritable arg used in publishHTTPResponse
 	 * @param writable Writable arg used in publishHTTPResponse
 	 * @return publishHTTPResponse(reqeustReader.getConnectionId (), reqeustReader.getSequenceCode(),
 	 * 				false, headers, 200, writable)
 	 */
-	public boolean publishHTTPResponse(HTTPFieldReader<?> reqeustReader, 
+	public boolean publishHTTPResponse(HTTPFieldReader reqeustReader, 
 	           HeaderWritable headers, HTTPContentType contentType, Writable writable) {
 		return publishHTTPResponse(reqeustReader.getConnectionId(), reqeustReader.getSequenceCode(),
 				200, false, headers, contentType, writable);
@@ -283,6 +283,15 @@ public class HTTPResponseService {
 		
 		NetResponseWriter outputStream = (NetResponseWriter)Pipe.outputStream(pipe);
 		
+		int len = writePayload(hasContinuation, writable, pipe, outputStream);
+		   	
+		writeHeaderAndPublish(statusCode, headers, contentType, pipe, outputStream, len);
+		
+		return true;
+	}
+
+	private int writePayload(boolean hasContinuation, Writable writable, Pipe<ServerResponseSchema> pipe,
+			NetResponseWriter outputStream) {
 		int context;
 		if (!hasContinuation) {
 			context = ServerCoordinator.END_RESPONSE_MASK;
@@ -302,7 +311,11 @@ public class HTTPResponseService {
 		
 		Pipe.addIntValue(context, pipe);  //real context    	
 		Pipe.confirmLowLevelWrite(pipe);
-		   	
+		return len;
+	}
+
+	private void writeHeaderAndPublish(int statusCode, HeaderWritable headers, HTTPContentType contentType,
+			Pipe<ServerResponseSchema> pipe, NetResponseWriter outputStream, int len) {
 		////////////////////Write the header
 		
 		HTTPUtilResponse data = msgCommandChannel.data;
@@ -336,8 +349,6 @@ public class HTTPResponseService {
 		
 		//now publish both header and payload
 		Pipe.publishWrites(pipe);
-		
-		return true;
 	}
 
 	/**

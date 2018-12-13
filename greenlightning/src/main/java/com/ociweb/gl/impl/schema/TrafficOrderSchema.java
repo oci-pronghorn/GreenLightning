@@ -59,7 +59,7 @@ public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
 
     /**
      *
-     * @param input Pipe<TrafficOrderSchema> arg used in PipeReader.readInt
+     * @param input Pipe arg used in PipeReader.readInt
      */
     public static void consumeGo(Pipe<TrafficOrderSchema> input) {
         int fieldPipeIdx = PipeReader.readInt(input,MSG_GO_10_FIELD_PIPEIDX_11);
@@ -68,7 +68,7 @@ public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
 
     /**
      *
-     * @param input Pipe<TrafficOrderSchema> arg used in PipeReader.readLong
+     * @param input Pipe arg used in PipeReader.readLong
      */
     public static void consumeBlockChannel(Pipe<TrafficOrderSchema> input) {
         long fieldDurationNanos = PipeReader.readLong(input,MSG_BLOCKCHANNEL_22_FIELD_DURATIONNANOS_13);
@@ -76,7 +76,7 @@ public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
 
     /**
      *
-     * @param input Pipe<TrafficOrderSchema> arg used in PipeReader.readLong
+     * @param input Pipe arg used in PipeReader.readLong
      */
     public static void consumeBlockChannelUntil(Pipe<TrafficOrderSchema> input) {
         long fieldTimeMS = PipeReader.readLong(input,MSG_BLOCKCHANNELUNTIL_23_FIELD_TIMEMS_14);
@@ -84,7 +84,7 @@ public class TrafficOrderSchema extends MessageSchema<TrafficOrderSchema> {
 
     /**
      *
-     * @param output Pipe<TrafficOrderSchema> arg used in PipeWriter.presumeWriteFragment, .writeInt, .publishWrites
+     * @param output Pipe arg used in PipeWriter.presumeWriteFragment, .writeInt, .publishWrites
      * @param fieldPipeIdx int arg used in PipeWriter.writeInt
      * @param fieldCount int arg used in PipeWriter.writeInt
      */

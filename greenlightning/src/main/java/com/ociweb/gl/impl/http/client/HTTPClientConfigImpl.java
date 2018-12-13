@@ -116,7 +116,7 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
 	}
 
 	public int getNetResponseCount() { //needed for heavy load tests to consume all the responses when they arrive.
-		return 256;
+		return 512;
 	}
 	
 	

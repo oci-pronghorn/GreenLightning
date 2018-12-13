@@ -32,7 +32,7 @@ public class MessagePrivate extends MessageSchema<MessagePrivate> {
 
 	/**
 	 *
-	 * @param input Pipe<MessagePrivate> arg used for PipeReader.getMsgIdx and PipeReader.releaseReadLock
+	 * @param input Pipe arg used for PipeReader.getMsgIdx and PipeReader.releaseReadLock
 	 */
 		public static void consume(Pipe<MessagePrivate> input) {
 		    while (PipeReader.tryReadFragment(input)) {
@@ -51,7 +51,7 @@ public class MessagePrivate extends MessageSchema<MessagePrivate> {
 
 	/**
 	 *
-	 * @param input Pipe<MessagePrivate> arg used in PipeReader.inputStream
+	 * @param input Pipe arg used in PipeReader.inputStream
 	 */
 		public static void consumePublish(Pipe<MessagePrivate> input) {
 		    DataInputBlobReader<MessagePrivate> fieldPayload = PipeReader.inputStream(input, MSG_PUBLISH_1_FIELD_PAYLOAD_3);
@@ -59,7 +59,7 @@ public class MessagePrivate extends MessageSchema<MessagePrivate> {
 
 	/**
 	 *
-	 * @param output Pipe<MessagePrivate> arg used for PipeWriter.presumeWriteFragment and PipeWriter.publishWrites
+	 * @param output Pipe arg used for PipeWriter.presumeWriteFragment and PipeWriter.publishWrites
 	 * @param fieldPayloadBacking byte[] arg used for PipeWriter.writeBytes
 	 * @param fieldPayloadPosition int arg used for PipeWriter.writeBytes
 	 * @param fieldPayloadLength int arg used for PipeWriter.writeBytes

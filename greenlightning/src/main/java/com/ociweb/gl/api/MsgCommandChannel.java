@@ -270,7 +270,6 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 	/**
 	 *
 	 * @param queueLength int arg to be passed to HTTPResponseService
-	 * @param maxMessageSize int arg to be passed to HTTPResponseService
 	 * @return new HTTPResponseService
 	 */
 	public HTTPResponseService newHTTPResponseService(int queueLength) {
@@ -903,7 +902,7 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 
 	/**
 	 *
-	 * @param cmd MsgCommandChannel <?> arg
+	 * @param cmd MsgCommandChannel arg
 	 * @param publishPrivateTopics PublishPrivateTopics arg
 	 */
 	public static void setPrivateTopics(
@@ -914,8 +913,8 @@ public class MsgCommandChannel<B extends BuilderImpl> implements BehaviorNameabl
 
 	/**
 	 *
-	 * @param cmd MsgCommandChannel<?> arg used for goPipe
-	 * @param target Pipe<TrafficOrderSchema> arg used for goPipe
+	 * @param cmd MsgCommandChannel arg used for goPipe
+	 * @param target Pipe arg used for goPipe
 	 * @return boolean, true if this cmdChannel uses this very same go pipe.
 	 */
 	public static boolean isGoPipe(MsgCommandChannel<?> cmd, Pipe<TrafficOrderSchema> target) {

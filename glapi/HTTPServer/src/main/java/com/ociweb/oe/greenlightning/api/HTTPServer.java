@@ -37,6 +37,8 @@ public class HTTPServer implements GreenApp
     @Override
     public void declareConfiguration(GreenFramework c) {
         
+    	c.setDefaultRate(4000);
+    	
 		HTTPServerConfig server = c.useHTTP1xServer(port)
 		 .setHost(host)
 		 .setConcurrentChannelsPerDecryptUnit(3)

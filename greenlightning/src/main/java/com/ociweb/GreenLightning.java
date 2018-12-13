@@ -1,135 +1,146 @@
 package com.ociweb;
 
-import com.ociweb.pronghorn.HTTPServer;
-import com.ociweb.pronghorn.network.NetGraphBuilder;
-import com.ociweb.pronghorn.network.TLSCertificates;
-import com.ociweb.pronghorn.network.TLSCerts;
-import com.ociweb.pronghorn.network.http.ModuleConfig;
-import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.InetAddress;
-import java.util.List;
+import com.ociweb.gl.api.GreenApp;
+import com.ociweb.gl.api.GreenFramework;
+import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.pronghorn.HTTPServer;
+import com.ociweb.pronghorn.network.HTTPServerConfig;
+import com.ociweb.pronghorn.network.TLSCertificates;
+import com.ociweb.pronghorn.network.TLSCerts;
 
 public class GreenLightning {
-	//$ java -jar phogLite.jar --s ../src/main/resources/site
-
-
+	
 	static final Logger logger = LoggerFactory.getLogger(GreenLightning.class);
 	
 	public static void main(String[] args) {
 						
-		String path = HTTPServer.getOptArg("-site", "--s", args, null);	
-		String resourceRoot = HTTPServer.getOptArg("-resourcesRoot", "--rr", args, null==path?"/site/index.html":null);
-		String rootFolder = null;
+		String path = HTTPServer.getOptArg("--site", "-s", args, "/usr/share/greenlightning/html/index.html");	
+		String strTLS = HTTPServer.getOptArg("--tls", "-t", args, "True");
+		boolean isTLS = Boolean.parseBoolean(strTLS);
 		
-		if (null==path) {
-		   if (null==resourceRoot) {
-			   System.out.println("Path to site must be defined with -site or --s");			   
-			   return;			
-		   } else {
-			   //use internal resources	
-			   
-			   int endOfRoot = resourceRoot.lastIndexOf('/');
-			   if (-1==endOfRoot) {
-				   System.out.println("resourceRoot must contain at least one / to define the subfolder inside the resources folder");
-				   return;
-			   }
-			   rootFolder = resourceRoot.substring(0, endOfRoot);
-			   			   
-			   System.out.println("reading site data from internal resources: "+rootFolder);  
-		   }			
-		} else {
-			   if (null==resourceRoot) {
-				   //normal file path site
-				   System.out.println("reading site data from: "+path);
-			   } else {
-				   System.out.println("use -size for file paths or -resourcesRoot for packaged resources. Only one can be used at a time.");
-				   return;
-			   }
-		}
-		
-		
-		String isTLS = HTTPServer.getOptArg("-tls", "--t", args, "True");	
-		String isLarge = HTTPServer.getOptArg("-large", "--l", args, "False");	
-
-		String strPort = HTTPServer.getOptArg("-port", "--p", args, "8080");
+		String strPort = HTTPServer.getOptArg("--port", "-p", args, "8080");
 		int port = Integer.parseInt(strPort);
 		
-		String bindHost = HTTPServer.getOptArg("-host", "--h", args, null);
+		String bindHost = HTTPServer.getOptArg("--host", "-h", args, "0.0.0.0");
 		
-	    boolean large = Boolean.parseBoolean(isLarge);
-	    
-	    if (null==bindHost) {
-		    bindHost = bindHost();		
-	    }
-	   	
-	    final int fileOutgoing = large ? 2048 : 1024;//makes big performance difference.
-	    final int fileChunkSize = large? 1<<14 : 1<<10;
-	    int processors = large ? 8 : -1;
-	    
-		GraphManager gm = new GraphManager();
-		TLSCertificates certs  = Boolean.parseBoolean(isTLS)  ? TLSCerts.define() : null;
-		HTTPServer.startupHTTPServer(gm, processors, 
-				GreenLightning.simpleModuleConfig(path, resourceRoot, rootFolder, fileOutgoing, fileChunkSize), bindHost, port, certs);
-        		
-		System.out.println("Press \"ENTER\" to exit...");
-		int value = -1;
-		do {
-		    try {
-		        value = System.in.read();
-		    } catch (IOException e) {
-		        e.printStackTrace();
-		    }
-		} while (value!=10);
-	    System.exit(0);
+		String strClientAuthReq = HTTPServer.getOptArg("--clientAuth", "-c", args, "False");
+		boolean isClientAuthRequired = Boolean.parseBoolean(strClientAuthReq);
+
+		String identityStoreResourceName = HTTPServer.getOptArg("-storeResource", "-store", args, null);
+        String keyPassword = HTTPServer.getOptArg("-keyPassword", "-keyPass", args, null);
+        String keyStorePassword = HTTPServer.getOptArg("-keyStorePassword", "-storePass", args, null);
+
+		String strTrustAll = HTTPServer.getOptArg("--trustAll", "-a", args, "True");
+		boolean trustAll = Boolean.parseBoolean(strTrustAll);
 		
-	}
-
-    @Deprecated //use NetGraphBuilder.bindHost
-	public static String bindHost() {
-		String bindHost;
-		boolean noIPV6 = true;//TODO: we really do need to add ipv6 support.
-		List<InetAddress> addrList = NetGraphBuilder.homeAddresses(noIPV6);
-		if (addrList.isEmpty()) {
-			bindHost = "127.0.0.1";
-		} else {
-			bindHost = addrList.get(0).toString().replace("/", "");
-		}
-		return bindHost;
-	}
-
+		GreenRuntime.run(
+				new StaticFileServer(
+							isTLS, 
+							bindHost, 
+							port, 
+							path,
+							isClientAuthRequired,
+							identityStoreResourceName,
+							keyPassword,
+							keyStorePassword,
+							trustAll
+						));
 	
-    public static ModuleConfig simpleModuleConfig(String path, String resourceRoot, String rootFolder,
-    		                         final int fileOutgoing, final int fileChunkSize) {
-    	
-    	
-    	//GreenLightning.class.getClassLoader().getResourceAsStream(name)
-    	
-    		
-    	File tempPathRoot = null;
-		if (null!=path) {
-			tempPathRoot = new File(path.replace("target/phogLite.jar!",""));
-			if (tempPathRoot.exists()) {
-				logger.info("reading files from folder {}",tempPathRoot);
-			} else {
-				logger.info("EXITING: unable to find {}",tempPathRoot);
-				System.exit(-1);				
-			}
-		}
-		
-		final String resourcesRoot = resourceRoot;
-		final String resourcesDefault = rootFolder;		
-		final File pathRoot = tempPathRoot;
-		
-		return HTTPServer.simpleFileServerConfig(
-				fileOutgoing, fileChunkSize, 
-				resourcesRoot, resourcesDefault, 
-				pathRoot);
 	}
 
+	public static class StaticFileServer implements GreenApp{
+
+		private final int bindPort;
+		private final String bindHost;
+		private final String filePath;
+		private final int connectionBits = 10;
+		private final boolean isTLS;
+		private final boolean isClientAuthRequired;
+		private final String identityStoreResourceName;
+		private final String keyPassword;
+		private final String keyStorePassword;
+		private final boolean trustAll;
+		
+		public enum ROUTE_ID {
+			ROOT
+		};
+		
+		public StaticFileServer(boolean isTLS, String bindHost, int bindPort, String path,
+				               boolean isClientAuthRequired, 
+				               String identityStoreResourceName,
+				               String keyPassword,
+				               String keyStorePassword,
+				               boolean trustAll) {
+			this.bindPort = bindPort;
+			this.bindHost = bindHost;
+			this.filePath = path;
+			this.isTLS = isTLS;
+			
+			this.isClientAuthRequired=isClientAuthRequired;
+			
+			this.identityStoreResourceName=identityStoreResourceName;
+			this.keyPassword=keyPassword;
+			this.keyStorePassword=keyStorePassword;
+			
+			this.trustAll = trustAll;
+		}		
+
+		@Override
+		public void declareConfiguration(GreenFramework config) {
+		
+			HTTPServerConfig server = config.useHTTP1xServer(bindPort)
+											.setMaxConnectionBits(connectionBits)
+										    .setHost(bindHost);
+			if (!isTLS) {
+				server.useInsecureServer();
+			} else {
+				//if any one of these do not match the default then we use custom
+				boolean customCerts = isClientAuthRequired | 
+						              (identityStoreResourceName!=null) |
+						              (keyPassword!=null) |
+						              (keyStorePassword!=null) |
+						              (!trustAll);
+				if (customCerts) {
+					
+					TLSCerts temp = TLSCerts.define();
+					
+					temp.clientAuthRequired(isClientAuthRequired);
+					
+					if (null!=identityStoreResourceName) {
+						temp.identityStoreResourceName(identityStoreResourceName);
+					}
+					if (null!=keyPassword) {
+						temp.keyPassword(keyPassword);
+					}
+					if (null!=keyStorePassword) {
+						temp.keyStorePassword(keyStorePassword);
+					}					
+					if (trustAll) {
+						temp.trustAll();
+					}
+					
+					server.setTLS(temp);
+				} else {
+					server.setTLS(TLSCertificates.defaultCerts); 
+				}
+			}
+		
+			config.defineRoute()
+			      .path("${path}")
+			      .routeId(ROUTE_ID.ROOT);
+
+		}
+
+		@Override
+		public void declareBehavior(GreenRuntime runtime) {
+			
+			runtime.addFileServer(filePath).includeRoutesByAssoc(ROUTE_ID.ROOT);
+			
+		}
+
+	}
 	
 }
