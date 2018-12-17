@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb</groupId>
   <artifactId>slipstream</artifactId>
-  <version>1.0.18</version>
+  <version>1.0.19</version>
   <packaging>pom</packaging>
  
   <modules>  
