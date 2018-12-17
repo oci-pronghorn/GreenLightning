@@ -27,7 +27,7 @@
 		<dependency>
 			<groupId>com.ociweb</groupId>
 			<artifactId>greenlightning</artifactId>
-			<version>1.0.18</version>
+			<version>1.0.19</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -64,20 +64,6 @@
 					</compilerArguments>
 					<source>1.8</source>
 					<target>1.8</target>
-				</configuration>
-			</plugin>
-
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-jar-plugin</artifactId>
-				<version>3.1.0</version>
-				<configuration>
-					<forceCreation>true</forceCreation>
-					<archive>
-						<manifestEntries>
-							<Build-Time>${maven.build.timestamp}</Build-Time>
-						</manifestEntries>
-					</archive>
 				</configuration>
 			</plugin>
 
@@ -203,7 +189,7 @@
 				<configuration>
 					<archiveDirectory>${project.build.directory}</archiveDirectory>
 					<includes>
-						<include>**/*.jar</include>
+						<include>**/${artifactId}.jar</include>
 					</includes>
 					<keystore>${keystore.path}</keystore>
 					<alias>${keystore.alias}</alias>

@@ -29,12 +29,15 @@ public class GreenLightning {
 		String strClientAuthReq = HTTPServer.getOptArg("--clientAuth", "-c", args, "False");
 		boolean isClientAuthRequired = Boolean.parseBoolean(strClientAuthReq);
 
-		String identityStoreResourceName = HTTPServer.getOptArg("-storeResource", "-store", args, null);
-        String keyPassword = HTTPServer.getOptArg("-keyPassword", "-keyPass", args, null);
-        String keyStorePassword = HTTPServer.getOptArg("-keyStorePassword", "-storePass", args, null);
+		String identityStoreResourceName = HTTPServer.getOptArg("--storeResource", "-store", args, null);
+        String keyPassword = HTTPServer.getOptArg("--keyPassword", "-keyPass", args, null);
+        String keyStorePassword = HTTPServer.getOptArg("--keyStorePassword", "-storePass", args, null);
 
 		String strTrustAll = HTTPServer.getOptArg("--trustAll", "-a", args, "True");
 		boolean trustAll = Boolean.parseBoolean(strTrustAll);
+		
+		String strTelemetryPort = HTTPServer.getOptArg("--telemetryPort", "-m", args, "-1");
+		int telemetryPort = Integer.parseInt(strTelemetryPort);
 		
 		GreenRuntime.run(
 				new StaticFileServer(
@@ -46,7 +49,8 @@ public class GreenLightning {
 							identityStoreResourceName,
 							keyPassword,
 							keyStorePassword,
-							trustAll
+							trustAll,
+							telemetryPort
 						));
 	
 	}
@@ -63,6 +67,7 @@ public class GreenLightning {
 		private final String keyPassword;
 		private final String keyStorePassword;
 		private final boolean trustAll;
+		private final int telemetryPort;
 		
 		public enum ROUTE_ID {
 			ROOT
@@ -73,7 +78,7 @@ public class GreenLightning {
 				               String identityStoreResourceName,
 				               String keyPassword,
 				               String keyStorePassword,
-				               boolean trustAll) {
+				               boolean trustAll, int telemetryPort) {
 			this.bindPort = bindPort;
 			this.bindHost = bindHost;
 			this.filePath = path;
@@ -86,14 +91,19 @@ public class GreenLightning {
 			this.keyStorePassword=keyStorePassword;
 			
 			this.trustAll = trustAll;
+			this.telemetryPort = telemetryPort;
 		}		
 
 		@Override
 		public void declareConfiguration(GreenFramework config) {
-		
+					
+			config.enableTelemetry(telemetryPort);
+			
 			HTTPServerConfig server = config.useHTTP1xServer(bindPort)
 											.setMaxConnectionBits(connectionBits)
 										    .setHost(bindHost);
+			
+			
 			if (!isTLS) {
 				server.useInsecureServer();
 			} else {

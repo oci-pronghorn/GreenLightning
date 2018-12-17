@@ -17,13 +17,14 @@ public class HTTPServer implements GreenApp
 	//private int largeResponseRouteId;
 	//private int splitResponseRouteId;
 	private int shutdownRouteId;
-		
+	private int port;	
 	private AppendableProxy console;
 	private final String host;
 	private long keyFieldId;
 	
-	public HTTPServer(String host, Appendable console) {
+	public HTTPServer(String host, Appendable console, int port) {
 		this.host = host;
+		this.port = port;
 		this.console = Appendables.proxy(console);
 	}
 	
@@ -36,7 +37,7 @@ public class HTTPServer implements GreenApp
     public void declareConfiguration(GreenFramework c) {
         
     	
-    	HTTPServerConfig conf = c.useHTTP1xServer(8088)
+    	HTTPServerConfig conf = c.useHTTP1xServer(port)
     			.setHost(host)
     			
     			.useInsecureServer()

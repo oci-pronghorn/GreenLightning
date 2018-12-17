@@ -14,9 +14,11 @@ public class HTTPClient implements GreenApp
     
     private boolean telemetry;
     private StringBuilder console = new StringBuilder();
+    private int port;
     
-    public HTTPClient(boolean telemetry) {
+    public HTTPClient(boolean telemetry, int port) {
     	this.telemetry = telemetry;
+    	this.port = port;
     }
 
     @Override
@@ -25,14 +27,14 @@ public class HTTPClient implements GreenApp
 
 		HTTPClientConfig netClientConfig = c.useInsecureNetClient();//NetClient();
 		session1 = netClientConfig
-        		   .newHTTPSession("127.0.0.1", 8088)
+        		   .newHTTPSession("127.0.0.1", port)
 	       		   .parseJSON()
 	       		    .integerField("age", Fields.AGE) 
 			    	.stringField("name", Fields.NAME)
         		   .finish();
 		
 		session2 = netClientConfig
-     		   		.newHTTPSession("127.0.0.1", 8088)     		   		
+     		   		.newHTTPSession("127.0.0.1", port)     		   		
 	       		    .parseJSON()	       		   
 	       		     .integerField("age", Fields.AGE)
 			      	 .stringField("name", Fields.NAME)     		   

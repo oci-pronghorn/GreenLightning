@@ -16,7 +16,8 @@ import com.ociweb.oe.greenlightning.api.server.HTTPServer;
 public class ClientAppTest { 
 	
 	 private static final String host = "127.0.0.1";
-	
+	 private static int port = (int) (3000 + (System.nanoTime()%12000));
+	 
 	 private static StringBuilder result;
  	 private static GreenRuntime runtime;
 	 
@@ -24,7 +25,7 @@ public class ClientAppTest {
 	 public static void startup() {
 		 
 		 result = new StringBuilder();		
-		 runtime = GreenRuntime.run(new HTTPServer(host, result));
+		 runtime = GreenRuntime.run(new HTTPServer(host, result, port));
 		 
 	 }
 	 
@@ -40,8 +41,8 @@ public class ClientAppTest {
 		 			(i,r)-> {return r.structured().readPayload().equalBytes("{\"age\":123,\"name\":\"bob\"}".getBytes());},
 		 			"/testPageB", 
 		 			false, false, 
-		 			1, 10_000, 
-		 			host, 8088, 
+		 			1, 200, 
+		 			host, port, 
 		 			10_000, System.out);
 		 
 	 }
@@ -55,7 +56,9 @@ public class ClientAppTest {
 		    //System.out.println("starting up client");
 	   	    
 	   	    //this test will hit the above server until it calls shutdown.
-		    boolean cleanExit =  GreenRuntime.testConcurrentUntilShutdownRequested(new HTTPClient(telemetry), timeoutMS);
+		    boolean cleanExit =  GreenRuntime.testConcurrentUntilShutdownRequested(
+		    		new HTTPClient(telemetry, port), 
+		    		timeoutMS);
 		    
 	 }
 	 

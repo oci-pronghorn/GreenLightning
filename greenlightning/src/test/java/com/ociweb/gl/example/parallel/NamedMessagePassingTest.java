@@ -5,6 +5,7 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
+import com.ociweb.gl.test.LoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
@@ -46,6 +47,8 @@ public class NamedMessagePassingTest {
 	@Test
 	public void runTest() {
 		
+		int port = (int) (2000 + (System.nanoTime()%12000));
+		
 		//GraphManager.showPipeIdOnTelemetry = true;
 		
 		GraphManager.showThreadIdOnTelemetry = true;
@@ -75,10 +78,10 @@ public class NamedMessagePassingTest {
 		ClientSocketReaderStage.abandonSlowConnections = false;
 		
 		
-		//GraphManager.showThreadIdOnTelemetry = true;
-		//GraphManager.showScheduledRateOnTelemetry = true;
+		GraphManager.showThreadIdOnTelemetry = true;
+		GraphManager.showScheduledRateOnTelemetry = true;
 		
-		boolean telemetry = false;
+		boolean telemetry = true;
 		//ust not be true when checked in.
 		long cycleRate = 6_000; //larger rate should be used with greater volume..
 
@@ -87,25 +90,27 @@ public class NamedMessagePassingTest {
 		//if we want more volume we should use more threads this can be 5x greater..
 		
 		int serverTracks = 1;
-		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate,serverTracks));
+		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate,serverTracks,port));
 		
 		
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
 
 		//spikes are less frequent when the wifi network is off
-		int cyclesPerTrack = 40_000; //*(1+99_9999);
+		int cyclesPerTrack = 10_000; //*(1+99_9999);
 		int parallelTracks = 1; 
 
 		
-		ParallelClientLoadTesterConfig config2 = new ParallelClientLoadTesterConfig(parallelTracks, cyclesPerTrack, 8081, "/test", telemetry);
+		ParallelClientLoadTesterConfig config2 = new ParallelClientLoadTesterConfig(
+				             parallelTracks, cyclesPerTrack, port, "/test", telemetry);
+		
 		assertTrue(0==config2.durationNanos);
 		
 		config2.simultaneousRequestsPerTrackBits  = 0;
-	    
-
+		
+	    	    
 		GreenRuntime.testConcurrentUntilShutdownRequested(
-															new ParallelClientLoadTester(config2, payload),
-															5*60*60_000); //5 hours
+											new ParallelClientLoadTester(config2, payload),
+											5*60*60_000); //5 hours
 		
 		//average resources per page is about 100
 		//for 100 calls we expect the slowest to be 100 micros

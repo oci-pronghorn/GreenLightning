@@ -14,24 +14,26 @@ public class NamedMessagePassingApp implements GreenApp {
 		
 	private int tracks;
     private boolean chunked = false;
+    private int port;
 
 	public enum Fields {nameA, nameB , urlArg;}
 	
 	
 	public static void main(String[] args) {
-		GreenRuntime.run(new NamedMessagePassingApp(true,4000,2));
+		GreenRuntime.run(new NamedMessagePassingApp(true,4000,2, 8081));
 	}
 	
-	public NamedMessagePassingApp(boolean telemetry, long rate, int tracks) {
+	public NamedMessagePassingApp(boolean telemetry, long rate, int tracks, int port) {
 		this.telemetry = telemetry;
 		this.rate = rate;
 		this.tracks = tracks;
+		this.port = port;
 	}
 	
 	@Override
 	public void declareConfiguration(GreenFramework builder) {
 		
-		builder.useHTTP1xServer(8081, tracks, this::declareParallelBehavior)
+		builder.useHTTP1xServer(port, tracks, this::declareParallelBehavior)
 		       .useInsecureServer()
 		       //.logTraffic(false)
 		       //TODO: confirm that 404 comes back when we get requests too large..

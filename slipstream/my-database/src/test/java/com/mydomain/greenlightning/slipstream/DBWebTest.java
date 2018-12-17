@@ -55,7 +55,7 @@ public class DBWebTest {
 	public void uploadProductsTest() {
 
 		int tracks = 2;
-		int callsPerTrack = 1_000; 
+		int callsPerTrack = 100; 
 		int inFlightBits = 3;
 		boolean telemetry2 = false;
 

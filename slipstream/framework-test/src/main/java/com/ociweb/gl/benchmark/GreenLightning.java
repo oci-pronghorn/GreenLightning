@@ -9,6 +9,11 @@ public class GreenLightning {
 		
 		//ServerSocketReaderStage.showRequests = true;
 		
+		////ScriptedNonThreadScheduler.debugStageOrder = System.out;
+		//TODO: we have reactors in the wrong order after the consume ordering stage.. must fix
+		//TODO: the TrackHTTPResponseListener private class is the new high cpu stage for full test.
+		
+		
 		//PipeConfig.showConfigsCreatedLargerThan = 1<<23;
 		GraphManager.showThreadIdOnTelemetry = true;
 		GraphManager.showScheduledRateOnTelemetry = true;

@@ -68,7 +68,7 @@ public class WebMicroServiceTest {
 				int inFlightBits = 6;  
 				int tracks = 8;
 				
-				int callsPerTrack = 10000 /tracks; 
+				int callsPerTrack = 1000 /tracks; 
 		
 				StringBuilder uploadConsoleCapture = new StringBuilder();
 				LoadTester.runClient(

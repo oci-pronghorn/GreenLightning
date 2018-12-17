@@ -84,7 +84,7 @@ public class FrameworkTest implements GreenApp {
     	this.pipelineBits = 14;//max concurrent in flight database requests 1<<pipelineBits
     	
     	this.dbCallMaxResponseCount = 1<<6;
-    	this.jsonMaxResponseCount = 1<<17;
+    	this.jsonMaxResponseCount = 1<<16;
     	
     	this.dbCallMaxResponseSize = 20_000; //for 500 mult db call in JSON format
     	this.jsonMaxResponseSize = 1<<9;
@@ -138,7 +138,7 @@ public class FrameworkTest implements GreenApp {
 	@Override
     public void declareConfiguration(GreenFramework framework) {
 		
-		framework.setDefaultRate(20_000);
+		framework.setDefaultRate(10_000);
 		
 		//for 14 cores this is expected to use less than 16G, must use next largest prime to ensure smaller groups are not multiples.
 		framework.useHTTP1xServer(bindPort, this::parallelBehavior) //standard auto-scale
@@ -196,7 +196,7 @@ public class FrameworkTest implements GreenApp {
 			framework.enableTelemetryLogging();
 		}
 				
-		framework.setTimerPulseRate(30 * 1000);//2x per minute
+		framework.setTimerPulseRate(20 * 1000);//3x per minute
     }
 
 
