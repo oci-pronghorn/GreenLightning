@@ -898,7 +898,10 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
     	    	  int parallelIdx = parallelRevision >>> HTTPRevision.BITS;
     	    	  int revision = HTTPRevision.MASK & parallelRevision;
     	    	  
-				  populateReader(p, connectionId, sequenceNo, routeId, verbId, reader, parallelIdx, revision);
+    	    	  //TODO: can we get this struct ID better???
+    			  int structId = DataInputBlobReader.getStructType(reader);
+    			  
+				  populateReader(p, connectionId, sequenceNo, routeId, verbId, reader, parallelIdx, revision, structId);
  			
     	    	  if (null!=restRequestReader && 
     	    	      routeId<restRequestReader.length &&
@@ -933,12 +936,12 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	}
 
 	private void populateReader(Pipe<HTTPRequestSchema> p, long connectionId, final int sequenceNo, int routeId,
-			int verbId, HTTPRequestReader reader, int parallelIdx, int revision) {
+			int verbId, HTTPRequestReader reader, int parallelIdx, int revision, int structId) {
 		reader.setRevisionId(revision);
 		  int context = Pipe.takeInt(p);   	    	  
 		  
-		  int structType = DataInputBlobReader.getStructType(reader);    	    	  
-		  reader.setRouteId(routeId, graphManager.recordTypeData.structAssociatedObject(structType));
+		  
+		  reader.setRouteId(routeId, graphManager.recordTypeData.structAssociatedObject(structId));
 		      	    	  
 		  assert(parallelIdx<OrderSupervisorStage.CLOSE_CONNECTION_MASK);
 		  

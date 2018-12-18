@@ -358,6 +358,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			//if for large processor count we want to reduce the socket readers by increasing the sub pipes count
 			int subTracks = (availableProcessors >= 16)? 3: 2; //this value can only be 2 or 3 at this time
 			tracks = Math.max(1, subTracks*PMath.nextPrime(((int)(availableProcessors*.75))/subTracks) ); //one pipeline track per core	
+			tracks = Math.min(tracks, availableProcessors);
 			
 			String maxTrack = System.getProperty("greenlightning.tracks.max");
 			if (null!=maxTrack) {

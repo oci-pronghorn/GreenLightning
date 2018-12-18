@@ -39,7 +39,7 @@ public class FrameworkTest implements GreenApp {
 	
     private PgPoolOptions options;
     
-	public static int connectionsPerTrack =   2;
+	public static int connectionsPerTrack =   4;
 	public static int connectionPort =        5432;
 	public AtomicBoolean foundDB = new AtomicBoolean(false);
 	public static String connectionHost =     "localhost";
@@ -81,7 +81,7 @@ public class FrameworkTest implements GreenApp {
     	this.queueLengthOfPendingRequests = queueLengthOfPendingRequests;
     	this.minMemoryOfInputPipes = minMemoryOfInputPipes;
     	this.telemetryPort = telemetryPort;
-    	this.pipelineBits = 14;//max concurrent in flight database requests 1<<pipelineBits
+    	this.pipelineBits = 16;//max concurrent in flight database requests 1<<pipelineBits
     	
     	this.dbCallMaxResponseCount = 1<<6;
     	this.jsonMaxResponseCount = 1<<16;

@@ -18,7 +18,7 @@ public class WebTest {
 	
 	final static boolean useTLS = false;
 	final static int timeoutMS = 600_000;
-	final static int totalCalls = 8_000;
+	final static int totalCalls = 2_000;
 	
 	private static FrameworkTest app;
 	private static GreenRuntime runtime;

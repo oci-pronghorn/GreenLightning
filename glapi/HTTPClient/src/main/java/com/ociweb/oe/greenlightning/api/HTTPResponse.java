@@ -28,7 +28,10 @@ public class HTTPResponse implements HTTPResponseListener {
 		Payloadable payload = new Payloadable() {
 			@Override
 			public void read(ChannelReader reader) {
-				
+				if (reader.available()<1) {
+					//error
+					return;
+				}
 				int age = reader.structured().readInt(Fields.AGE);
 				String name = reader.structured().readText(Fields.NAME);
 				
