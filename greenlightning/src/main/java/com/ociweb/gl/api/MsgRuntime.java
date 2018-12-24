@@ -477,7 +477,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		///////////////////////
 		
 		r.pcmIn.ensureSize(HTTPRequestSchema.class, 
-						Math.max(incomingMsgFragCount-2, 2), 
+						Math.max(incomingMsgFragCount-2, 2)*2, 
 						r.getMaxRequestSize());
 		
 		r.pcmOut.ensureSize(ServerResponseSchema.class, 4, r.getMaxResponseSize());	

@@ -93,6 +93,7 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadProducerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
+import com.ociweb.pronghorn.stage.memory.MemorySequentialReplayerStage;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.CoresUtil;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -1267,7 +1268,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		
 		int j = instances;
 		while (--j>=0) {					
-			buildSerialStore(j, null, largestBlock);
+			buildSerialStore(j, null, largestBlock, SequentialReplayerImpl.File);
 		}
 	}
 	
@@ -1287,7 +1288,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		
 		int j = instances;
 		while (--j>=0) {					
-			buildSerialStore(j, noiseProducer, largestBlock);
+			buildSerialStore(j, noiseProducer, largestBlock, SequentialReplayerImpl.File);
 		}
 	}
 	
@@ -1304,7 +1305,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		serialStoreWrite = new Pipe[instances];
 		
 		for(int j=0; j<instances; j++) {					
-			buildSerialStore(j, noiseProducer, largestBlock);
+			buildSerialStore(j, noiseProducer, largestBlock, SequentialReplayerImpl.File);
 		}
 	}
 
@@ -1330,25 +1331,10 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		return netResponsePipe;
 	}
 	
-	private void buildSerialStore(int id, 
-			                      NoiseProducer noiseProducer,
-			                      int largestBlock) {
-		
-		File targetDirectory = null;
-		try {
-			targetDirectory = new File(Files.createTempDirectory("serialStore"+id).toString());
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}		
-		
-		final short maxInFlightCount = 4;
-		
-		buildSerialStore(id, noiseProducer, largestBlock, targetDirectory, maxInFlightCount);
-		
-	}
 
-	private void buildSerialStore(int id, NoiseProducer noiseProducer, int largestBlock, File targetDirectory,
-			final short maxInFlightCount) {
+	private void buildSerialStore(int id, NoiseProducer noiseProducer, int largestBlock, SequentialReplayerImpl sri) {
+		final short maxInFlightCount = 4;
+
 		Pipe<PersistedBlobLoadReleaseSchema> fromStoreRelease = 
 				PersistedBlobLoadReleaseSchema.instance.newPipe(maxInFlightCount, 0);
 		Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer =
@@ -1360,32 +1346,90 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		Pipe<PersistedBlobStoreProducerSchema> toStoreProducer =
 				PersistedBlobStoreProducerSchema.instance.newPipe(maxInFlightCount, largestBlock);
 	
+		//NOTE: the above pipes will dangle but will remain in the created order so that
+		//      they can be attached to the right command channels upon definition
+
 		serialStoreReleaseAck[id] = fromStoreRelease;
 		serialStoreReplay[id] = fromStoreConsumer;
 		serialStoreWriteAck[id] = fromStoreProducer;
 		serialStoreRequestReplay[id] = toStoreConsumer;
 		serialStoreWrite[id] = toStoreProducer;
 		
-		//NOTE: the above pipes will dangle but will remain in the created order so that
-		//      they can be attached to the right command channels upon definition
-		
-	
-		long rate=-1;//do not set so we will use the system default.
-		String backgroundColor="cornsilk2";
-				
-		PronghornStageProcessor proc = new PronghornStageProcessor() {
-			@Override
-			public void process(GraphManager gm, PronghornStage stage) {
-				GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, rate, stage);
-				GraphManager.addNota(gm, GraphManager.DOT_BACKGROUND, backgroundColor, stage);
-			}			
+		//do not set so we will use the system default.
+		PronghornStageProcessor stageProcessor = (gm,stage)-> {
+			GraphManager.addNota(gm, GraphManager.SCHEDULE_RATE, (long) -1, stage);
+			GraphManager.addNota(gm, GraphManager.DOT_BACKGROUND, "cornsilk2", stage);
 		};
+
+		switch (sri) {
+			case File:
+				buildLocalFileSequentialReplayer(id, noiseProducer, largestBlock, 
+						maxInFlightCount, fromStoreRelease, fromStoreConsumer, fromStoreProducer, 
+						toStoreConsumer, toStoreProducer, stageProcessor);
+				break;
+			case Memory:
+				assert(null==noiseProducer) : "Memory sequential replayer does not support encryption";
+				buildMemorySequentialReplayer(id, largestBlock, 
+						maxInFlightCount, fromStoreRelease, fromStoreConsumer, fromStoreProducer, 
+						toStoreConsumer, toStoreProducer, stageProcessor);
+				break;
+			case Raft:
+				buildRaftSequentialReplayer(id, noiseProducer, largestBlock, 
+						maxInFlightCount, fromStoreRelease, fromStoreConsumer, fromStoreProducer, 
+						toStoreConsumer, toStoreProducer, stageProcessor);
+				break;				
+		}
 		
+	}
+
+	private void buildRaftSequentialReplayer(int id, NoiseProducer noiseProducer, int largestBlock,
+			short maxInFlightCount, Pipe<PersistedBlobLoadReleaseSchema> fromStoreRelease,
+			Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer,
+			Pipe<PersistedBlobLoadProducerSchema> fromStoreProducer,
+			Pipe<PersistedBlobStoreConsumerSchema> toStoreConsumer,
+			Pipe<PersistedBlobStoreProducerSchema> toStoreProducer, PronghornStageProcessor stageProcessor) {
+		
+		
+		throw new UnsupportedOperationException("not yet implemented.");
+		
+		
+	}
+
+	private void buildMemorySequentialReplayer(int id, int largestBlock, short maxInFlightCount, 
+			Pipe<PersistedBlobLoadReleaseSchema>  fromStoreRelease,
+			Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer,
+			Pipe<PersistedBlobLoadProducerSchema> fromStoreProducer,
+			Pipe<PersistedBlobStoreConsumerSchema> toStoreConsumer,
+			Pipe<PersistedBlobStoreProducerSchema> toStoreProducer, 
+			PronghornStageProcessor stageProcessor) {
+		
+		MemorySequentialReplayerStage.newInstance(gm,
+				fromStoreRelease,fromStoreConsumer,fromStoreProducer,
+				toStoreConsumer,toStoreProducer			
+				);
+		
+	}
+
+	private void buildLocalFileSequentialReplayer(int id, NoiseProducer noiseProducer, int largestBlock,
+			final short maxInFlightCount, Pipe<PersistedBlobLoadReleaseSchema> fromStoreRelease,
+			Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer,
+			Pipe<PersistedBlobLoadProducerSchema> fromStoreProducer,
+			Pipe<PersistedBlobStoreConsumerSchema> toStoreConsumer,
+			Pipe<PersistedBlobStoreProducerSchema> toStoreProducer, 
+			PronghornStageProcessor stageProcessor) {
+		
+		File targetDirectory = null;
+		try {
+			targetDirectory = new File(Files.createTempDirectory("serialStore"+id).toString());
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}	
 		FileGraphBuilder.buildSequentialReplayer(gm, 
-				fromStoreRelease, fromStoreConsumer, fromStoreProducer, 
-				toStoreConsumer, toStoreProducer, 
-				maxInFlightCount, largestBlock, targetDirectory, 
-				noiseProducer, proc);
+											fromStoreRelease, fromStoreConsumer, fromStoreProducer, 
+											toStoreConsumer, toStoreProducer, 
+											maxInFlightCount, largestBlock, targetDirectory, 
+											noiseProducer, stageProcessor);
+		
 	}
 	
 	///////////////////////////////////
