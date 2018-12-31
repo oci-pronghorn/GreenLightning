@@ -8,7 +8,7 @@ public class SimpleLoadTester {
 
 	public static void main(String[] args) {
 	
-		LoadTester.cycleRate = 50_000_000L;
+		LoadTester.cycleRate = 200_000L;
 		//ClientSocketReaderStage.showResponse = true;
 		
 		//ClientSocketReaderStage.showResponse = true;
