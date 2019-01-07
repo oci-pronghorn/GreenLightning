@@ -48,10 +48,9 @@ public class LoadTester {
 		
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload(); // calling get
 		
-		payload.post = testData;
-		
+		payload.post = testData;		
 		payload.validator = validator;
-;
+
 		GreenRuntime.testConcurrentUntilShutdownRequested(new ParallelClientLoadTester(testerConfig, payload), timeoutMS);
 
 		

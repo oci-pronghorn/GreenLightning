@@ -472,19 +472,13 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		
 		((HTTPServerConfigImpl) config).setTracks(parallelTrackCount);
 		HTTPServerConfigImpl r = ((HTTPServerConfigImpl) config);
-		int incomingMsgFragCount = r.defaultComputedChunksCount();
-		
-		///////////////////////
-		
-		r.pcmIn.ensureSize(HTTPRequestSchema.class, 
-						Math.max(incomingMsgFragCount-2, 2)*2, 
-						r.getMaxRequestSize());
-		
+						
 		r.pcmOut.ensureSize(ServerResponseSchema.class, 4, r.getMaxResponseSize());	
 		
 		r.pcmIn.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
 		r.pcmOut.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
 		
+		int socketToParserBlocks = 64;
 		
 		ServerPipesConfig serverConfig = new ServerPipesConfig(
 					r.logFileConfig(),
@@ -496,7 +490,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 					r.getDecryptionUnitsPerTrack(),
 					r.getConcurrentChannelsPerDecryptUnit(),				
 					//one message might be broken into this many parts
-					incomingMsgFragCount,
+					socketToParserBlocks, r.getMinimumInputPipeMemory(),//blocks # from socket to parser...
 					r.getMaxRequestSize(),
 					r.getMaxResponseSize(),
 					config.getMaxQueueIn(),
