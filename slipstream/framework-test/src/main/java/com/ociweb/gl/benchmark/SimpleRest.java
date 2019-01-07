@@ -14,7 +14,9 @@ public class SimpleRest implements RestMethodListener {
 	private final HTTPResponseService responseService;
 	
 	public SimpleRest(GreenRuntime runtime, int maxResponseCount, int maxResponseSize) {
-		responseService = runtime.newCommandChannel().newHTTPResponseService(maxResponseCount, maxResponseSize);		
+		responseService = runtime
+				.newCommandChannel()
+				.newHTTPResponseService(maxResponseCount, maxResponseSize);		
 	}
 	
 
