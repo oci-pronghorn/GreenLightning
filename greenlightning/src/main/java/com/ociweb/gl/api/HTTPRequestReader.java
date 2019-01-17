@@ -113,6 +113,7 @@ public class HTTPRequestReader extends HTTPPayloadReader<HTTPRequestSchema> impl
 	
 	/**
 	 * Only call this method when NO routes have been defined.
+	 * @param <A> target appendable type
 	 * @param appendable
 	 * 
 	 */

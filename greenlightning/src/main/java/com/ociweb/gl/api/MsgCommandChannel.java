@@ -28,8 +28,6 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 import com.ociweb.pronghorn.util.BloomFilter;
-import com.ociweb.pronghorn.util.CharSequenceToUTF8Local;
-import com.ociweb.pronghorn.util.TrieParserReader;
 import com.ociweb.pronghorn.util.TrieParserReaderLocal;
 
 /**

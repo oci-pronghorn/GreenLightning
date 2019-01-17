@@ -39,7 +39,7 @@ public class RestConsumer implements RestListener {
 			Object objectB,
 			Object valueObj) {		
 		this.cmd2 = runtime.newCommandChannel();		
-		this.messageService = this.cmd2.newPubSubService("/send/200",8,400);
+		this.messageService = this.cmd2.newPubSubService("/send/200",64,400);
 		this.responseService = this.cmd2.newHTTPResponseService(8,400);
 		this.fieldA = fieldA;
 		this.fieldB = fieldB;	

@@ -67,7 +67,9 @@ public interface Builder<R extends MsgRuntime<?,?,R>> extends ArgumentProvider {
      * Creates a new struct builder that allows you to define named values on a channel
      * @return the new struct built
      */
+	@Deprecated
 	JSONExtractor defineJSONSDecoder();
+	@Deprecated
 	JSONExtractor defineJSONSDecoder(boolean writeDot);
 
 	StructBuilder defineStruct();

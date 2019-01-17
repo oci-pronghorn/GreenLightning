@@ -55,14 +55,21 @@ public abstract class AbstractTrafficOrderedStage extends PronghornStage {
 	 * It supports time based blocks (in ms) specific to each connection.  This way no other commands are
 	 * send to that connection until the time expires.  This is across all pipes.
 	 * 
+	 * @param graphmanager graphmanager
+	 * @param runtime runtime
+	 * @param inputData pipe in
+	 * @param goPipe go pipe
+	 * @param ackPipe ack pipe
+	 * @param otherResponse pipe responses
+	 * 
+	 * 
 	 */
 	public AbstractTrafficOrderedStage(GraphManager graphManager, 
 			MsgRuntime<?,?,?> runtime,
 			BuilderImpl hardware,
 			Pipe<?>[] inputData,
 			Pipe<TrafficReleaseSchema>[] goPipe,
-			Pipe<TrafficAckSchema>[] ackPipe,
-			
+			Pipe<TrafficAckSchema>[] ackPipe,			
 			Pipe<?> ... otherResponse ) {
 
 		super(graphManager, join(goPipe, inputData), join(ackPipe, otherResponse));

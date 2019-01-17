@@ -3,7 +3,7 @@
     <groupId>com.ociweb</groupId>
     <artifactId>greenlightning</artifactId>
     <name>greenlightning</name>
-    <version>1.0.24</version>
+    <version>1.0.25</version>
 
     <description>Open Edge - Green Lightning Micro-Service Runtime</description>
     <url>https://github.com/oci-pronghorn/GreenLightning</url>
@@ -110,7 +110,7 @@
         <dependency>
             <groupId>com.ociweb</groupId>
             <artifactId>pronghorn</artifactId>
-            <version>1.0.28</version>
+            <version>1.0.29</version>
         </dependency>
 
         <dependency>
@@ -118,6 +118,14 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.7.25</version>
         </dependency>
+        
+        <!--  in progress of adding JAX-RS support -->
+        <!-- dependency>
+        	<groupId>javax.ws.rs</groupId>
+        	<artifactId>javax.ws.rs-api</artifactId>
+        	<version>2.1.1</version>
+        </dependency  -->
+        
 
         <!-- Testing dependencies. -->
         <dependency>

@@ -45,6 +45,7 @@ public class PubSubService {
 
 	/**
 	 * A method to determine if there is enough room in the pipe for more data
+	 * @param topic message topic
 	 * @param messageCount int arg used in FieldReferenceOffsetManager.maxFragmentSize
 	 * @return null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount)
 	 */
@@ -712,6 +713,8 @@ public class PubSubService {
     /**
      * Takes previous state and changes it to specified state
      * @param state used to convert original
+     * @param <E> enum for states
+     * @return boolean did xmit change
       */
 	public <E extends Enum<E>> boolean changeStateTo(E state) {
 		assert((0 != (msgCommandChannel.initFeatures & MsgCommandChannel.DYNAMIC_MESSAGING))) : "CommandChannel must be created with DYNAMIC_MESSAGING flag";

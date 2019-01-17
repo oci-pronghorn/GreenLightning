@@ -34,6 +34,14 @@ public class HTTPResponseService {
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, 1, minHeader);
 		assert(setupValidator());
+		
+		
+		//TODO: need to write response type and JSON back to HTTPRouterStageConfig....
+		
+		//TODO: where does th router stage config live?
+	//	msgCommandChannel.builder.getHTTPServerConfig().
+		
+		
 	}
 
 	/**
@@ -285,7 +293,7 @@ public class HTTPResponseService {
 		
 		int len = writePayload(hasContinuation, writable, pipe, outputStream);
 		   	
-		writeHeaderAndPublish(statusCode, headers, contentType, pipe, outputStream, len);
+		writeHeaderAndPublish(statusCode, headers, contentType, pipe, outputStream, len, msgCommandChannel);
 		
 		return true;
 	}
@@ -314,17 +322,24 @@ public class HTTPResponseService {
 		return len;
 	}
 
-	private void writeHeaderAndPublish(int statusCode, HeaderWritable headers, HTTPContentType contentType,
-			Pipe<ServerResponseSchema> pipe, NetResponseWriter outputStream, int len) {
+	private static void writeHeaderAndPublish(int statusCode, HeaderWritable headers, HTTPContentType contentType,
+			Pipe<ServerResponseSchema> pipe, NetResponseWriter outputStream, int len, MsgCommandChannel<?> msgCommandChannel) {
 		////////////////////Write the header
 		
-		HTTPUtilResponse data = msgCommandChannel.data;
-				
-		HTTPUtilResponse.openToEmptyBlock(data, outputStream);
-		
+		HTTPUtilResponse.openToEmptyBlock(msgCommandChannel.data, outputStream);		
 		outputStream.write(HTTPRevisionDefaults.HTTP_1_1.getBytes());				
 		outputStream.write(HTTPResponseStatusCodes.codes[statusCode]); //this is " 200 OK\r\n" for most calls
 
+		writeDateTimeHeader(outputStream);
+		writeHeadersWithHeaderWriter(headers, contentType, outputStream, len, msgCommandChannel.headerWriter.target(outputStream));
+		
+		HTTPUtilResponse.finalizeLengthOfFirstBlock(msgCommandChannel.data, outputStream);
+		
+		//now publish both header and payload
+		Pipe.publishWrites(pipe);
+	}
+
+	private static void writeDateTimeHeader(NetResponseWriter outputStream) {
 		///////////////////////
 		//write date GC free direct copy
 		///////////////////////
@@ -332,8 +347,10 @@ public class HTTPResponseService {
 		outputStream.dateFormatter.write(System.currentTimeMillis(), outputStream);
 		outputStream.writeByte('\r');
 		outputStream.writeByte('\n');
+	}
 
-		HeaderWriter headerWriter = msgCommandChannel.headerWriter.target(outputStream);
+	private static void writeHeadersWithHeaderWriter(HeaderWritable headers, HTTPContentType contentType,
+			NetResponseWriter outputStream, int len, HeaderWriter headerWriter) {
 		if (null!=headers) {
 			headers.write(headerWriter); //NOTE: using content_length, connection or status are all discouraged here..
 		}
@@ -344,11 +361,6 @@ public class HTTPResponseService {
 		headerWriter.write(HTTPHeaderDefaults.CONTENT_LENGTH, len);
 		outputStream.writeByte('\r');
 		outputStream.writeByte('\n');
-		
-		HTTPUtilResponse.finalizeLengthOfFirstBlock(data, outputStream);
-		
-		//now publish both header and payload
-		Pipe.publishWrites(pipe);
 	}
 
 	/**

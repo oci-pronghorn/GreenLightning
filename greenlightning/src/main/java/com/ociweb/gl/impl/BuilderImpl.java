@@ -94,6 +94,7 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
 import com.ociweb.pronghorn.stage.memory.MemorySequentialReplayerStage;
+import com.ociweb.pronghorn.stage.raft.RaftGraphBuilder;
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.CoresUtil;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -357,14 +358,22 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			//auto select tracks based on cores
 			int availableProcessors = CoresUtil.availableProcessors();
 			//if for large processor count we want to reduce the socket readers by increasing the sub pipes count
+			
 			int subTracks = (availableProcessors >= 16)? 3: 2; //this value can only be 2 or 3 at this time
+			
+			//TODO: if availableProcessors is large and workload is light, but how to know???
+			if (availableProcessors>=5 && 0==(availableProcessors%5)) {
+				subTracks = 5;//only when it is divisible by 5
+			}
+			
+			
 			tracks = Math.max(1, subTracks*PMath.nextPrime(((int)(availableProcessors*.75))/subTracks) ); //one pipeline track per core	
 			tracks = Math.min(tracks, availableProcessors);
 			
 			String maxTrack = System.getProperty("greenlightning.tracks.max");
 			if (null!=maxTrack) {
 				try {
-				tracks = Math.min(tracks, Integer.parseInt(maxTrack));
+					tracks = Math.min(tracks, Integer.parseInt(maxTrack));
 				} catch (Exception e) {
 					logger.warn("unable to enforce greenlightning.tracks.max property '{}', the value was not parsable",maxTrack);
 				}				
@@ -670,6 +679,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	 * @param consumers arg used in ReactiveListenerStage
 	 * @param parallelInstance int arg used in ReactiveListenerStage
 	 * @param nameId String arg used in ReactiveListenerStage
+	 * @param <R> reactive listener
 	 * @return new reactive listener stage
 	 */
     public <R extends ReactiveListenerStage> R createReactiveListener(GraphManager gm,  Behavior listener, 
@@ -697,6 +707,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
      *
      * @param parallelInstanceId MsgCommandChannel arg used for GreenCommandChannel(gm, this, 0, parallelInstanceId, pcm)
      * @param pcm int arg used for GreenCommandChannel(gm, this, 0, parallelInstanceId, pcm)
+     * @param <G> message channel
      * @return new GreenCommandChannel(gm, this, 0, parallelInstanceId, pcm)
      */
 	public <G extends MsgCommandChannel> G newCommandChannel(
@@ -779,10 +790,6 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		return scheduler;
 	}
 
-	private final int getShutdownSeconds() {
-		return shutdownTimeoutInSeconds;
-	}
-
 	
 	protected final ChildClassScannerVisitor deepListener = new ChildClassScannerVisitor<ListenerTransducer>() {
 		@Override
@@ -814,6 +821,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	
 	/**
 	 * access to system time.  This method is required so it can be monitored and simulated by unit tests.
+	 * @return time ms
 	 */
 	public long currentTimeMillis() {
 		return System.currentTimeMillis();
@@ -1139,10 +1147,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			int responseUnwrapCount = this.client.isTLS()? 
 					             Math.min(this.client.getUnwrapCount(), netResponsePipes.length) //how many decrypters					             
 					             : 2;
-			
-		    // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-			//TODO: must have N pipes from HTTPClientRequests -> wrap for the count of client connections
-			//TODO: if true then we may need a lock for this wrap logic..	             
+			            
 			
 		    int clientSocketWriters = client.getSocketWriterCount();
 			int clientWrapperCount = this.client.isTLS()? clientSocketWriters*2 : clientSocketWriters; //writer/encrypter units
@@ -1387,11 +1392,13 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer,
 			Pipe<PersistedBlobLoadProducerSchema> fromStoreProducer,
 			Pipe<PersistedBlobStoreConsumerSchema> toStoreConsumer,
-			Pipe<PersistedBlobStoreProducerSchema> toStoreProducer, PronghornStageProcessor stageProcessor) {
-		
-		
-		throw new UnsupportedOperationException("not yet implemented.");
-		
+			Pipe<PersistedBlobStoreProducerSchema> toStoreProducer,
+			PronghornStageProcessor stageProcessor) {
+			
+		RaftGraphBuilder.raftBuild(id, noiseProducer, largestBlock, maxInFlightCount,
+				 fromStoreRelease, fromStoreConsumer, fromStoreProducer,
+				 toStoreConsumer, toStoreProducer, stageProcessor
+				 );
 		
 	}
 
@@ -1400,13 +1407,16 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			Pipe<PersistedBlobLoadConsumerSchema> fromStoreConsumer,
 			Pipe<PersistedBlobLoadProducerSchema> fromStoreProducer,
 			Pipe<PersistedBlobStoreConsumerSchema> toStoreConsumer,
-			Pipe<PersistedBlobStoreProducerSchema> toStoreProducer, 
+			Pipe<PersistedBlobStoreProducerSchema> toStoreProducer,
 			PronghornStageProcessor stageProcessor) {
 		
-		MemorySequentialReplayerStage.newInstance(gm,
+		PronghornStage stage = MemorySequentialReplayerStage.newInstance(gm,
 				fromStoreRelease,fromStoreConsumer,fromStoreProducer,
-				toStoreConsumer,toStoreProducer			
+				toStoreConsumer,toStoreProducer
 				);
+		
+		stageProcessor.process(gm, stage);
+		
 		
 	}
 
