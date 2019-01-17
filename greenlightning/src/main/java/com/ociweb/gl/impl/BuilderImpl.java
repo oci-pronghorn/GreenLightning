@@ -94,7 +94,7 @@ import com.ociweb.pronghorn.stage.file.schema.PersistedBlobLoadReleaseSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreConsumerSchema;
 import com.ociweb.pronghorn.stage.file.schema.PersistedBlobStoreProducerSchema;
 import com.ociweb.pronghorn.stage.memory.MemorySequentialReplayerStage;
-import com.ociweb.pronghorn.stage.raft.RaftGraphBuilder;
+
 import com.ociweb.pronghorn.stage.route.ReplicatorStage;
 import com.ociweb.pronghorn.stage.scheduling.CoresUtil;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
@@ -1395,10 +1395,11 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			Pipe<PersistedBlobStoreProducerSchema> toStoreProducer,
 			PronghornStageProcessor stageProcessor) {
 			
-		RaftGraphBuilder.raftBuild(id, noiseProducer, largestBlock, maxInFlightCount,
-				 fromStoreRelease, fromStoreConsumer, fromStoreProducer,
-				 toStoreConsumer, toStoreProducer, stageProcessor
-				 );
+		throw new UnsupportedOperationException();
+//		RaftGraphBuilder.raftBuild(id, noiseProducer, largestBlock, maxInFlightCount,
+//				 fromStoreRelease, fromStoreConsumer, fromStoreProducer,
+//				 toStoreConsumer, toStoreProducer, stageProcessor
+//				 );
 		
 	}
 
