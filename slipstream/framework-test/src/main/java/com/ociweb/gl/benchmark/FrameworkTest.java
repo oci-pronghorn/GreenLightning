@@ -116,7 +116,9 @@ public class FrameworkTest implements GreenApp {
     	this.jsonMaxResponseSize = 1<<8;
 
     	this.maxQueueOut = 64;
-    	this.maxConnectionBits = 13;
+    	
+    	this.maxConnectionBits = 10;  //no need for more than 1K connections
+    	
     	this.maxRequestSize = 1<<9;
     	    	
     	if (!"127.0.0.1".equals(System.getProperty("host",null))) { 
