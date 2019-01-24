@@ -117,7 +117,7 @@ public class FrameworkTest implements GreenApp {
 
     	this.maxQueueOut = 64;
     	
-    	this.maxConnectionBits = 10;  //no need for more than 1K connections
+    	this.maxConnectionBits = 14;  //no need for more than 16K connections
     	
     	this.maxRequestSize = 1<<9;
     	    	
@@ -170,7 +170,7 @@ public class FrameworkTest implements GreenApp {
 	@Override
     public void declareConfiguration(GreenFramework framework) {
 		
-		framework.setDefaultRate(100_000);
+		framework.setDefaultRate(20_000);
 		
 		//for 14 cores this is expected to use less than 16G, must use next largest prime to ensure smaller groups are not multiples.
 		framework.useHTTP1xServer(bindPort, this::parallelBehavior) //standard auto-scale

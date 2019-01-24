@@ -54,6 +54,7 @@ public class SimpleLoadTester {
 					host, port, timeoutMS, inFlightBits,
 					null,						
 					System.out);	
+			testTelemetry = false;
 		}
 		
 	}
