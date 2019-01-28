@@ -5,6 +5,7 @@ import java.util.Random;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.ociweb.gl.api.ClientHostPortConfig;
 import com.ociweb.gl.api.ClientHostPortInstance;
 import com.ociweb.gl.api.DelayService;
 import com.ociweb.gl.api.GreenApp;
@@ -248,12 +249,13 @@ public class ParallelClientLoadTester implements GreenApp {
 			clientConfig = builder.useNetClient(TLSCerts.define());
 		}
 
+		ClientHostPortConfig config = clientConfig.newHTTPSession(host, port);
 		int base = ClientHostPortInstance.getSessionCount();
 		int i = parallelTracks;
 		while (--i>=0) {
 			int s = session[i].length;
 			while (--s >= 0) {
-				ClientHostPortInstance conSess = clientConfig.newHTTPSession(host, port).finish();
+				ClientHostPortInstance conSess = config.finish();
 				session[i][s] = conSess;
 				sessionLookup[conSess.sessionId] = s;				
 			}
@@ -276,7 +278,6 @@ public class ParallelClientLoadTester implements GreenApp {
 		clientConfig.setSocketWriterCount(Math.min(4, sessionCount));
 				
 		
-		System.out.println("Test is running with "+(ClientHostPortInstance.getSessionCount()-base)+" total connections");
 		
 		if (telemetryPort != null) {
 
@@ -303,6 +304,7 @@ public class ParallelClientLoadTester implements GreenApp {
 		if (durationNanos>0) {
 			builder.definePublicTopics(CALL_TOPIC);
 		}
+		System.out.println("Test is running with "+(ClientHostPortInstance.getSessionCount()-base)+" total connections");
 	}
 
 	@Override
@@ -313,12 +315,12 @@ public class ParallelClientLoadTester implements GreenApp {
 				.addSubscription(ENDERS_TOPIC, progress::enderMessage)
 		        .addSubscription(PROGRESS_TOPIC, progress::progressMessage);
 		
-		
+		//System.out.println("declare normal behavior");
 	}
 
 	public void declareParallelBehavior(GreenRuntime runtime) {
 		final int track = trackId++;
-
+		//System.out.println("declare track: "+track);
 		TrackHTTPResponseListener responder = new TrackHTTPResponseListener(runtime, track);
 		runtime.registerListener(RESPONDER_NAME, responder)
 					.addSubscription(CALL_TOPIC, responder::callMessage)
@@ -375,7 +377,7 @@ public class ParallelClientLoadTester implements GreenApp {
 					                   1<<Math.max(28-consumedBits,3));
 
 			//Need many pipes so the messages can be combined and so we can push that much volume
-			int httpClientConnections = Math.max(1, (sessionCount/8));
+			int httpClientConnections = Math.max(1, (sessionCount/64));
 			httpClientService = new HTTPRequestService[httpClientConnections];
 			clientServiceMask = httpClientService.length-1;
 			
@@ -383,7 +385,7 @@ public class ParallelClientLoadTester implements GreenApp {
 			while(--i>=0) {
 				httpClientService[i] = runtime.newCommandChannel().newHTTPClientService(queueLength, writer!=null ? maxPayloadSize : 0);	
 			}
-			
+		
 		}
 
 		
@@ -409,7 +411,8 @@ public class ParallelClientLoadTester implements GreenApp {
 			}
 		}
 		
-		private boolean doHTTPCall(int sessionIdx) {		
+		private boolean doHTTPCall(int sessionIdx) {
+			//System.out.println("http call: "+sessionIdx);
 			if (null==writer) {
 				return (header != null) ? httpGetWithHeader(sessionIdx) : httpGet(sessionIdx);   
 			} else { 
@@ -455,7 +458,7 @@ public class ParallelClientLoadTester implements GreenApp {
 				long now = System.currentTimeMillis();
 				int i = inFlightHTTPs;
 				while (--i>=0) {
-					
+					//System.out.println("pub "+s+" "+i);
 					while(!callService.publishTopic(w->w.writeInt(finalS))) {
 						//must publish this many to get the world moving
 						Thread.yield();
@@ -637,10 +640,10 @@ public class ParallelClientLoadTester implements GreenApp {
 				if (s!=null) {
 					//NOTE: only safe place to close the connection.
 //TODO: testing, must ensure this does not close all connections
-//					if (insecureClient) {
-//						
-//						httpClientService[clientServiceMask&sessionIdx].httpClose(s); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. 
-//					}
+					if (insecureClient) {
+						
+						httpClientService[clientServiceMask&sessionIdx].httpClose(s); //FOR TLS we can not close because shared SSLEngine gets closed before we are done. 
+					}
 	
 					session[track][sessionIdx]=null;
 				}			

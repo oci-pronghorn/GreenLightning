@@ -1139,8 +1139,11 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			{
 				int tracks = Math.max(1, runtime.getBuilder().parallelTracks());			
 				int totalSessions = ClientHostPortInstance.getSessionCount()-sessionCountBase;
-				ccm = new ClientCoordinator((int)Math.ceil(Math.log(4*(totalSessions*tracks))/Math.log(2)), 
-											totalSessions,
+				ccm = new ClientCoordinator(
+						Math.min(
+						       (int)Math.ceil(Math.log(2*(totalSessions*tracks))/Math.log(2)), 
+						       1<<15),
+						totalSessions,
 	                    					this.client.getCertificates(), gm.recordTypeData);
 			}
 				

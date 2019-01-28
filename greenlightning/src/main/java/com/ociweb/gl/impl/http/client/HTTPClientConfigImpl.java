@@ -108,15 +108,15 @@ public class HTTPClientConfigImpl implements HTTPClientConfig {
 	}
 
 	public int getReleaseCount() {
-		return 1024;
+		return 4096;
 	}
 
 	public int getResponseQueue() {
-		return 32;
+		return 16;
 	}
 
 	public int getNetResponseCount() { //needed for heavy load tests to consume all the responses when they arrive.
-		return 512;
+		return 32; //must be large for HIGH_VOLUME and many in flight 
 	}
 	
 	

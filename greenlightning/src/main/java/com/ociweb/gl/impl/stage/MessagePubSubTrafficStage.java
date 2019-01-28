@@ -111,7 +111,7 @@ public class MessagePubSubTrafficStage extends AbstractTrafficOrderedStage {
 	        			
 	                    if (data.pendingPublishCount>0) {
 	                    	
-	                    	MessagePubSubImpl.logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing in graph {} [1]",data.graphName);
+	                    	//MessagePubSubImpl.logger.warn("Message PubSub pipes have become full, you may want to consider fewer messages or longer pipes for MessagePubSub outgoing in graph {} [1]",data.graphName);
 	                    	data.pendingDeliveryType = MessagePubSubImpl.PubType.Message;                   	
 	                        data.pendingReleaseCountIdx = i; 
 	                        

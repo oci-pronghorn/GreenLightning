@@ -1,14 +1,19 @@
 package com.ociweb.gl.test;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.stage.scheduling.CoresUtil;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class LoadTester {
 	
-	//TODO: need auto fallback of cycle to slow and get more volume!!!!
+	//TODO: need auto fallback of cycle to slow and get more volume!!!
 	
-	public static long cycleRate = 200_000_000L;//for high volume we slow the cycle rate
+	private final static Logger logger = LoggerFactory.getLogger(LoadTester.class);
+	
+	public static long cycleRate = 200_000L;//for high volume we slow the cycle rate
 	
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,
 			ValidatorFactory validator, String route, boolean useTLS, boolean telemetry, int parallelTracks,
@@ -23,7 +28,7 @@ public class LoadTester {
 	}
 	
 	//one response actor should only try to manage this many connections unless we are out of cores then we just distribute the load.
-	private static final int LIMITED_CONNECTIONS_PER_ACTOR = 64;
+	private static final int LIMITED_CONNECTIONS_PER_ACTOR = 350;
 	//HIGHVOLUME
 	
 	public static <T, A extends Appendable> A runClient(WritableFactory testData,
@@ -44,8 +49,9 @@ public class LoadTester {
 		testerConfig.cycleRate = cycleRate;
 		
 		//must be floor because the tracks may not divide evenly, we do not support more  pipes than we have sessions.
-		testerConfig.sessionsPerTrack = (int)Math.floor(concurrentConnections/(float)tracks);
+		testerConfig.sessionsPerTrack = (int)Math.ceil(concurrentConnections/(float)tracks);
 		
+		logger.info("Tracks: {}  SessionsPerTrack: {} TotalConnections: {}",tracks,testerConfig.sessionsPerTrack,tracks*testerConfig.sessionsPerTrack);
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload(); // calling get
 		
 		payload.post = testData;		

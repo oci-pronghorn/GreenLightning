@@ -357,7 +357,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
     	
 	    	if ((null == builder) || (null == builder.getScheduler()) ) {
 	    		//logger.warn("No runtime activity was detected.");
-	    		System.exit(0);
+	    		//System.exit(0); //not sure we want this because we call this from another app..
 	    		return;
 	    	}
 	    
@@ -478,7 +478,8 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		r.pcmIn.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
 		r.pcmOut.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
 		
-		int socketToParserBlocks = 64;
+		int socketToParserBlocks = 8; //TODO: make configurable..
+		//if memory pipe is large we should make this number larger as well
 		
 		ServerPipesConfig serverConfig = new ServerPipesConfig(
 					r.logFileConfig(),

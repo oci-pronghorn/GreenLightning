@@ -10,78 +10,25 @@ import com.ociweb.gl.test.ParallelClientLoadTester;
 import com.ociweb.gl.test.ParallelClientLoadTesterConfig;
 import com.ociweb.gl.test.ParallelClientLoadTesterPayload;
 import com.ociweb.pronghorn.network.ClientSocketReaderStage;
+import com.ociweb.pronghorn.network.ServerSocketReaderStage;
+import com.ociweb.pronghorn.network.ServerSocketWriterStage;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
 
 public class NamedMessagePassingTest {
 	
-	///////////-XX:+UseLargePages 
-	//          -verbose:gc -Xloggc:gc.log -XX:+PrintGCTimeStamps -XX:+PrintGCDetails
-	
-	// -XX:MaxGCPauseMillis=5 -XX:+UseG1GC
-	// -XX:MaxDirectMemorySize=256m
-
-//	@Test
-//	public void lowCPUUsage() {
-//		
-//		//run server
-//		
-//		boolean telemetry = true;  //must not be true when checked in.
-//		long cycleRate = 10_000;
-//		
-//		//cpu usage
-//		//default network size..
-//		
-//		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate));
-//		
-//		try {
-//			Thread.sleep(200_000);
-//		} catch (InterruptedException e) {
-//			// TODO Auto-generated catch block
-//			e.printStackTrace();
-//		}
-//		
-//		//call cpu monior ...
-//		
-//	}
-	
+	//TODO: urgent fix why is this latency larger than the old 20micros.	
 	@Test
 	public void runTest() {
 		
 		int port = (int) (2000 + (System.nanoTime()%12000));
 		
-		//GraphManager.showPipeIdOnTelemetry = true;
-		
-		GraphManager.showThreadIdOnTelemetry = true;
-		//ServerSocketWriterStage.showWrites = true;
-		
-		//ClientSocketWriterStage.logLatencyData = true; //for the group of connections used.
-		//ClientConnection.logLatencyData = true; //every individual connection
-		//ServerSocketReaderStage.showRequests = true;
-		//HTTP1xResponseParserStage.showData = true;
-		//HTTP1xRouterStage.showHeader=true;
-		
-//		-XX:+UnlockCommercialFeatures 
-//		-XX:+FlightRecorder
-//		-XX:CMSInitiatingOccupancyFraction=98  //fixed 99
-//		-XX:+UseCMSInitiatingOccupancyOnly
-//		-XX:+UseThreadPriorities 
-//		-XX:+UseNUMA
-//		-XX:+AlwaysPreTouch
-//		-XX:+UseConcMarkSweepGC 
-//		-XX:+CMSParallelRemarkEnabled 
-//		-XX:+ParallelRefProcEnabled
-//		-XX:+UnlockDiagnosticVMOptions
-//		-XX:ParGCCardsPerStrideChunk=32768  //fixed the 99.9 ??
-				
-		//ClientAbandonConnectionScanner.absoluteNSToKeep =100;
-		//ClientAbandonConnectionScanner.absoluteNSToAbandon = 100_000;
 		ClientSocketReaderStage.abandonSlowConnections = false;
-		
-		
 		GraphManager.showThreadIdOnTelemetry = true;
 		GraphManager.showScheduledRateOnTelemetry = true;
 		
-		boolean telemetry = true;
+		ServerSocketWriterStage.hardLimtNS = 2_000;
+		
+		boolean telemetry = false;
 		//ust not be true when checked in.
 		long cycleRate = 6_000; //larger rate should be used with greater volume..
 
@@ -89,15 +36,15 @@ public class NamedMessagePassingTest {
 		//ScriptedNonThreadScheduler.debugStageOrder = System.out;
 		//if we want more volume we should use more threads this can be 5x greater..
 		
-		int serverTracks = 1;
+		int serverTracks = 2;
 		GreenRuntime.run(new NamedMessagePassingApp(telemetry,cycleRate,serverTracks,port));
 		
 		
 		ParallelClientLoadTesterPayload payload = new ParallelClientLoadTesterPayload("{\"key1\":\"value\",\"key2\":123}");
 
 		//spikes are less frequent when the wifi network is off
-		int cyclesPerTrack = 100_000; //*(1+99_9999);
-		int parallelTracks = 1; 
+		int cyclesPerTrack = 1<<15;
+		int parallelTracks = 2; 
 
 		
 		ParallelClientLoadTesterConfig config2 = new ParallelClientLoadTesterConfig(
@@ -105,7 +52,7 @@ public class NamedMessagePassingTest {
 		
 		assertTrue(0==config2.durationNanos);
 		
-		config2.simultaneousRequestsPerTrackBits  = 14;
+		config2.simultaneousRequestsPerTrackBits  = 0;
 		
 	    	    
 		GreenRuntime.testConcurrentUntilShutdownRequested(

@@ -1,11 +1,7 @@
 package com.ociweb.gl.benchmark;
 
-import java.util.concurrent.TimeUnit;
-
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-
-import io.vertx.core.VertxOptions;
 
 public class GreenLightning {
 
@@ -47,7 +43,7 @@ public class GreenLightning {
 		
 		//reduce pipes for less memory used by test to reach 16K test..
 		//TODO: block other 5 values..
-		System.setProperty("pronghorn.processors", "3"); //set lower since we do testing here... //6 , 8,  12,  16
+		System.setProperty("pronghorn.processors", "2"); //set lower since we do testing here... //6 , 8,  12,  16
 		                                                  
 		GreenRuntime.run(new FrameworkTest(),args);
 	

@@ -33,7 +33,11 @@ class LoadTestProgress implements PubSubMethodListener, StartupListener {
 		this.parallelClientLoadTester = parallelClientLoadTester;
 		this.cmd4 = runtime.newCommandChannel().newPubSubService(
 				                                    ParallelClientLoadTester.ENDERS_TOPIC,
-				                                    Math.max(ParallelClientLoadTester.PUB_MSGS, this.parallelClientLoadTester.maxInFlight), ParallelClientLoadTester.PUB_MSGS_SIZE);
+				                                    Math.max(ParallelClientLoadTester.PUB_MSGS, 
+				                                    		
+				                                    		Math.max(16, this.parallelClientLoadTester.maxInFlight)
+				                                    		
+				                                    		), ParallelClientLoadTester.PUB_MSGS_SIZE);
 	
 		this.finished = new long[this.parallelClientLoadTester.parallelTracks];
 		this.timeouts = new long[this.parallelClientLoadTester.parallelTracks];
@@ -43,6 +47,7 @@ class LoadTestProgress implements PubSubMethodListener, StartupListener {
 	@Override
 	public void startup() {
 		this.parallelClientLoadTester.startupTime = System.nanoTime();
+		//System.out.println("load tester is now running");
 	}
 
 	boolean enderMessage(CharSequence topic, ChannelReader payload) {
