@@ -359,16 +359,27 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			int availableProcessors = CoresUtil.availableProcessors();
 			//if for large processor count we want to reduce the socket readers by increasing the sub pipes count
 			
-			int subTracks = (availableProcessors >= 16)? 3: 2; //this value can only be 2 or 3 at this time
+			//minimize the number of selectors since they must fight for the critical ePoll block in the OS.
+			//each selector also has some housekeeping work (data copy and usage flags) which is not in the critical block.
+			//if we assume 33% is in the block and 66% of the time is NOT then 3 selectors is optimal.
+			//the above logic may change as we optimize the selector and my become 50% or 2 in the future
+			//We must NEVER have 4 or more selectors since they will block each other and may cause prime route issues
+		
+			//Selector rules
+			//Small:  1 for 11 or less tracks
+			//Medium: 2 for 12-26 tracks, groups are the first prime after division eg 5,7 etc 
+			//Large:  3 for 27+ tracks, groups are the first prime after division eg 11, 13 etc 
+			//PMath.nextPrime
 			
-			//TODO: if availableProcessors is large and workload is light, but how to know???
-			if (availableProcessors>=5 && 0==(availableProcessors%5)) {
-				subTracks = 5;//only when it is divisible by 5
+			if (availableProcessors>=27) {
+				tracks = 3*(PMath.nextPrime((availableProcessors/3)-1));
+			} else if (availableProcessors>=12) {
+				tracks = 2*(PMath.nextPrime((availableProcessors/2)-1));
+			} else {
+				tracks = availableProcessors;				
 			}
 			
 			
-			tracks = Math.max(1, subTracks*PMath.nextPrime(((int)(availableProcessors*.75))/subTracks) ); //one pipeline track per core	
-			tracks = Math.min(tracks, availableProcessors);
 			
 			String maxTrack = System.getProperty("greenlightning.tracks.max");
 			if (null!=maxTrack) {

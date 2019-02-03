@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
   <artifactId>timer</artifactId>
-  <version>1.0.27</version>
+  <version>1.0.28</version>
   
   <properties>
     <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
@@ -18,7 +18,7 @@
   		<dependency>
 	  		<groupId>com.ociweb</groupId>
             <artifactId>greenlightning</artifactId>
-            <version>[1.0.27,)</version>
+            <version>[1.0.28,)</version>
     	</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
