@@ -1737,7 +1737,8 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	 * Enables the child classes to modify which schemas are used.
 	 * For the pi this allows for using i2c instead of digital or analog in transducers.
 	 * 
-	 * @param schema
+	 * @param schema to be mapped
+	 * @return mapped schema
 	 */
 	public MessageSchema schemaMapper(MessageSchema schema) {
 		return schema;
@@ -1803,7 +1804,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	/**
 	 * Store the reactive listeners until they are all created.
 	 * The actual stages are created at once after they are all registered.
-	 * @param buildable
+	 * @param buildable stages to build
 	 */
 	public void pendingInit(PendingStageBuildable buildable) {
 		pendingStagesToBuild.add(buildable);
