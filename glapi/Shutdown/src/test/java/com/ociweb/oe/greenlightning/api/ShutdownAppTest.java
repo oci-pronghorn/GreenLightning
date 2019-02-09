@@ -20,7 +20,7 @@ public class ShutdownAppTest {
 
 	private final int timeoutMS = 240_000; //240 sec
 	private final static Logger logger = LoggerFactory.getLogger(ShutdownAppTest.class);
-	static int port = (int) (3000 + (System.nanoTime()%12000));
+	static int port = (int) (3000 + ((131+System.nanoTime())%12000));
 		
 	 @Test
 	 public void testApp() {
