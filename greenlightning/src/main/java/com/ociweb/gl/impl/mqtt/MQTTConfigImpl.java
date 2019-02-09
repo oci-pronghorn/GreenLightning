@@ -140,7 +140,7 @@ public class MQTTConfigImpl extends BridgeConfigImpl<MQTTConfigTransmission,MQTT
 	 * 
 	 * By default this is false.
 	 * 
-	 * @param clean
+	 * @param clean boolean for clean sessions
 	 */
 	public MQTTBridge cleanSession(boolean clean) {
 		configStage.throwIfNot(BridgeConfigStage.DeclareConnections);
