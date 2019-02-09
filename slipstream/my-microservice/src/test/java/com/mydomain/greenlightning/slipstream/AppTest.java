@@ -9,11 +9,12 @@ import com.ociweb.gl.api.GreenRuntime;
  */
 public class AppTest { 
 
+	static int port = (int) (3000 + (System.nanoTime()%12000));
 	
 	 @Test
 	 public void testApp() {
 		    int timeoutMS = 1000;
-		    GreenRuntime.testUntilShutdownRequested(new MyMicroservice(true, 1443, false), timeoutMS);
+		    GreenRuntime.testUntilShutdownRequested(new MyMicroservice(true, port, false), timeoutMS);
 		    	    
 			
 	 }
