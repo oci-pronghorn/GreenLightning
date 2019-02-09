@@ -24,7 +24,7 @@ public class WebMicroServiceTest {
 	static String host = "127.0.0.1";
 	static int timeoutMS = 1200_000; //20 minutes	
 	static boolean telemetry = false;
-	static boolean useTLS = true;//true;//NOTE: must be dropping valuable data somewhere??
+	static boolean useTLS = false;
 
 	
 	public static void main(String[] args) {
@@ -62,6 +62,7 @@ public class WebMicroServiceTest {
 	@Test
 	public void uploadProductsTest() {
 				
+		
 		ClientSocketReaderStage.abandonSlowConnections = false;
 		
 		        boolean testTelemetry = false;

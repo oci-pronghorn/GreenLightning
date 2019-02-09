@@ -16,7 +16,7 @@ public class MyMicroservice implements GreenApp {
 	private boolean telemetry;
 	
 	public MyMicroservice() {
-		this (true, 1443, false);
+		this (false, 1443, false);
 	}
 	
 	//the app can take optional arguments to make testing easier
@@ -47,6 +47,7 @@ public class MyMicroservice implements GreenApp {
     	  //decryption stage.  This increases how many concurrent writes are 
     	  //supported.  The count supported is reported in the console at startup.
     	  .setConcurrentChannelsPerDecryptUnit(4)
+    	  .setConcurrentChannelsPerEncryptUnit(4)
     	  
     	  .setDecryptionUnitsPerTrack(1)
     	  .setEncryptionUnitsPerTrack(1) 

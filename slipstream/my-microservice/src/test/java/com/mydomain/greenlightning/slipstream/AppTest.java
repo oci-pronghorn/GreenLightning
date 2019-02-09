@@ -14,7 +14,7 @@ public class AppTest {
 	 @Test
 	 public void testApp() {
 		    int timeoutMS = 1000;
-		    GreenRuntime.testUntilShutdownRequested(new MyMicroservice(true, port, false), timeoutMS);
+		    GreenRuntime.testUntilShutdownRequested(new MyMicroservice(false, port, false), timeoutMS);
 		    	    
 			
 	 }

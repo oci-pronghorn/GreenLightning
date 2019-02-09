@@ -782,8 +782,9 @@ public class ParallelClientLoadTester implements GreenApp {
 				 Pipe p = allPipes[a];
 				 if (null != p) {	 
 					 PronghornStage stagePro = GraphManager.getRingProducer(g, p.id);
-					 PronghornStage stageCon = GraphManager.getRingConsumer(g, p.id);							 
-					 if (!GraphManager.hasNota(g, stagePro.stageId, GraphManager.MONITOR)) {
+					 PronghornStage stageCon = GraphManager.getRingConsumer(g, p.id);		
+					 					 
+					 if (!stagePro.isMonitor()) {
 						 if (!Pipe.isEmpty(p)) {
 							System.out.println(label+p+" "+stagePro+"->"+stageCon);
 						 }
