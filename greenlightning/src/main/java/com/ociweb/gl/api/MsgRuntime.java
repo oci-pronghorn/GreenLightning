@@ -516,7 +516,6 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, 
 											serverConfig.pcmIn.getConfig(NetPayloadSchema.class));           
 		
-
 		
 		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, encryptedIncomingGroup);
 		               
