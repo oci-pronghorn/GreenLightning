@@ -357,28 +357,15 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 		if (tracks<=0) {
 			//auto select tracks based on cores
 			int availableProcessors = CoresUtil.availableProcessors();
-			//if for large processor count we want to reduce the socket readers by increasing the sub pipes count
 			
-			//minimize the number of selectors since they must fight for the critical ePoll block in the OS.
-			//each selector also has some housekeeping work (data copy and usage flags) which is not in the critical block.
-			//if we assume 33% is in the block and 66% of the time is NOT then 3 selectors is optimal.
-			//the above logic may change as we optimize the selector and my become 50% or 2 in the future
-			//We must NEVER have 4 or more selectors since they will block each other and may cause prime route issues
-		
-			//Selector rules
-			//Small:  1 for 11 or less tracks
-			//Medium: 2 for 12-26 tracks, groups are the first prime after division eg 5,7 etc 
-			//Large:  3 for 27+ tracks, groups are the first prime after division eg 11, 13 etc 
-			//PMath.nextPrime
+			int estCores = Math.max(1, availableProcessors/2)+1; //plus one for div by 2 and larger cores.
 			
-			if (availableProcessors>=27) {
-				tracks = 3*(PMath.nextPrime((availableProcessors/3)-1));
-			} else if (availableProcessors>=12) {
-				tracks = 2*(PMath.nextPrime((availableProcessors/2)-1));
-			} else {
-				tracks = availableProcessors;				
-			}
+			int socketReaders = Math.max(1, estCores/2); 
+			socketReaders = PMath.nextPrime(Math.min(5, socketReaders)-1);//no more than 5 readers
+			//readers is 1, 2, 3, or 5
+			///////////	
 			
+			tracks = socketReaders*(estCores/socketReaders); 
 			
 			
 			String maxTrack = System.getProperty("greenlightning.tracks.max");

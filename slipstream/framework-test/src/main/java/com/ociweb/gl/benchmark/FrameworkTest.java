@@ -52,9 +52,10 @@ public class FrameworkTest implements GreenApp {
 	public static String connectionDB =       "testdb";
 	public static String connectionUser =     "postgres";
 	public static String connectionPassword = "postgres";
-		
-	static final int c = 63;//125;//250 goal,       //needed to reach 16K simultainious calls
-
+	
+	//TODO: why is this multiplied by 2, remove this odd behavior and adjust the numbers...
+	static final int c = 274;// to reach 16K simultainious calls
+    //NOTE: plaintext is run with 16K connections but JSON test is only 512 (optimize for 512)
 	
     public FrameworkTest() {
     	    	
@@ -67,15 +68,14 @@ public class FrameworkTest implements GreenApp {
     		 8081,    	//default port for test 
     		 //TODO: Note max connections in flight is 128!!!! What is the deal?
     		 c,//250 goal,       //needed to reach 16K simultainious calls
-    		 (c*2)*4,// c*2,     //1<<14 (router to module) //TODO: do we have a minimum in place here?
+    		 c*4,// c*2,     //1<<14 (router to module) //TODO: do we have a minimum in place here?
     		 1<<11,     //default total size of network buffer used by blocks
     		 Integer.parseInt(System.getProperty("telemetry.port", "-1")),
     		 "tfb-database", // jdbc:postgresql://tfb-database:5432/hello_world
     		 "hello_world",
     		 "benchmarkdbuser",
     		 "benchmarkdbpass"
-    		 );    	
-    	
+    		 );
     }   
         
     public FrameworkTest(String host, int port, 
@@ -165,9 +165,9 @@ public class FrameworkTest implements GreenApp {
     			 .setMaxConnectionBits(maxConnectionBits) //8K max client connections.
     			 .setConcurrentChannelsPerDecryptUnit(concurrentWritesPerChannel)
     			 
-    			 //keep the outgoing pipe count small...
-    			 .setConcurrentChannelsPerEncryptUnit(Math.max(4, concurrentWritesPerChannel/10))
-    			 
+    			 //keep the outgoing pipe count smaller for less scan time...
+    			 .setConcurrentChannelsPerEncryptUnit(Math.max(4, concurrentWritesPerChannel/2))
+    					 
     			 .setMaxQueueIn(queueLengthOfPendingRequests)
     			 .setMaxRequestSize(maxRequestSize)
     	

@@ -37,7 +37,7 @@ public class GreenLightning {
 	///	ServerSocketReaderStage.showRequests = true;
 	//	ServerSocketWriterStage.showWrites = true;
 		
-		//System.setProperty("pronghorn.processors", "28"); //simulate the techempower testing box
+//		System.setProperty("pronghorn.processors", "28"); //simulate the techempower testing box
 		
 		//test client is the same old 22 version so issue MUST be
 		//in socket reader OR the http parser.
@@ -48,7 +48,7 @@ public class GreenLightning {
 		
 		//reduce pipes for less memory used by test to reach 16K test..
 		//TODO: block other 5 values..
-		System.setProperty("pronghorn.processors", "14"); //set lower since we do testing here... //6 , 8,  12,  16
+		//System.setProperty("pronghorn.processors", "14"); //set lower since we do testing here... //6 , 8,  12,  16
 		                                                  
 		GreenRuntime.run(new FrameworkTest(),args);
 	

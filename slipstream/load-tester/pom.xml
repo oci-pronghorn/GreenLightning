@@ -4,7 +4,7 @@
 	
 	<groupId>com.ociweb.gl.load</groupId>
 	<artifactId>load-tester</artifactId>
-	<version>1.0.29</version>
+	<version>1.0.30</version>
 
 	<properties>
 		<keystore.path>./certificates/ocikeystore.jks</keystore.path>

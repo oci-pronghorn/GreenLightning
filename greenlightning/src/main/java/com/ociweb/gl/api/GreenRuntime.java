@@ -16,6 +16,10 @@ import com.ociweb.pronghorn.stage.scheduling.StageVisitor;
 
 public class GreenRuntime extends MsgRuntime<BuilderImpl<GreenRuntime>, ListenerFilter, GreenRuntime>{
 	
+	//TODO: need to add yaml property file loader with env override....
+	//TODO: add thymeleaf templeting.
+	//TODO: finish openapi..
+	
      public GreenRuntime() {
         this(new String[0],null);
      }
