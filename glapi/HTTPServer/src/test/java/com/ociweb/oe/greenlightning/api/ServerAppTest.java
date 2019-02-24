@@ -2,8 +2,8 @@ package com.ociweb.oe.greenlightning.api;
 
 import static org.junit.Assert.assertTrue;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import com.ociweb.gl.api.GreenRuntime;
@@ -32,21 +32,21 @@ public class ServerAppTest {
 	static StringBuilder console;
 	
 	static int port = (int) (3000 + (System.nanoTime()%12000));
-	static int telemetryPort = -1;//8097;
+	static int telemetryPort = 8097;
 	static String host = "127.0.0.1";
 	
-	int timeoutMS = 60_000;	
+	int timeoutMS = 10_000;	
 	boolean telemetry = false;
 	int cyclesPerTrack = 100;
 
 	static boolean useTLS = true;
 	int parallelTracks = 2; //NOTE: this number must be lower than the server connections when using TLS because rounds of handshake may cause hang.
 	
-	@BeforeClass
-	public static void startServer() {
+	@Before
+	public void startServer() {
 		
 		//speed up load testers
-		LoadTester.cycleRate = 4_0000;
+		LoadTester.cycleRate = 80_000;
 		
 		
 		console = new StringBuilder();
@@ -54,8 +54,8 @@ public class ServerAppTest {
 		
 	}
 		
-	@AfterClass
-	public static void stopServer() {
+	@After
+	public void stopServer() {
 		runtime.shutdownRuntime();	
 		runtime = null;
 	}
@@ -63,7 +63,7 @@ public class ServerAppTest {
 	@Test
 	public void jsonCallTest() {
 		
-		int cycles = 3;
+		int cycles = 1;
 		int tracks = 4;
 		
 		 Writable testData = new Writable() {			 
@@ -96,7 +96,7 @@ public class ServerAppTest {
 	@Test
 	public void jsonCall2Test() {
 		
-		int cycles = 3;
+		int cycles = 1;
 		int tracks = 4;
 		
 		Person person = new Person("bob",42);
@@ -126,7 +126,7 @@ public class ServerAppTest {
 	@Test
 	public void fileCallTest() {
 		
-		int cycles = 3;
+		int cycles = 1;
 		int tracks = 4;
 		
 		StringBuilder results = new StringBuilder(); 
@@ -157,8 +157,7 @@ public class ServerAppTest {
 	
 	@Test
 	public void resourceCallTest() {
-		
-		
+			
 		int cycles = 1; //TODO: why is this not wokring with larger values?
 		int tracks = 4;
 		
@@ -182,7 +181,7 @@ public class ServerAppTest {
 	@Test
 	public void pageBTest() {
 		
-		int cycles = 3;
+		int cycles = 1;
 		int tracks = 4;
 		
 		StringBuilder results = new StringBuilder(); 
@@ -204,7 +203,7 @@ public class ServerAppTest {
 	@Test
 	public void pageATest() {
 		
-		int cycles = 3;
+		int cycles = 1;
 		int tracks = 4;
 		
 		console.setLength(0);
@@ -230,9 +229,7 @@ public class ServerAppTest {
 	@Test
 	public void pageADefaultTest() {
 		
-		
-		
-		int cycles = 3;
+		int cycles = 1;
 		int tracks = 4;
 		console.setLength(0);
 		
@@ -256,7 +253,7 @@ public class ServerAppTest {
 	@Test
 	public void pageCTest() {
 		
-		int cycles = 3;
+		int cycles = 1;
 		int tracks = 4;
 		
 		console.setLength(0);
@@ -281,7 +278,7 @@ public class ServerAppTest {
 	public void pageDTest() {
 		
 		
-		int cycles = 3;
+		int cycles = 1;
 		int tracks = 4;
 		
 		console.setLength(0);

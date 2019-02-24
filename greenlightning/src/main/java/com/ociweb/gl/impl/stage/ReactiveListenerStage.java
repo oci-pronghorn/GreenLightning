@@ -788,8 +788,13 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 		    	}
 		
 		        if (timeEvents) {         					        	
-		        	processTimeEvents(timeListener, timeTrigger);
-		        	realStage.didWork();
+		        	long msRemaining = (timeTrigger-builder.currentTimeMillis()); 
+					if (msRemaining > timeProcessWindow) {
+						//if its not near, leave						
+					} else {
+						processTimeEvents(timeListener, timeTrigger, msRemaining);
+						realStage.didWork();
+					}
 		        }
 		
 		        if (null != tickListener) {
@@ -1210,13 +1215,7 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
 	}        
 
 	
-	protected final void processTimeEvents(TimeListener listener, long trigger) {
-		
-		long msRemaining = (trigger-builder.currentTimeMillis()); 
-		if (msRemaining > timeProcessWindow) {
-			//if its not near, leave
-			return;
-		}
+	protected void processTimeEvents(TimeListener listener, long trigger, long msRemaining) {
 		if (msRemaining>1) {
 			try {
 				Thread.sleep(msRemaining-1);				

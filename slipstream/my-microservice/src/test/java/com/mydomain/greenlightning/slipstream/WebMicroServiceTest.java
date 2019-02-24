@@ -22,7 +22,7 @@ public class WebMicroServiceTest {
 	static int port = (int) (3000 + (System.nanoTime()%12000));
 	
 	static String host = "127.0.0.1";
-	static int timeoutMS = 1200_000; //20 minutes	
+	static int timeoutMS = 40_000; //40 sec
 	static boolean telemetry = false;
 	static boolean useTLS = false;
 
@@ -67,7 +67,7 @@ public class WebMicroServiceTest {
 		
 		        boolean testTelemetry = false;
 				int inFlightBits = 6;  
-				int tracks = 8;
+				int tracks = 1;
 				
 				int callsPerTrack = 1000 /tracks; 
 		

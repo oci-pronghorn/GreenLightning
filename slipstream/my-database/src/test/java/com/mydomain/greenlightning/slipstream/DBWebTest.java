@@ -54,7 +54,7 @@ public class DBWebTest {
 	@Test
 	public void uploadProductsTest() {
 
-		int tracks = 2;
+		int tracks = 1;
 		int callsPerTrack = 100; 
 		int inFlightBits = 3;
 		boolean telemetry2 = false;
