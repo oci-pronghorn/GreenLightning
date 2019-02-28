@@ -4,7 +4,7 @@
 	
 	<groupId>com.ociweb.gl.load</groupId>
 	<artifactId>load-tester</artifactId>
-	<version>1.0.31</version>
+	<version>1.0.32</version>
 
 	<properties>
 		<keystore.path>./certificates/ocikeystore.jks</keystore.path>
@@ -22,7 +22,7 @@
 		<dependency>
 			<groupId>com.ociweb</groupId>
 			<artifactId>greenlightning</artifactId>
-			<version>1.0.31</version>
+			<version>${version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>

@@ -12,11 +12,10 @@ import com.ociweb.gl.api.GreenCommandChannel;
  */
 import com.ociweb.gl.api.GreenFramework;
 import com.ociweb.gl.api.GreenRuntime;
-import com.ociweb.pronghorn.network.ServerSocketWriterStage;
 
 import io.reactiverse.pgclient.PgClient;
+import io.reactiverse.pgclient.PgPool;
 import io.reactiverse.pgclient.PgPoolOptions;
-import io.vertx.core.VertxOptions;
 
 public class FrameworkTest implements GreenApp {
 
@@ -85,6 +84,7 @@ public class FrameworkTest implements GreenApp {
     		             String dbUser,
     		             String dbPass) {
     	
+    	
     	this.connectionsPerTrack = 2;
     	this.connectionPort = 5432;
     	this.bindPort = port;
@@ -138,12 +138,30 @@ public class FrameworkTest implements GreenApp {
 
     		///early check to know if we have a database or not,
 	    	///this helps testing to know which tests should be run on different boxes.
-	    	PgClient.pool(options).getConnection(a->{
+	    	PgPool pool = PgClient.pool(options);
+			pool.getConnection(a->{
 	    		foundDB.set(a.succeeded());
 	    		if (null!=a.result()) {
 	    			a.result().close();
 	    		}
 	    	});
+			pool.close();
+	    	
+//	    	pool.preparedQuery("SELECT * FROM world WHERE id=$1", Tuple.of(1), r -> {
+//				if (r.succeeded()) {
+//
+//					PgIterator resultSet = r.result().iterator();
+//					Tuple row = resultSet.next();			        
+//					System.out.println("successfull query");
+//
+//				} else {
+//					System.out.println("fail: "+r.cause().getLocalizedMessage());
+//					 
+//				}		
+//				
+//			});	
+	    	
+	    	
     	} catch (Throwable t) {
     		//t.printStackTrace();
     		System.out.println("No database in use");
