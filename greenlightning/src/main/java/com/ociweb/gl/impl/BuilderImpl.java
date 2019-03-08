@@ -149,6 +149,9 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	public Enum<?> beginningState;
     
 	private int behaviorTracks = 1;//default is one
+	private int groups = 1;
+	private int tracksPerGroup = 1;
+	
     private DeclareBehavior<R> behaviorTracksDefinition;
     
     
@@ -350,28 +353,29 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	}
 	
 	@Override
-	public HTTPServerConfig useHTTP1xServer(int bindPort, int tracks, DeclareBehavior<R> behaviorDefinition) {
+	public HTTPServerConfig useHTTP1xServer(int bindPort, int targetProcessors, DeclareBehavior<R> behaviorDefinition) {
 		if (server != null) {
 			throw new UnsupportedOperationException("Server already enabled, microservice runtime only supports one server.");
 		}
-		if (tracks<=0) {
+		if (targetProcessors<=0) {
 			//auto select tracks based on cores
-			int availableProcessors = CoresUtil.availableProcessors();
+//			int availableProcessors = CoresUtil.availableProcessors();
+//			
+//			int estCores = Math.max(1, availableProcessors/2)+1; //plus one for div by 2 and larger cores.
+//			
+//			int socketReaders = Math.max(1, estCores/2); 
+//			socketReaders = PMath.nextPrime(Math.min(5, socketReaders)-1);//no more than 5 readers
+//			//readers is 1, 2, 3, or 5
+//			///////////	
+//			
+//			targetProcessors = socketReaders*(estCores/socketReaders); 
 			
-			int estCores = Math.max(1, availableProcessors/2)+1; //plus one for div by 2 and larger cores.
-			
-			int socketReaders = Math.max(1, estCores/2); 
-			socketReaders = PMath.nextPrime(Math.min(5, socketReaders)-1);//no more than 5 readers
-			//readers is 1, 2, 3, or 5
-			///////////	
-			
-			tracks = socketReaders*(estCores/socketReaders); 
-			
+			targetProcessors = CoresUtil.availableProcessors();
 			
 			String maxTrack = System.getProperty("greenlightning.tracks.max");
 			if (null!=maxTrack) {
 				try {
-					tracks = Math.min(tracks, Integer.parseInt(maxTrack));
+					targetProcessors = Math.min(targetProcessors, Integer.parseInt(maxTrack));
 				} catch (Exception e) {
 					logger.warn("unable to enforce greenlightning.tracks.max property '{}', the value was not parsable",maxTrack);
 				}				
@@ -379,7 +383,7 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 			
 		}
 		
-		this.behaviorTracks = tracks;
+		this.behaviorTracks = targetProcessors;
 		
 		if (this.behaviorTracksDefinition!=null) {
 			throw new UnsupportedOperationException("tracks may not be set more than once");
@@ -396,6 +400,9 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	
 
 	public final HTTPServerConfig getHTTPServerConfig() {
+		
+		//optimize the final configuration of groups and tracks
+		behaviorTracks = optimizeGroupsAndTracks(behaviorTracks);		
 		return this.server;
 	}
 
@@ -942,12 +949,34 @@ public abstract class BuilderImpl<R extends MsgRuntime<?,?,R>> implements Builde
 	public void parallelTracks(int trackCount, DeclareBehavior<R> behaviorDefinition) {
 		assert(trackCount>0);
 		
-		this.behaviorTracks = trackCount;
 		if (this.behaviorTracksDefinition!=null) {
 			throw new UnsupportedOperationException("tracks may not be set more than once");
 		}
-		this.behaviorTracksDefinition = behaviorDefinition;
-		
+		this.behaviorTracksDefinition = behaviorDefinition;		
+		this.behaviorTracks = trackCount;		
+	}	
+	
+	private int optimizeGroupsAndTracks(int target) {
+		if (null==server) {
+			return target;
+		} else {
+			long gt = NetGraphBuilder.computeGroupsAndTracks(target, server.isTLS());
+			
+			groups = (int)((gt>>32)&Integer.MAX_VALUE);
+			tracksPerGroup = (int)gt&Integer.MAX_VALUE;
+			
+			//new Exception("set groups and tracks "+groups+"  "+tracksPerGroup).printStackTrace();
+			
+			return groups*tracksPerGroup;
+		}
+	}
+	
+	public int getGroupsCount() {
+		return groups;
+	}
+	
+	public int getTracksPerGroup() {
+		return tracksPerGroup;
 	}
 	
 	@Override

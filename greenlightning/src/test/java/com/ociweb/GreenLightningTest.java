@@ -23,7 +23,7 @@ public class GreenLightningTest {
 		System.out.println(url);
 		
 		boolean isTLS=false;
-		String bindHost="0.0.0.0";
+		String bindHost="127.0.0.1";//"0.0.0.0";
 		int bindPort = (int) (2000 + (System.nanoTime()%12000));
 		boolean isClientAuthRequired=false;;
         String identityStoreResourceName=null;

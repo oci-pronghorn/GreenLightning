@@ -406,9 +406,16 @@ public class ReactiveListenerStage<H extends BuilderImpl> extends ReactiveProxy 
         long rate = builder.getTriggerRate();
         if (rate>0 && listener instanceof TimeListener) {
             setTimeEventSchedule(rate, builder.getTriggerStart());
-            //Since we are using the time schedule we must set the stage to be faster
-            long customRate =   (rate*nsPerMS)/NonThreadScheduler.granularityMultiplier;// in ns and guanularityXfaster than clock trigger
-            long appliedRate = Math.min(customRate,builder.getDefaultSleepRateNS());
+            final long rateNS = rate*nsPerMS;
+            long customRate =   rateNS/NonThreadScheduler.granularityMultiplier;// in ns and guanularityXfaster than clock trigger
+            
+            long appliedRate = customRate;            
+            //use the faster default rate if this stage may be listening to other data.
+            if (inputPipes.length>0) {
+	            //Since we are using the time schedule we must set the stage to be faster
+	            appliedRate = Math.min(customRate, 
+	            		               builder.getDefaultSleepRateNS());
+            }
             GraphManager.addNota(graphManager, GraphManager.SCHEDULE_RATE, appliedRate, realStage);
         }
     }

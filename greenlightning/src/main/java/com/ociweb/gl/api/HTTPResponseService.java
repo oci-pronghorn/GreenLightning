@@ -14,6 +14,7 @@ import com.ociweb.pronghorn.network.http.SequenceValidator;
 import com.ociweb.pronghorn.network.schema.ServerResponseSchema;
 import com.ociweb.pronghorn.pipe.FieldReferenceOffsetManager;
 import com.ociweb.pronghorn.pipe.Pipe;
+import com.ociweb.pronghorn.pipe.PipeConfig;
 import com.ociweb.pronghorn.util.Appendables;
 
 public class HTTPResponseService {
@@ -463,20 +464,28 @@ public class HTTPResponseService {
 	 */
 	public boolean hasRoomFor(int messageCount) {
 		
+		 
 		boolean goHasRoom = null==msgCommandChannel.goPipe 
 				|| Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
 						FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
 		
 		if (goHasRoom) {
-			//since we do not know the exact publication we must check 
-			//all of them and ensure they each have room.
-			int i = msgCommandChannel.netResponse.length;
-			while (--i >= 0) {
-				Pipe<ServerResponseSchema> dataPipe = msgCommandChannel.netResponse[i];
-				if (!Pipe.hasRoomForWrite(dataPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(dataPipe))*messageCount)) {
-					return false;
-				}		
+			
+			if (msgCommandChannel.netResponse != null) {
+				//since we do not know the exact publication we must check 
+				//all of them and ensure they each have room.
+				int i = msgCommandChannel.netResponse.length;
+				while (--i >= 0) {
+					Pipe<ServerResponseSchema> dataPipe = msgCommandChannel.netResponse[i];
+					if (!Pipe.hasRoomForWrite(dataPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(dataPipe))*messageCount)) {
+						return false;
+					}		
+				}
+			} else {
+				final PipeConfig<ServerResponseSchema> commonConfig = msgCommandChannel.builder.pcm.getConfig(ServerResponseSchema.class);				
+				return commonConfig.minimumFragmentsOnPipe()>=messageCount;				
 			}
+			
 			return goHasRoom;
 		} else {
 			return false;//go had no room so we stopped early

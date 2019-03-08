@@ -465,12 +465,11 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 	private void buildGraphForServer(MsgApp app) {
 
 		HTTPServerConfig config = builder.getHTTPServerConfig();
-		final int parallelTrackCount = builder.parallelTracks();
 		
 		//////////////////////////
 		//////////////////////////
 		
-		((HTTPServerConfigImpl) config).setTracks(parallelTrackCount);
+		((HTTPServerConfigImpl) config).setTracks(builder.parallelTracks());
 		HTTPServerConfigImpl r = ((HTTPServerConfigImpl) config);
 						
 		r.pcmOut.ensureSize(ServerResponseSchema.class, 4, r.getMaxResponseSize());	
@@ -498,6 +497,9 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 					config.getMaxQueueOut(),
 					r.pcmIn,r.pcmOut);
 
+		
+		int groups = builder.getGroupsCount();
+		
 		serverCoord = new ServerCoordinator(
 				config.getCertificates(),
 				config.bindHost(), 
@@ -508,6 +510,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 				config.defaultHostPath(),
 				serverConfig);
 	
+		
 		//NOTE  serverConfig.maxConcurrentInputs = serverRequestUnwrapUnits * concurrentChannelsPerDecryptUnit
 		//this is only 600MB for this NetPayloadSchema inputs of 280   building: 280 of Primary:15 Secondary:21 NetPayloadSchema total: 623902720
 		//System.out.println("building: "+serverConfig.maxConcurrentInputs+" of "+serverConfig.incomingDataConfig+" total: "+(serverConfig.maxConcurrentInputs*serverConfig.incomingDataConfig.totalBytesAllocated()));
@@ -516,8 +519,12 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		final Pipe<NetPayloadSchema>[] encryptedIncomingGroup = Pipe.buildPipes(serverConfig.maxConcurrentInputs, 
 											serverConfig.pcmIn.getConfig(NetPayloadSchema.class));           
 		
+
 		
-		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(gm, serverCoord, parallelTrackCount, encryptedIncomingGroup);
+		Pipe[] acks = NetGraphBuilder.buildSocketReaderStage(
+				           gm, serverCoord,
+						   builder.getGroupsCount(), builder.getTracksPerGroup(), 
+						   encryptedIncomingGroup);
 		               
 		Pipe[] handshakeIncomingGroup=null;
 		Pipe[] planIncomingGroup;
@@ -545,7 +552,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		constructingBridges();
 		builder.initAllPendingReactors();
 		
-		buildLastHalfOfGraphForServerImpl(serverConfig, serverCoord, parallelTrackCount, acks, handshakeIncomingGroup,
+		buildLastHalfOfGraphForServerImpl(serverConfig, serverCoord, builder.parallelTracks(), acks, handshakeIncomingGroup,
 				planIncomingGroup);
 	}
 
