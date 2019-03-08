@@ -32,6 +32,9 @@ public class GreenLightning {
 		GraphManager.showScheduledRateOnTelemetry = true;
 		GraphManager.showMessageCountRangeOnTelemetry = true;
 		
+		//TODO: we must pre build the graph to allow for giant images
+		//GraphManager.combineCommonEdges = true;
+		
 	///	ServerSocketReaderStage.showRequests = true;
 	//	ServerSocketWriterStage.showWrites = true;
 		
