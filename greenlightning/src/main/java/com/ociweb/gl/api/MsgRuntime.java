@@ -409,6 +409,10 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		return parallelInstanceUnderActiveConstruction;
 	}
 	
+	public int totalParallelInstances() {
+		return builder.parallelTracks();
+	}
+	
 	protected void constructingParallelInstancesEnding() {
 		parallelInstanceUnderActiveConstruction = -1;
 	}

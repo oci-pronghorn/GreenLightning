@@ -49,9 +49,10 @@ public class GreenLightning {
 		
 		//reduce pipes for less memory used by test to reach 16K test..
 		//TODO: block other 5 values..
-		//System.setProperty("pronghorn.processors", "28"); //set lower since we do testing here... //6 , 8,  12,  16
-		                              
-		//System.setProperty("greenlightning.tracks.max","3");
+		System.setProperty("pronghorn.processors", "28"); //set lower since we do testing here... //6 , 8,  12,  16
+		                           
+	//	System.setProperty("pronghorn.processors", "6"); 
+		
 		//System.setProperty("pronghorn.processors", "1");
 		GreenRuntime.run(new FrameworkTest(),args);
 	
