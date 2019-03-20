@@ -4,7 +4,7 @@
 	<groupId>com.mydomain.greenlightning.slipstream</groupId>
 	<artifactId>my-microservice</artifactId>
 	<name>my-microservice</name>
-	<version>1.0.34</version>
+	<version>1.0.35</version>
 
 	<properties>
 		<keystore.path>./certificates/ocikeystore.jks</keystore.path>

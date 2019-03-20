@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
   <artifactId>glapi</artifactId>
-  <version>1.0.34</version>
+  <version>1.0.35</version>
   <packaging>pom</packaging>
  
   <modules>
