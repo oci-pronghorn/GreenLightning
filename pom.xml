@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb</groupId>
   <artifactId>open-edge-greenlightning</artifactId>
-  <version>1.0.35</version>
+  <version>1.0.36</version>
   <packaging>pom</packaging>
  
   <modules>  

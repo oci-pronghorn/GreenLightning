@@ -4,7 +4,7 @@
 	<groupId>com.mydomain.greenlightning.slipstream</groupId>
 	<artifactId>my-proxy</artifactId>
 	<name>my-proxy</name>
-	<version>1.0.35</version>
+	<version>1.0.36</version>
 
 	<properties>
 		<keystore.path>./certificates/ocikeystore.jks</keystore.path>

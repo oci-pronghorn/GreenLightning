@@ -53,10 +53,7 @@ public class ProcessFortune {
 	
 			target.setStatus(-2);//out for work	
 			target.clear();
-		
-			//great space coaster?
-			//SQRL integration: new page from Steve.. https://www.grc.com/sqrl/sspapi.htm
-			
+
 			pm.pool().preparedQuery( "SELECT id, message FROM fortune", r -> {
 				    //NOTE: we want to do as little work here a s possible since
 				    //      we want this thread to get back to work on other calls.

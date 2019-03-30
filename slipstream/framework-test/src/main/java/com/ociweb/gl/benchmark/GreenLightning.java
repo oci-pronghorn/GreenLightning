@@ -20,7 +20,6 @@ public class GreenLightning {
 		//TODO: we have reactors in the wrong order after the consume ordering stage.. must fix
 		//TODO: the TrackHTTPResponseListener private class is the new high cpu stage for full test.
 		
-		//TODO: underload vert.x can shut down server, limited to 14 bits?
 		//   
 		//     Jan 10, 2019 1:47:45 PM io.vertx.core.impl.BlockedThreadChecker
 		//     WARNING: Thread Thread[vert.x-eventloop-thread-0,5,main] has been blocked for 2247 ms, time limit is 2000 ms
@@ -35,7 +34,7 @@ public class GreenLightning {
 		//TODO: we must pre build the graph to allow for giant images
 		//GraphManager.combineCommonEdges = true;
 		
-	///	ServerSocketReaderStage.showRequests = true;
+	//ServerSocketReaderStage.showRequests = true;
 	//	ServerSocketWriterStage.showWrites = true;
 		
 		//System.setProperty("pronghorn.processors", "28"); //simulate the techempower testing box
@@ -49,9 +48,15 @@ public class GreenLightning {
 		
 		//reduce pipes for less memory used by test to reach 16K test..
 		//TODO: block other 5 values..
-		System.setProperty("pronghorn.processors", "28"); //set lower since we do testing here... //6 , 8,  12,  16
+		
+		//System.setProperty("pronghorn.processors", "28"); //set lower since we do testing here... //6 , 8,  12,  16
 		                           
-	//	System.setProperty("pronghorn.processors", "6"); 
+		System.setProperty("pronghorn.processors", "6"); 
+	//	System.setProperty("pronghorn.processors", "28"); 
+		
+		//TODO: need 3 tracks and ramp it up to 750K+ to show 7M on the server
+		//TODO: fix order super...
+		
 		
 		//System.setProperty("pronghorn.processors", "1");
 		GreenRuntime.run(new FrameworkTest(),args);
