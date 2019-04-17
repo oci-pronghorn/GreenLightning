@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
   <artifactId>http-server</artifactId>
-  <version>1.0.36</version>
+  <version>1.0.37</version>
   
   <properties>
     <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>

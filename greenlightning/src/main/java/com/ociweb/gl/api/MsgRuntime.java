@@ -480,10 +480,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 		
 		r.pcmIn.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
 		r.pcmOut.ensureSize(ReleaseSchema.class, 1<<16, 0);//for high volume
-		
-		int socketToParserBlocks = 8; //TODO: make configurable..
-		//if memory pipe is large we should make this number larger as well
-		
+
 		ServerPipesConfig serverConfig = new ServerPipesConfig(
 					r.logFileConfig(),
 					r.isTLS(),
@@ -494,7 +491,7 @@ public class MsgRuntime<B extends BuilderImpl, L extends ListenerFilter, G exten
 					r.getDecryptionUnitsPerTrack(),
 					r.getConcurrentChannelsPerDecryptUnit(),				
 					//one message might be broken into this many parts
-					socketToParserBlocks, r.getMinimumInputPipeMemory(),//blocks # from socket to parser...
+					r.getSocketToParserBlocks(), r.getMinimumInputPipeMemory(),//blocks # from socket to parser...
 					r.getMaxRequestSize(),
 					r.getMaxResponseSize(),
 					config.getMaxQueueIn(),
