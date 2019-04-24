@@ -1,5 +1,6 @@
 package com.ociweb.gl.api;
 
+import com.ociweb.gl.impl.schema.TrafficOrderSchema;
 import com.ociweb.pronghorn.network.HTTPUtilResponse;
 import com.ociweb.pronghorn.network.OrderSupervisorStage;
 import com.ociweb.pronghorn.network.ServerCoordinator;
@@ -24,6 +25,9 @@ public class HTTPResponseService {
 	public static final byte[] SERVER_HEADER_NAME = "GreenLightning".getBytes();
 	private static final int minHeader = 128;
 	private transient SequenceValidator validator; //will be null unless assertions are on.
+	private final int maxGoFragmentSize;
+	private final int maxNetRespFragmentSize;
+	
 	
 	private boolean setupValidator() {
 		validator = new SequenceValidator();
@@ -35,14 +39,9 @@ public class HTTPResponseService {
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER;		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, 1, minHeader);
 		assert(setupValidator());
-		
-		
-		//TODO: need to write response type and JSON back to HTTPRouterStageConfig....
-		
-		//TODO: where does th router stage config live?
-	//	msgCommandChannel.builder.getHTTPServerConfig().
-		
-		
+						 
+		maxGoFragmentSize = FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe));
+		maxNetRespFragmentSize = FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.netResponse[0]));
 	}
 
 	/**
@@ -58,6 +57,9 @@ public class HTTPResponseService {
 		msgCommandChannel.initFeatures |= MsgCommandChannel.NET_RESPONDER; 		
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, queueLength, Math.max(minHeader, maxMessageSize));
 		assert(setupValidator());
+				 
+		maxGoFragmentSize = FieldReferenceOffsetManager.maxFragmentSize(TrafficOrderSchema.FROM);//		Pipe.from(msgCommandChannel.goPipe));
+		maxNetRespFragmentSize = FieldReferenceOffsetManager.maxFragmentSize(ServerResponseSchema.FROM);//Pipe.from(msgCommandChannel.netResponse[0]));
 	}
 
 
@@ -463,11 +465,8 @@ public class HTTPResponseService {
 	 * @return has room for
 	 */
 	public boolean hasRoomFor(int messageCount) {
-		
-		 
-		boolean goHasRoom = null==msgCommandChannel.goPipe 
-				|| Pipe.hasRoomForWrite(msgCommandChannel.goPipe, 
-						FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe))*messageCount);
+
+		boolean goHasRoom = null==msgCommandChannel.goPipe || Pipe.hasRoomForWrite(msgCommandChannel.goPipe, maxGoFragmentSize*messageCount);
 		
 		if (goHasRoom) {
 			
@@ -476,14 +475,12 @@ public class HTTPResponseService {
 				//all of them and ensure they each have room.
 				int i = msgCommandChannel.netResponse.length;
 				while (--i >= 0) {
-					Pipe<ServerResponseSchema> dataPipe = msgCommandChannel.netResponse[i];
-					if (!Pipe.hasRoomForWrite(dataPipe, FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(dataPipe))*messageCount)) {
+					if (!Pipe.hasRoomForWrite(msgCommandChannel.netResponse[i], maxNetRespFragmentSize*messageCount)) {
 						return false;
 					}		
 				}
 			} else {
-				final PipeConfig<ServerResponseSchema> commonConfig = msgCommandChannel.builder.pcm.getConfig(ServerResponseSchema.class);				
-				return commonConfig.minimumFragmentsOnPipe()>=messageCount;				
+				return msgCommandChannel.builder.pcm.getConfig(ServerResponseSchema.class).minimumFragmentsOnPipe()>=messageCount;				
 			}
 			
 			return goHasRoom;
