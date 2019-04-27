@@ -40,8 +40,8 @@ public class HTTPResponseService {
 		msgCommandChannel.pcm.ensureSize(ServerResponseSchema.class, 1, minHeader);
 		assert(setupValidator());
 						 
-		maxGoFragmentSize = FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.goPipe));
-		maxNetRespFragmentSize = FieldReferenceOffsetManager.maxFragmentSize(Pipe.from(msgCommandChannel.netResponse[0]));
+		maxGoFragmentSize = FieldReferenceOffsetManager.maxFragmentSize(TrafficOrderSchema.FROM);
+		maxNetRespFragmentSize = FieldReferenceOffsetManager.maxFragmentSize(ServerResponseSchema.FROM);
 	}
 
 	/**
