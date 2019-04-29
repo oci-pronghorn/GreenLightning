@@ -2,7 +2,6 @@ package com.ociweb.gl.benchmark;
 
 import com.ociweb.gl.api.GreenRuntime;
 import com.ociweb.pronghorn.stage.scheduling.GraphManager;
-import com.ociweb.pronghorn.stage.scheduling.ScriptedNonThreadScheduler;
 
 public class GreenLightning {
 
@@ -53,7 +52,7 @@ public class GreenLightning {
 		
 		//System.setProperty("pronghorn.processors", "28"); //set lower since we do testing here... //6 , 8,  12,  16
 		                           
-		System.setProperty("pronghorn.processors", "7"); 
+		System.setProperty("pronghorn.processors", "6"); 
 	//	System.setProperty("pronghorn.processors", "28"); 
 		
 		//TODO: need 3 tracks and ramp it up to 750K+ to show 7M on the server
