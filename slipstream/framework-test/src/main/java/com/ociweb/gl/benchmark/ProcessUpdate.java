@@ -24,7 +24,7 @@ public class ProcessUpdate {
 	private final AtomicInteger requestsInFlight = new AtomicInteger();
 		
 	public ProcessUpdate(int pipelineBits, HTTPResponseService service, PoolManager pm) {
-		this.DBUpdateInFlight = new ObjectPipe<ResultObject>(10/*pipelineBits*/, ResultObject.class,	ResultObject::new);
+		this.DBUpdateInFlight = new ObjectPipe<ResultObject>(pipelineBits, ResultObject.class,	ResultObject::new);
 		this.service = service;
 		this.pm = pm;
 		
