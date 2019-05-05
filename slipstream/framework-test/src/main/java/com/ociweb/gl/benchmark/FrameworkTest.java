@@ -86,7 +86,7 @@ public class FrameworkTest implements GreenApp {
     		             String dbPass) {
     	
     	
-    	this.connectionsPerTrack = 6;
+    	this.connectionsPerTrack = 1;
     	this.connectionPort = 5432;
     	this.bindPort = port;
     	this.host = host;
@@ -172,7 +172,8 @@ public class FrameworkTest implements GreenApp {
     			 //NOTE: not sure this is optimal yet ...
     			 //TODO: neeed to allow for multiple writes one pipe! big dif.
     			// .setConcurrentChannelsPerEncryptUnit(Math.max(1,concurrentWritesPerChannel/2))  //8K    
-    			 .setConcurrentChannelsPerEncryptUnit(concurrentWritesPerChannel/4)//4)
+    			 .setConcurrentChannelsPerEncryptUnit(concurrentWritesPerChannel/16) // /8)//4)
+    			 //TODO: we need smaller count of connections but MORE writers.
     			 
     			 .disableEPoll() //provides advantage in JSON test....
  						 
