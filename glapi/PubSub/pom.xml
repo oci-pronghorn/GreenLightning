@@ -4,7 +4,7 @@
 
   <groupId>com.ociweb.oe.greenlightning.api</groupId>
   <artifactId>pub-sub</artifactId>
-  <version>1.0.37</version>
+  <version>1.0.38</version>
   
   <properties>
     <java.bootstrap.classes>${java.home}/lib/rt.jar</java.bootstrap.classes>
